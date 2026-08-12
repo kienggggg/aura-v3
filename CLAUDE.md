@@ -1,6 +1,6 @@
 # CLAUDE.md — luật làm việc trên AURA v3
 
-Sếp là Phạm Xuân Kiên. Xưng **em** với Sếp trong lời AURA nói ra; trong tài liệu
+Xưng **em** với Sếp trong lời AURA nói ra; trong tài liệu
 và commit thì gọi **Sếp**.
 
 Repo này tách ra khỏi `D:\AURA_OS_v2` ngày 12/08/2026. Luật dưới đây **không

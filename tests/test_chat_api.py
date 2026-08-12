@@ -330,13 +330,13 @@ def _memory(method, payload=None):
 
 def test_user_confirmed_memory_add_edit_delete(memory):
     status, body = _memory(
-        "POST", {"text": "Sếp tốt nghiệp Đại học Thái Bình"}
+        "POST", {"text": "Sếp tốt nghiệp Đại học Bách khoa"}
     )
     assert status == 200
     fact_id = body["facts"][0]["id"]
 
     status, body = _memory(
-        "PUT", {"id": fact_id, "text": "Sếp tốt nghiệp ĐH Thái Bình 2026"}
+        "PUT", {"id": fact_id, "text": "Sếp tốt nghiệp ĐH Bách khoa 2026"}
     )
     assert status == 200 and "2026" in body["facts"][0]["text"]
 

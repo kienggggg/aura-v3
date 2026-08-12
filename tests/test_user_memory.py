@@ -37,17 +37,17 @@ def test_cau_do_AI_sinh_ra_khong_the_tu_thanh_su_that():
 
 
 def test_co_xac_nhan_thi_ghi_duoc():
-    fact = remember("Sếp tên Phạm Xuân Kiên", confirmed_by_user=True)
+    fact = remember("Sếp tên Nguyễn Văn A", confirmed_by_user=True)
     assert fact["id"].startswith("m-")
-    assert [f["text"] for f in list_facts()] == ["Sếp tên Phạm Xuân Kiên"]
+    assert [f["text"] for f in list_facts()] == ["Sếp tên Nguyễn Văn A"]
 
 
 # --------------------------------------------------------- người đọc/sửa được
 def test_tep_la_markdown_nguoi_doc_duoc():
-    remember("Sếp học Đại học Thái Bình", confirmed_by_user=True)
+    remember("Sếp học Đại học Bách khoa", confirmed_by_user=True)
     raw = user_memory.MEMORY_FILE.read_text(encoding="utf-8")
     assert raw.startswith("# AURA nhớ gì về Sếp")
-    assert "Sếp học Đại học Thái Bình" in raw
+    assert "Sếp học Đại học Bách khoa" in raw
     assert "SỬA TAY ĐƯỢC" in raw, "tệp phải tự nói cho Sếp biết là sửa được"
 
 
@@ -78,9 +78,9 @@ def test_bi_mat_khong_vao_tri_nho_du_Sep_bao_nho():
 
 
 def test_khong_nho_trung_lap():
-    remember("Sếp ở Thái Bình", confirmed_by_user=True)
+    remember("Sếp ở Hà Nội", confirmed_by_user=True)
     with pytest.raises(MemoryRefused):
-        remember("sếp ở thái bình", confirmed_by_user=True)
+        remember("sếp ở hà nội", confirmed_by_user=True)
     assert len(list_facts()) == 1
 
 
@@ -101,7 +101,7 @@ def test_tri_nho_khong_phinh_vo_han(monkeypatch):
 
 # ------------------------------------------------------- nhận biết lệnh nhớ
 @pytest.mark.parametrize("cau,mong_doi", [
-    ("ghi nhớ: tôi tốt nghiệp Đại học Thái Bình", "tôi tốt nghiệp Đại học Thái Bình"),
+    ("ghi nhớ: tôi tốt nghiệp Đại học Bách khoa", "tôi tốt nghiệp Đại học Bách khoa"),
     ("nhớ giúp tôi là tôi thích cà phê đen", "tôi thích cà phê đen"),
     ("ghi nhớ tôi làm việc ban đêm", "tôi làm việc ban đêm"),
     ("AURA hãy ghi nhớ tôi làm việc ban đêm", "tôi làm việc ban đêm"),

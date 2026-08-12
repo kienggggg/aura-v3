@@ -10,6 +10,14 @@
 data/chat_sessions/
 data/
 
+# ─── Hồ sơ trình duyệt của cửa sổ ứng dụng ───
+# `aura_app.pyw` mở Chrome với `--user-data-dir=data/app_window` để Windows coi
+# AURA là ứng dụng riêng. Đúng về giao diện, nhưng nó biến một thư mục trong
+# repo thành nơi tích phiên đăng nhập. Ngày 11/08/2026 ở repo cũ: 648 MB,
+# 5.061 tệp, có Cookies / Login Data / Web Data (tự điền: địa chỉ, thẻ) /
+# History. Một lần `git add -A` là công khai toàn bộ.
+data/app_window/
+
 # ─── Python ───
 __pycache__/
 *.py[cod]

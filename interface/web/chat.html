@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AURA · Trò chuyện</title>
+<style>
+:root{
+  --bg:#16181c; --panel:#1e2127; --line:#333842; --muted:#98a0ac;
+  --me:#2b5f8f; --aura:#242830; --text:#e6eaf0; --accent:#8ee6aa;
+}
+@media (prefers-color-scheme: light){
+  :root{--bg:#f4f6f9;--panel:#fff;--line:#dde2ea;--muted:#5d6674;
+        --me:#2f6fb0;--aura:#eef1f6;--text:#1b1f26;}
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:15.5px/1.6 'Segoe UI',system-ui,sans-serif;display:flex;flex-direction:column}
+header{padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel);
+  display:flex;align-items:center;gap:10px;flex:none}
+header b{font-size:1.05rem}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--accent)}
+header .sub{color:var(--muted);font-size:.85rem;margin-left:auto}
+header b.ban{font-size:.72rem;color:var(--muted);font-weight:600;letter-spacing:.04em;
+  margin-left:-4px;cursor:help}
+#log{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;max-width:820px;width:100%;margin:0 auto}
+.row.me{justify-content:flex-end}
+.bubble{padding:11px 15px;border-radius:14px;white-space:pre-wrap;word-wrap:break-word;
+  max-width:76%}
+.me .bubble{background:var(--me);color:#fff;border-bottom-right-radius:4px}
+.aura .bubble{background:var(--aura);border:1px solid var(--line);border-bottom-left-radius:4px}
+.meta{font-size:.72rem;color:var(--muted);margin-top:5px}
+/* Markdown trong bong bóng AURA. `.doan` tự giữ xuống dòng nhờ pre-wrap của
+   .bubble; các khối dưới đây phải TẮT pre-wrap, nếu không mỗi thẻ lại đẻ thêm
+   một dòng trống thừa. */
+.bubble .doan + .doan{margin-top:.55em}
+.bubble ul,.bubble ol{white-space:normal;margin:.5em 0;padding-left:1.45em}
+.bubble li{margin:.2em 0}
+.bubble strong{font-weight:650}
+.bubble code{font-family:ui-monospace,"Cascadia Code",Consolas,monospace;
+  font-size:.9em;background:rgba(127,127,127,.16);padding:.1em .35em;
+  border-radius:5px}
+.bubble pre{white-space:pre;overflow-x:auto;margin:.55em 0;padding:10px 12px;
+  border-radius:9px;background:rgba(127,127,127,.14)}
+.bubble pre code{background:none;padding:0;font-size:.86em}
+#composer{flex:none;border-top:1px solid var(--line);background:var(--panel);padding:12px 18px}
+#composer .wrap{max-width:820px;margin:0 auto;display:flex;gap:10px}
+textarea{flex:1;resize:none;background:var(--bg);color:var(--text);
+  border:1px solid var(--line);border-radius:10px;padding:11px 13px;font:inherit;
+  min-height:46px;max-height:180px}
+textarea:focus{outline:none;border-color:var(--me)}
+button{background:var(--me);color:#fff;border:0;border-radius:10px;padding:0 20px;
+  font:inherit;font-weight:600;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+.empty{color:var(--muted);text-align:center;margin:auto;max-width:420px}
+.think{color:var(--muted);font-style:italic}
+</style>
+</head>
+<body>
+
+<header>
+  <!-- Nhãn phiên bản KHÔNG phải trang trí.  10/08/2026 Sếp báo AURA trả sai
+       ngày, trong khi bản đã vá trả đúng 3/3 — hoá ra Sếp đang gõ vào bảng
+       điều khiển v2 cũ ở cổng khác mà không có cách nào biết.  Từ giờ mỗi cửa
+       tự khai mình là ai và đang chạy mã ngày nào. -->
+  <span class="dot"></span><b>AURA</b><b id="ban" class="ban"></b>
+  <span class="sub" id="hint">Enter để gửi</span>
+</header>
+
+<div id="log">
+  <div class="empty" id="empty">Chưa có gì cả.<br>Gõ một câu bên dưới để bắt đầu.</div>
+</div>
+
+<div id="composer">
+  <div class="wrap">
+    <textarea id="box" maxlength="12000" placeholder="Nhắn cho AURA…" autofocus></textarea>
+    <button id="send">Gửi</button>
+  </div>
+</div>
+
+<script>
+const MAX_TEXT_CODEPOINTS = 12000;
+const CLIENT_TIMEOUT_MS = 105000;
+
+function freshUuid(){
+  if (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  const bytes = new Uint8Array(16);
+  if (globalThis.crypto && typeof globalThis.crypto.getRandomValues === 'function') {
+    globalThis.crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const h = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
+}
+
+function validSessionId(value){
+  if (typeof value !== 'string') return false;
+  const canonical = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return canonical.test(value) && !/^0{32}$/i.test(value.replaceAll('-', ''));
+}
+
+// Mỗi tab giữ namespace hội thoại trong sessionStorage. localStorage bị cấm vì
+// mọi tab cùng origin sẽ chia sẻ cùng một ID và đọc lẫn lịch sử.
+const SID = (() => {
+  try {
+    let s = sessionStorage.getItem('aura_session_id');
+    if (!validSessionId(s)) {
+      s = freshUuid();
+      sessionStorage.setItem('aura_session_id', s);
+    }
+    return s;
+  } catch (_error) {
+    // Storage có thể bị chặn trong chế độ riêng tư; vẫn dùng UUID chỉ tồn tại
+    // trong tab hiện tại, không rơi về một "phiên mặc định" dùng chung.
+    return freshUuid();
+  }
+})();
+
+const log = document.getElementById('log');
+const box = document.getElementById('box');
+const send = document.getElementById('send');
+const empty = document.getElementById('empty');
+
+// Dịch Markdown thành NÚT DOM, dựng từng thẻ một.
+//
+// Đây không phải sự cầu kỳ. Chữ AURA trả về có thể chứa nguyên văn lấy từ
+// trang web lạ (khối nguồn đi thẳng vào prompt). Gán cả cụm chữ đó làm mã
+// trang là mở cửa cho một trang bất kỳ chạy script trong cửa chat của Sếp.
+// Dựng bằng `createElement` + `textContent` thì thẻ HTML lẫn trong nội dung
+// chỉ còn là chữ thường.
+//
+// Test `test_ui_handles_timeout_http_and_non_json_without_html_injection`
+// chặn thẳng cái tên thuộc tính nguy hiểm trong TOÀN BỘ tệp — nên ngay cả
+// chú thích này cũng không được viết tên nó ra.
+function dichInline(chu, cha){
+  const mau = /(`[^`\n]+`|\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g;
+  let cuoi = 0, khop;
+  while ((khop = mau.exec(chu)) !== null){
+    if (khop.index > cuoi){
+      cha.appendChild(document.createTextNode(chu.slice(cuoi, khop.index)));
+    }
+    const the = khop[0];
+    let nut;
+    if (the.startsWith('`'))       { nut = document.createElement('code');
+                                     nut.textContent = the.slice(1, -1); }
+    else if (the.startsWith('**')) { nut = document.createElement('strong');
+                                     nut.textContent = the.slice(2, -2); }
+    else                           { nut = document.createElement('em');
+                                     nut.textContent = the.slice(1, -1); }
+    cha.appendChild(nut);
+    cuoi = khop.index + the.length;
+  }
+  if (cuoi < chu.length) cha.appendChild(document.createTextNode(chu.slice(cuoi)));
+}
+
+function dichMarkdown(chu){
+  const manh = document.createDocumentFragment();
+  const dong = String(chu == null ? '' : chu).split('\n');
+  let i = 0;
+  while (i < dong.length){
+    // Khối mã ```...``` — giữ NGUYÊN VĂN, không dịch gì bên trong.
+    if (dong[i].trim().startsWith('```')){
+      const khoi = [];
+      i++;
+      while (i < dong.length && !dong[i].trim().startsWith('```')) khoi.push(dong[i++]);
+      i++;
+      const pre = document.createElement('pre');
+      const ma = document.createElement('code');
+      ma.textContent = khoi.join('\n');
+      pre.appendChild(ma);
+      manh.appendChild(pre);
+      continue;
+    }
+    // Danh sách: gom các dòng liền nhau vào một <ul>/<ol>
+    const gachDau = /^\s*[-*•]\s+(.*)$/;
+    const danhSo = /^\s*\d+[.)]\s+(.*)$/;
+    const kieu = gachDau.test(dong[i]) ? gachDau : (danhSo.test(dong[i]) ? danhSo : null);
+    if (kieu){
+      const ds = document.createElement(kieu === gachDau ? 'ul' : 'ol');
+      while (i < dong.length && kieu.test(dong[i])){
+        const muc = document.createElement('li');
+        dichInline(dong[i].match(kieu)[1], muc);
+        ds.appendChild(muc);
+        i++;
+      }
+      manh.appendChild(ds);
+      continue;
+    }
+    if (!dong[i].trim()){ i++; continue; }
+    // Đoạn văn: gom tới dòng trống hoặc tới khi gặp một khối khác.
+    const doan = document.createElement('div');
+    doan.className = 'doan';
+    const gom = [];
+    while (i < dong.length && dong[i].trim()
+           && !kieuKhoiKhac(dong[i])) gom.push(dong[i++]);
+    dichInline(gom.join('\n'), doan);
+    manh.appendChild(doan);
+  }
+  return manh;
+}
+
+function kieuKhoiKhac(dong){
+  return dong.trim().startsWith('```')
+      || /^\s*[-*•]\s+/.test(dong)
+      || /^\s*\d+[.)]\s+/.test(dong);
+}
+
+function bubble(role, text, meta, sources){
+  if (empty) empty.remove();
+  const row = document.createElement('div');
+  row.className = 'row ' + (role === 'user' ? 'me' : 'aura');
+  const b = document.createElement('div');
+  b.className = 'bubble';
+  if (role === 'user'){
+    // Chữ Sếp gõ thì hiện y nguyên: Sếp gõ dấu sao là muốn thấy dấu sao.
+    b.textContent = text;
+  } else {
+    b.appendChild(dichMarkdown(text));
+  }
+  if (meta){
+    const m = document.createElement('div');
+    m.className = 'meta';
+    m.textContent = meta;
+    b.appendChild(m);
+  }
+  if (Array.isArray(sources) && sources.length) {
+    const list = document.createElement('ol');
+    list.className = 'meta';
+    sources.forEach(source => {
+      const item = document.createElement('li');
+      const link = document.createElement('a');
+      link.href = source.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = source.title || source.url;
+      item.appendChild(link);
+      list.appendChild(item);
+    });
+    b.appendChild(list);
+  }
+  row.appendChild(b);
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+  return b;
+}
+
+// Đồng hồ đếm khi AURA đang nghĩ. Chính vì KHÔNG có thứ này mà Sếp từng tưởng
+// AURA điếc: nó nghĩ 300 giây và màn hình không nói gì cả.
+function thinking(){
+  const b = bubble('aura', 'AURA đang nghĩ… 0s');
+  b.classList.add('think');
+  const t0 = Date.now();
+  const timer = setInterval(() => {
+    const s = Math.round((Date.now() - t0) / 1000);
+    b.textContent = `AURA đang nghĩ… ${s}s`;
+  }, 1000);
+  return {node: b, stop: () => clearInterval(timer)};
+}
+
+// Cửa này là AURA nào, chạy mã sửa lần cuối lúc nào.  10/08/2026: một tab mở
+// từ trước vẫn hiện lịch sử do bản CHƯA VÁ sinh ra, và cả Sếp lẫn tôi đều
+// tưởng bản vá không chạy.  Nhãn này để không ai phải đoán nữa.
+(async () => {
+  try {
+    const res = await fetch('/api/status');
+    if (!res.ok) throw new Error(String(res.status));
+    const s = await res.json();
+    const nhan = document.getElementById('ban');
+    nhan.textContent = ` ${(s.service || '').replace('aura-chat-', '')}`;
+    nhan.title = `mã sửa lần cuối ${s.code_updated_at || 'không rõ'}`
+      + (s.model_configured ? '' : ' · CHƯA cắm model');
+  } catch (_) {
+    document.getElementById('ban').textContent = ' ?';
+  }
+})();
+
+async function ask(){
+  const text = box.value.trim();
+  if (!text) return;
+  if (Array.from(text).length > MAX_TEXT_CODEPOINTS) {
+    bubble('aura', `⚠️ Tin nhắn dài quá ${MAX_TEXT_CODEPOINTS} ký tự.`);
+    return;
+  }
+  box.value = '';
+  send.disabled = true;
+  bubble('user', text);
+  const busy = thinking();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text, session_id: SID}),
+      signal: controller.signal,
+    });
+    const raw = await res.text();
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch (_error) {
+      throw new Error(`Máy chủ trả dữ liệu không hợp lệ (HTTP ${res.status}).`);
+    }
+    busy.stop(); busy.node.parentElement.remove();
+    const visible = typeof data.text === 'string' && data.text.trim()
+      ? data.text : `AURA không có câu trả lời hợp lệ (HTTP ${res.status}).`;
+    const seconds = Number.isFinite(data.latency_ms)
+      ? `${(data.latency_ms / 1000).toFixed(1)}s · ` : '';
+    bubble('aura', visible, `${seconds}${data.status || `HTTP ${res.status}`}`,
+           data.sources || []);
+  } catch (err) {
+    busy.stop(); busy.node.parentElement.remove();
+    const message = err && err.name === 'AbortError'
+      ? '⚠️ Đã dừng chờ vì AURA quá thời gian trả lời.'
+      : '⚠️ Không gọi được AURA: ' + err;
+    bubble('aura', message);
+  } finally {
+    clearTimeout(timeout);
+    send.disabled = false;
+    box.focus();
+  }
+}
+
+send.onclick = ask;
+box.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); ask(); }
+});
+
+async function loadHistory(){
+  try {
+    const response = await fetch('/api/chat/history?session_id=' + encodeURIComponent(SID));
+    if (!response.ok) return;
+    const data = await response.json();
+    (data.messages || []).forEach(message =>
+      bubble(message.role === 'user' ? 'user' : 'aura', message.content || ''));
+  } catch (_error) {
+    // History is context, not a reason to disable a fresh local conversation.
+  }
+}
+loadHistory();
+</script>
+</body>
+</html>

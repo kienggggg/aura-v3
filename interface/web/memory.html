@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AURA nhớ gì về tôi?</title>
+<style>
+:root{--bg:#16181c;--panel:#1e2127;--line:#333842;--muted:#98a0ac;
+      --text:#e6eaf0;--accent:#8ee6aa;--warn:#e08a72;--me:#2b5f8f}
+@media (prefers-color-scheme: light){
+  :root{--bg:#f4f6f9;--panel:#fff;--line:#dde2ea;--muted:#5d6674;
+        --text:#1b1f26;--me:#2f6fb0}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:15.5px/1.65 'Segoe UI',system-ui,sans-serif}
+header{padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel);
+  display:flex;align-items:center;gap:12px}
+header b{font-size:1.05rem}
+header a{color:var(--muted);text-decoration:none;margin-left:auto;font-size:.9rem}
+main{max-width:760px;margin:0 auto;padding:22px 18px 60px}
+.note{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;color:var(--muted);font-size:.92rem;margin-bottom:20px}
+.note b{color:var(--text)}
+.fact{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start}
+.fact .body{flex:1;min-width:0}
+.fact .txt{white-space:pre-wrap;word-wrap:break-word}
+.fact .meta{font-size:.75rem;color:var(--muted);margin-top:5px}
+.fact button{background:none;border:1px solid var(--line);color:var(--muted);
+  border-radius:7px;padding:5px 10px;cursor:pointer;font:inherit;font-size:.82rem}
+.fact button:hover{color:var(--text)}
+.fact button.del:hover{color:var(--warn);border-color:var(--warn)}
+.add{display:flex;gap:10px;margin-top:18px}
+input[type=text]{flex:1;background:var(--panel);color:var(--text);
+  border:1px solid var(--line);border-radius:9px;padding:11px 13px;font:inherit}
+input[type=text]:focus{outline:none;border-color:var(--me)}
+.primary{background:var(--me);color:#fff;border:0;border-radius:9px;padding:0 18px;
+  font:inherit;font-weight:600;cursor:pointer}
+.empty{color:var(--muted);text-align:center;padding:32px 0}
+#msg{margin-top:12px;font-size:.9rem;min-height:20px}
+#msg.bad{color:var(--warn)}
+#msg.good{color:var(--accent)}
+code{background:rgba(127,127,127,.16);padding:2px 6px;border-radius:4px}
+</style>
+</head>
+<body>
+
+<header>
+  <b>AURA nhớ gì về tôi?</b>
+  <a href="/chat">← quay lại trò chuyện</a>
+</header>
+
+<main>
+  <div class="note">
+    AURA <b>chỉ nhớ điều Sếp tự xác nhận</b>. Câu do AURA nói ra không bao giờ tự
+    biến thành sự thật ở đây.<br>
+    Mọi thứ nằm trong một tệp Markdown — Sếp mở
+    <code>data/aura_nho_gi_ve_sep.md</code> sửa tay cũng được, xoá một dòng là AURA
+    quên hẳn.
+  </div>
+
+  <div id="list"></div>
+
+  <div class="add">
+    <input type="text" id="new" placeholder="Thêm một điều AURA nên nhớ về Sếp…">
+    <button class="primary" id="addBtn">Nhớ</button>
+  </div>
+  <div id="msg"></div>
+</main>
+
+<script>
+const list = document.getElementById('list');
+const box = document.getElementById('new');
+const msg = document.getElementById('msg');
+
+function say(text, ok){
+  msg.textContent = text;
+  msg.className = ok ? 'good' : 'bad';
+  if (text) setTimeout(() => { if (msg.textContent === text) msg.textContent = ''; }, 6000);
+}
+
+function render(facts){
+  list.innerHTML = '';
+  if (!facts.length){
+    list.innerHTML = '<div class="empty">AURA chưa nhớ gì về Sếp cả.</div>';
+    return;
+  }
+  facts.forEach(f => {
+    const row = document.createElement('div');
+    row.className = 'fact';
+
+    const body = document.createElement('div');
+    body.className = 'body';
+    const txt = document.createElement('div');
+    txt.className = 'txt';
+    txt.textContent = f.text;
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = f.meta || '';
+    body.append(txt, meta);
+
+    const edit = document.createElement('button');
+    edit.textContent = 'Sửa';
+    edit.onclick = async () => {
+      const moi = prompt('Sửa lại điều AURA nhớ:', f.text);
+      if (moi === null) return;
+      await send('PUT', {id: f.id, text: moi});
+    };
+
+    const del = document.createElement('button');
+    del.className = 'del';
+    del.textContent = 'Quên';
+    del.onclick = async () => {
+      if (!confirm('AURA sẽ quên hẳn điều này:\n\n' + f.text)) return;
+      await send('DELETE', {id: f.id});
+    };
+
+    row.append(body, edit, del);
+    list.appendChild(row);
+  });
+}
+
+async function load(){
+  try {
+    const r = await fetch('/api/memory');
+    const d = await r.json();
+    render(d.facts || []);
+  } catch (err) {
+    say('Không đọc được trí nhớ: ' + err, false);
+  }
+}
+
+async function send(method, payload){
+  try {
+    const r = await fetch('/api/memory', {
+      method,
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (!r.ok){ say(d.error || 'Không làm được.', false); return; }
+    say(d.message || 'Xong.', true);
+    render(d.facts || []);
+  } catch (err) {
+    say('Lỗi: ' + err, false);
+  }
+}
+
+document.getElementById('addBtn').onclick = async () => {
+  const text = box.value.trim();
+  if (!text) return;
+  box.value = '';
+  await send('POST', {text});
+};
+box.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('addBtn').click(); });
+
+load();
+</script>
+</body>
+</html>

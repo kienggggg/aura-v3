@@ -1,0 +1,26 @@
+# ─── Bí mật — TUYỆT ĐỐI KHÔNG commit ───
+.env
+.env.*
+!.env.example
+
+# ─── Sổ phiên chat ───
+# Nội dung hội thoại thật của Sếp, không phải mã nguồn. Ngày 09/08/2026 trong
+# repo cũ, tệp nhật ký kiểu này chứa mật khẩu wifi thật vì AURA đọc nó ra màn
+# hình trước khi có core/secret_guard.py.
+data/chat_sessions/
+data/
+
+# ─── Python ───
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# ─── Virtualenv ───
+venv/
+.venv/
+
+# ─── Hệ điều hành / IDE ───
+Thumbs.db
+.DS_Store
+.idea/
+.vscode/

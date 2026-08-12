@@ -1,0 +1,905 @@
+from __future__ import annotations
+
+import asyncio
+from datetime import datetime, timezone
+from uuid import uuid4
+
+from core.chat_contract import (
+    ChatRequest,
+    ChatStatus,
+    ContentCheck,
+    OutwardContent,
+    SourceCitation,
+)
+from core.chat_service import ChatMessage, ChatService, ModelReply
+
+
+def _request(**changes) -> ChatRequest:
+    values = {
+        "request_id": str(uuid4()),
+        "session_id": str(uuid4()),
+        "actor_id": "owner",
+        "channel": "test",
+        "text": "AURA là gì?",
+    }
+    values.update(changes)
+    return ChatRequest(**values)
+
+
+def _source(number: int) -> SourceCitation:
+    return SourceCitation(
+        title=f"Nguồn {number}",
+        url=f"https://example.com/{number}",
+        retrieved_at=datetime.now(timezone.utc).isoformat(),
+        supports=f"Dữ kiện {number}",
+    )
+
+
+class FakeStore:
+    def __init__(self):
+        self.history = (ChatMessage("user", "lượt trước"),)
+        self.loads = []
+        self.appended = []
+
+    async def load(self, *, actor_id, session_id):
+        self.loads.append((actor_id, session_id))
+        return self.history
+
+    async def append_exchange(self, *, request, result):
+        self.appended.append((request, result))
+
+
+class FakeModel:
+    def __init__(self, replies):
+        self.replies = list(replies)
+        self.calls = []
+
+    async def generate(self, request, *, history, sources=()):
+        self.calls.append((request, tuple(history), tuple(sources)))
+        reply = self.replies.pop(0)
+        if isinstance(reply, Exception):
+            raise reply
+        return reply
+
+
+class FakeWeb:
+    def __init__(self, sources=(), error=None):
+        self.sources = sources
+        self.error = error
+        self.queries = []
+
+    async def search(self, query):
+        self.queries.append(query)
+        if self.error:
+            raise self.error
+        return self.sources
+
+
+class FakeGuard:
+    def __init__(
+        self,
+        *,
+        allowed=True,
+        transcript_text=None,
+        rejection_text="Nội dung bị chặn.",
+        output_prefix="",
+    ):
+        self.allowed = allowed
+        self.transcript_text = transcript_text
+        self.rejection_text = rejection_text
+        self.output_prefix = output_prefix
+        self.checked = []
+        self.outputs = []
+
+    def check_input(self, request):
+        self.checked.append(request)
+        safe_input = (
+            request.text
+            if self.transcript_text is None
+            else self.transcript_text
+        )
+        return ContentCheck(
+            allowed=self.allowed,
+            transcript_text=safe_input,
+            rejection_text=self.rejection_text,
+        )
+
+    def scrub_history(self, history):
+        return tuple(
+            ChatMessage(
+                item.role,
+                item.content.replace("RAW_SECRET", "[REDACTED]"),
+            )
+            for item in history
+        )
+
+    def scrub_output(self, content):
+        self.outputs.append(content)
+
+        def clean(value):
+            return value.replace("RAW_SECRET", "[REDACTED]")
+
+        return OutwardContent(
+            text=self.output_prefix + clean(content.text),
+            sources=tuple(
+                SourceCitation(
+                    title=clean(source.title),
+                    url=clean(source.url),
+                    retrieved_at=clean(source.retrieved_at),
+                    supports=clean(source.supports),
+                )
+                for source in content.sources
+            ),
+            fallback_text=self.output_prefix + clean(content.fallback_text),
+        )
+
+
+def _service(*, model, store, guard=None, **kwargs):
+    return ChatService(
+        model=model,
+        store=store,
+        guard=guard if guard is not None else FakeGuard(),
+        **kwargs,
+    )
+
+
+def test_plain_answer_preserves_ids_and_appends_once():
+    request = _request()
+    store = FakeStore()
+    model = FakeModel([ModelReply("  Chào Sếp.  ")])
+    guard = FakeGuard()
+    result = asyncio.run(
+        _service(model=model, store=store, guard=guard).reply(request)
+    )
+
+    assert result.status is ChatStatus.OK
+    assert result.request_id == request.request_id
+    assert result.session_id == request.session_id
+    assert result.text == "Chào Sếp."
+    assert result.used_web is False
+    assert result.sources == ()
+    assert store.loads == [(request.actor_id, request.session_id)]
+    assert store.appended == [(request, result)]
+    assert [item.text for item in guard.outputs] == ["Chào Sếp."]
+
+
+def test_guard_rejects_secret_before_model_web_or_transcript():
+    request = _request(text="RAW_SECRET input")
+    store = FakeStore()
+    model = FakeModel([ModelReply("must not run")])
+    web = FakeWeb((_source(1), _source(2)))
+    guard = FakeGuard(
+        allowed=False,
+        transcript_text="[REDACTED INPUT]",
+        rejection_text="Không thể đọc RAW_SECRET.",
+    )
+    result = asyncio.run(
+        _service(model=model, store=store, web=web, guard=guard).reply(request)
+    )
+
+    assert result.status is ChatStatus.REJECTED
+    assert result.text == "Không thể đọc [REDACTED]."
+    assert [item.text for item in guard.outputs] == ["Không thể đọc RAW_SECRET."]
+    assert model.calls == []
+    assert web.queries == []
+    assert store.loads == []
+    assert store.appended == []
+
+
+def test_store_never_sees_raw_input_or_raw_model_output():
+    class InspectingStore(FakeStore):
+        async def append_exchange(self, *, request, result):
+            assert request.text == "[SAFE INPUT]"
+            assert "RAW_SECRET" not in request.text
+            assert "RAW_SECRET" not in result.text
+            await super().append_exchange(request=request, result=result)
+
+    request = _request(text="permitted but sensitive input")
+    store = InspectingStore()
+    model = FakeModel([ModelReply("Answer contains RAW_SECRET")])
+    guard = FakeGuard(transcript_text="[SAFE INPUT]")
+    result = asyncio.run(
+        _service(model=model, store=store, guard=guard).reply(request)
+    )
+
+    assert result.status is ChatStatus.OK
+    assert result.text == "Answer contains [REDACTED]"
+    assert [item.text for item in guard.outputs] == ["Answer contains RAW_SECRET"]
+    assert len(store.appended) == 1
+
+
+def test_persistence_failure_after_plain_answer_is_not_reported_ok():
+    class FailingStore(FakeStore):
+        def __init__(self):
+            super().__init__()
+            self.attempted = []
+
+        async def append_exchange(self, *, request, result):
+            self.attempted.append((request, result))
+            raise RuntimeError("RAW_SECRET storage exception")
+
+    request = _request(text="permitted input")
+    store = FailingStore()
+    guard = FakeGuard(
+        transcript_text="[SAFE INPUT]", output_prefix="SAFE: "
+    )
+    result = asyncio.run(
+        _service(
+            model=FakeModel([ModelReply("model answer RAW_SECRET")]),
+            store=store,
+            guard=guard,
+        ).reply(request)
+    )
+
+    assert result.status is ChatStatus.BACKEND_ERROR
+    assert result.used_web is False
+    assert result.sources == ()
+    assert "model answer" not in result.text
+    assert "storage exception" not in result.text
+    assert "RAW_SECRET" not in result.text
+    assert "không xác nhận được việc lưu lịch sử" in result.text
+    assert len(store.attempted) == 1
+    attempted_request, attempted_result = store.attempted[0]
+    assert attempted_request.text == "[SAFE INPUT]"
+    assert "RAW_SECRET" not in attempted_result.text
+    assert store.appended == []
+    assert [item.text for item in guard.outputs] == [
+        "model answer RAW_SECRET",
+        "AURA đã tạo câu trả lời nhưng không xác nhận được việc lưu lịch sử. "
+        "Vui lòng thử lại.",
+    ]
+
+
+def test_persistence_failure_after_web_answer_drops_answer_and_sources():
+    class FailingStore(FakeStore):
+        async def append_exchange(self, *, request, result):
+            assert result.used_web is True
+            assert len(result.sources) == 2
+            raise OSError("disk detail must stay private")
+
+    request = _request(text="thời tiết Hà Nội")
+    guard = FakeGuard(output_prefix="SAFE: ")
+    result = asyncio.run(
+        _service(
+            model=FakeModel([ModelReply("web answer")]),
+            store=FailingStore(),
+            web=FakeWeb((_source(1), _source(2))),
+            guard=guard,
+        ).reply(request)
+    )
+
+    assert result.status is ChatStatus.BACKEND_ERROR
+    assert result.used_web is True, "lỗi ghi sổ không xoá cuộc gọi web đã xảy ra"
+    assert result.sources == ()
+    assert "web answer" not in result.text
+    assert "disk detail" not in result.text
+    assert "không xác nhận được việc lưu lịch sử" in result.text
+    assert [item.text for item in guard.outputs] == [
+        "web answer",
+        "AURA đã tạo câu trả lời nhưng không xác nhận được việc lưu lịch sử. "
+        "Vui lòng thử lại.",
+    ]
+
+
+def test_allowed_redacted_input_is_the_only_request_seen_downstream():
+    raw = "giá bitcoin credential=RAW_SECRET"
+    safe = "giá bitcoin credential=[REDACTED]"
+    request = _request(text=raw)
+    store = FakeStore()
+    store.history = (ChatMessage("user", "old RAW_SECRET"),)
+    model = FakeModel([ModelReply("đã tra")])
+    web = FakeWeb((_source(1), _source(2)))
+    guard = FakeGuard(transcript_text=safe)
+    result = asyncio.run(
+        _service(
+            model=model,
+            store=store,
+            web=web,
+            guard=guard,
+        ).reply(request)
+    )
+
+    assert result.status is ChatStatus.OK
+    assert web.queries == [safe]
+    assert all(call[0].text == safe for call in model.calls)
+    assert all("RAW_SECRET" not in item.content for item in model.calls[0][1])
+    stored_request, _ = store.appended[0]
+    assert stored_request.text == safe
+    assert raw not in web.queries
+
+
+def test_citation_metadata_is_scrubbed_and_changed_secret_url_is_dropped():
+    request = _request(text="Giải thích dữ kiện")
+    store = FakeStore()
+    sources = (
+        SourceCitation(
+            "Nguồn RAW_SECRET một",
+            "https://example.com/one",
+            datetime.now(timezone.utc).isoformat(),
+            "Hỗ trợ RAW_SECRET một",
+        ),
+        SourceCitation(
+            "Nguồn RAW_SECRET hai",
+            "https://example.com/two",
+            datetime.now(timezone.utc).isoformat(),
+            "Hỗ trợ RAW_SECRET hai",
+        ),
+        SourceCitation(
+            "Nguồn ba",
+            "https://example.com/three?token=RAW_SECRET",
+            datetime.now(timezone.utc).isoformat(),
+            "Hỗ trợ ba",
+        ),
+    )
+    model = FakeModel(
+        [ModelReply("cần web", requires_web=True), ModelReply("đã kiểm chứng")]
+    )
+    result = asyncio.run(
+        _service(
+            model=model,
+            store=store,
+            web=FakeWeb(sources),
+            guard=FakeGuard(),
+        ).reply(request)
+    )
+
+    assert result.status is ChatStatus.OK
+    assert len(result.sources) == 2
+    outward = repr(result)
+    assert "RAW_SECRET" not in outward
+    assert all("[REDACTED]" in source.title for source in result.sources)
+    assert all("[REDACTED]" in source.supports for source in result.sources)
+    assert "RAW_SECRET" not in repr(store.appended)
+
+
+def test_citation_drop_below_two_downgrades_and_does_not_persist():
+    request = _request(text="Giải thích dữ kiện")
+    store = FakeStore()
+    sources = (
+        _source(1),
+        SourceCitation(
+            "Nguồn hai",
+            "https://example.com/two?token=RAW_SECRET",
+            datetime.now(timezone.utc).isoformat(),
+            "Hỗ trợ hai",
+        ),
+    )
+    model = FakeModel(
+        [ModelReply("cần web", requires_web=True), ModelReply("đã kiểm chứng")]
+    )
+    result = asyncio.run(
+        _service(
+            model=model,
+            store=store,
+            web=FakeWeb(sources),
+            guard=FakeGuard(),
+        ).reply(request)
+    )
+
+    assert result.status is ChatStatus.WEB_UNAVAILABLE
+    assert result.used_web is True, "nguồn bị loại vẫn phải khai là đã gọi web"
+    assert result.sources == ()
+    assert "RAW_SECRET" not in repr(result)
+    assert store.appended == []
+
+
+def test_invalid_retrieved_at_after_scrub_drops_citation_fail_closed():
+    class CorruptTimeGuard(FakeGuard):
+        def scrub_output(self, content):
+            safe = super().scrub_output(content)
+            changed = list(safe.sources)
+            first = changed[0]
+            changed[0] = SourceCitation(
+                first.title,
+                first.url,
+                "[REDACTED INVALID TIME]",
+                first.supports,
+            )
+            return OutwardContent(
+                text=safe.text,
+                sources=tuple(changed),
+                fallback_text=safe.fallback_text,
+            )
+
+    request = _request(text="Giải thích dữ kiện")
+    store = FakeStore()
+    model = FakeModel(
+        [ModelReply("cần web", requires_web=True), ModelReply("đã kiểm chứng")]
+    )
+    result = asyncio.run(
+        _service(
+            model=model,
+            store=store,
+            web=FakeWeb((_source(1), _source(2))),
+            guard=CorruptTimeGuard(),
+        ).reply(request)
+    )
+
+    assert result.status is ChatStatus.WEB_UNAVAILABLE
+    assert result.sources == ()
+    assert store.appended == []
+
+
+def test_finalize_scrubs_web_early_failure_and_backend_error_once_each():
+    cases = (
+        (
+            _request(text="thời tiết Hà Nội"),
+            FakeModel([ModelReply("must not run")]),
+            FakeWeb(()),
+            ChatStatus.WEB_UNAVAILABLE,
+        ),
+        (
+            _request(text="giải thích"),
+            FakeModel([RuntimeError("backend exploded")]),
+            FakeWeb(()),
+            ChatStatus.BACKEND_ERROR,
+        ),
+    )
+    for request, model, web, expected_status in cases:
+        guard = FakeGuard(output_prefix="SCRUBBED: ")
+        store = FakeStore()
+        result = asyncio.run(
+            _service(model=model, store=store, web=web, guard=guard).reply(request)
+        )
+        assert result.status is expected_status
+        assert result.text.startswith("SCRUBBED: ")
+        assert len(guard.outputs) == 1
+        # 10/08/2026: lượt `web_unavailable` GIỜ CÓ vào sổ — màn hình và trí
+        # nhớ của AURA phải kể cùng một câu chuyện (xem
+        # tests/test_luot_hong_van_vao_so.py).  Thứ KHÔNG được vào sổ vẫn y
+        # nguyên: bản nháp chưa có nguồn của model.
+        if expected_status is ChatStatus.WEB_UNAVAILABLE:
+            assert len(store.appended) == 1
+            assert store.appended[0][1].text.startswith("SCRUBBED: ")
+            assert "must not run" not in store.appended[0][1].text
+        else:
+            assert store.appended == []
+
+
+def test_finalize_scrubs_structural_rejection_and_empty_answer_once_each():
+    cases = (
+        (
+            _request(text=" "),
+            FakeModel([ModelReply("must not run")]),
+            ChatStatus.REJECTED,
+        ),
+        (
+            _request(text="giải thích"),
+            FakeModel([ModelReply("   ")]),
+            ChatStatus.CANNOT_ANSWER,
+        ),
+    )
+    for request, model, expected_status in cases:
+        guard = FakeGuard(output_prefix="SAFE: ")
+        result = asyncio.run(
+            _service(model=model, store=FakeStore(), guard=guard).reply(request)
+        )
+        assert result.status is expected_status
+        assert result.text.startswith("SAFE: ")
+        assert len(guard.outputs) == 1
+
+
+def test_empty_and_oversize_are_rejected_before_any_dependency():
+    for request in (_request(text=" "), _request(text="x" * 12_001)):
+        store = FakeStore()
+        model = FakeModel([ModelReply("must not run")])
+        web = FakeWeb((_source(1), _source(2)))
+        result = asyncio.run(
+            _service(model=model, store=store, web=web).reply(request)
+        )
+        assert result.status is ChatStatus.REJECTED
+        assert model.calls == []
+        assert store.loads == []
+        assert store.appended == []
+        assert web.queries == []
+
+
+def test_model_requested_web_fails_closed_with_fewer_than_two_sources():
+    request = _request(text="Giải thích dữ kiện này")
+    store = FakeStore()
+    model = FakeModel([ModelReply("để tôi đoán", requires_web=True)])
+    web = FakeWeb((_source(1),))
+    result = asyncio.run(
+        _service(model=model, store=store, web=web).reply(request)
+    )
+
+    assert result.status is ChatStatus.WEB_UNAVAILABLE
+    # `used_web` ĐỔI NGHĨA ngày 10/08/2026, có chủ ý: từ "câu trả lời có dựa
+    # trên nguồn web" sang "lượt này AURA CÓ gọi ra ngoài".  Nghĩa cũ giấu đúng
+    # cái Sếp cần biết — tra hụt vẫn là đã tra, câu hỏi đã rời khỏi máy rồi.
+    # Đổi được vì màn hình dựng khối nguồn theo `sources.length`, không theo cờ
+    # này (interface/web/chat.html:131).
+    assert result.used_web is True, "đã gọi máy tìm kiếm thì phải khai là có"
+    # Phần fail-closed thì KHÔNG đổi: dưới 2 nguồn thì không nhận nguồn nào,
+    # và tuyệt đối không gọi model lần hai để nó đoán bừa.
+    assert result.sources == ()
+    assert len(model.calls) == 1
+    # Lượt này CÓ vào sổ (10/08/2026), nhưng cái vào sổ là LỜI TỪ CHỐI, không
+    # phải bản nháp "để tôi đoán" của model.
+    assert len(store.appended) == 1
+    assert "để tôi đoán" not in store.appended[0][1].text
+    assert store.appended[0][1].sources == ()
+
+
+def test_model_hong_sau_khi_da_goi_web_van_khai_used_web():
+    request = _request(text="tin công nghệ mới nhất")
+    store = FakeStore()
+    model = FakeModel([RuntimeError("model hỏng sau khi nhận nguồn")])
+    web = FakeWeb((_source(1), _source(2)))
+
+    result = asyncio.run(
+        _service(model=model, store=store, web=web).reply(request)
+    )
+
+    assert web.queries, "phép thử phải thật sự đi qua cổng web"
+    assert result.status is ChatStatus.BACKEND_ERROR
+    assert result.used_web is True
+    assert result.sources == ()
+
+
+def test_web_required_rejects_duplicate_or_malformed_evidence():
+    request = _request(text="Giải thích dữ kiện này")
+    store = FakeStore()
+    model = FakeModel([ModelReply("để tôi đoán", requires_web=True)])
+    source = _source(1)
+    malformed = SourceCitation(
+        title="tệp cục bộ",
+        url="file:///C:/private.txt",
+        retrieved_at=datetime.now(timezone.utc).isoformat(),
+        supports="không phải nguồn web",
+    )
+    result = asyncio.run(
+        _service(
+            model=model,
+            store=store,
+            web=FakeWeb((source, source, malformed)),
+        ).reply(request)
+    )
+
+    assert result.status is ChatStatus.WEB_UNAVAILABLE
+    # Vào sổ lời từ chối thì được; nguồn trùng lặp/hỏng thì tuyệt đối không.
+    assert len(store.appended) == 1
+    assert store.appended[0][1].sources == ()
+
+
+def test_web_answer_uses_two_sources_and_only_final_answer_is_stored():
+    request = _request(text="Giải thích dữ kiện này")
+    store = FakeStore()
+    model = FakeModel(
+        [
+            ModelReply("cần web", requires_web=True),
+            ModelReply("Câu trả lời đã kiểm chứng."),
+        ]
+    )
+    sources = (_source(1), _source(2))
+    guard = FakeGuard(output_prefix="SAFE: ")
+    result = asyncio.run(
+        _service(
+            model=model,
+            store=store,
+            web=FakeWeb(sources),
+            guard=guard,
+        ).reply(request)
+    )
+
+    assert result.status is ChatStatus.OK
+    assert result.used_web is True
+    assert result.sources == sources
+    assert result.text == "SAFE: Câu trả lời đã kiểm chứng."
+    assert [item.text for item in guard.outputs] == [
+        "Câu trả lời đã kiểm chứng."
+    ]
+    assert model.calls[1][2] == sources
+    assert store.appended == [(request, result)]
+
+
+def test_dynamic_search_query_is_used_by_web_gateway():
+    request = _request(text="Chào AURA, bạn xem giúp biến động thị trường tuần này")
+    store = FakeStore()
+    web = FakeWeb((_source(1), _source(2)))
+    model = FakeModel(
+        [
+            ModelReply("cần web", requires_web=True, search_query="biến động thị trường tuần này"),
+            ModelReply("Tổng hợp thị trường [1], [2]."),
+        ]
+    )
+    result = asyncio.run(
+        _service(model=model, store=store, web=web).reply(request)
+    )
+
+    assert result.status is ChatStatus.OK
+    assert result.used_web is True
+    assert web.queries == ["biến động thị trường tuần này"]
+    assert result.text == "Tổng hợp thị trường [1], [2]."
+
+
+def test_explicit_or_current_query_requires_web_even_when_model_would_not():
+    for text in (
+        "tra giá xăng",
+        "tìm lịch thi đấu",
+        "kiểm tra tin này",
+        "tin mới nhất",
+        "thời tiết hôm nay",
+        "giá hiện tại",
+    ):
+        request = _request(text=text)
+        store = FakeStore()
+        # If the deterministic policy were bypassed, this ungrounded answer
+        # would be accepted because the model itself says web is unnecessary.
+        model = FakeModel([ModelReply("tôi tự đoán", requires_web=False)])
+        result = asyncio.run(
+            _service(model=model, store=store, web=FakeWeb(())).reply(request)
+        )
+        assert result.status is ChatStatus.WEB_UNAVAILABLE, text
+        assert model.calls == [], text
+        # Lời từ chối vào sổ, nhưng câu "tôi tự đoán" của model thì KHÔNG —
+        # model còn chưa được gọi lần nào.
+        assert len(store.appended) == 1, text
+        assert "tự đoán" not in store.appended[0][1].text, text
+
+
+def test_live_domains_use_authoritative_policy_and_fail_closed():
+    for text in (
+        "giá bitcoin",
+        "thời tiết Hà Nội",
+        "tỷ giá USD VND",
+    ):
+        request = _request(text=text)
+        store = FakeStore()
+        model = FakeModel([ModelReply("con số nhớ từ trước", requires_web=False)])
+        result = asyncio.run(
+            _service(model=model, store=store, web=FakeWeb(())).reply(request)
+        )
+        assert result.status is ChatStatus.WEB_UNAVAILABLE, text
+        assert model.calls == [], text
+        assert len(store.appended) == 1, text
+        assert "nhớ từ trước" not in store.appended[0][1].text, text
+
+
+def test_provider_exception_becomes_structured_error_without_details():
+    request = _request()
+    store = FakeStore()
+    model = FakeModel([RuntimeError("secret backend detail")])
+    result = asyncio.run(_service(model=model, store=store).reply(request))
+
+    assert result.status is ChatStatus.BACKEND_ERROR
+    assert result.text
+    assert "secret backend detail" not in result.text
+    assert result.request_id == request.request_id
+    assert result.session_id == request.session_id
+    assert store.appended == []
+
+
+def test_timeout_cancels_provider_and_never_appends_late_transcript():
+    class CancellableModel:
+        def __init__(self):
+            self.started = asyncio.Event()
+            self.cancelled = asyncio.Event()
+
+        async def generate(self, request, *, history, sources=()):
+            self.started.set()
+            try:
+                await asyncio.sleep(60)
+            except asyncio.CancelledError:
+                self.cancelled.set()
+                raise
+
+    async def scenario():
+        request = _request()
+        store = FakeStore()
+        model = CancellableModel()
+        guard = FakeGuard(output_prefix="SAFE: ")
+        result = await _service(
+            model=model, store=store, guard=guard, timeout_s=0.02
+        ).reply(request)
+        await asyncio.sleep(0.03)
+        return request, store, model, guard, result
+
+    request, store, model, guard, result = asyncio.run(scenario())
+    assert result.status is ChatStatus.TIMEOUT
+    assert result.request_id == request.request_id
+    assert result.session_id == request.session_id
+    assert model.started.is_set()
+    assert model.cancelled.is_set()
+    # Đúng MỘT bản ghi, và là lượt quá giờ — không có gì từ model lọt vào, vì
+    # model bị huỷ trước khi kịp trả chữ nào.
+    assert len(store.appended) == 1
+    assert store.appended[0][1].status is ChatStatus.TIMEOUT
+    assert result.text.startswith("SAFE: ")
+    assert len(guard.outputs) == 1
+
+
+def test_timeout_ignores_adapter_that_swallows_cancel_and_returns_late_ok():
+    class AdversarialModel:
+        def __init__(self):
+            self.cancelled = asyncio.Event()
+            self.returned_late = asyncio.Event()
+
+        async def generate(self, request, *, history, sources=()):
+            try:
+                await asyncio.sleep(60)
+            except asyncio.CancelledError:
+                self.cancelled.set()
+                await asyncio.sleep(0.08)
+                self.returned_late.set()
+                return ModelReply("OK nhưng đã quá hạn")
+
+    async def scenario():
+        request = _request()
+        store = FakeStore()
+        model = AdversarialModel()
+        guard = FakeGuard(output_prefix="SAFE: ")
+        loop = asyncio.get_running_loop()
+        started = loop.time()
+        result = await _service(
+            model=model, store=store, guard=guard, timeout_s=0.02
+        ).reply(request)
+        elapsed_at_return = loop.time() - started
+        appended_at_return = tuple(store.appended)
+        await asyncio.sleep(0.12)
+        return (
+            store,
+            model,
+            guard,
+            result,
+            elapsed_at_return,
+            appended_at_return,
+        )
+
+    store, model, guard, result, elapsed, appended_at_return = asyncio.run(scenario())
+    assert result.status is ChatStatus.TIMEOUT
+    assert elapsed < 0.06, f"deadline response was late: {elapsed:.3f}s"
+    assert model.cancelled.is_set()
+    assert model.returned_late.is_set()
+    # 10/08/2026: lượt quá giờ GIỜ CÓ vào sổ — Sếp nhìn thấy nó trên màn hình
+    # nên trí nhớ của AURA cũng phải có.  Thứ test này canh KHÔNG đổi: bản nháp
+    # về muộn của model tuyệt đối không được chạm vào sổ.
+    assert len(appended_at_return) == 1
+    assert len(store.appended) == 1, "có bản ghi thứ hai — nghi ghi mồ côi"
+    ghi = store.appended[0][1]
+    assert ghi.status is ChatStatus.TIMEOUT
+    assert "OK nhưng đã quá hạn" not in ghi.text, "kết quả về muộn lọt vào sổ"
+    assert result.text.startswith("SAFE: ")
+    assert len(guard.outputs) == 1
+
+
+def test_external_cancellation_is_finalized_and_scrubbed_once():
+    class WaitingModel:
+        def __init__(self):
+            self.started = asyncio.Event()
+
+        async def generate(self, request, *, history, sources=()):
+            self.started.set()
+            await asyncio.sleep(60)
+            return ModelReply("too late")
+
+    async def scenario():
+        request = _request()
+        store = FakeStore()
+        model = WaitingModel()
+        guard = FakeGuard(output_prefix="SAFE: ")
+        task = asyncio.create_task(
+            _service(model=model, store=store, guard=guard).reply(request)
+        )
+        await model.started.wait()
+        task.cancel()
+        result = await task
+        return store, guard, result
+
+    store, guard, result = asyncio.run(scenario())
+    assert result.status is ChatStatus.CANCELLED
+    assert result.text.startswith("SAFE: ")
+    assert len(guard.outputs) == 1
+    assert store.appended == []
+
+
+def test_external_cancellation_during_history_load_returns_cancelled():
+    class BlockingLoadStore(FakeStore):
+        def __init__(self):
+            super().__init__()
+            self.started = asyncio.Event()
+            self.cancelled = asyncio.Event()
+
+        async def load(self, *, actor_id, session_id):
+            self.started.set()
+            try:
+                await asyncio.sleep(60)
+            except asyncio.CancelledError:
+                self.cancelled.set()
+                raise
+
+    async def scenario():
+        store = BlockingLoadStore()
+        model = FakeModel([ModelReply("must not run")])
+        guard = FakeGuard(output_prefix="SAFE: ")
+        task = asyncio.create_task(
+            _service(model=model, store=store, guard=guard).reply(_request())
+        )
+        await store.started.wait()
+        task.cancel()
+        return store, model, guard, await task
+
+    store, model, guard, result = asyncio.run(scenario())
+    assert result.status is ChatStatus.CANCELLED
+    assert store.cancelled.is_set()
+    assert model.calls == []
+    assert len(guard.outputs) == 1
+
+
+def test_external_cancellation_during_search_returns_cancelled():
+    class BlockingWeb(FakeWeb):
+        def __init__(self):
+            super().__init__()
+            self.started = asyncio.Event()
+            self.cancelled = asyncio.Event()
+
+        async def search(self, query):
+            self.queries.append(query)
+            self.started.set()
+            try:
+                await asyncio.sleep(60)
+            except asyncio.CancelledError:
+                self.cancelled.set()
+                raise
+
+    async def scenario():
+        store = FakeStore()
+        web = BlockingWeb()
+        model = FakeModel([ModelReply("must not run")])
+        guard = FakeGuard(output_prefix="SAFE: ")
+        task = asyncio.create_task(
+            _service(model=model, store=store, web=web, guard=guard).reply(
+                _request(text="thời tiết Hà Nội")
+            )
+        )
+        await web.started.wait()
+        task.cancel()
+        return store, web, model, guard, await task
+
+    store, web, model, guard, result = asyncio.run(scenario())
+    assert result.status is ChatStatus.CANCELLED
+    assert web.cancelled.is_set()
+    assert model.calls == []
+    assert store.appended == []
+    assert len(guard.outputs) == 1
+
+
+def test_external_cancellation_during_append_never_returns_ok():
+    class BlockingAppendStore(FakeStore):
+        def __init__(self):
+            super().__init__()
+            self.append_started = asyncio.Event()
+            self.append_cancelled = asyncio.Event()
+
+        async def append_exchange(self, *, request, result):
+            self.append_started.set()
+            try:
+                await asyncio.sleep(60)
+            except asyncio.CancelledError:
+                self.append_cancelled.set()
+                raise
+
+    async def scenario():
+        store = BlockingAppendStore()
+        guard = FakeGuard(output_prefix="SAFE: ")
+        task = asyncio.create_task(
+            _service(
+                model=FakeModel([ModelReply("answer")]),
+                store=store,
+                guard=guard,
+            ).reply(_request())
+        )
+        await store.append_started.wait()
+        task.cancel()
+        return store, guard, await task
+
+    store, guard, result = asyncio.run(scenario())
+    assert result.status is ChatStatus.CANCELLED
+    assert store.append_cancelled.is_set()
+    assert store.appended == []
+    # The initial OK candidate was scrubbed before storage; cancellation then
+    # requires a second, separately scrubbed final status.
+    assert [item.text for item in guard.outputs] == [
+        "answer",
+        "Yêu cầu đã được hủy.",
+    ]

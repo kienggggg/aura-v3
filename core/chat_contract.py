@@ -40,6 +40,23 @@ class ChatStatus(str, Enum):
     REJECTED = "rejected"
 
 
+# Các bước một lượt đi qua, theo đúng thứ tự trong `ChatService.reply()`.
+# Dùng cho `ChatResult.stage`: lượt kết thúc ở bước nào.
+CHAT_STAGE_INPUT = "input_check"      # kiểm dữ liệu vào + cổng nội dung
+CHAT_STAGE_HISTORY = "load_history"   # đọc sổ phiên ra làm ngữ cảnh
+CHAT_STAGE_WEB = "web_search"         # tra mạng
+CHAT_STAGE_MODEL = "model_call"       # gọi model (local hoặc cloud)
+CHAT_STAGE_PERSIST = "persist"        # ghi lượt vào sổ
+
+CHAT_STAGES = frozenset({
+    CHAT_STAGE_INPUT,
+    CHAT_STAGE_HISTORY,
+    CHAT_STAGE_WEB,
+    CHAT_STAGE_MODEL,
+    CHAT_STAGE_PERSIST,
+})
+
+
 @dataclass(frozen=True, slots=True)
 class ContentCheck:
     """A guard decision plus the only input text permitted in transcripts."""
@@ -216,6 +233,17 @@ class ChatResult:
     used_web: bool
     sources: tuple[SourceCitation, ...]
     latency_ms: int
+    # Lượt này đứng ở BƯỚC NÀO lúc nó kết thúc.
+    #
+    # Vì sao cần: 12/08/2026 mở 8 lượt `timeout` trong sổ phiên thì 6 lượt có
+    # nhãn không đứng vững — chúng ghi sổ cách nhau 8 đến 25 giây trong khi trần
+    # một lượt là 90 giây, nên không lượt nào chạy hết trần. Không kiểm được vì
+    # sổ chỉ ghi PHÁN QUYẾT (`status`) mà không ghi phép đo tạo ra nó. Hai lượt
+    # `timeout` còn lại thì `used_web=False` — tức 90 giây bị đốt TRƯỚC khi tới
+    # bước tra mạng, một chi tiết mà nhãn "quá thời gian trả lời" giấu mất.
+    #
+    # Rỗng = bản ghi cũ, trước khi có trường này. Đừng coi rỗng là "không rõ".
+    stage: str = ""
 
     def validation_errors(self) -> tuple[str, ...]:
         errors: list[str] = []
@@ -250,6 +278,12 @@ class ChatResult:
             errors.append("latency_ms must be an integer")
         elif self.latency_ms < 0:
             errors.append("latency_ms cannot be negative")
+        # Danh sách ĐÓNG. Một tên lạ lọt vào sổ thì lần sau đếm theo bước sẽ ra
+        # số sai mà không ai biết — đúng bệnh của nhãn `timeout` cũ.
+        if not isinstance(self.stage, str):
+            errors.append("stage must be a string")
+        elif self.stage and self.stage not in CHAT_STAGES:
+            errors.append(f"stage must be one of {sorted(CHAT_STAGES)}")
         return tuple(errors)
 
 

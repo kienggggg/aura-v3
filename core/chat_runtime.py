@@ -192,6 +192,17 @@ class JsonlSessionStore:
             "request_id": request.request_id,
             "channel": str(channel),
             "status": str(status),
+            # Phán quyết (`status`) phải đi kèm phép đo tạo ra nó, không thì
+            # không ai kiểm lại được. 12/08/2026 mở 8 lượt `timeout` cũ: 6 lượt
+            # ghi sổ cách nhau 8–25 giây trong khi trần một lượt là 90 giây, tức
+            # nhãn không đứng vững — mà sổ không có cách nào chứng minh, vì nó
+            # chỉ ghi kết luận. `latency_ms` vốn ĐÃ có sẵn trong ChatResult và
+            # bị vứt đúng ở dòng này.
+            "latency_ms": int(result.latency_ms),
+            # Gãy ở BƯỚC nào. Hai lượt `timeout` thật hôm đó có used_web=False,
+            # nghĩa là 90 giây bị đốt trước cả bước tra mạng — nhãn "quá thời
+            # gian trả lời" giấu mất chi tiết đó.
+            "stage": str(getattr(result, "stage", "") or ""),
             "used_web": bool(result.used_web),
             "user": request.text,
             "assistant": result.text,

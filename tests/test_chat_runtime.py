@@ -9,7 +9,13 @@ from uuid import uuid4
 
 import pytest
 
-from core.chat_contract import ChatRequest, ChatResult, ChatStatus, SourceCitation
+from core.chat_contract import (
+    CHAT_STAGE_MODEL,
+    ChatRequest,
+    ChatResult,
+    ChatStatus,
+    SourceCitation,
+)
 from core.chat_runtime import (
     JsonlSessionStore,
     JsonlSessionStoreConfig,
@@ -287,3 +293,68 @@ def test_runtime_import_boundary_excludes_legacy_control_plane():
     assert imported.isdisjoint(forbidden)
     assert "getenv(" not in source
     assert "load_dotenv" not in source
+
+
+def test_ban_ghi_so_mang_theo_ca_thoi_luong_va_buoc(tmp_path):
+    """Sổ phải ghi PHÉP ĐO, không chỉ phán quyết.
+
+    12/08/2026: mở 8 lượt `timeout` thật trong sổ thì 6 lượt có nhãn không đứng
+    vững — chúng ghi sổ cách nhau 8–25 giây trong khi trần một lượt là 90 giây.
+    Không ai chứng minh được vì bản ghi chỉ có `status`. `latency_ms` thì vốn ĐÃ
+    có sẵn trong ChatResult và bị vứt đúng lúc ghi.
+
+    Test này canh chính dòng đó: xoá `latency_ms` hoặc `stage` khỏi bản ghi là đỏ.
+    """
+
+    async def scenario():
+        request = _request()
+        result = ChatResult(
+            request_id=request.request_id,
+            session_id=request.session_id,
+            status=ChatStatus.TIMEOUT,
+            text="AURA đã dừng vì quá thời gian trả lời.",
+            used_web=False,
+            sources=(),
+            latency_ms=90_000,
+            stage=CHAT_STAGE_MODEL,
+        )
+        await _store(tmp_path).append_exchange(request=request, result=result)
+        transcript = next((tmp_path / "sessions").glob("*.jsonl"))
+        return json.loads(transcript.read_text("utf-8").splitlines()[0])
+
+    row = asyncio.run(scenario())
+    assert row["status"] == "timeout"
+    # Hai trường mới: thiếu cái nào cũng làm nhãn `timeout` hết kiểm được.
+    assert row["latency_ms"] == 90_000
+    assert row["stage"] == CHAT_STAGE_MODEL
+    # `used_web=False` cạnh `stage=model_call` là chỗ đọc ra được điều mà nhãn
+    # cũ giấu: 90 giây bị đốt TRƯỚC khi tới bước tra mạng.
+    assert row["used_web"] is False
+
+
+def test_ban_ghi_cu_khong_co_hai_truong_van_doc_duoc(tmp_path):
+    """Bản ghi trước 12/08 không có `latency_ms`/`stage`. Đừng làm hỏng chúng."""
+
+    async def scenario():
+        request = _request()
+        result = ChatResult(
+            request_id=request.request_id,
+            session_id=request.session_id,
+            status=ChatStatus.OK,
+            text="xong",
+            used_web=False,
+            sources=(),
+            latency_ms=5,
+        )
+        await _store(tmp_path).append_exchange(request=request, result=result)
+        transcript = next((tmp_path / "sessions").glob("*.jsonl"))
+        row = json.loads(transcript.read_text("utf-8").splitlines()[0])
+        # Ghi đè bằng một dòng KIỂU CŨ rồi đọc lại: sổ vẫn phải nạp được.
+        cu = {k: v for k, v in row.items() if k not in ("latency_ms", "stage")}
+        transcript.write_text(json.dumps(cu, ensure_ascii=False) + "\n", "utf-8")
+        return await _store(tmp_path).load(
+            actor_id=request.actor_id, session_id=request.session_id
+        )
+
+    history = asyncio.run(scenario())
+    assert [m.content for m in history] == [_request().text, "xong"]

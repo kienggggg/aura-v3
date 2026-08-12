@@ -109,6 +109,26 @@ In "CHỐNG ĐƯỢC 0/4" trong khi cả 4 đòn đều gãy ở chữ ký hàm 
 "AURA thua sạch". Tách ba trạng thái: **đạt** · **đo được mà không đạt** ·
 **không đo được**.
 
+### Phán quyết phải đi kèm phép đo tạo ra nó
+
+Sổ phiên ghi `status` nhưng không ghi lượt đó chạy bao lâu. Ngày 12/08/2026 mở
+**8 lượt `timeout`** ra đọc thì **6 lượt có nhãn không đứng vững**: chúng ghi sổ
+cách nhau **8–25 giây** trong khi trần một lượt là **90 giây**, nên không lượt
+nào chạy hết trần. Không ai chứng minh được — sổ chỉ có kết luận.
+
+Hai lượt `timeout` còn lại thì thật, và chỗ đáng giá nằm ở cờ `used_web=False`:
+**90 giây bị đốt TRƯỚC khi tới bước tra mạng**. Nhãn "quá thời gian trả lời" đọc
+như là mạng chậm, trong khi thứ chậm là lượt gọi model.
+
+`latency_ms` vốn ĐÃ có sẵn trong `ChatResult` và bị vứt đúng lúc ghi sổ. Nay bản
+ghi mang thêm `latency_ms` và `stage` (`input_check` · `load_history` ·
+`web_search` · `model_call` · `persist`). Bản ghi trước 12/08 không có hai
+trường này — rỗng nghĩa là **cũ**, không phải "không rõ".
+
+**Đừng in ra một phán quyết mà không kèm con số tạo ra nó.** Cùng họ với "phép
+đo không chạy phải nói là không chạy": ở đó là giấu việc không chạy, ở đây là
+giấu việc chạy bao lâu và gãy ở đâu.
+
 ### Gắn theo thứ tự là giả định, không phải phép đo
 
 Sổ soát link có 30 tóm tắt **đúng nội dung** nhưng nằm **sai URL**, vì một bên

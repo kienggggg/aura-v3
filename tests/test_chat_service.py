@@ -5,7 +5,10 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from core.chat_contract import (
+    CHAT_STAGE_INPUT,
+    CHAT_STAGE_MODEL,
     ChatRequest,
+    ChatResult,
     ChatStatus,
     ContentCheck,
     OutwardContent,
@@ -903,3 +906,83 @@ def test_external_cancellation_during_append_never_returns_ok():
         "answer",
         "Yêu cầu đã được hủy.",
     ]
+
+
+# ---------------------------------------------------------------------------
+# Phán quyết phải đi kèm phép đo tạo ra nó
+#
+# 12/08/2026 mở 8 lượt `timeout` trong sổ phiên thật: 6 lượt ghi sổ cách nhau
+# 8–25 giây trong khi trần một lượt là 90 giây, nên nhãn không đứng vững. Không
+# ai chứng minh được, vì sổ chỉ ghi KẾT LUẬN. Hai test dưới canh đúng chỗ đó.
+# ---------------------------------------------------------------------------
+
+
+def test_timeout_ghi_ro_gay_o_buoc_goi_model():
+    """Quá giờ ở lượt gọi model thì sổ phải nói ĐÚNG bước đó, không nói chung chung."""
+
+    class ModelTreo:
+        async def generate(self, request, *, history, sources=()):
+            await asyncio.sleep(60)
+
+    async def scenario():
+        request = _request()
+        store = FakeStore()
+        result = await _service(
+            model=ModelTreo(), store=store, timeout_s=0.02
+        ).reply(request)
+        await asyncio.sleep(0.03)
+        return store, result
+
+    store, result = asyncio.run(scenario())
+    assert result.status is ChatStatus.TIMEOUT
+    assert result.stage == CHAT_STAGE_MODEL
+    # Chưa tới bước tra mạng thì đừng để sổ nói là đã tra.
+    assert result.used_web is False
+    # Lượt quá giờ VẪN vào sổ, và bản ghi phải mang theo cả hai con số.
+    assert store.appended, "lượt quá giờ phải vào sổ"
+    ghi = store.appended[0][1]
+    assert ghi.stage == CHAT_STAGE_MODEL
+    assert ghi.latency_ms >= 20, "trần 0,02s mà đo ra dưới 20ms là không thật"
+
+
+def test_luot_bi_chan_o_cua_ghi_ro_buoc_kiem_dau_vao():
+    """Chặn ở cổng nội dung là gãy ở BƯỚC ĐẦU, không phải ở model."""
+
+    class GuardChan(FakeGuard):
+        def check_input(self, request):
+            return ContentCheck(
+                allowed=False,
+                transcript_text=request.text,
+                rejection_text="không được",
+            )
+
+    result = asyncio.run(
+        _service(
+            model=FakeModel([ModelReply(text="không bao giờ tới đây")]),
+            store=FakeStore(),
+            guard=GuardChan(),
+        ).reply(_request())
+    )
+    assert result.status is ChatStatus.REJECTED
+    assert result.stage == CHAT_STAGE_INPUT
+
+
+def test_stage_la_danh_sach_dong():
+    """Tên bước lạ phải bị bắt. Lọt một tên lạ là lần sau đếm ra số sai."""
+    from dataclasses import replace as _replace
+
+    hop_le = ChatResult(
+        request_id=str(uuid4()),
+        session_id=str(uuid4()),
+        status=ChatStatus.OK,
+        text="xong",
+        used_web=False,
+        sources=(),
+        latency_ms=1,
+        stage=CHAT_STAGE_MODEL,
+    )
+    assert hop_le.validation_errors() == ()
+    # Rỗng = bản ghi cũ, vẫn hợp lệ.
+    assert _replace(hop_le, stage="").validation_errors() == ()
+    loi = _replace(hop_le, stage="buoc_khong_co_that").validation_errors()
+    assert any("stage must be one of" in e for e in loi)

@@ -11,6 +11,11 @@ from time import monotonic
 from typing import Awaitable, Protocol, Sequence, TypeVar
 
 from core.chat_contract import (
+    CHAT_STAGE_HISTORY,
+    CHAT_STAGE_INPUT,
+    CHAT_STAGE_MODEL,
+    CHAT_STAGE_PERSIST,
+    CHAT_STAGE_WEB,
     ChatRequest,
     ChatResult,
     ChatStatus,
@@ -288,12 +293,20 @@ class ChatService:
     async def reply(self, request: ChatRequest) -> ChatResult:
         started = monotonic()
         deadline = started + self._timeout_s
+
+        # Lượt đang đứng ở bước nào. Gán lại NGAY TRƯỚC mỗi chỗ chờ, để nhánh
+        # `except` nào cũng đọc được bước cuối cùng thật sự chạm tới. Không có
+        # nó thì `timeout` chỉ nói "quá giờ" mà không nói quá ở đâu — 12/08 mở
+        # sổ ra mới thấy 90 giây bị đốt trước cả bước tra mạng.
+        stage = CHAT_STAGE_INPUT
+
         if request.validation_errors():
             return await self._finalize(
                 request,
                 ChatStatus.REJECTED,
                 started=started,
                 deadline=deadline,
+                stage=stage,
             )
 
         # `used_web` phải trả lời được đúng câu hỏi Sếp thật sự quan tâm: "lượt
@@ -323,12 +336,14 @@ class ChatService:
                     text=content_check.rejection_text,
                     started=started,
                     deadline=deadline,
+                    stage=stage,
                 )
 
             # From this point on, raw request.text is out of scope. The guard's
             # transcript_text is the only text model, web, and store may see.
             safe_request = replace(request, text=content_check.transcript_text)
 
+            stage = CHAT_STAGE_HISTORY
             raw_history = tuple(
                 await _before_deadline(
                     self._store.load(
@@ -346,7 +361,9 @@ class ChatService:
             sources: tuple[SourceCitation, ...] = ()
             if policy_requires_web:
                 da_goi_mang = True
+                stage = CHAT_STAGE_WEB
                 sources = await self._search_with_evidence(safe_request, deadline)
+                stage = CHAT_STAGE_MODEL
                 final_reply = await _before_deadline(
                     self._model.generate(
                         safe_request,
@@ -356,6 +373,7 @@ class ChatService:
                     deadline,
                 )
             else:
+                stage = CHAT_STAGE_MODEL
                 initial = await _before_deadline(
                     self._model.generate(safe_request, history=history), deadline
                 )
@@ -377,14 +395,17 @@ class ChatService:
                         text=self._loi_bo_tay(history),
                         started=started,
                         deadline=deadline,
+                        stage=stage,
                     )
                 if initial.requires_web:
                     da_goi_mang = True
+                    stage = CHAT_STAGE_WEB
                     sources = await self._search_with_evidence(
                         safe_request,
                         deadline,
                         search_query=initial.search_query,
                     )
+                    stage = CHAT_STAGE_MODEL
                     final_reply = await _before_deadline(
                         self._model.generate(
                             safe_request,
@@ -409,6 +430,7 @@ class ChatService:
                     deadline=deadline,
                     persist=True,
                     transcript_request=safe_request,
+                    stage=stage,
                 )
 
             # Không tin adapter là lớp chặn cuối.  Cổng cloud cũ từng trả prose
@@ -431,6 +453,7 @@ class ChatService:
                     deadline=deadline,
                     persist=True,
                     transcript_request=safe_request,
+                    stage=stage,
                 )
 
             return await self._finalize(
@@ -443,6 +466,7 @@ class ChatService:
                 deadline=deadline,
                 persist=True,
                 transcript_request=safe_request,
+                stage=stage,
             )
         except _DeadlineExceeded:
             # Quá giờ VẪN phải vào sổ: Sếp nhìn thấy lượt đó trên màn hình, nên
@@ -465,6 +489,7 @@ class ChatService:
                 persist=True,
                 transcript_request=safe_request,
                 persist_deadline=monotonic() + _AN_HAN_GHI_SO,
+                stage=stage,
             )
         except _WebUnavailable:
             # Tra hụt VẪN là đã tra: câu của Sếp đi ra ngoài rồi, dù không mang
@@ -485,6 +510,7 @@ class ChatService:
                 deadline=deadline,
                 persist=True,
                 transcript_request=safe_request,
+                stage=stage,
             )
         except asyncio.CancelledError:
             return await self._finalize(
@@ -493,6 +519,7 @@ class ChatService:
                 used_web=da_goi_mang,
                 started=started,
                 deadline=deadline,
+                stage=stage,
             )
         except Exception as error:
             # Cổng model được phép kèm MỘT câu an toàn cho người dùng (ví dụ:
@@ -507,6 +534,7 @@ class ChatService:
                 used_web=da_goi_mang,
                 # Cũng KHÔNG ghi sổ, cùng lý do: lỗi bộ não là máy hỏng giữa
                 # chừng, không phải AURA đã trả lời Sếp một điều gì.
+                stage=stage,
             )
 
     async def _search_with_evidence(
@@ -568,6 +596,7 @@ class ChatService:
         persist: bool = False,
         transcript_request: ChatRequest | None = None,
         persist_deadline: float | None = None,
+        stage: str = "",
     ) -> ChatResult:
         """Scrub exactly once, then optionally expose only scrubbed data to storage."""
 
@@ -643,6 +672,7 @@ class ChatService:
             used_web=used_web,
             sources=safe_sources,
             latency_ms=latency_ms,
+            stage=stage,
         )
         if persist:
             if transcript_request is None:
@@ -680,6 +710,9 @@ class ChatService:
                     else ""
                 )
                 failure_text = failure_text or "AURA không thể xuất câu trả lời an toàn."
+                # Câu trả lời đã dựng xong, chỗ gãy là lúc GHI SỔ. Ghi đúng bước
+                # đó chứ không giữ bước cũ — nếu không, sổ sẽ đổ lỗi cho model
+                # trong khi model đã làm xong việc của nó.
                 return ChatResult(
                     request_id=request.request_id,
                     session_id=request.session_id,
@@ -687,6 +720,7 @@ class ChatService:
                     text=failure_text,
                     used_web=used_web,
                     sources=(),
+                    stage=CHAT_STAGE_PERSIST,
                     latency_ms=max(
                         0, round((monotonic() - started) * 1000)
                     ),

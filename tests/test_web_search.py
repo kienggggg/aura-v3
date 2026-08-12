@@ -241,3 +241,53 @@ def test_cong_khong_bao_gio_goi_model(run):
     src = inspect.getsource(web_search)
     for cam in ("openai", "gemini", "ollama", "complete(", "chat_completion"):
         assert cam not in src.lower(), f"cổng tra mạng không được gọi model ({cam})"
+
+
+# ---------------------------------------------------------------------------
+# Từ khoá phải khớp theo RANH GIỚI TỪ, không phải chuỗi con
+#
+# 12/08/2026, đo trên phiên thật: Sếp hỏi "câu hỏi thứ 2 tôi hỏi trong PHIÊN NÀY
+# là gì?" thì AURA đem câu đó ra máy chủ tìm kiếm — 23 đến 43 giây thay vì 2-3
+# giây, và một câu về CUỘC TRÒ CHUYỆN RIÊNG bị đẩy ra ngoài.
+#
+# Bỏ dấu xong "phiên này" -> "phien nay", mà "hiện nay" -> "hien nay" nằm lọt
+# bên trong:   p·hien nay
+# Cùng họ với "ai" khớp trong "thứ hai" đã ghi ở CLAUDE.md.
+# ---------------------------------------------------------------------------
+
+
+def test_hoi_ve_phien_chat_khong_bi_day_ra_mang():
+    """Câu hỏi về chính cuộc trò chuyện KHÔNG được gọi ra ngoài."""
+    from core.web_search import is_search_request
+
+    for cau in (
+        "câu hỏi thứ 2 tôi hỏi trong phiên này là gì?",
+        "phiên này là gì",
+        "phiên chat này có bao nhiêu câu",
+        "tóm tắt phiên này giúp tôi",
+    ):
+        assert is_search_request(cau) is False, cau
+
+
+def test_tu_chi_do_moi_van_con_tac_dung():
+    """Sửa ranh giới từ mà làm chết luật cũ thì là đổi một lỗi lấy một lỗi."""
+    from core.web_search import is_search_request
+
+    for cau in (
+        "giá vàng hiện nay",
+        "hiện nay giá xăng bao nhiêu",
+        "tin tức mới nhất về AI",
+        "phiên bản mới nhất của Python",
+    ):
+        assert is_search_request(cau) is True, cau
+
+
+def test_khop_khong_an_vao_giua_mot_tu():
+    """Mọi từ khoá đều phải đứng riêng, không được nằm lọt trong từ khác."""
+    from core.web_search import _khop, bo_dau
+
+    # "nay" nằm trong "nayxyz" -> không được khớp.
+    assert _khop("hôm nayxyz", bo_dau("hôm nayxyz"), ("nay",)) is False
+    assert _khop("hôm nay", bo_dau("hôm nay"), ("nay",)) is True
+    # Dấu câu vẫn là ranh giới hợp lệ.
+    assert _khop("hiện nay?", bo_dau("hiện nay?"), ("hiện nay",)) is True

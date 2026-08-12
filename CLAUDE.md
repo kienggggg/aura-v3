@@ -103,6 +103,24 @@ xuất hiện lại ngày 12/08 lúc dò xem test nào thuộc v3: so chuỗi
 `core.chat_contract.ChatRequest` với danh sách V3 thì trượt, dù `core/chat_contract.py`
 nằm trong đó. Phải **phân giải tên import ra tệp thật** rồi mới so.
 
+Và lần thứ ba, cùng ngày, ở chỗ đắt nhất — `core/web_search.py` chấm "câu này có
+cần tra mạng không" bằng chuỗi con:
+
+```
+"phiên này"  --bỏ dấu-->  "p·hien nay"
+                            └──────┘   khớp "hiện nay"
+```
+
+Nên câu *"câu hỏi thứ 2 tôi hỏi trong PHIÊN NÀY là gì?"* bị đem ra máy chủ tìm
+kiếm: **23–43 giây** thay vì 2–3 giây, và một câu về **cuộc trò chuyện riêng**
+của Sếp đi ra ngoài — trong khi `core/doc_so_phien.py` trả lời được bằng cách
+đếm trong sổ, không cần mạng. Sửa ở chỗ **so khớp** (ranh giới từ) chứ không vá
+riêng chữ "phiên": vá một ca thì họ lỗi vẫn còn nguyên. Sau khi sửa: **3,4 giây**.
+
+**Ba lần một ngày, ba chỗ khác nhau, một nguyên nhân.** Thấy mình sắp viết
+`x in y` để quyết định một chuyện, hãy hỏi: `x` có thể nằm lọt giữa một từ khác
+không?
+
 ### Phép đo không chạy phải NÓI LÀ KHÔNG CHẠY
 
 In "CHỐNG ĐƯỢC 0/4" trong khi cả 4 đòn đều gãy ở chữ ký hàm — "0/4" đọc y hệt

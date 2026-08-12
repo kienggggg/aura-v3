@@ -23,6 +23,7 @@ import json
 import logging
 import os
 import re
+from functools import lru_cache
 import shutil
 import subprocess
 import unicodedata
@@ -178,17 +179,40 @@ def bo_dau(text: str) -> str:
     return khong_dau.replace("đ", "d")
 
 
+@lru_cache(maxsize=512)
+def _mau(tu: str) -> re.Pattern[str]:
+    """Từ khoá thành mẫu có RANH GIỚI TỪ ở hai đầu."""
+    return re.compile(rf"(?<!\w){re.escape(tu)}(?!\w)")
+
+
 def _khop(text_co_dau: str, text_bo_dau: str, tu_khoa: tuple[str, ...]) -> bool:
-    """Khớp ở CẢ HAI dạng, trừ những từ hoá mơ hồ khi mất dấu."""
+    """Khớp ở CẢ HAI dạng, trừ những từ hoá mơ hồ khi mất dấu.
+
+    KHỚP THEO RANH GIỚI TỪ, không phải chuỗi con thô.
+    12/08/2026 đo được: Sếp hỏi "câu hỏi thứ 2 tôi hỏi trong PHIÊN NÀY là gì?"
+    thì AURA đem câu đó ra Google. Bỏ dấu xong `"phiên này"` -> `"phien nay"`,
+    mà `"hiện nay"` -> `"hien nay"` NẰM LỌT bên trong nó:
+
+        p·hien nay
+         └──────┘  khớp "hiện nay" -> tưởng câu hỏi cần dữ liệu mới
+
+    Hậu quả không chỉ là chậm (23–43 giây thay vì 2–3 giây): câu hỏi về CHÍNH
+    CUỘC TRÒ CHUYỆN RIÊNG của Sếp bị đẩy ra máy chủ tìm kiếm bên ngoài. Trong
+    khi `core/doc_so_phien.py` trả lời được bằng cách ĐẾM trong sổ, không cần
+    mạng.
+
+    Đây đúng bệnh CLAUDE.md đã ghi — `"ai"` khớp bên trong `"thứ hai"` — nên
+    chữa ở chỗ SO KHỚP để diệt cả họ, không vá riêng chữ "phiên".
+    """
     for tu in tu_khoa:
         if tu == "giá" and any(
             cum in text_co_dau for cum in _GIA_KHONG_PHAI_GIA_CA
         ):
             continue          # "đánh giá" không phải câu hỏi về giá cả
-        if tu in text_co_dau:
+        if _mau(tu).search(text_co_dau):
             return True
         moc = bo_dau(tu)
-        if moc not in _MO_HO_KHI_BO_DAU and moc in text_bo_dau:
+        if moc not in _MO_HO_KHI_BO_DAU and _mau(moc).search(text_bo_dau):
             return True
     return False
 

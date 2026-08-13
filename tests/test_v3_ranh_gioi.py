@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # Cửa vào của AURA v3.  Chỉ có một.
 CUA_VAO = ("aura_chat.py",)
 
-# Toàn bộ AURA v3.  17 file.  Mọi thứ khác trong repo là KHO PHỤ TÙNG của v2:
+# Toàn bộ AURA v3.  18 file.  Mọi thứ khác trong repo là KHO PHỤ TÙNG của v2:
 # vẫn nằm đó, vẫn đọc được, nhưng v3 không được phép với tay sang.
 V3 = frozenset({
     "aura_chat.py",
@@ -37,7 +37,9 @@ V3 = frozenset({
     "core/dong_ho.py",             # AURA từng trả sai ngày 20 hôm, nói chắc nịch
     "core/kiem_tien.py",           # "137.500 đồng/lượng" — sai tiền 1000 lần
     "core/local_first_gateway.py",  # trò làm trước, mượn thầy khi bí
-    "core/may_tinh.py",            # AURA nói "khoảng 23 ngày" khi đúng là 22
+    "core/may_tinh.py",      # AURA nói "khoảng 23 ngày" khi đúng là 22
+    "core/nho_lai.py",       # 13/08: hỏi lại dữ kiện lượt 1 ở lượt 15 -> bịa
+                             # "biển số 123" trong khi sổ ghi "29AB-123.45"
     "core/paths.py",               # thay core/config.py 1.029 dòng
     "core/redact.py",
     "core/secret_guard.py",        # AURA không đọc mật khẩu ra màn hình

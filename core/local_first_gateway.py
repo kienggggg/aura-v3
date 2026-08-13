@@ -36,6 +36,7 @@ from core.chat_service import ChatMessage, ModelReply
 from core.doc_so_phien import tra_so
 from core.dong_ho import cau_gio
 from core.may_tinh import tinh_giup
+from core.nho_lai import nho_lai
 from core.web_search import loc_menh_lenh
 
 logger = logging.getLogger("aura.local_first")
@@ -241,6 +242,16 @@ class OllamaGateway:
                 # Đếm trên TOÀN BỘ `history`, không trên 24 tin đã cắt bên dưới
                 # — đếm trên phần bị cắt thì "câu thứ 2" ra một câu khác hẳn.
                 tra_so(request.text, history),
+                # Lôi lại NỘI DUNG đã rơi khỏi cửa sổ. 13/08 đo: dữ kiện đặt ở
+                # lượt 1, hỏi lại ở lượt 15 -> AURA đáp "biển số 123" trong khi
+                # Sếp nói "29AB-123.45", và sổ vẫn giữ nguyên câu đó.
+                #
+                # Truyền `max_history_messages` chứ không phải `gioi_han` bên
+                # dưới: lượt có nguồn cắt lịch sử xuống 6 tin, nhưng phần "đã
+                # rơi khỏi cửa sổ" thì vẫn tính theo cửa sổ THẬT — không thì
+                # mỗi lượt tra mạng lại lôi về cả đống tin còn đang hiển thị.
+                nho_lai(request.text, history,
+                        self._config.max_history_messages),
             ) if phan
         ]
         if sources:

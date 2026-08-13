@@ -40,14 +40,23 @@ def _bo_dau(text: str) -> str:
     return "".join(c for c in tach if not unicodedata.combining(c)).replace("đ", "d")
 
 
-def _tinh_cay(nut: ast.AST) -> float:
-    """Duyệt cây cú pháp, chỉ cho phép số và toán tử — không tên, không gọi hàm."""
+def _tinh_cay(nut: ast.AST, an: tuple[str, float] | None = None) -> float:
+    """Duyệt cây cú pháp: chỉ số và toán tử, không gọi hàm.
+
+    `an` là cặp (tên ẩn, giá trị) — CHỈ một tên duy nhất được phép, và nó phải
+    do chỗ gọi truyền vào. Không có `an` thì mọi tên đều bị từ chối, y như cũ:
+    cấm tên là thứ ngăn `__import__` hay `os` lọt vào cây.
+    """
     if isinstance(nut, ast.Constant):
         if isinstance(nut.value, bool) or not isinstance(nut.value, (int, float)):
             raise ValueError("chỉ nhận số")
         return nut.value
+    if isinstance(nut, ast.Name):
+        if an is not None and nut.id == an[0]:
+            return an[1]
+        raise ValueError("tên lạ trong biểu thức")
     if isinstance(nut, ast.BinOp) and type(nut.op) in _PHEP:
-        trai, phai = _tinh_cay(nut.left), _tinh_cay(nut.right)
+        trai, phai = _tinh_cay(nut.left, an), _tinh_cay(nut.right, an)
         if isinstance(nut.op, ast.Pow) and (
             abs(trai) > _TRAN_LUY_THUA or abs(phai) > 64
         ):
@@ -55,7 +64,7 @@ def _tinh_cay(nut: ast.AST) -> float:
             raise ValueError("luỹ thừa quá lớn")
         return _PHEP[type(nut.op)](trai, phai)
     if isinstance(nut, ast.UnaryOp) and type(nut.op) in _PHEP:
-        return _PHEP[type(nut.op)](_tinh_cay(nut.operand))
+        return _PHEP[type(nut.op)](_tinh_cay(nut.operand, an))
     raise ValueError("biểu thức không hợp lệ")
 
 
@@ -74,6 +83,89 @@ def tinh_bieu_thuc(bieu_thuc: str) -> float | None:
     except (SyntaxError, ValueError, TypeError, ZeroDivisionError,
             OverflowError, RecursionError):
         return None
+
+
+# --------------------------------------------------------------------------- #
+# PHƯƠNG TRÌNH BẬC NHẤT MỘT ẨN
+#
+# 13/08/2026, Sếp gõ "2x * 3 = 12, x bằng bao nhiêu":
+#     lần chạy thứ nhất  ->  x = 2   (đúng)
+#     lần chạy thứ hai   ->  x = 4   (sai)
+# Cùng một câu, hai đáp án. `tinh_giup` trả `None` cho cả hai lần vì nó chỉ tính
+# được biểu thức SỐ, nên không có máy nào kiểm lại model.
+#
+# Khác vụ bịa tiểu sử — chỗ đó chặn được bằng bắt buộc tra nguồn — ở đây KHÔNG
+# CÓ NGUỒN NÀO ĐỂ TRA. Chỉ có cách để máy tự giải.
+#
+# Cách giải: KHÔNG dựng đại số ký hiệu. Một phương trình bậc nhất là hàm
+# f(x) = a·x + b, nên đo f tại ba điểm là ra:
+#     b = f(0)            a = f(1) − f(0)            x = −b / a
+# Điểm thứ ba (x=2) dùng để KIỂM nó có thật sự bậc nhất không: f(2) phải bằng
+# 2a + b. Không khớp thì đây là bậc hai trở lên, hoặc có ẩn dưới mẫu — trả
+# `None` để model tự lo, đừng đưa một đáp án sai kèm giọng chắc chắn.
+# --------------------------------------------------------------------------- #
+
+# "2x" -> "2*x"; "3(x+1)" -> "3*(x+1)". Nhân ẩn phải viết ra thì AST mới hiểu.
+_NHAN_NGAM = re.compile(r"(?<=[0-9)])\s*(?=[a-z(])")
+_MOT_AN = re.compile(r"(?<![a-z])([a-z])(?![a-z])")
+_SAI_SO = 1e-9
+
+
+def _doi_ve(ve: str, ten_an: str, gia_tri: float) -> float:
+    cay = ast.parse(ve.strip(), mode="eval").body
+    return _tinh_cay(cay, (ten_an, gia_tri))
+
+
+def giai_phuong_trinh(text: str) -> str | None:
+    """Giải phương trình bậc nhất một ẩn, hoặc `None` nếu không phải.
+
+    Fail-closed ở mọi chỗ nghi ngờ: nhiều ẩn, không bậc nhất, vô nghiệm, vô số
+    nghiệm — tất cả trả `None`.
+    """
+    goc = (text or "").strip()
+    if "=" not in goc:
+        return None
+
+    # Chỉ lấy phần có dạng phương trình, bỏ đuôi "x bằng bao nhiêu".
+    khop = re.search(r"([0-9a-z\s+\-*/^().]+=[0-9a-z\s+\-*/^().]+)", _bo_dau(goc))
+    if not khop:
+        return None
+    pt = khop.group(1).replace("^", "**")
+    if pt.count("=") != 1:
+        return None
+
+    ten = sorted(set(_MOT_AN.findall(pt)))
+    if len(ten) != 1:
+        return None                      # không ẩn, hoặc nhiều hơn một ẩn
+    an = ten[0]
+
+    pt = _NHAN_NGAM.sub("*", pt)
+    trai, phai = pt.split("=")
+    if not trai.strip() or not phai.strip():
+        return None
+
+    try:
+        f = [_doi_ve(trai, an, t) - _doi_ve(phai, an, t) for t in (0.0, 1.0, 2.0)]
+    except (SyntaxError, ValueError, TypeError, ZeroDivisionError,
+            OverflowError, RecursionError):
+        return None
+
+    b = f[0]
+    a = f[1] - f[0]
+    # Bậc nhất thì f(2) − f(1) phải bằng f(1) − f(0).
+    if abs((f[2] - f[1]) - a) > _SAI_SO * max(1.0, abs(a)):
+        return None
+    if abs(a) <= _SAI_SO:
+        return None                      # vô nghiệm hoặc vô số nghiệm
+
+    nghiem = -b / a
+    if nghiem != nghiem or abs(nghiem) == float("inf"):   # NaN / vô cực
+        return None
+    return (
+        f'ĐÃ GIẢI SẴN. Trả lời đúng ý này: "{an} = {_goi_gon(nghiem)}." '
+        f"Đây là đáp án MÁY giải ra, không phải model đoán — dùng đúng con số "
+        f"này, đừng tính lại."
+    )
 
 
 # Biểu thức NẰM GIỮA câu chữ: phải có ít nhất hai số và một toán tử giữa chúng,
@@ -177,6 +269,13 @@ def tinh_giup(text: str, *, now: datetime | None = None) -> str | None:
         return None
     hom_nay = (now or datetime.now()).date()
     khong_dau = _bo_dau(goc)
+
+    # Phương trình xét TRƯỚC biểu thức số: "2x * 3 = 12" có cả dấu "=" lẫn phép
+    # nhân, nên bộ rút biểu thức sẽ nhặt được "3 = 12" hoặc tương tự và trả một
+    # con số vô nghĩa.
+    pt = giai_phuong_trinh(goc)
+    if pt is not None:
+        return pt
 
     if _HOI_CACH_NGAY.search(khong_dau):
         moc = _doc_ngay(khong_dau, hom_nay)

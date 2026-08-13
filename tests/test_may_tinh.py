@@ -184,3 +184,72 @@ def test_khong_bat_nham_chu_thuong_ngay():
     for cau in ("Sếp trừ em ra thì còn ai", "chia sẻ file này giúp em",
                 "COVID-19 là gì", "phòng 3 ở đâu", "cộng đồng mã nguồn mở"):
         assert tinh_giup(cau) is None, cau
+
+
+# ---------------------------------------------------------------------------
+# Phương trình bậc nhất một ẩn
+#
+# 13/08/2026, Sếp gõ "2x * 3 = 12, x bằng bao nhiêu":
+#     lần 1 -> x = 2 (đúng)      lần 2 -> x = 4 (SAI)
+# Cùng một câu, hai đáp án. Khác vụ bịa tiểu sử — chỗ đó chặn được bằng bắt
+# buộc tra nguồn — ở đây KHÔNG CÓ NGUỒN NÀO ĐỂ TRA. Chỉ có cách để máy tự giải.
+# ---------------------------------------------------------------------------
+
+
+import pytest
+
+
+@pytest.mark.parametrize("cau,nghiem", [
+    ("2x * 3 = 12, x bằng bao nhiêu", "x = 2"),   # chính câu Sếp gõ
+    ("2x + 3 = 11", "x = 4"),
+    ("3x = 15", "x = 5"),
+    ("x/2 + 1 = 5", "x = 8"),
+    ("5 - x = 2", "x = 3"),
+    ("2(x+1) = 10", "x = 4"),
+    ("x + 5 = 5", "x = 0"),
+])
+def test_giai_duoc_phuong_trinh_bac_nhat(cau, nghiem):
+    from core.may_tinh import giai_phuong_trinh
+
+    ra = giai_phuong_trinh(cau)
+    assert ra is not None, cau
+    assert nghiem in ra, f"{cau} -> {ra}"
+
+
+@pytest.mark.parametrize("cau", [
+    "x*x = 4",        # bậc hai — đo tại ba điểm sẽ lộ ra không tuyến tính
+    "1/x = 2",        # ẩn dưới mẫu
+    "x + y = 5",      # hai ẩn
+    "2 = 2",          # không ẩn
+    "0*x = 5",        # vô nghiệm
+    "1247 nhân 38",   # không phải phương trình
+    "AI là gì",
+])
+def test_khong_chac_thi_IM(cau):
+    """Đưa một đáp án sai kèm giọng chắc chắn còn tệ hơn trả None."""
+    from core.may_tinh import giai_phuong_trinh
+
+    assert giai_phuong_trinh(cau) is None, cau
+
+
+def test_van_cam_ten_la_trong_bieu_thuc():
+    """Mở cửa cho MỘT ẩn không được mở cửa cho tên bất kỳ.
+
+    Cấm tên là thứ ngăn `__import__` hay `os` lọt vào cây cú pháp.
+    """
+    from core.may_tinh import tinh_bieu_thuc
+
+    for doc in ("__import__('os')", "os.system('x')", "open('f')"):
+        assert tinh_bieu_thuc(doc) is None, doc
+
+
+def test_phuong_trinh_xet_TRUOC_bieu_thuc_so():
+    """"2x * 3 = 12" có cả "=" lẫn phép nhân.
+
+    Xét biểu thức số trước thì bộ rút biểu thức nhặt được một mẩu như "3 = 12"
+    và trả về một con số vô nghĩa.
+    """
+    from core.may_tinh import tinh_giup
+
+    ra = tinh_giup("2x * 3 = 12, x bằng bao nhiêu")
+    assert ra is not None and "x = 2" in ra

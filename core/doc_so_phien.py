@@ -102,4 +102,55 @@ def tra_so(text: str, history: Sequence[object]) -> str | None:
     )
 
 
-__all__ = ["tra_so"]
+def tra_loi_thang(text: str, history: Sequence[object]) -> str | None:
+    """Câu trả lời HOÀN CHỈNH cho Sếp, hoặc `None` nếu đây không phải câu hỏi ấy.
+
+    Vì sao có hàm này bên cạnh `tra_so`: `tra_so` đưa model một LỜI DẶN ("nhắc
+    lại câu này, đừng trả lời nó") rồi trông vào model nghe lời. Đo 13/08/2026,
+    chạy 5 lần cùng một phiên có sẵn hai lượt đầy ngày tháng:
+
+        ĐÚNG 1/5 — bốn lần AURA đáp "Hôm nay là ngày 13 tháng 8 năm 2026"
+
+    Tức nó TRẢ LỜI LẠI câu cũ thay vì nhắc lại, đúng lỗi mà lời dặn dài dòng ở
+    `tra_so` sinh ra để chặn. Lời dặn viết kỹ tới đâu cũng thua khi đáp án của
+    câu cũ đang nằm ngay trong lịch sử và trong `cau_gio()` ở lời dặn hệ thống —
+    model 1.7B bị kéo về phía đó.
+
+    Chỗ chữa không phải viết lời dặn chặt hơn. "Câu thứ N là gì" có đáp án
+    ĐƯỢC XÁC ĐỊNH HOÀN TOÀN bởi sổ: một chuỗi chép nguyên văn. Không có việc gì
+    cho model làm ngoài chép lại — mà hỏi model là mời nó đoán (CLAUDE.md §3).
+    Nên máy trả lời thẳng, bỏ qua model.
+
+    Đổi lại: câu trả lời cụt và máy móc hơn. Chấp nhận — đúng còn hơn mượt.
+    """
+    khong_dau = _bo_dau(text)
+    if not _DAU_HIEU.search(khong_dau):
+        return None
+
+    danh_sach = _cau_hoi_cua_sep(history)
+    if not danh_sach:
+        return None
+
+    thu_tu: int | None = None
+    khop = _HOI_THU_MAY.search(khong_dau)
+    if khop:
+        gia_tri = khop.group(1)
+        thu_tu = int(gia_tri) if gia_tri.isdigit() else _SO_CHU.get(gia_tri)
+    elif _HOI_DAU_TIEN.search(khong_dau):
+        thu_tu = 1
+
+    if thu_tu is None or thu_tu < 1:
+        return None
+    if thu_tu > len(danh_sach):
+        return (
+            f"Trong phiên này Sếp mới hỏi {len(danh_sach)} câu, chưa có câu "
+            f"thứ {thu_tu} ạ."
+        )
+
+    cau = " ".join(danh_sach[thu_tu - 1].split())
+    if len(cau) > 300:
+        cau = cau[:300].rstrip() + "…"
+    return f'Câu hỏi thứ {thu_tu} của Sếp trong phiên này, nguyên văn, là: "{cau}"'
+
+
+__all__ = ["tra_so", "tra_loi_thang"]

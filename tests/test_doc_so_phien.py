@@ -98,26 +98,27 @@ def test_dem_tren_TOAN_BO_so_khong_phai_phan_model_nhin_thay():
 
 
 def test_da_cam_vao_cong_local():
-    """Viết bộ tra sổ mà quên cắm thì viết cho ai xem."""
+    """Máy trả lời THẲNG câu "câu thứ mấy" — KHÔNG gọi model.
+
+    13/08/2026 đổi hành vi, có số: bản cũ đưa model một lời dặn "nhắc lại, đừng
+    trả lời" rồi trông vào nó nghe lời. Chạy 5 lần trên một phiên có sẵn hai
+    lượt đầy ngày tháng: ĐÚNG 1/5 — bốn lần AURA trả lời lại câu cũ.
+
+    Đáp án được xác định hoàn toàn bởi sổ, nên không có việc gì cho model làm.
+    Test này canh đúng chỗ đó: KHÔNG có lệnh gọi nào ra ngoài, và câu trả lời
+    mang nguyên văn câu hỏi cũ.
+    """
     from core.local_first_gateway import OllamaConfig, OllamaGateway
 
-    sent = {}
+    goi = []
 
     class _Client:
-        async def post(self, url, json=None):
-            sent["json"] = json
-
-            class _Response:
-                status_code = 200
-
-                @staticmethod
-                def json():
-                    return {"message": {"content": "Câu thứ 2 là về giá vàng."}}
-
-            return _Response()
+        async def post(self, url, json=None):     # pragma: no cover — không được gọi
+            goi.append(json)
+            raise AssertionError("đã gọi model cho câu mà máy trả lời được")
 
     gate = OllamaGateway(OllamaConfig(), client=_Client())
-    asyncio.run(gate.generate(
+    tra_loi = asyncio.run(gate.generate(
         ChatRequest(
             request_id=str(uuid.uuid4()), session_id=str(uuid.uuid4()),
             actor_id="owner:web", channel="web",
@@ -125,9 +126,7 @@ def test_da_cam_vao_cong_local():
         ),
         history=PHIEN_THAT,
     ))
-    # Đi kèm CÂU HỎI, không chôn trong lời dặn hệ thống — xem ghi chú trong
-    # `OllamaGateway._messages`.
-    cau_hoi = sent["json"]["messages"][-1]
-    assert cau_hoi["role"] == "user"
-    assert "ĐÃ TRA SỔ" in cau_hoi["content"]
-    assert "giá vàng hôm nay là bao nhiêu" in cau_hoi["content"]
+    assert goi == [], "không được gọi model"
+    assert "thứ 2" in tra_loi.text
+    # Nguyên văn câu cũ phải có trong câu trả lời, không phải đáp án của nó.
+    assert PHIEN_THAT[2].content in tra_loi.text

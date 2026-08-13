@@ -33,7 +33,7 @@ import httpx
 from core.chat_contract import ChatRequest, SourceCitation
 from core.chat_runtime import ModelGatewayError, ModelGatewayTimeout
 from core.chat_service import ChatMessage, ModelReply
-from core.doc_so_phien import tra_so
+from core.doc_so_phien import tra_loi_thang, tra_so
 from core.dong_ho import cau_gio
 from core.may_tinh import tinh_giup
 from core.nho_lai import nho_lai
@@ -311,6 +311,26 @@ class OllamaGateway:
         history: Sequence[ChatMessage] = (),
         sources: Sequence[SourceCitation] = (),
     ) -> ModelReply:
+        # THỨ MÁY BIẾT CHẮC THÌ ĐỪNG HỎI MODEL.
+        #
+        # "Câu thứ N là gì" có đáp án được xác định hoàn toàn bởi sổ phiên —
+        # một chuỗi chép nguyên văn, không có việc gì cho model làm.
+        #
+        # Bản cũ đưa model một lời dặn "nhắc lại, đừng trả lời" rồi trông vào
+        # nó nghe lời. Đo 13/08/2026, 5 lần trên cùng một phiên có sẵn hai lượt
+        # đầy ngày tháng: ĐÚNG 1/5. Bốn lần AURA đáp "Hôm nay là ngày 13 tháng
+        # 8 năm 2026" — trả lời lại câu cũ thay vì nhắc lại nó. Đáp án của câu
+        # cũ nằm ngay trong lịch sử VÀ trong `cau_gio()`, model 1.7B bị kéo.
+        #
+        # Chỗ chữa không phải viết lời dặn chặt hơn.
+        #
+        # KHÔNG chặn ở lượt CÓ NGUỒN: lúc đó Sếp đang hỏi chuyện ngoài, không
+        # hỏi về phiên.
+        if not sources:
+            thang = tra_loi_thang(request.text, history)
+            if thang:
+                return ModelReply(text=thang)
+
         payload = {
             "model": self._config.model,
             "messages": self._messages(request, history=history, sources=sources),

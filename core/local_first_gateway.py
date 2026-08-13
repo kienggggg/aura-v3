@@ -35,6 +35,7 @@ from core.chat_runtime import ModelGatewayError, ModelGatewayTimeout
 from core.chat_service import ChatMessage, ModelReply
 from core.doc_so_phien import tra_loi_thang, tra_so
 from core.dong_ho import cau_gio
+from core.loai_cau_hoi import loi_dan_dang
 from core.may_tinh import tinh_giup
 from core.nho_lai import nho_lai
 from core.web_search import loc_menh_lenh
@@ -145,7 +146,16 @@ class OllamaConfig:
         "- Mã nguồn LUÔN đặt trong khối ba dấu huyền, có tên ngôn ngữ. Không "
         "bao giờ nhét mã giữa dòng văn. Nhưng câu hỏi không cần mã thì ĐỪNG "
         "tạo khối mã rỗng chỉ để nói là không có mã.\n"
-        "- Sếp xin gạch đầu dòng thì mỗi ý MỘT DÒNG, mở đầu bằng \"- \".\n"
+        "- CHỈ dùng gạch đầu dòng KHI Sếp xin. Sếp xin thì mỗi ý MỘT DÒNG, mở "
+        "đầu bằng \"- \"; Sếp không xin thì viết thành câu bình thường.\n"
+        # 13/08/2026, ảnh chụp phiên thật của Sếp: MỌI câu trả lời đều mở đầu
+        # bằng "- ", kể cả "- x = 2" và cả một bài thơ — trong khi Sếp không hề
+        # xin gạch đầu dòng lần nào. Model chép lại CÁI DẠNG của chính khối luật
+        # này (nó viết bằng gạch đầu dòng) vào câu trả lời.
+        #
+        # Cùng bệnh đã ghi ngay phía trên: model ĐỌC THUỘC LÒNG danh sách trong
+        # lời dặn. Lần đó nó chép nội dung, lần này nó chép hình thức.
+
         "- Sếp xin mấy phần thì trả đủ từng ấy phần, đúng thứ tự đã nêu.\n"
         "- Không viết một đoạn văn dài khi Sếp đã xin danh sách.\n\n"
         # Lời dặn RÒ RA MẶT SẾP.  10/08 trong phiên thật, AURA đáp: "...không
@@ -252,6 +262,10 @@ class OllamaGateway:
                 # mỗi lượt tra mạng lại lôi về cả đống tin còn đang hiển thị.
                 nho_lai(request.text, history,
                         self._config.max_history_messages),
+                # Dạng đầu ra cho câu sáng tác, kèm ví dụ mẫu. Đặt Ở ĐÂY —
+                # cạnh câu hỏi — chứ không nhét vào `system_prompt`: nhét vào
+                # đó thì model bỏ qua, hoặc đọc thuộc lòng nó ra mặt Sếp.
+                loi_dan_dang(request.text),
             ) if phan
         ]
         if sources:

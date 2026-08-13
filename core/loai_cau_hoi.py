@@ -141,4 +141,61 @@ def loai(text: str) -> str:
     return TU_NGHI
 
 
-__all__ = ["loai", "SANG_TAC", "TU_NGHI", "TRA_CUU"]
+# Thứ để sáng tác có DẠNG riêng. Model 1.7B không tự suy ra được, phải đưa mẫu.
+#
+# 13/08/2026: Sếp gõ "viết 1 bài thơ về AURA", AURA trả về một ĐOẠN VĂN XUÔI
+# gạch đầu dòng — "AURA là một người phụ nữ đầy sức sống..." — kèm đúng một câu
+# trong ngoặc kép. Xin thơ, nhận văn.
+#
+# Đây là bản tương đương của trưng cất tri thức Ở LÚC SUY LUẬN: trưng cất thật
+# phải huấn luyện lại trọng số, mà máy này 11,7 GB RAM không GPU rời (cùng rổ
+# với Unsloth và DiffusionGemma đã loại). Cái làm được là đưa VÍ DỤ MẪU vào lời
+# dặn để model bắt chước dạng — trưng cất vào lời dặn thay vì vào trọng số.
+#
+# Mẫu cố tình NGẮN và TẦM THƯỜNG về nội dung: nó dạy DẠNG, không dạy ý. Mẫu hay
+# quá thì model chép luôn cả ý.
+_MAU_THO = (
+    "Ví dụ ĐÚNG DẠNG (chỉ học cách trình bày, đừng chép nội dung):\n"
+    "Nắng lên trên mái hiên nhà\n"
+    "Gió đưa hương lúa bay qua cánh đồng\n"
+    "Chiều về nghiêng bóng bên sông\n"
+    "Một mình ta đứng ngóng trông cuối trời"
+)
+
+_THO = re.compile(r"(?<!\w)(?:tho|bai tho|cau tho|ca dao|luc bat|tho \w+ chu)(?!\w)")
+_TRUYEN = re.compile(r"(?<!\w)(?:truyen|truyen ngan|cau chuyen|tieu thuyet|kich ban)(?!\w)")
+
+
+def loi_dan_dang(text: str) -> str | None:
+    """Lời dặn về DẠNG đầu ra, gắn cạnh câu hỏi. `None` nếu không cần.
+
+    Đặt cạnh CÂU HỎI chứ không nhét vào `system_prompt`: luật đã trả giá trong
+    `local_first_gateway._messages` — nhét vào lời dặn hệ thống thì model bỏ
+    qua, hoặc tệ hơn là ĐỌC THUỘC LÒNG nó ra mặt Sếp.
+    """
+    if loai(text) != SANG_TAC:
+        return None
+
+    moc = _bo_dau(text)
+    chung = (
+        "DẠNG ĐẦU RA: đây là bài sáng tác. TUYỆT ĐỐI không dùng gạch đầu dòng, "
+        "không mở đầu bằng \"- \", không giải thích, không nói \"đây là bài thơ "
+        "của tôi\". Viết thẳng tác phẩm."
+    )
+    if _THO.search(moc):
+        return (
+            f"{chung}\n"
+            "Thơ thì phải xuống dòng: mỗi câu MỘT DÒNG riêng, ít nhất 4 dòng, "
+            "có vần hoặc có nhịp. Không viết thành đoạn văn xuôi.\n"
+            f"{_MAU_THO}"
+        )
+    if _TRUYEN.search(moc):
+        return (
+            f"{chung}\n"
+            "Truyện thì phải có mở đầu, diễn biến và kết — kể chuyện, đừng mô tả "
+            "chung chung."
+        )
+    return chung
+
+
+__all__ = ["loai", "loi_dan_dang", "SANG_TAC", "TU_NGHI", "TRA_CUU"]

@@ -363,6 +363,20 @@ def _parse_exa(raw: str) -> list[Source]:
     return sources
 
 
+# Không dựng cửa sổ console cho tiến trình con.
+#
+# 13/08/2026, Sếp hỏi ngay khi đang dùng: "sao mỗi lần hỏi là có cái màn cmd
+# hiện lên vậy". AURA chạy bằng `pythonw.exe` (cố tình không có console), nên
+# mỗi lần gọi `mcporter` — một chương trình console — Windows dựng cho nó một
+# cửa sổ MỚI, nháy lên giữa màn hình rồi tắt.
+#
+# Repo đã biết bệnh này và chữa ở `core/hearing.py` từ trước ("bài học từ
+# screen_time/wifi_manager"), nhưng cổng tra mạng thì chưa áp dụng.
+#
+# `getattr` chứ không dùng thẳng: hằng số này chỉ có trên Windows.
+_KHONG_CUA_SO = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+
 def _mcporter_argv(call: str) -> list[str]:
     """Build a shell-free argv, including for npm's Windows CMD shim.
 
@@ -411,7 +425,7 @@ def search(query: str, limit: int = 5, timeout_s: int = _TIMEOUT_S) -> SearchRes
         proc = subprocess.run(
             _mcporter_argv(call),
             capture_output=True, text=True, encoding="utf-8", errors="replace",
-            timeout=timeout_s, shell=False,
+            timeout=timeout_s, shell=False, creationflags=_KHONG_CUA_SO,
         )
     except FileNotFoundError:
         return SearchResult(query, False, now, error="Chưa cài công cụ tra mạng (mcporter).")

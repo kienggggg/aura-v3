@@ -163,6 +163,11 @@ class ReadOnlySearchGateway:
                 *argv,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                # ĐÂY mới là chỗ chạy thật khi Sếp chat — `web_search.search()`
+                # là đường đồng bộ dùng cho công cụ và test. Thiếu cờ này thì
+                # mỗi lượt tra mạng nháy một cửa sổ CMD giữa màn hình (Sếp báo
+                # 13/08). Vá cả hai chỗ, không vá mỗi chỗ dễ thấy.
+                creationflags=backend._KHONG_CUA_SO,
             )
             stdout, _stderr = await process.communicate()
         except asyncio.CancelledError:

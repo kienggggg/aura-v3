@@ -291,3 +291,47 @@ def test_khop_khong_an_vao_giua_mot_tu():
     assert _khop("hôm nay", bo_dau("hôm nay"), ("nay",)) is True
     # Dấu câu vẫn là ranh giới hợp lệ.
     assert _khop("hiện nay?", bo_dau("hiện nay?"), ("hiện nay",)) is True
+
+
+def test_khong_dung_cua_so_console_khi_tra_mang(monkeypatch):
+    """Mỗi lượt tra mạng KHÔNG được nháy một cửa sổ CMD giữa màn hình.
+
+    13/08/2026 Sếp báo ngay khi đang dùng: "sao mỗi lần hỏi là có cái màn cmd
+    hiện lên vậy". AURA chạy bằng `pythonw.exe` (cố tình không console), nên gọi
+    `mcporter` — chương trình console — làm Windows dựng cửa sổ mới.
+    """
+    import subprocess as sp
+    from core import web_search
+
+    ghi = {}
+
+    class _Xong:
+        returncode = 0
+        stdout = "{}"
+        stderr = ""
+
+    def _gia(argv, **kw):
+        ghi.update(kw)
+        return _Xong()
+
+    monkeypatch.setattr(web_search.subprocess, "run", _gia)
+    monkeypatch.setattr(web_search, "_mcporter_argv", lambda call: ["x"])
+    web_search.search("giá vàng hôm nay")
+
+    assert "creationflags" in ghi, "thiếu cờ -> Windows dựng cửa sổ console"
+    assert ghi["creationflags"] == getattr(sp, "CREATE_NO_WINDOW", 0)
+
+
+def test_duong_BAT_DONG_BO_cung_khong_dung_cua_so():
+    """Đường async mới là đường chạy thật khi Sếp chat — vá cả hai, không vá một.
+
+    `web_search.search()` là đường đồng bộ dùng cho công cụ và test; lúc Sếp gõ
+    câu hỏi thì `ReadOnlySearchGateway` chạy. Vá mỗi chỗ dễ thấy thì cửa sổ vẫn
+    nháy y như cũ.
+    """
+    import inspect
+
+    from interface import chat_adapters
+
+    nguon = inspect.getsource(chat_adapters.ReadOnlySearchGateway)
+    assert "creationflags" in nguon, "đường async còn thiếu cờ"

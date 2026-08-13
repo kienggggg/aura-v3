@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # Cửa vào của AURA v3.  Chỉ có một.
 CUA_VAO = ("aura_chat.py",)
 
-# Toàn bộ AURA v3.  18 file.  Mọi thứ khác trong repo là KHO PHỤ TÙNG của v2:
+# Toàn bộ AURA v3.  19 file.  Mọi thứ khác trong repo là KHO PHỤ TÙNG của v2:
 # vẫn nằm đó, vẫn đọc được, nhưng v3 không được phép với tay sang.
 V3 = frozenset({
     "aura_chat.py",
@@ -35,7 +35,9 @@ V3 = frozenset({
     "core/chat_service.py",        # một hàm reply(), mọi kênh dùng chung
     "core/doc_so_phien.py",        # "câu thứ 2" — đếm, chứ không đoán
     "core/dong_ho.py",             # AURA từng trả sai ngày 20 hôm, nói chắc nịch
-    "core/kiem_tien.py",           # "137.500 đồng/lượng" — sai tiền 1000 lần
+    "core/kiem_tien.py",     # "137.500 đồng/lượng" — sai tiền 1000 lần
+    "core/loai_cau_hoi.py",  # 13/08: "Phạm Xuân Kiên là ai" -> bịa nguyên một
+                             # tiểu sử. Tự nghĩ / tra cứu / sáng tác.
     "core/local_first_gateway.py",  # trò làm trước, mượn thầy khi bí
     "core/may_tinh.py",      # AURA nói "khoảng 23 ngày" khi đúng là 22
     "core/nho_lai.py",       # 13/08: hỏi lại dữ kiện lượt 1 ở lượt 15 -> bịa

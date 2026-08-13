@@ -1,0 +1,144 @@
+# -*- coding: utf-8 -*-
+"""Câu này thuộc loại nào — tự nghĩ, đi tra, hay được phép bịa.
+
+13/08/2026, Sếp test thật và bắt được chỗ nguy nhất:
+
+    Sếp: "Phạm Xuân Kiên là ai"
+    AURA: "một nhà văn, nhà báo, một trong những người sáng lập Báo chí Việt Nam"
+
+Bịa hoàn toàn, về chính tên Sếp, và nói chắc nịch trong 5,2 giây. Cùng phiên:
+"Nguyễn Tất Thành là ai" ra một người khác hẳn Hồ Chí Minh — hai câu liền nhau,
+cùng một người, hai tiểu sử khác nhau.
+
+VÌ SAO LỌT: luật cũ chỉ có MỘT TRỤC — "câu này có cần dữ liệu MỚI không".
+"giá vàng hôm nay" có chữ chỉ độ mới nên đi tra; "X là ai" thì không, nên model
+tự trả lời từ trí nhớ tham số. Model 1.7B không có tri thức đó, và nó không im.
+
+THIẾU TRỤC THỨ HAI: **câu này có đáp án KIỂM CHỨNG ĐƯỢC ngoài đời không.**
+Tiểu sử một người là dữ kiện, không phải ý kiến — sai là sai, và sai về người
+thật thì tệ hơn nhiều so với nói "em không biết".
+
+BA LOẠI, đúng như Sếp mô tả:
+
+    SANG_TAC   bịa là ĐÚNG VIỆC — thơ, truyện, kịch bản, lời chúc.
+               Tra mạng ở đây là vô nghĩa và tốn 20-30 giây.
+    TU_NGHI    máy/model tự làm — toán, mã, dịch, tóm tắt, giải thích khái niệm.
+               Đáp án nằm trong chính câu hỏi hoặc trong năng lực suy luận.
+    TRA_CUU    dữ kiện về một thực thể có thật — PHẢI có nguồn, hoặc nói không
+               biết. Đây là loại vừa làm AURA bịa.
+
+Trả `TRA_CUU` là bật đường fail-closed đã có sẵn trong `ChatService`: tra được
+thì trả lời kèm nguồn, tra không đủ nguồn thì trạng thái `web_unavailable` và
+AURA nói thẳng là chưa lấy được nguồn. **Không có đường nào dẫn tới bịa.**
+
+Cố ý dùng LUẬT TỪ KHOÁ chứ không hỏi model: quyết định "có tra hay không" phải
+xem lại được và không đổi giữa hai lần chạy — cùng lý do đã ghi ở
+`web_search.is_search_request`.
+"""
+from __future__ import annotations
+
+import re
+import unicodedata
+
+SANG_TAC = "sang_tac"
+TU_NGHI = "tu_nghi"
+TRA_CUU = "tra_cuu"
+
+# --------------------------------------------------------------------------- #
+# SÁNG TÁC — bịa là đúng việc.
+# Phải có ĐỘNG TỪ TẠO RA + THỨ ĐỂ SÁNG TÁC, không bắt mỗi chữ "viết": "viết hàm
+# Python" là lập trình, không phải sáng tác.
+# --------------------------------------------------------------------------- #
+_DONG_TU_TAO = r"(?:viet|lam|sang tac|soan|ke|nghi ra|tuong tuong|dat)"
+_THU_SANG_TAC = (
+    r"(?:bai tho|tho|truyen|truyen ngan|kich ban|loi bai hat|bai hat|van|"
+    r"doan van|bai van|loi chuc|cau chuyen|tieu thuyet|slogan|khau hieu|"
+    r"loi thoai|cau tho|ca dao|ve|tut|caption|status)"
+)
+_SANG_TAC = re.compile(rf"(?<!\w){_DONG_TU_TAO}\s+(?:\w+\s+){{0,2}}{_THU_SANG_TAC}(?!\w)")
+
+# --------------------------------------------------------------------------- #
+# TRA CỨU — dữ kiện về thực thể có thật.
+# --------------------------------------------------------------------------- #
+
+# "X là ai" — hỏi về một NGƯỜI. Đây là mẫu đã làm AURA bịa hai lần trong một
+# phiên. Không có ngoại lệ nào: kể cả người rất nổi tiếng cũng phải có nguồn,
+# vì chính chỗ "model chắc là nó biết" mới là chỗ nó bịa tự tin nhất.
+_HOI_NGUOI = re.compile(r"(?<!\w)la\s+ai(?!\w)")
+
+# Vị từ hỏi một DỮ KIỆN cụ thể — trả lời sai là sai hẳn, không phải "diễn đạt
+# khác đi". Có thực thể viết hoa đi kèm thì bắt buộc tra.
+_VI_TU_DU_KIEN = re.compile(
+    r"(?<!\w)(?:"
+    r"thanh lap (?:nam|khi|tu) nao|thanh lap nam|ra doi nam nao|"
+    r"sinh (?:nam|ngay) nao|mat (?:nam|ngay) nao|qua doi nam nao|"
+    r"bao nhieu tuoi|sinh nhat|que (?:o|quan)|"
+    r"tru so|dat o dau|nam o dau|o dau|"
+    r"giam doc|ceo|nguoi sang lap|chu tich|tong giam doc|"
+    r"dan so|dien tich|cao bao nhieu|dai bao nhieu|"
+    r"gia bao nhieu|bao nhieu tien|doanh thu|von hoa"
+    r")(?!\w)"
+)
+
+# Tên riêng: một chữ viết hoa KHÔNG đứng đầu câu ("VinFast", "Hồ Chí Minh").
+# Đầu câu không tính — câu nào chẳng viết hoa chữ đầu.
+#
+# LIỆT KÊ THẲNG chữ hoa, không dùng dải: `[A-ZĐÀ-Ỹ]` trông có vẻ đúng nhưng dải
+# `À-Ỹ` (U+00C0–U+1EF8) BAO CẢ CHỮ THƯỜNG có dấu. Đo 13/08: "lỗi này nằm ở đâu"
+# bị nhận là có tên riêng vì "ở đâu" khớp — chữ "ở" nằm trong dải đó. Hậu quả:
+# một câu hỏi về mã của Sếp bị đẩy đi tra mạng.
+#
+# Và phải nhận tên MỘT CHỮ: bản đầu bắt buộc hai chữ hoa liền nhau nên
+# "Công ty VinFast thành lập năm nào" lọt — "Công" đứng đầu câu bị loại, còn
+# "VinFast" một mình thì không đủ.
+_HOA = (
+    "A-Z"
+    "ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝ"
+    "ĂĐĨŨƠƯ"
+    "ẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼẾỀỂỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴỶỸ"
+)
+_TEN_RIENG = re.compile(rf"(?<!^)(?<![.!?]\s)\b[{_HOA}][\wÀ-ỹ]*")
+
+# Chữ báo "câu này cần dữ liệu ngoài", dùng chung với `web_search`.
+# KHÔNG nhập từ đó để tệp này đứng một mình, đọc là hiểu.
+_CHU_DO_MOI = re.compile(
+    r"(?<!\w)(?:hom nay|hien nay|bay gio|moi nhat|gan day|nam nay|"
+    r"tin tuc|dang hot|xu huong|vua ra|vua cong bo|cap nhat)(?!\w)"
+)
+
+
+def _bo_dau(text: str) -> str:
+    tach = unicodedata.normalize("NFD", (text or "").lower())
+    return "".join(c for c in tach if not unicodedata.combining(c)).replace("đ", "d")
+
+
+def loai(text: str) -> str:
+    """Phân loại câu hỏi. Thứ tự xét CÓ Ý NGHĨA.
+
+    1. SÁNG TÁC thắng trước: "viết một bài thơ về Hồ Chí Minh" là làm thơ, không
+       phải tra tiểu sử. Xét sau thì tên riêng kéo nó sang TRA_CUU và AURA đi
+       tra 30 giây để rồi vẫn phải tự làm thơ.
+    2. TRA CỨU: hỏi về người, hoặc dữ kiện cụ thể, hoặc cần dữ liệu mới.
+    3. Còn lại TỰ NGHĨ — giữ nguyên hành vi cũ, không làm chậm những câu đang chạy tốt.
+    """
+    if not isinstance(text, str) or not text.strip():
+        return TU_NGHI
+
+    moc = _bo_dau(text)
+
+    if _SANG_TAC.search(moc):
+        return SANG_TAC
+
+    if _HOI_NGUOI.search(moc):
+        return TRA_CUU
+    if _CHU_DO_MOI.search(moc):
+        return TRA_CUU
+    # Dữ kiện cụ thể CHỈ tính khi có tên riêng: "ở đâu" trong "lỗi này nằm ở
+    # đâu" là hỏi về mã của Sếp, không phải hỏi địa chỉ một nơi có thật.
+    if _VI_TU_DU_KIEN.search(moc) and _TEN_RIENG.search(text):
+        return TRA_CUU
+
+    return TU_NGHI
+
+
+__all__ = ["loai", "SANG_TAC", "TU_NGHI", "TRA_CUU"]

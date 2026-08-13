@@ -25,6 +25,7 @@ from core.chat_contract import (
     valid_citations,
 )
 from core.kiem_tien import gan_canh_bao
+from core.loai_cau_hoi import SANG_TAC as LOAI_SANG_TAC, TRA_CUU as LOAI_TRA_CUU, loai as loai_cau_hoi
 from core.web_search import (
     mang_co_song,
     is_search_request,
@@ -114,6 +115,25 @@ class DeterministicFreshnessPolicy:
     _INHERENTLY_LIVE_DOMAINS = ("thời tiết", "weather")
 
     def requires_web(self, request: ChatRequest) -> bool:
+        # TRỤC THỨ HAI: câu này có đáp án KIỂM CHỨNG ĐƯỢC ngoài đời không.
+        #
+        # Luật cũ chỉ hỏi "có cần dữ liệu MỚI không", nên "giá vàng hôm nay" đi
+        # tra còn "Phạm Xuân Kiên là ai" thì không — và 13/08 Sếp test thật thì
+        # AURA bịa nguyên một tiểu sử về chính tên Sếp trong 5,2 giây, rồi bịa
+        # tiếp Nguyễn Tất Thành thành một người khác Hồ Chí Minh.
+        #
+        # Trả True ở đây là bật đường FAIL-CLOSED đã có sẵn bên dưới: tra được
+        # thì trả lời kèm nguồn; không đủ nguồn thì `web_unavailable` và AURA
+        # nói thẳng là chưa lấy được nguồn. Không còn đường nào dẫn tới bịa.
+        #
+        # SÁNG TÁC thì ngược lại, phải chặn: "viết một bài thơ về Hồ Chí Minh"
+        # có tên riêng nhưng đi tra 30 giây để rồi vẫn phải tự làm thơ.
+        nhan = loai_cau_hoi(request.text)
+        if nhan == LOAI_TRA_CUU:
+            return True
+        if nhan == LOAI_SANG_TAC:
+            return False
+
         normalized = request.text.casefold()
         # "kiểm tra" nằm trong `_EXPLICIT_COMMANDS`, nên câu "Viết giúp tôi hàm
         # Python KIỂM TRA một tên miền có hợp lệ không" bị đẩy đi tra mạng —

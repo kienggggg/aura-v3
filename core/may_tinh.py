@@ -83,8 +83,36 @@ _BIEU_THUC_TRONG_CAU = re.compile(
 )
 
 
+# Sếp gõ TIẾNG VIỆT, không gõ ký hiệu.
+#
+# 13/08/2026: "1247 nhân 38 bằng bao nhiêu" -> AURA đáp 46.586. Đúng là 47.386.
+# Đo ra thì `tinh_giup()` trả `None` — máy tính KHÔNG HỀ bắt câu đó, nên model
+# tự đoán. Mẫu cũ chỉ nhận ký hiệu `+ - * / × ÷`, mà CLAUDE.md ghi tệp này sinh
+# ra chính vì phép "1247*38". Nó đúng cho người gõ dấu sao; Sếp thì gõ "nhân".
+#
+# Sáng cùng ngày AURA từng trả 47.386 đúng — đó là MAY, không phải máy tính
+# chạy. Một phép đo đúng nhờ may thì lần sau sai mà không ai hiểu vì sao.
+#
+# Chỉ đổi khi có DẠNG SỐ-CHỮ-SỐ: "trừ" còn nghĩa "ngoại trừ", "chia" còn nghĩa
+# "chia sẻ" — kẹp giữa hai con số thì mới chắc là phép tính.
+_CHU_THANH_KY_HIEU = (
+    (re.compile(r"(?<=\d)\s*(?:nhan|x)\s*(?=\d)", re.IGNORECASE), " * "),
+    (re.compile(r"(?<=\d)\s*(?:cong|them)\s*(?=\d)", re.IGNORECASE), " + "),
+    (re.compile(r"(?<=\d)\s*(?:tru|bot)\s*(?=\d)", re.IGNORECASE), " - "),
+    (re.compile(r"(?<=\d)\s*chia\s*(?=\d)", re.IGNORECASE), " / "),
+    (re.compile(r"(?<=\d)\s*(?:mu|luy thua)\s*(?=\d)", re.IGNORECASE), " ^ "),
+)
+
+
+def _doi_chu_thanh_ky_hieu(khong_dau: str) -> str:
+    for mau, ky_hieu in _CHU_THANH_KY_HIEU:
+        khong_dau = mau.sub(ky_hieu, khong_dau)
+    return khong_dau
+
+
 def _rut_bieu_thuc(text: str) -> str | None:
     """Nhặt phép tính dài nhất nằm lẫn trong câu chữ, hoặc `None`."""
+    text = _doi_chu_thanh_ky_hieu(_bo_dau(text or ""))
     khop = _BIEU_THUC_TRONG_CAU.findall(text or "")
     if not khop:
         return None

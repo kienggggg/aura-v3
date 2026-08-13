@@ -149,3 +149,38 @@ def test_cong_local_gui_ket_qua_da_tinh_len_model():
     assert "ĐÃ TÍNH SẴN" not in sent["json"]["messages"][0]["content"]
     assert "ĐÃ TÍNH SẴN" in sent["json"]["messages"][-1]["content"]
     assert sent["json"]["messages"][-1]["role"] == "user"
+
+
+# ---------------------------------------------------------------------------
+# Sếp gõ TIẾNG VIỆT, không gõ ký hiệu
+#
+# 13/08/2026: "1247 nhân 38 bằng bao nhiêu" -> AURA đáp 46.586, đúng là 47.386.
+# `tinh_giup()` trả None — máy tính KHÔNG HỀ bắt câu đó nên model tự đoán.
+# CLAUDE.md ghi tệp này sinh ra chính vì phép 1247*38; nó đúng cho người gõ dấu
+# sao, còn Sếp gõ "nhân". Sáng cùng ngày AURA từng trả đúng — đó là MAY.
+# ---------------------------------------------------------------------------
+
+
+def test_bat_duoc_toan_tu_viet_bang_chu():
+    from core.may_tinh import tinh_giup
+
+    ra = tinh_giup("1247 nhân 38 bằng bao nhiêu")
+    assert ra is not None, "máy tính không bắt được 'nhân' -> model tự đoán"
+    assert "47.386" in ra
+
+    assert "350" in (tinh_giup("100 cộng 250") or "")
+    assert "999" in (tinh_giup("1000 trừ 1") or "")
+    assert "12" in (tinh_giup("144 chia 12") or "")
+    assert "1.024" in (tinh_giup("2 mũ 10") or "")
+
+
+def test_khong_bat_nham_chu_thuong_ngay():
+    """"trừ" còn nghĩa "ngoại trừ", "chia" còn nghĩa "chia sẻ".
+
+    Chỉ đổi khi có dạng SỐ-CHỮ-SỐ; kẹp giữa hai con số thì mới chắc là phép tính.
+    """
+    from core.may_tinh import tinh_giup
+
+    for cau in ("Sếp trừ em ra thì còn ai", "chia sẻ file này giúp em",
+                "COVID-19 là gì", "phòng 3 ở đâu", "cộng đồng mã nguồn mở"):
+        assert tinh_giup(cau) is None, cau

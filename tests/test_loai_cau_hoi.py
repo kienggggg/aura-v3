@@ -236,6 +236,50 @@ def test_hoi_ve_thu_TRONG_cuoc_tro_chuyen_thi_khong_di_tra(cau):
     assert loai(cau) == TU_NGHI, cau
 
 
+# ---------------------------------------------------------------------------
+# Đồng hồ thắng trước mọi luật tra mạng
+#
+# 13/08/2026, hỏi AURA đang chạy: "Hôm nay là ngày mấy?" -> "Hôm nay là ngày
+# 06/08/2026", KÈM 4 NGUỒN. Sai 7 ngày. Cùng lúc đó `cau_gio()` trả đúng
+# "12:28 Thứ Năm, ngày 13 tháng 8 năm 2026", và trong chính câu đó có dòng
+# "đừng đoán và đừng tra mạng để biết ngày".
+#
+# Máy biết đúng. Lời dặn ghi rõ. Model vẫn tin trang web hơn.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("cau", [
+    "Hôm nay là ngày mấy?",      # chính câu làm lộ lỗi
+    "Hôm nay thứ mấy?",
+    "Bây giờ là mấy giờ?",
+    "Hôm nay ngày bao nhiêu",
+    "mấy giờ rồi",
+    "ngày mai là thứ mấy",
+])
+def test_cau_hoi_dong_ho_KHONG_duoc_di_tra_mang(cau):
+    """Đáp án nằm sẵn trong `cau_gio()` gắn vào mỗi lượt.
+
+    Đẩy đi tra là vừa chậm 20-30 giây vừa SAI — model chép ngày trên trang web
+    thay vì đọc mốc ngay trước mặt.
+    """
+    assert loai(cau) == TU_NGHI, cau
+
+
+@pytest.mark.parametrize("cau", [
+    "Giá vàng hôm nay thế nào?",
+    "Tin tức hôm nay có gì",
+    "Thời tiết Hà Nội hôm nay",
+    "VinFast hôm nay ra xe gì",
+])
+def test_hoi_TIN_kem_chu_hom_nay_thi_VAN_phai_tra(cau):
+    """Luật đồng hồ đòi CẢ vế thời gian LẪN vế hỏi giờ/ngày.
+
+    Bắt mỗi chữ "hôm nay" thì giá vàng và thời tiết cũng thành tự nghĩ — đổi
+    một lỗi bịa ngày lấy một lỗi bịa giá, lỗ nặng hơn.
+    """
+    assert loai(cau) == TRA_CUU, cau
+
+
 def test_hom_nay_khong_bi_hieu_thanh_tro_ngu_canh():
     """"hôm nay" chứa "nay", mà "nay" là dấu trỏ ngữ cảnh.
 

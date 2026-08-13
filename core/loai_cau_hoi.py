@@ -66,6 +66,20 @@ _SANG_TAC = re.compile(rf"(?<!\w){_DONG_TU_TAO}\s+(?:\w+\s+){{0,2}}{_THU_SANG_TA
 # vì chính chỗ "model chắc là nó biết" mới là chỗ nó bịa tự tin nhất.
 _HOI_NGUOI = re.compile(r"(?<!\w)la\s+ai(?!\w)")
 
+# Câu hỏi mà ĐỒNG HỒ MÁY đã có sẵn đáp án. `cau_gio()` gắn mốc thời gian vào
+# mỗi lượt, nên đẩy mấy câu này ra Internet là vừa chậm 20-30 giây vừa SAI —
+# model chép ngày trên trang web thay vì đọc mốc ngay trước mặt.
+#
+# Đòi hỏi cả VẾ THỜI GIAN lẫn VẾ HỎI, không bắt mỗi "hôm nay": "giá vàng hôm
+# nay" phải đi tra thật, chỉ "hôm nay NGÀY MẤY" mới là hỏi đồng hồ.
+_HOI_GIO_MAY = re.compile(
+    r"(?<!\w)(?:hom nay|bay gio|hien tai|luc nay|hom qua|ngay mai|tuan nay"
+    r"|thang nay|nam nay)(?!\w)[^\n]{0,24}"
+    r"(?:ngay may|thu may|may gio|ngay bao nhieu|la ngay|la thu|la may)(?!\w)"
+    r"|(?<!\w)(?:ngay may|thu may|may gio)(?!\w)[^\n]{0,24}"
+    r"(?:hom nay|bay gio|roi)(?!\w)"
+)
+
 # "X là gì" — hỏi ĐỊNH NGHĨA. Bản đầu tôi chỉ bắt "là ai" và tưởng thế là đủ.
 #
 # 13/08/2026 Sếp gõ "claude là gì" -> "Claude là một tên người, một trong những
@@ -153,6 +167,21 @@ def loai(text: str) -> str:
 
     if _SANG_TAC.search(moc):
         return SANG_TAC
+
+    # ĐỒNG HỒ THẮNG TRƯỚC MỌI LUẬT TRA MẠNG.
+    #
+    # 13/08/2026, hỏi AURA đang chạy: "Hôm nay là ngày mấy?" -> "Hôm nay là
+    # ngày 06/08/2026", KÈM 4 NGUỒN. Sai 7 ngày, và sai vì nó đi tra mạng rồi
+    # chép ngày trên một trang web.
+    #
+    # Trớ trêu: `cau_gio()` lúc đó trả đúng "12:28 Thứ Năm, ngày 13 tháng 8 năm
+    # 2026", và trong chính câu đó có dòng "đừng đoán và đừng tra mạng để biết
+    # ngày". Máy biết đúng, lời dặn ghi rõ, mà bộ phân loại vẫn đẩy đi tra —
+    # rồi model tin trang web hơn tin lời dặn.
+    #
+    # Lời dặn không phải hàng rào. Hàng rào là ĐỪNG ĐỂ CÂU ĐÓ ĐI TRA.
+    if _HOI_GIO_MAY.search(moc) and not _TEN_RIENG.search(text):
+        return TU_NGHI
 
     if _HOI_NGUOI.search(moc):
         return TRA_CUU

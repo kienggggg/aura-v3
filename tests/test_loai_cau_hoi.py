@@ -84,8 +84,18 @@ def test_sang_tac_THANG_chu_chi_do_moi(cau):
 # TỰ NGHĨ — đừng làm chậm những câu đang chạy tốt
 # --------------------------------------------------------------------------- #
 
+# "AI là gì" ĐÃ RỜI danh sách này ngày 13/08/2026, xuống
+# `test_hoi_dinh_nghia_cung_phai_tra_cuu`.
+#
+# Nó nằm đây vì một GIẢ ĐỊNH: câu này model tự trả lời được, đẩy đi tra chỉ tổ
+# chậm. Đo thật thì giả định sai — model trả "Hệ thống Điều khiển Trí tuệ" rồi
+# "Hệ thống Tự động", hai lần hai kiểu, đúng phải là "trí tuệ nhân tạo". Tiêu
+# đề mục này là "đừng làm chậm những câu ĐANG CHẠY TỐT", mà câu này không chạy
+# tốt — nên nó không thuộc về đây nữa.
+#
+# Giữ nó lại để danh sách trông đầy đủ thì thành: một test xanh canh cho một
+# hành vi sai.
 @pytest.mark.parametrize("cau", [
-    "AI là gì",
     "1247 nhân 38 bằng bao nhiêu",
     "Viết hàm Python đảo ngược một chuỗi",   # "viết" nhưng là lập trình
     "Tóm tắt đoạn văn sau",
@@ -186,3 +196,50 @@ def test_DA_CAM_loi_dan_dang_VAO_CONG():
     assert "DẠNG ĐẦU RA" in cuoi["content"], "lời dặn dạng chưa tới được model"
     assert "Ví dụ" in cuoi["content"]
     del asyncio
+
+
+# ---------------------------------------------------------------------------
+# "X là gì" — hỏi ĐỊNH NGHĨA cũng phải tra
+#
+# 13/08/2026 Sếp gõ "claude là gì" -> "Claude là một tên người, một trong những
+# người sáng lập hệ thống điều khiển trí tuệ tại EPFL". Dựng lại trong phiên
+# MỚI TINH: "Claude là một loại ngôn ngữ mã nguồn mở". Hai lần, hai câu bịa
+# khác nhau, 0 nguồn.
+#
+# Sếp hỏi "hay là do phiên chat cũ nó vậy" — không. Luật cũ chỉ bắt "là ai".
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("cau", [
+    "claude là gì",       # chính câu Sếp gõ, chữ thường
+    "Claude là gì",
+    "AI là gì",           # sai hai lần: "Hệ thống Điều khiển Trí tuệ", "Hệ thống Tự động"
+    "VinFast là gì",
+    "MCP là gì",
+])
+def test_hoi_dinh_nghia_cung_phai_tra_cuu(cau):
+    assert loai(cau) == TRA_CUU, cau
+
+
+@pytest.mark.parametrize("cau", [
+    "lỗi này là gì",           # Sếp vừa dán một khối lỗi
+    "hàm vừa rồi là gì",
+    "cái đó là gì",
+    "đoạn code trên là gì",
+])
+def test_hoi_ve_thu_TRONG_cuoc_tro_chuyen_thi_khong_di_tra(cau):
+    """Đáp án nằm trong lịch sử, không nằm ngoài Internet.
+
+    Đẩy đi tra là vừa chậm vừa sai chỗ, và còn đẩy chuyện riêng của Sếp ra
+    ngoài — đúng bài học "phiên này" bị hiểu thành "hiện nay" hôm 12/08.
+    """
+    assert loai(cau) == TU_NGHI, cau
+
+
+def test_hom_nay_khong_bi_hieu_thanh_tro_ngu_canh():
+    """"hôm nay" chứa "nay", mà "nay" là dấu trỏ ngữ cảnh.
+
+    Xét `_CHU_DO_MOI` TRƯỚC nên câu này đã thành TRA_CUU rồi, chữ "nay" không
+    kịp bị hiểu nhầm.
+    """
+    assert loai("giá vàng hôm nay là gì") == TRA_CUU

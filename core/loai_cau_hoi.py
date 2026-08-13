@@ -66,6 +66,31 @@ _SANG_TAC = re.compile(rf"(?<!\w){_DONG_TU_TAO}\s+(?:\w+\s+){{0,2}}{_THU_SANG_TA
 # vì chính chỗ "model chắc là nó biết" mới là chỗ nó bịa tự tin nhất.
 _HOI_NGUOI = re.compile(r"(?<!\w)la\s+ai(?!\w)")
 
+# "X là gì" — hỏi ĐỊNH NGHĨA. Bản đầu tôi chỉ bắt "là ai" và tưởng thế là đủ.
+#
+# 13/08/2026 Sếp gõ "claude là gì" -> "Claude là một tên người, một trong những
+# người sáng lập hệ thống điều khiển trí tuệ tại EPFL". Dựng lại trong phiên
+# MỚI TINH: "Claude là một loại ngôn ngữ mã nguồn mở". Hai lần, hai câu bịa
+# khác nhau, 0 nguồn. Sếp hỏi có phải do phiên chat cũ không — không, do luật
+# thiếu.
+#
+# Cùng ngày, "AI là gì" cũng ra sai hai lần: "Hệ thống Điều khiển Trí tuệ" rồi
+# "Hệ thống Tự động" (đúng là "trí tuệ nhân tạo"). Tức model 1.7B KHÔNG đáng
+# tin cho câu định nghĩa, kể cả với thứ nó có vẻ phải biết.
+#
+# GIÁ PHẢI TRẢ: mỗi câu "là gì" giờ mất 20-30 giây vì phải ra mạng. Đổi tốc độ
+# lấy việc không bịa. Sếp đã chốt hướng đó: "giờ chỉ cần AURA trả lời được".
+_HOI_DINH_NGHIA = re.compile(r"(?<!\w)la\s+(?:gi|cai gi)(?!\w)")
+
+# ...TRỪ khi câu hỏi trỏ vào thứ NGAY TRONG cuộc trò chuyện: "lỗi này là gì"
+# (Sếp vừa dán một khối lỗi), "hàm vừa rồi là gì". Đáp án nằm trong lịch sử,
+# không nằm ngoài Internet — đẩy đi tra là vừa chậm vừa sai chỗ, và còn đẩy
+# chuyện riêng của Sếp ra ngoài.
+_TRO_VE_NGU_CANH = re.compile(
+    r"(?<!\w)(?:nay|do|kia|vua roi|vua noi|tren|duoi|ben tren|o tren|"
+    r"tren day|ban dau|luc nay|phia tren)(?!\w)"
+)
+
 # Vị từ hỏi một DỮ KIỆN cụ thể — trả lời sai là sai hẳn, không phải "diễn đạt
 # khác đi". Có thực thể viết hoa đi kèm thì bắt buộc tra.
 _VI_TU_DU_KIEN = re.compile(
@@ -132,6 +157,10 @@ def loai(text: str) -> str:
     if _HOI_NGUOI.search(moc):
         return TRA_CUU
     if _CHU_DO_MOI.search(moc):
+        return TRA_CUU
+    # Xét SAU `_CHU_DO_MOI`: "giá vàng hôm nay là gì" đã thành TRA_CUU ở trên,
+    # nên chữ "nay" trong "hôm nay" không kịp bị hiểu nhầm là trỏ ngữ cảnh.
+    if _HOI_DINH_NGHIA.search(moc) and not _TRO_VE_NGU_CANH.search(moc):
         return TRA_CUU
     # Dữ kiện cụ thể CHỈ tính khi có tên riêng: "ở đâu" trong "lỗi này nằm ở
     # đâu" là hỏi về mã của Sếp, không phải hỏi địa chỉ một nơi có thật.

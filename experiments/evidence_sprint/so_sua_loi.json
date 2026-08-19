@@ -220,5 +220,88 @@
   "tep": "core/web_search.py",
   "so_loi": 3,
   "co_the": 8
+ },
+ {
+  "trang_thai": "dat",
+  "luot": 1,
+  "ghi": [
+   {
+    "luot": 1,
+    "suy_luan": "Lỗi nằm ở việc hàm `cau_gio` không trả về ngày đúng khi được gọi với thời gian cụ thể. Trong ví dụ kiểm tra, hàm trả về \"Thứ Tư\" thay vì \"Thứ Hai\". Điều này xảy ra vì hàm đang sử dụng `datetime.now().astimezone()` để lấy thời gian hiện tại, thay vì sử dụng thời gian được truyền vào hàm. Để sửa lỗi này, chúng ta cần sửa hàm để nó sử dụng thời gian được truyền vào thay vì lấy thời gian hiện tại.",
+    "giay": 174.4,
+    "hong": "",
+    "va": "from __future__ import annotations\nfrom datetime import datetime\n_THU = ('Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật')\n\ndef cau_gio(now: datetime | None=None) -> str:\n    \"\"\"Một dòng tiếng Việt nói rõ bây giờ là lúc nào, theo giờ máy của Sếp.\n\n    Nhận `now` để test đóng đinh được thời gian — một hàm đọc thẳng\n    `datetime.now()` bên trong thì không có cách nào kiểm.\n    \"\"\"\n    hien_tai = now or datetime.now().astimezone()\n    thu = _THU[hien_tai.weekday()]\n    return f'BÂY GIỜ là {hien_tai:%H:%M} {thu}, ngày {hien_tai.day} tháng {hien_tai.month} năm {hien_tai.y"
+   }
+  ],
+  "tep": "core/dong_ho.py",
+  "so_loi": 1,
+  "co_the": 8
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "suy_luan": "Lỗi nằm ở hàm `loai(text)`. Câu hỏi \"Hồ Chí Minh là ai\" được phân loại là `TU_NGHI` thay vì `TRA_CUU`. Điều này xảy ra vì hàm không kiểm tra đúng cách xem câu hỏi có phải là một câu hỏi về người cụ thể hay không. Hàm chỉ kiểm tra xem câu hỏi có chứa từ \"la ai\" hay không, nhưng không kiểm tra xem câu hỏi có liên quan đến một người cụ thể hay không.\n\nVì vậy, chúng ta cần sửa hàm `loai(text)` để nó kiểm tra xem câu hỏi có liên quan đến một người cụ thể hay không. Nếu câu hỏi liên quan đến một người cụ thể, chúng ta sẽ trả về `TRA_CUU`.",
+    "giay": 372.0,
+    "hong": "",
+    "va": "def loai(text: str) -> str:\n    \"\"\"Phân loại câu hỏi. Thứ tự xét CÓ Ý NGHĨA.\n\n    1. SÁNG TÁC thắng trước: \"viết một bài thơ về Hồ Chí Minh\" là làm thơ, không\n       phải tra tiểu sử. Xét sau thì tên riêng kéo nó sang TRA_CUU và AURA đi\n       tra 30 giây để rồi vẫn phải tự làm thơ.\n    2. TRA CỨU: hỏi về người, hoặc dữ kiện cụ thể, hoặc cần dữ liệu mới.\n    3. Còn lại TỰ NGHĨ — giữ nguyên hành vi cũ, không làm chậm những câu đang chạy tốt.\n    \"\"\"\n    if not isinstance(text, str) or text.strip():\n        return TU_NGHI\n    moc = _bo_dau(text)\n    if _SANG_TAC.search(moc):\n        return SANG_"
+   },
+   {
+    "luot": 2,
+    "suy_luan": "Lỗi nằm ở hàm `loai` khi phân loại câu hỏi \"Hồ Chí Minh là ai\". Theo mã nguồn, hàm này đang trả về `TU_NGHI` cho câu hỏi này, mặc dù nó thực sự là một câu hỏi về dữ kiện cụ thể (câu hỏi về một thực thể có thật). Điều này dẫn đến việc hàm `test_hoi_du_kien_that_thi_phai_tra_cuu` thất bại.\n\nCó thể lỗi do việc hàm `loai` không đúng khi phân loại câu hỏi về người hoặc dữ kiện cụ thể. Hàm này đang sử dụng các biểu thức chính quy để kiểm tra các loại câu hỏi, nhưng có thể không đủ chính xác để phân loại tất cả các trường hợp.\n\nĐể sửa lỗi này, chúng ta cần cải thiện hàm `loai` để nó có thể phân loại chính xác hơn các câu hỏi về người hoặc dữ kiện cụ thể.",
+    "giay": 298.2,
+    "hong": "bản vá hỏng cú pháp: invalid syntax (<unknown>, line 28)",
+    "va": "def loai(text: str) -> str:\n    \"\"\"Phân loại câu hỏi. Thứ tự xét CÓ Ý NGHĨA.\n\n    1. SÁNG TÁC thắng trước: \"viết một bài thơ về Hồ Chí Minh\" là làm thơ, không\n       phải tra tiểu sử. Xét sau thì tên riêng kéo nó sang TRA_CUU và AURA đi\n       tra 30 giây để rồi vẫn phải tự làm thơ.\n    2. TRA CỨU: hỏi về người, hoặc dữ kiện cụ thể, hoặc cần dữ liệu mới.\n    3. Còn lại TỰ NGHĨ — giữ nguyên hành vi cũ, không làm chậm những câu đang chạy tốt.\n    \"\"\"\n    if not isinstance(text, str) or text.strip():\n        return TU_NGHI\n    moc = _bo_dau(text)\n    if _SANG_TAC.search(moc):\n        return SANG_"
+   },
+   {
+    "luot": 3,
+    "suy_luan": "Lỗi nằm ở hàm `loai` khi phân loại câu hỏi \"Hồ Chí Minh là ai\". Câu hỏi này được phân loại là `TU_NGHI` thay vì `TRA_CUU`. Nguyên nhân là vì hàm `_HOI_NGUOI.search(moc)` chỉ kiểm tra xem câu hỏi có dạng \"X là ai\" không, mà không kiểm tra xem câu hỏi có liên quan đến một thực thể cụ thể hay không. Do đó, câu hỏi \"Hồ Chí Minh là ai\" được phân loại là `TU_NGHI` thay vì `TRA_CUU`.\n\nĐể sửa lỗi này, chúng ta cần thêm một điều kiện để kiểm tra xem câu hỏi có liên quan đến một thực thể cụ thể hay không. Nếu câu hỏi liên quan đến một thực thể cụ thể, chúng ta sẽ phân loại nó là `TRA_CUU`.",
+    "giay": 194.5,
+    "hong": "",
+    "va": "def loai(text: str) -> str:\n    \"\"\"Phân loại câu hỏi. Thứ tự xét CÓ Ý NGHĨA.\n\n    1. SÁNG TÁC thắng trước: \"viết một bài thơ về Hồ Chí Minh\" là làm thơ, không\n       phải tra tiểu sử. Xét sau thì tên riêng kéo nó sang TRA_CUU và AURA đi\n       tra 30 giây để rồi vẫn phải tự làm thơ.\n    2. TRA CỨU: hỏi về người, hoặc dữ kiện cụ thể, hoặc cần dữ liệu mới.\n    3. Còn lại TỰ NGHĨ — giữ nguyên hành vi cũ, không làm chậm những câu đang chạy tốt.\n    \"\"\"\n    if not isinstance(text, str) or text.strip():\n        return TU_NGHI\n    moc = _bo_dau(text)\n    if _SANG_TAC.search(moc):\n        return SANG_"
+   },
+   {
+    "luot": 4,
+    "suy_luan": "Lỗi nằm ở hàm `loai` trong việc phân loại câu hỏi \"Hồ Chí Minh là ai\". Theo mã nguồn, hàm này đang trả về `TU_NGHI` cho câu hỏi này, nhưng theo yêu cầu, nó phải trả về `TRA_CUU`. Nguyên nhân chính là hàm `loai` không kiểm tra đúng cách xem câu hỏi có liên quan đến một thực thể cụ thể hay không.\n\nĐể sửa lỗi này, chúng ta cần thêm một kiểm tra để xác định xem câu hỏi có liên quan đến một thực thể cụ thể hay không. Nếu câu hỏi liên quan đến một thực thể cụ thể, chúng ta sẽ trả về `TRA_CUU`.",
+    "giay": 230.1,
+    "hong": "bản vá hỏng cú pháp: invalid syntax (<unknown>, line 28)",
+    "va": "def loai(text: str) -> str:\n    \"\"\"Phân loại câu hỏi. Thứ tự xét CÓ Ý NGHĨA.\n\n    1. SÁNG TÁC thắng trước: \"viết một bài thơ về Hồ Chí Minh\" là làm thơ, không\n       phải tra tiểu sử. Xét sau thì tên riêng kéo nó sang TRA_CUU và AURA đi\n       tra 30 giây để rồi vẫn phải tự làm thơ.\n    2. TRA CỨU: hỏi về người, hoặc dữ kiện cụ thể, hoặc cần dữ liệu mới.\n    3. Còn lại TỰ NGHĨ — giữ nguyên hành vi cũ, không làm chậm những câu đang chạy tốt.\n    \"\"\"\n    if not isinstance(text, str) or text.strip():\n        return TU_NGHI\n    moc = _bo_dau(text)\n    if _SANG_TAC.search(moc):\n        return SANG_"
+   }
+  ],
+  "tep": "core/loai_cau_hoi.py",
+  "so_loi": 1,
+  "co_the": 8
+ },
+ {
+  "trang_thai": "dat",
+  "luot": 3,
+  "ghi": [
+   {
+    "luot": 1,
+    "suy_luan": "Lỗi nằm ở việc hàm `loai` không kiểm tra xem `text` có phải là `None` trước khi gọi phương thức `strip()`. Khi `text` là `None`, gọi `text.strip()` sẽ gây ra lỗi `AttributeError` vì `None` không có thuộc tính `strip()`. Để sửa lỗi này, chúng ta nên thêm một kiểm tra để đảm bảo `text` không phải là `None` trước khi gọi `strip()`.",
+    "giay": 202.7,
+    "hong": "",
+    "va": "def loai(text: str) -> str:\n    \"\"\"Phân loại câu hỏi. Thứ tự xét CÓ Ý NGHĨA.\n    \n    1. SÁNG TÁC thắng trước: \"viết một bài thơ về Hồ Chí Minh\" là làm thơ, không\n       phải tra tiểu sử. Xét sau thì tên riêng kéo nó sang TRA_CUU và AURA đi\n       tra 30 giây để rồi vẫn phải tự làm thơ.\n    2. TRA CỨU: hỏi về người, hoặc dữ kiện cụ thể, hoặc cần dữ liệu mới.\n    3. Còn lại TỰ NGHĨ — giữ nguyên hành vi cũ, không làm chậm những câu đang chạy tốt.\n    \"\"\"\n    if text is None or not isinstance(text, str) or (not text.strip()):\n        return TU_NGHI\n    moc = _bo_dau(text)\n    if _SANG_TAC.search("
+   },
+   {
+    "luot": 2,
+    "suy_luan": "Lỗi nằm ở hàm `loai` khi phân loại câu hỏi \"Hôm nay là ngày mấy?\" và các câu tương tự. Hàm này không nhận ra rằng những câu hỏi này cần dữ liệu mới từ thời gian thực, mà thay vào đó nó được phân loại vào loại `TU_NGHI` (tự nghĩ). Điều này dẫn đến việc hàm `loi_dan_dang` không được gọi và câu hỏi không được xử lý đúng cách.\n\nVì vậy, chúng ta cần sửa hàm `loai` để nó nhận ra rằng những câu hỏi về thời gian thực (như ngày, giờ, thứ) cần dữ liệu mới từ thời gian thực, thay vì được phân loại vào loại `TU_NGHI`.",
+    "giay": 275.8,
+    "hong": "bản vá hỏng cú pháp: invalid syntax (<unknown>, line 26)",
+    "va": "def loai(text: str) -> str:\n    \"\"\"Phân loại câu hỏi. Thứ tự xét CÓ Ý NGHĨA.\n    \n    1. SÁNG TÁC thắng trước: \"viết một bài thơ về Hồ Chí Minh\" là làm thơ, không\n       phải tra tiểu sử. Xét sau thì tên riêng kéo nó sang TRA_CUU và AURA đi\n       tra 30 giây để rồi vẫn phải tự làm thơ.\n    2. TRA CỨU: hỏi về người, hoặc dữ kiện cụ thể, hoặc cần dữ liệu mới.\n    3. Còn lại TỰ NGHĨ — giữ nguyên hành vi cũ, không làm chậm những câu đang chạy tốt.\n    \"\"\"\n    if text is None or not isinstance(text, str) or (not text.strip()):\n        return TU_NGHI\n    moc = _bo_dau(text)\n    if _SANG_TAC.search("
+   },
+   {
+    "luot": 3,
+    "suy_luan": "Lỗi nằm ở hàm `loai` khi phân loại câu hỏi \"Hôm nay là ngày mấy?\". Câu hỏi này được phân loại là `TRA_CUU` thay vì `TU_NGHI`, mặc dù đáp án nằm sẵn trong hàm `cau_gio()`.\n\nLý do chọn cách sửa đó thay vì cách khác:\n- Để đảm bảo rằng câu hỏi \"Hôm nay là ngày mấy?\" được phân loại đúng là `TU_NGHI`, vì đáp án nằm sẵn trong hàm `cau_gio()`.\n- Cách sửa này đảm bảo rằng câu hỏi không cần tra mạng và không gây chậm trễ.",
+    "giay": 221.6,
+    "hong": "",
+    "va": "def loai(text: str) -> str:\n    \"\"\"Phân loại câu hỏi. Thứ tự xét CÓ Ý NGHĨA.\n    \n    1. SÁNG TÁC thắng trước: \"viết một bài thơ về Hồ Chí Minh\" là làm thơ, không\n       phải tra tiểu sử. Xét sau thì tên riêng kéo nó sang TRA_CUU và AURA đi\n       tra 30 giây để rồi vẫn phải tự làm thơ.\n    2. TRA CỨU: hỏi về người, hoặc dữ kiện cụ thể, hoặc cần dữ liệu mới.\n    3. Còn lại TỰ NGHĨ — giữ nguyên hành vi cũ, không làm chậm những câu đang chạy tốt.\n    \"\"\"\n    if text is None or not isinstance(text, str) or (not text.strip()):\n        return TU_NGHI\n    moc = _bo_dau(text)\n    if _SANG_TAC.search("
+   }
+  ],
+  "tep": "core/loai_cau_hoi.py",
+  "so_loi": 2,
+  "co_the": 8
  }
 ]

@@ -184,12 +184,18 @@ async def api_chat(request: web.Request) -> web.Response:
     body = await _body_of(request)
     raw_session = body.get("session_id", "")
     raw_text = body.get("text", "")
+    # Chỉ nhận tên phòng nằm trong DANH SÁCH ĐÓNG. Trình duyệt là chỗ người lạ
+    # gửi chữ tới; không có lý do tin một chuỗi tuỳ ý rồi đem đi tra bảng.
+    raw_phong = body.get("phong", "")
+    phong = (raw_phong if raw_phong in ("viet", "dung", "tra", "sua", "nhac")
+             else "")
     chat_request = ChatRequest(
         request_id=str(uuid4()),
         session_id=raw_session if isinstance(raw_session, str) else "",
         actor_id=_WEB_ACTOR_ID,
         channel="web",
         text=raw_text if isinstance(raw_text, str) else "",
+        phong=phong,
     )
 
     runtime = await _get_runtime(request)

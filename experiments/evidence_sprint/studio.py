@@ -12,21 +12,54 @@ def generate_sapi_tts(text, output_wav):
     with open(text_file, "w", encoding="utf-8") as f:
         f.write(text)
         
+    # WinRT chứ KHÔNG System.Speech — vì giọng Việt nằm ở hive khác.
+    #
+    # Đo 19/08/2026 trên máy này:
+    #   HKLM\\...\\Speech\\Voices\\Tokens           DAVID, ZIRA          (đều en-US)
+    #   HKLM\\...\\Speech_OneCore\\Voices\\Tokens   +  MSTTS_V110_viVN_An
+    #
+    # `System.Speech` (SAPI5) chỉ đọc hive thứ nhất, nên nó KHÔNG BAO GIỜ thấy
+    # giọng Việt — dù giọng ấy đã cài sẵn từ đầu. Bản cũ vì thế rơi xuống đường
+    # lui "giọng Microsoft bất kỳ" và đọc chương truyện tiếng Việt bằng giọng
+    # tiếng Anh, trong im lặng. Cửa kiểm không bắt được vì nó chỉ hỏi "có tiếng
+    # không", không hỏi "đúng giọng không".
+    #
+    # `Windows.Media.SpeechSynthesis` đọc được hive OneCore. Không cần quyền
+    # admin, không sờ vào registry, không cài thêm gì.
+    #
+    # KHÔNG có đường lui sang giọng khác: KY_LUAT_THUC_THI.md chương II mục 2
+    # đòi đúng token vi-VN. Thiếu thì phải KÊU, vì một giọng tiếng Anh đọc
+    # tiếng Việt là hỏng SẢN PHẨM, không phải hỏng test.
     ps_script = f"""
+    $ErrorActionPreference = 'Stop'
     $text = Get-Content '{text_file}' -Encoding UTF8 -Raw
-    Add-Type -AssemblyName System.Speech
-    $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
-    $voice = $synth.GetInstalledVoices() | Where-Object {{ $_.VoiceInfo.Name -match "Microsoft An" }}
-    if (-not $voice) {{
-        $voice = $synth.GetInstalledVoices() | Where-Object {{ $_.VoiceInfo.Name -match "Microsoft" }} | Select-Object -First 1
+    [Windows.Media.SpeechSynthesis.SpeechSynthesizer, Windows.Media, ContentType=WindowsRuntime] | Out-Null
+    [Windows.Storage.Streams.DataReader, Windows.Storage.Streams, ContentType=WindowsRuntime] | Out-Null
+    Add-Type -AssemblyName System.Runtime.WindowsRuntime
+    $asTask = [System.WindowsRuntimeSystemExtensions].GetMethods() |
+        Where-Object {{ $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and
+                       $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' }} |
+        Select-Object -First 1
+    function Await($op, $type) {{
+        $t = $asTask.MakeGenericMethod($type).Invoke($null, @($op))
+        $t.Wait(-1) | Out-Null
+        $t.Result
     }}
-    if ($voice) {{
-        $synth.SelectVoice($voice.VoiceInfo.Name)
-    }} else {{
+    $vi = [Windows.Media.SpeechSynthesis.SpeechSynthesizer]::AllVoices |
+          Where-Object {{ $_.Language -like 'vi*' }} | Select-Object -First 1
+    if (-not $vi) {{
+        Write-Error "khong co giong vi-VN nao trong Speech_OneCore"
         exit 1
     }}
-    $synth.SetOutputToWaveFile('{output_wav}')
-    $synth.Speak($text)
+    Write-Output "giong: $($vi.DisplayName) [$($vi.Language)]"
+    $synth = New-Object Windows.Media.SpeechSynthesis.SpeechSynthesizer
+    $synth.Voice = $vi
+    $stream = Await $synth.SynthesizeTextToStreamAsync($text) ([Windows.Media.SpeechSynthesis.SpeechSynthesisStream])
+    $reader = New-Object Windows.Storage.Streams.DataReader($stream)
+    Await $reader.LoadAsync($stream.Size) ([uint32]) | Out-Null
+    $bytes = New-Object byte[] $stream.Size
+    $reader.ReadBytes($bytes)
+    [System.IO.File]::WriteAllBytes('{output_wav}', $bytes)
     """
     ps_file = "tts.ps1"
     with open(ps_file, "w", encoding="utf-8") as f:
@@ -51,7 +84,7 @@ def generate_sapi_tts(text, output_wav):
         loi = ((res.stderr or "") + (res.stdout or "")).strip()[:300]
         raise Exception(
             f"TTS thất bại, PowerShell thoát {res.returncode}. "
-            f"exit 1 = không có giọng Microsoft nào; mã khác = lỗi khác. "
+            f"exit 1 = không có giọng vi-VN trong Speech_OneCore. "
             f"Lời PowerShell: {loi or '(không nói gì)'}")
 
     # Thoát 0 KHÁC có tiếng. SAPI ghi tệp rỗng khi văn bản rỗng, và một wav 0
@@ -201,7 +234,7 @@ def kiem_mp4(mp4_path):
             "streams": loai}
 
 def rut_kich_ban(chuong: str, model: str = "qwen3.5:4b") -> str:
-    """Chương 1.500-2.500 chữ -> kịch bản đọc 120-160 từ.
+    """Chương 1.500-2.500 chữ -> kịch bản đọc 234-276 từ (55-65 giây).
 
     Bàn giao chốt ở thaoluan.md lượt 008 là:
         chapter.md -> shorts_script (120-160 từ) -> shot_list -> voice+ảnh -> mp4
@@ -214,28 +247,54 @@ def rut_kich_ban(chuong: str, model: str = "qwen3.5:4b") -> str:
     'thinking' và `response` rỗng (đo 16/08: 51,6s ra 0 ký tự).
     """
     import httpx
-    loi_dan = (
-        "Bạn là biên tập video ngắn. Rút đoạn truyện dưới đây thành một kịch "
-        "bản ĐỌC THÀNH TIẾNG dài 120-160 từ tiếng Việt.\n"
-        "- Giữ đúng nhân vật và bối cảnh, không thêm tình tiết mới.\n"
-        "- Viết thành câu liền mạch để đọc, KHÔNG gạch đầu dòng, KHÔNG tiêu đề.\n"
-        "- Chỉ trả về kịch bản, không giải thích.\n\n"
-        f"ĐOẠN TRUYỆN:\n{chuong[:6000]}"
-    )
-    # ĐỪNG CẦU MODEL ĐẾM TỪ. Đo 16/08: xin 120-160 từ, model 4b trả về 353 —
-    # gấp hơn hai lần. Nó không cố tình cãi; nó đơn giản không đếm được từ
-    # trong lúc viết.
+
+    # ĐỪNG XIN MODEL MỘT ĐỘ DÀI. Đo ba lần, cùng chương, cùng seed:
+    #     xin 120-160 từ  ->  353    (gấp 2,2 lần)
+    #     xin 250 từ      ->  206    (bằng 0,82)
+    #     xin 400 từ      ->  188    (bằng 0,47)
+    # Xin nhiều hơn thì ra ÍT hơn. Con số trong lời dặn không điều khiển gì cả;
+    # độ dài ra là do LƯỢNG CHỮ ĐƯA VÀO quyết định. Bản cũ đưa `chuong[:6000]`
+    # — khoảng 60% một chương 10.000 ký tự — nên video cũng chỉ kể được 60%
+    # chương, và luôn ra quanh 190-210 từ.
     #
-    # Máy siết được thì để máy siết: `num_predict` là trần CỨNG, model không
-    # vượt qua được dù muốn. 160 từ tiếng Việt ~ 210-260 token.
-    r = httpx.post("http://localhost:11434/api/generate", json={
-        "model": model, "prompt": loi_dan, "stream": False, "think": False,
-        "keep_alive": "10m",
-        "options": {"seed": 42, "temperature": 0.4, "num_predict": 420,
-                    "num_ctx": 4096},
-    }, timeout=600.0)
-    r.raise_for_status()
-    chu = (r.json().get("response") or "").strip()
+    # Nên đổi cần gạt: MÁY ghép, model chỉ viết văn. Chia chương thành khúc,
+    # xin kịch bản từng khúc, nối lại tới khi đủ 234 từ rồi cắt xuống 275.
+    # Máy đếm được thì để máy đếm — model đã ba lần chứng minh nó không đếm.
+    #
+    # Lợi thêm: kịch bản giờ phủ CẢ chương chứ không riêng phần đầu.
+    # Gom tới 320 từ THÔ, không phải 234.
+    #
+    # Bản đầu của vòng này dừng ở 234 — đúng cửa dưới — rồi bước cắt-về-cuối-câu
+    # ngay bên dưới gọt mất phần dư và tụt xuống 211, trượt chính cái cửa vừa
+    # canh. Kiểm ngưỡng ở chỗ TRƯỚC khi cắt thì ngưỡng ấy không có nghĩa gì.
+    #
+    # 320 chừa chỗ cho cả hai bước gọt (về cuối câu, rồi cắt xuống 275), nên
+    # đầu ra rơi vào khoảng 234-275 thay vì rơi xuống dưới.
+    KHUC = 5000
+    khuc = [chuong[i:i + KHUC] for i in range(0, len(chuong), KHUC)] or [chuong]
+    phan: list[str] = []
+    for k in khuc:
+        if len(" ".join(phan).split()) >= 320:
+            break
+        loi_dan = (
+            "Bạn là biên tập video ngắn. Rút đoạn truyện dưới đây thành lời "
+            "ĐỌC THÀNH TIẾNG bằng tiếng Việt.\n"
+            "- Giữ đúng nhân vật và bối cảnh, không thêm tình tiết mới.\n"
+            "- Viết thành câu liền mạch để đọc, KHÔNG gạch đầu dòng, KHÔNG tiêu đề.\n"
+            "- Chỉ trả về lời đọc, không giải thích.\n\n"
+            f"ĐOẠN TRUYỆN:\n{k}"
+        )
+        r = httpx.post("http://localhost:11434/api/generate", json={
+            "model": model, "prompt": loi_dan, "stream": False, "think": False,
+            "keep_alive": "10m",
+            "options": {"seed": 42, "temperature": 0.4, "num_predict": 900,
+                        "num_ctx": 4096},
+        }, timeout=600.0)
+        r.raise_for_status()
+        m = (r.json().get("response") or "").strip()
+        if m:
+            phan.append(m)
+    chu = " ".join(phan)
 
     # Cắt trần thường rơi vào giữa câu. Lùi về dấu chấm cuối cùng — câu cụt
     # đọc lên nghe hụt, và TTS không biết dừng ở đâu.
@@ -245,21 +304,48 @@ def rut_kich_ban(chuong: str, model: str = "qwen3.5:4b") -> str:
 
     # Vẫn dài thì cắt theo câu cho tới khi lọt trần.
     #
-    # Trần 195 từ, suy từ tốc độ đọc ĐO TRÊN TỆP WAV:
-    #     78 từ  ->  26,17 giây audio  ->  0,335 giây/từ
-    #     60 giây / 0,335 = ~179 từ
+    # Trần 275 từ. HẰNG SỐ NÀY ĐÃ SAI HAI LẦN, mỗi lần một kiểu khác nhau:
     #
-    # Lần đầu tôi tính ra 0,80 giây/từ và siết trần xuống 90 — SAI, vì tôi lấy
-    # 101 giây của MP4 làm tử số, mà chính mp4 đó đang bị lỗi kéo giãn thời
-    # gian (xem chú thích ở `run_ffmpeg_encode`). Rút tỉ lệ từ một phép đo đã
-    # hỏng thì ra một trần sai, rồi trần sai lại làm hỏng phép đo sau.
-    # Đo đúng chỗ: WAV, không phải MP4.
-    while len(chu.split()) > 195:
-        cat = max(chu.rstrip(".!?").rfind("."), chu.rstrip(".!?").rfind("!"),
-                  chu.rstrip(".!?").rfind("?"))
-        if cat <= 0:
-            break
-        chu = chu[:cat + 1]
+    #   0,80 giây/từ   lấy 101 giây của MP4 làm tử số, mà chính MP4 đó đang bị
+    #                  kéo giãn thời gian. Rút tỉ lệ từ một phép đo đã hỏng.
+    #   0,335 giây/từ  đo đúng trên WAV, nhưng là WAV của GIỌNG TIẾNG ANH đọc
+    #                  chữ tiếng Việt. Đo ba lượt — 0,335 · 0,329 · 0,332 —
+    #                  ba lượt khớp nhau và CẢ BA cùng đo sai một thứ.
+    #
+    # Ba phép đo khớp nhau không làm chúng đúng. Chúng chỉ chứng minh cùng một
+    # cái sai lặp lại ổn định.
+    #
+    # Đo 19/08 với giọng ĐÚNG (vi-VN Microsoft An), ba độ dài khác nhau:
+    #      60 từ -> 14,6 giây -> 0,243 giây/từ
+    #     132 từ -> 31,9 giây -> 0,241
+    #     224 từ -> 52,8 giây -> 0,236
+    #     đường thẳng:  giây = 0,2331 * từ + 0,56
+    #     -> 55-65 giây cần 234-276 từ
+    #
+    # Giọng Việt đọc NHANH HƠN giọng Anh 1,4 lần trên cùng chữ, vì giọng Anh
+    # phải bò từng âm tiết lạ. Nên vá giọng xong thì trần cũ 195 từ cho ra 40,5
+    # giây — trượt cửa dưới.
+    # CỘNG DỒN TỪ ĐẦU, không gọt từ đuôi.
+    #
+    # Bản cũ cắt nguyên một câu khỏi đuôi mỗi vòng cho tới khi lọt trần 275.
+    # Đo 19/08: model đẻ 808 từ, gọt dần xuống còn 280, rồi câu vượt trần cuối
+    # cùng dài 69 từ nên nhát gọt ấy ném thẳng xuống 211 — dưới cửa 234. Ba
+    # lượt chạy đều ra ĐÚNG 211, và tôi đã hai lần đoán sai nguyên nhân trước
+    # khi chịu đo từng khúc.
+    #
+    # Gọt từ đuôi thì nhát cuối muốn cắt bao nhiêu cũng được. Cộng từ đầu thì
+    # mỗi câu chỉ được thêm khi còn chỗ, nên kết quả bám sát trần từ phía dưới.
+    import re as _re
+    cau = [c for c in _re.split(r"(?<=[.!?])\s+", chu) if c.strip()]
+    gom, dem = [], 0
+    for c in cau:
+        n = len(c.split())
+        if dem + n > 275:
+            continue          # câu này quá dài -> bỏ qua, thử câu ngắn kế tiếp
+        gom.append(c)
+        dem += n
+    if gom:
+        chu = " ".join(gom)
     return chu.strip()
 
 
@@ -291,12 +377,14 @@ if __name__ == "__main__":
         kb_path = os.path.join(run_dir, 'artifacts', 'shorts_script.md')
         with open(kb_path, 'w', encoding='utf-8') as f:
             f.write(text)
-        # Khoảng suy ra từ tốc độ đọc ĐO ĐƯỢC của SAPI (~0,80 giây/từ), không
-        # từ con số 120-160 trong đặc tả — đặc tả viết cho giọng neural.
-        if not (150 <= so_tu <= 200):
+        # Khoảng suy từ tốc độ đọc ĐO ĐƯỢC của giọng vi-VN An 19/08:
+        # 0,2331 giây/từ (ba điểm: 60/132/224 từ). Không lấy từ con số 120-160
+        # trong đặc tả — con số đó tính cho một giọng khác, và ở nhịp này nó
+        # chỉ ra 28-38 giây, tức TRƯỢT chính cửa 55-65 mà đặc tả tự đặt.
+        if not (234 <= so_tu <= 276):
             raise SystemExit(
-                f"CỬA KỊCH BẢN: {so_tu} từ, ngoài khoảng 150-200 "
-                f"(~0,335 giây/từ -> 50-67 giây audio)")
+                f"CỬA KỊCH BẢN: {so_tu} từ, ngoài khoảng 234-276 "
+                f"(0,2331 giây/từ -> 55-65 giây audio)")
 
     try:
         # 1. SAPI

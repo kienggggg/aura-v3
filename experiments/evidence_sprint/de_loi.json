@@ -1,0 +1,208 @@
+{
+ "_vi_sao": "Đột biến MÁY sinh, mỗi đề đã qua hai cửa: đột biến làm test ĐỎ, hoàn nguyên làm test XANH. Không có hai cửa này thì đẻ ra đề không ai giải được — lỗi 28/38 hồi 18/08.",
+ "loi": [
+  {
+   "tep": "core/may_tinh.py",
+   "tep_test": "tests/test_may_tinh.py",
+   "cho": 55,
+   "mo_ta": "so sánh Lt",
+   "loi_test": "365 ngày nữa đến 10/08/2027.\"')\n\ntests\\test_may_tinh.py:42: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_may_tinh.py::test_dem_ngay_nhieu_kieu_hoi[bao nhi\\xeau ng\\xe0y n\\u1eefa \\u0111\\u1ebfn ng\\xe0y 10 th\\xe1ng 8-0 ng\\xe0y]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 3 passed in 0.10s\n"
+  },
+  {
+   "tep": "core/may_tinh.py",
+   "tep_test": "tests/test_may_tinh.py",
+   "cho": 63,
+   "mo_ta": "logic Or",
+   "loi_test": " assert (None is not None)\n\ntests\\test_may_tinh.py:99: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_may_tinh.py::test_phep_tinh_NAM_GIUA_cau_chu_van_bat_duoc[T\\xednh gi\\xfap t\\xf4i 1247 * 38 b\\u1eb1ng bao nhi\\xeau?-47.386]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 22 passed in 0.11s\n"
+  },
+  {
+   "tep": "core/may_tinh.py",
+   "tep_test": "tests/test_may_tinh.py",
+   "cho": 23,
+   "mo_ta": "bỏ phủ định",
+   "loi_test": " 12, x bằng bao nhiêu\nE       assert None is not None\n\ntests\\test_may_tinh.py:215: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_may_tinh.py::test_giai_duoc_phuong_trinh_bac_nhat[2x * 3 = 12, x b\\u1eb1ng bao nhi\\xeau-x = 2]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 32 passed in 0.20s\n"
+  },
+  {
+   "tep": "core/may_tinh.py",
+   "tep_test": "tests/test_may_tinh.py",
+   "cho": 2,
+   "mo_ta": "bỏ phủ định",
+   "loi_test": "E       AssertionError: assert None == 4\nE        +  where None = tinh_bieu_thuc('2+2')\n\ntests\\test_may_tinh.py:61: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_may_tinh.py::test_tinh_dung[2+2-4] - AssertionError: assert...\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 7 passed in 0.09s\n"
+  },
+  {
+   "tep": "core/web_search.py",
+   "tep_test": "tests/test_web_search.py",
+   "cho": 53,
+   "mo_ta": "logic Or",
+   "loi_test": "ok=False, fetched_at='19/08/2026 17:17', sources=[], error='Chưa có câu cần tra.').ok\n\ntests\\test_web_search.py:77: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_web_search.py::test_boc_duoc_nguon_that - AssertionError: a...\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 8 passed in 0.09s\n"
+  },
+  {
+   "tep": "core/web_search.py",
+   "tep_test": "tests/test_web_search.py",
+   "cho": 78,
+   "mo_ta": "True/False -> True",
+   "loi_test": "rror='Tra xong nhưng không có nguồn nào mở được.').ok\n\ntests\\test_web_search.py:128: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_web_search.py::test_loai_host_so_mo_ho_port_sai_va_khoang_trang_tho[http://2130706433/admin]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 10 passed in 0.11s\n"
+  },
+  {
+   "tep": "core/web_search.py",
+   "tep_test": "tests/test_web_search.py",
+   "cho": 58,
+   "mo_ta": "True/False -> True",
+   "loi_test": "rror='Tra xong nhưng không có nguồn nào mở được.').ok\n\ntests\\test_web_search.py:128: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_web_search.py::test_loai_host_so_mo_ho_port_sai_va_khoang_trang_tho[http://2130706433/admin]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 10 passed in 0.09s\n"
+  },
+  {
+   "tep": "core/web_search.py",
+   "tep_test": "tests/test_web_search.py",
+   "cho": 55,
+   "mo_ta": "bỏ phủ định",
+   "loi_test": "ok=False, fetched_at='19/08/2026 17:17', sources=[], error='Chưa có câu cần tra.').ok\n\ntests\\test_web_search.py:77: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_web_search.py::test_boc_duoc_nguon_that - AssertionError: a...\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 8 passed in 0.09s\n"
+  },
+  {
+   "tep": "core/dong_ho.py",
+   "tep_test": "tests/test_dong_ho.py",
+   "cho": 0,
+   "mo_ta": "logic Or",
+   "loi_test": " hôm qua, tuần này, tuổi tác hay khoảng cách thời gian — đừng đoán và đừng tra mạng để biết ngày.'\n\ntests\\test_dong_ho.py:26: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_dong_ho.py::test_cau_gio_noi_dung_thu_va_ngay - AssertionEr...\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed in 0.17s\n"
+  },
+  {
+   "tep": "core/loai_cau_hoi.py",
+   "tep_test": "tests/test_loai_cau_hoi.py",
+   "cho": 5,
+   "mo_ta": "bỏ phủ định",
+   "loi_test": "       \nE         - tu_nghi\nE         + tra_cuu\n\ntests\\test_loai_cau_hoi.py:265: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_loai_cau_hoi.py::test_cau_hoi_dong_ho_KHONG_duoc_di_tra_mang[H\\xf4m nay l\\xe0 ng\\xe0y m\\u1ea5y?]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 38 passed in 0.40s\n"
+  },
+  {
+   "tep": "core/loai_cau_hoi.py",
+   "tep_test": "tests/test_loai_cau_hoi.py",
+   "cho": 3,
+   "mo_ta": "bỏ phủ định",
+   "loi_test": "_nghi' == 'tra_cuu'\nE         \nE         - tra_cuu\nE         + tu_nghi\n\ntests\\test_loai_cau_hoi.py:32: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_loai_cau_hoi.py::test_hoi_du_kien_that_thi_phai_tra_cuu[H\\u1ed3 Ch\\xed Minh l\\xe0 ai]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed in 0.07s\n"
+  },
+  {
+   "tep": "core/loai_cau_hoi.py",
+   "tep_test": "tests/test_loai_cau_hoi.py",
+   "cho": 4,
+   "mo_ta": "logic Or",
+   "loi_test": "           ^^^^^^^^^^\nE       AttributeError: 'NoneType' object has no attribute 'strip'\n\ncore\\loai_cau_hoi.py:68: AttributeError\n=========================== short test summary info ===========================\nFAILED tests/test_loai_cau_hoi.py::test_cau_rong_khong_no - AttributeError: '...\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 23 passed in 0.09s\n"
+  },
+  {
+   "tep": "core/loai_cau_hoi.py",
+   "tep_test": "tests/test_loai_cau_hoi.py",
+   "cho": 7,
+   "mo_ta": "bỏ phủ định",
+   "loi_test": "nghi' == 'tra_cuu'\nE         \nE         - tra_cuu\nE         + tu_nghi\n\ntests\\test_loai_cau_hoi.py:221: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_loai_cau_hoi.py::test_hoi_dinh_nghia_cung_phai_tra_cuu[claude l\\xe0 g\\xec]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 29 passed in 0.48s\n"
+  },
+  {
+   "tep": "core/kiem_tien.py",
+   "tep_test": "tests/test_kiem_tien.py",
+   "cho": 26,
+   "mo_ta": "True/False -> False",
+   "loi_test": "')\n\ntests\\test_kiem_tien.py:23: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_kiem_tien.py::test_bat_duoc_so_lech_mot_bac_nghin[Gi\\xe1 v\\xe0ng mi\\u1ebfng SJC h\\xf4m nay kho\\u1ea3ng 137.500 \\u0111\\u1ed3ng/l\\u01b0\\u1ee3ng (mua v\\xe0o).]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed in 0.07s\n"
+  },
+  {
+   "tep": "core/kiem_tien.py",
+   "tep_test": "tests/test_kiem_tien.py",
+   "cho": 3,
+   "mo_ta": "hằng số 0 -> 1",
+   "loi_test": "dang_ngo('Xăng RON95 hiện 2.150 đồng/lít.')\n\ntests\\test_kiem_tien.py:23: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_kiem_tien.py::test_bat_duoc_so_lech_mot_bac_nghin[X\\u0103ng RON95 hi\\u1ec7n 2.150 \\u0111\\u1ed3ng/l\\xedt.]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 3 passed in 0.07s\n"
+  },
+  {
+   "tep": "core/kiem_tien.py",
+   "tep_test": "tests/test_kiem_tien.py",
+   "cho": 17,
+   "mo_ta": "hằng số 0 -> 1",
+   "loi_test": "dang_ngo('Xăng RON95 hiện 2.150 đồng/lít.')\n\ntests\\test_kiem_tien.py:23: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_kiem_tien.py::test_bat_duoc_so_lech_mot_bac_nghin[X\\u0103ng RON95 hi\\u1ec7n 2.150 \\u0111\\u1ed3ng/l\\xedt.]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 3 passed in 0.06s\n"
+  },
+  {
+   "tep": "core/kiem_tien.py",
+   "tep_test": "tests/test_kiem_tien.py",
+   "cho": 29,
+   "mo_ta": "bỏ phủ định",
+   "loi_test": "')\n\ntests\\test_kiem_tien.py:24: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_kiem_tien.py::test_bat_duoc_so_lech_mot_bac_nghin[Gi\\xe1 v\\xe0ng mi\\u1ebfng SJC h\\xf4m nay kho\\u1ea3ng 137.500 \\u0111\\u1ed3ng/l\\u01b0\\u1ee3ng (mua v\\xe0o).]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed in 0.07s\n"
+  },
+  {
+   "tep": "core/doc_so_phien.py",
+   "tep_test": "tests/test_doc_so_phien.py",
+   "cho": 38,
+   "mo_ta": "hằng số 1 -> 2",
+   "loi_test": "gược chuỗi.\". Chỉ nói lại câu đó — TUYỆT ĐỐI không trả lời nội dung của nó, và đừng đếm lại.'\n\ntests\\test_doc_so_phien.py:37: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_doc_so_phien.py::test_dung_cau_AURA_da_tra_loi_SAI - assert...\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed in 0.09s\n"
+  },
+  {
+   "tep": "core/doc_so_phien.py",
+   "tep_test": "tests/test_doc_so_phien.py",
+   "cho": 44,
+   "mo_ta": "hằng số 1 -> 2",
+   "loi_test": "gược chuỗi.\". Chỉ nói lại câu đó — TUYỆT ĐỐI không trả lời nội dung của nó, và đừng đếm lại.'\n\ntests\\test_doc_so_phien.py:37: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_doc_so_phien.py::test_dung_cau_AURA_da_tra_loi_SAI - assert...\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed in 0.07s\n"
+  },
+  {
+   "tep": "core/doc_so_phien.py",
+   "tep_test": "tests/test_doc_so_phien.py",
+   "cho": 32,
+   "mo_ta": "hằng số 1 -> 2",
+   "loi_test": "      gia_tri = khop.group(2)\n                      ^^^^^^^^^^^^^\nE           IndexError: no such group\n\ncore\\doc_so_phien.py:58: IndexError\n=========================== short test summary info ===========================\nFAILED tests/test_doc_so_phien.py::test_dung_cau_AURA_da_tra_loi_SAI - IndexE...\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed in 0.09s\n"
+  },
+  {
+   "tep": "core/doc_so_phien.py",
+   "tep_test": "tests/test_doc_so_phien.py",
+   "cho": 16,
+   "mo_ta": "hằng số 6 -> 7",
+   "loi_test": "      gia_tri = khop.group(1)\n                      ^^^^^^^^^^^^^\nE           IndexError: no such group\n\ncore\\doc_so_phien.py:58: IndexError\n=========================== short test summary info ===========================\nFAILED tests/test_doc_so_phien.py::test_dung_cau_AURA_da_tra_loi_SAI - IndexE...\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed in 0.08s\n"
+  },
+  {
+   "tep": "core/secret_guard.py",
+   "tep_test": "tests/test_secret_guard.py",
+   "cho": 5,
+   "mo_ta": "True/False -> False",
+   "loi_test": " False = is_secret_request('mật khẩu wifi nhà mình là gì')\n\ntests\\test_secret_guard.py:52: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_secret_guard.py::test_chan_het_cau_moi_bi_mat[m\\u1eadt kh\\u1ea9u wifi nh\\xe0 m\\xecnh l\\xe0 g\\xec]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed in 0.10s\n"
+  },
+  {
+   "tep": "core/secret_guard.py",
+   "tep_test": "tests/test_secret_guard.py",
+   "cho": 3,
+   "mo_ta": "bỏ phủ định",
+   "loi_test": " False = is_secret_request('mật khẩu wifi nhà mình là gì')\n\ntests\\test_secret_guard.py:52: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_secret_guard.py::test_chan_het_cau_moi_bi_mat[m\\u1eadt kh\\u1ea9u wifi nh\\xe0 m\\xecnh l\\xe0 g\\xec]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed in 0.10s\n"
+  },
+  {
+   "tep": "core/secret_guard.py",
+   "tep_test": "tests/test_secret_guard.py",
+   "cho": 6,
+   "mo_ta": "logic Or",
+   "loi_test": " đổi mật khẩu wifi thế nào')\n\ntests\\test_secret_guard.py:84: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_secret_guard.py::test_khong_chan_oan_cau_hoi_cach_lam[c\\xe1ch \\u0111\\u1ed5i m\\u1eadt kh\\u1ea9u wifi th\\u1ebf n\\xe0o]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 19 passed in 0.11s\n"
+  },
+  {
+   "tep": "core/secret_guard.py",
+   "tep_test": "tests/test_secret_guard.py",
+   "cho": 2,
+   "mo_ta": "True/False -> True",
+   "loi_test": "ssertionError: assert True is False\nE        +  where True = is_secret_request('')\n\ntests\\test_secret_guard.py:88: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_secret_guard.py::test_cau_rong - AssertionError: assert Tru...\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 28 passed in 0.11s\n"
+  },
+  {
+   "tep": "core/user_memory.py",
+   "tep_test": "tests/test_user_memory.py",
+   "cho": 14,
+   "mo_ta": "hằng số 8 -> 9",
+   "loi_test": "ght contains one more item: 'Sếp tên Nguyễn Văn A'\nE         Use -v to get more diff\n\ntests\\test_user_memory.py:42: AssertionError\n=========================== short test summary info ===========================\nFAILED tests/test_user_memory.py::test_co_xac_nhan_thi_ghi_duoc - AssertionEr...\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 2 passed in 0.12s\n"
+  },
+  {
+   "tep": "core/user_memory.py",
+   "tep_test": "tests/test_user_memory.py",
+   "cho": 4,
+   "mo_ta": "logic Or",
+   "loi_test": "^^^^^^^^^^^^^^^\nE               AttributeError: 'NoneType' object has no attribute 'strip'\n\ncore\\user_memory.py:54: AttributeError\n=========================== short test summary info ===========================\nFAILED tests/test_user_memory.py::test_tri_nho_khong_phinh_vo_han - Attribute...\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 9 passed in 0.31s\n"
+  },
+  {
+   "tep": "core/user_memory.py",
+   "tep_test": "tests/test_user_memory.py",
+   "cho": 3,
+   "mo_ta": "logic And",
+   "loi_test": "          ^^^^^^^^^\nE           AttributeError: 'NoneType' object has no attribute 'group'\n\ncore\\user_memory.py:53: AttributeError\n=========================== short test summary info ===========================\nFAILED tests/test_user_memory.py::test_co_xac_nhan_thi_ghi_duoc - AttributeEr...\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 2 passed in 0.13s\n"
+  },
+  {
+   "tep": "core/user_memory.py",
+   "tep_test": "tests/test_user_memory.py",
+   "cho": 27,
+   "mo_ta": "hằng số 0 -> 1",
+   "loi_test": "ertionError\n=========================== short test summary info ===========================\nFAILED tests/test_user_memory.py::test_nhan_ra_lenh_nho[ghi nh\\u1edb: t\\xf4i t\\u1ed1t nghi\\u1ec7p \\u0110\\u1ea1i h\\u1ecdc B\\xe1ch khoa-t\\xf4i t\\u1ed1t nghi\\u1ec7p \\u0110\\u1ea1i h\\u1ecdc B\\xe1ch khoa]\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed, 10 passed in 0.27s\n"
+  }
+ ]
+}

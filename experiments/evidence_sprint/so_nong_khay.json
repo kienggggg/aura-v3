@@ -1,0 +1,758 @@
+[
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "noi_bay_gio_may_gio",
+  "can": "cau_gio",
+  "dat": false,
+  "so_the": 0,
+  "giay": 13.5,
+  "ma": "from datetime import datetime\n\ndef noi_bay_gio_may_gio():\n    now = datetime.now()\n    return now.strftime(\"%H:%M:%S\")\n\n# Ví dụ sử dụng hàm\nprint(noi_bay_gio_may_gio())"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "dap_cau_hoi_co_phep_toan",
+  "can": "tinh_giup",
+  "dat": false,
+  "so_the": 0,
+  "giay": 32.0,
+  "ma": "def dap_cau_hoi_co_phep_toan(cau_hoi):\n    # Sử dụng eval để tính toán biểu thức trong câu hỏi\n    try:\n        ket_qua = eval(cau_hoi)\n        return ket_qua\n    except Exception as e:\n        return \"Câu hỏi không hợp lệ hoặc có lỗi trong phép toán.\"\n\n# Ví dụ sử dụng hàm\ncau_hoi = \"2 + 3 * 4\"\nket_qua = dap_cau_hoi_co_phep_toan(cau_hoi)\nprint(ket_qua)  # Kết quả sẽ là 14"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "lam_ra_ket_qua_day_phep",
+  "can": "tinh_bieu_thuc",
+  "dat": false,
+  "so_the": 0,
+  "giay": 77.3,
+  "ma": "Dưới đây là mã Python cho hàm `lam_ra_ket_qua_day_phep`:\n\n```python\ndef lam_ra_ket_qua_day_phep(day_phep):\n    stack = []\n    \n    for phan_tu in day_phep:\n        if phan_tu.isdigit():  # Nếu phần tử là số, thêm vào stack\n            stack.append(int(phan_tu))\n        else:  # Nếu phần tử là phép toán, thực hiện phép tính\n            so2 = stack.pop()\n            so1 = stack.pop()\n            if phan_tu == '+':\n                stack.append(so1 + so2)\n            elif phan_tu == '-':\n                stack.append(so1 - so2)\n            elif phan_tu == '*':\n                stack.append(so1 * so2)\n            elif phan_tu == '/':\n                stack.append(so1 / so2)\n    \n    return stack[0]  # Kết quả cuối cùng trong stack\n\n# Ví dụ sử dụng:\nday_phep = ['3', '4', '+', '2', '*', '7', '/']\nket_qua = lam_ra_ket_qua_day_phep(day_phep)\nprint(ket_qua)  # Kết quả: 5.0\n```\n\nHàm `lam_ra_ket_qua_day_phep` nhận một dãy phép toán đã tách sẵn và trả về kết quả số học của nó. Dãy phép toán được biểu diễn dưới dạng một danh"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "tim_an_so",
+  "can": "giai_phuong_trinh",
+  "dat": false,
+  "so_the": 0,
+  "giay": 59.2,
+  "ma": "def tim_an_so():\n    # Nhập đẳng thức từ người dùng\n    equation = input(\"Nhập đẳng thức bậc nhất (ví dụ: 2x + 3 = 7): \")\n    \n    # Tách đẳng thức thành hai phần: phần bên trái và phần bên phải\n    parts = equation.split('=')\n    left_side = parts[0].strip()\n    right_side = parts[1].strip()\n    \n    # Tách phần bên trái thành các phần riêng biệt\n    terms = left_side.split('+')\n    x_term = None\n    constant_term = 0\n    \n    for term in terms:\n        if 'x' in term:\n            x_term = term.strip('x')\n        else:\n            constant_term += int(term)\n    \n    # Tính giá trị của ẩn x\n    if x_term == None:\n        print(\"Đẳng thức không chứa x\")\n        return\n    \n    x_value = int(right_side) - constant_term\n    x_value /= int(x_term)\n    \n    # In kết quả\n    print(f\"Giá trị của x là: {x_value}\")\n\n# Gọi hàm\ntim_an_so()"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "dap_ve_luot_cu",
+  "can": "tra_so",
+  "dat": false,
+  "so_the": 0,
+  "giay": 10.2,
+  "ma": "def dap_ve_luot_cu(luot_truoc):\n    return f\"Tôi đã trả lời lượt trò chuyện trước đó như sau: {luot_truoc}\""
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "lay_lai_luot_da_troi",
+  "can": "nho_lai",
+  "dat": false,
+  "so_the": 0,
+  "giay": 43.0,
+  "ma": "def lay_lai_luot_da_troi(luot_da_troi):\n    # Chuyển đổi tất cả các ký tự thành chữ thường\n    luot_da_troi = luot_da_troi.lower()\n    \n    # Loại bỏ các ký tự không phải chữ cái\n    luot_da_troi = ''.join(filter(str.isalpha, luot_da_troi))\n    \n    # Chuyển đổi chuỗi thành danh sách các ký tự\n    luot_da_troi_list = list(luot_da_troi)\n    \n    # Đảo ngược danh sách các ký tự\n    luot_da_troi_list.reverse()\n    \n    # Chuyển đổi danh sách trở lại thành chuỗi\n    luot_da_troi = ''.join(luot_da_troi_list)\n    \n    return luot_da_troi"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "bo_dau_thanh_khoa",
+  "can": "bo_dau",
+  "dat": false,
+  "so_the": 0,
+  "giay": 25.2,
+  "ma": "import unicodedata\n\ndef bo_dau_thanh_khoa(s):\n    return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')\n\n# Ví dụ sử dụng\ncau_viet = \"Cô ấy là một người đẹp.\"\ncau_tron = bo_dau_thanh_khoa(cau_viet)\nprint(cau_tron)  # Kết quả: Co a la mot nguoi dep."
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "chan_doi_tu_ra_ngoai",
+  "can": "la_chuyen_rieng_cua_sep",
+  "dat": false,
+  "so_the": 0,
+  "giay": 31.2,
+  "ma": "def chan_doi_tu_ra_ngoai():\n    # Đây là hàm giả lập để chặn không cho đẩy đời tư của chủ máy ra bên ngoài\n    print(\"Chặn không cho đẩy đời tư của chủ máy ra bên ngoài.\")\n    # Thực hiện các biện pháp cần thiết để đảm bảo an ninh và quyền riêng tư\n    # Ví dụ: Xóa lịch sử trình duyệt, xóa file tạm, xóa dữ liệu lưu trữ, v.v.\n    # Lưu ý: Việc thực hiện các biện pháp này cần tuân thủ luật pháp và chính sách công ty\n    pass"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "xet_can_du_lieu_ngoai",
+  "can": "is_search_request",
+  "dat": false,
+  "so_the": 0,
+  "giay": 40.7,
+  "ma": "def xet_can_du_lieu_ngoai(cau_hoi):\n    # Đây là một ví dụ đơn giản, bạn có thể tùy chỉnh để phù hợp với yêu cầu cụ thể\n    danh_sach_du_lieu_can_nhap = [\"dữ liệu thời tiết\", \"dữ liệu tài chính\", \"dữ liệu khoa học\"]\n    \n    # Chuyển đổi câu hỏi thành chữ thường và loại bỏ khoảng trắng\n    cau_hoi = cau_hoi.lower().replace(\" \", \"\")\n    \n    # Kiểm tra xem câu hỏi có chứa từ khóa nào trong danh sách dữ liệu cần nhập không\n    for tu_khoa in danh_sach_du_lieu_can_nhap:\n        if tu_khoa in cau_hoi:\n            return True\n    \n    return False"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "xet_phai_tu_xu_ly",
+  "can": "la_viec_tu_lam",
+  "dat": false,
+  "so_the": 0,
+  "giay": 30.9,
+  "ma": "def xet_phai_tu_xu_ly(nguoi_dung, thong_tin):\n    # Đây là một ví dụ đơn giản về cách bạn có thể viết hàm này\n    # Bạn có thể thay đổi điều kiện và logic tùy theo yêu cầu cụ thể của dự án AURA\n\n    # Ví dụ: Nếu người dùng là 'admin' và thông tin chứa từ khóa 'sensitive', tự xử lý\n    if nguoi_dung == 'admin' and 'sensitive' in thong_tin:\n        return True\n    else:\n        return False"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "kiem_ket_noi",
+  "can": "mang_co_song",
+  "dat": false,
+  "so_the": 0,
+  "giay": 15.1,
+  "ma": "import socket\n\ndef kiem_ket_noi():\n    try:\n        # Kiểm tra kết nối với Google DNS\n        socket.create_connection((\"8.8.8.8\", 53), timeout=2)\n        return True\n    except OSError:\n        return False"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "giu_phan_nguoi_viet",
+  "can": "loi_sep_noi",
+  "dat": false,
+  "so_the": 0,
+  "giay": 32.7,
+  "ma": "import re\n\ndef giu_phan_nguoi_viet(text):\n    # Bỏ đường dẫn\n    text = re.sub(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\\\(\\\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', '', text)\n    # Bỏ mã dán kèm\n    text = re.sub(r'\\[.*?\\]', '', text)\n    # Giữ lại phần chữ do người thật gõ\n    text = re.sub(r'[^a-zA-Z\\s]', '', text)\n    return text.strip()"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "tim_tren_mang",
+  "can": "search",
+  "dat": false,
+  "so_the": 0,
+  "giay": 44.1,
+  "ma": "import requests\n\ndef tim_tren_mang(truy_van, so_ket_qua=10):\n    api_key = 'YOUR_API_KEY'  # Thay thế bằng API key của bạn\n    url = 'https://api.example.com/search'  # Thay thế bằng URL API thực tế\n    params = {\n        'q': truy_van,\n        'limit': so_ket_qua,\n        'api_key': api_key\n    }\n    response = requests.get(url, params=params)\n    if response.status_code == 200:\n        return response.json()\n    else:\n        return None\n```\n\nLưu ý: Bạn cần thay thế `'YOUR_API_KEY'` và `'https://api.example.com/search'` bằng API key và URL thực tế của dịch vụ tìm kiếm bạn đang sử dụng."
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "dung_cau_kem_nguon",
+  "can": "format_result",
+  "dat": false,
+  "so_the": 0,
+  "giay": 12.5,
+  "ma": "def dung_cau_kem_nguon(nguon, thong_tin):\n    return f\"Tham khảo từ {nguon}: {thong_tin}\""
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "gom_dia_chi_da_doc",
+  "can": "sources_of",
+  "dat": false,
+  "so_the": 0,
+  "giay": 168.6,
+  "ma": "def gom_dia_chi_da_doc(danh_sach_dia_chi):\n    \"\"\"\n    Hàm này nhận một danh sách địa chỉ đã đọc và trả về một danh sách địa chỉ đã đọc, đã được gom lại.\n\n    :param danh_sach_dia_chi: Danh sách địa chỉ đã đọc\n    :return: Danh sách địa chỉ đã đọc, đã được gom lại\n    \"\"\"\n    danh_sach_dia_chi_da_doc = []\n    for dia_chi in danh_sach_dia_chi:\n        if dia_chi not in danh_sach_dia_chi_da_doc:\n            danh_sach_dia_chi_da_doc.append(dia_chi)\n    return danh_sach_dia_chi_da_doc"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "cat_dong_sai_khien",
+  "can": "loc_menh_lenh",
+  "dat": false,
+  "so_the": 0,
+  "giay": 65.2,
+  "ma": "import re\n\ndef cat_dong_sai_khien(dong):\n    # Sử dụng biểu thức chính quy để tìm các dòng sai khiến\n    # Ví dụ: Dòng không bắt đầu bằng chữ cái hoặc số, hoặc chỉ chứa khoảng trắng\n    pattern = r'^[^a-zA-Z0-9].*|^ *$'\n    if re.match(pattern, dong):\n        return None\n    return dong\n\n# Ví dụ sử dụng hàm\ndongs = [\n    \"Đây là một dòng hợp lệ.\",\n    \"1234567890\",\n    \"   \",\n    \"Dòng này không hợp lệ!\",\n    \"Hàm này sẽ loại bỏ dòng này.\"\n]\n\ndongs_hop_le = [dong for dong in dongs if cat_dong_sai_khien(dong) is not None]\n\nprint(dongs_hop_le)\n```\n\nMã trên định nghĩa hàm `cat_dong_sai_khien` để loại bỏ các dòng sai khiến trong một đoạn trích. Hàm này sử dụng biểu thức chính quy để kiểm tra xem dòng có bắt đầu bằng chữ cái hoặc số và không chỉ chứa khoảng trắng hay không. Nếu dòng không hợp lệ, hàm trả về `None`; nếu hợp lệ, hàm trả về dòng đó."
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "che_thong_tin_nhay",
+  "can": "redact",
+  "dat": false,
+  "so_the": 0,
+  "giay": 76.2,
+  "ma": "import re\n\ndef che_thong_tin_nhay(text):\n    # Sử dụng biểu thức chính quy để tìm các thông tin nhạy cảm\n    # Ví dụ: số điện thoại, email, địa chỉ IP, v.v.\n    patterns = [\n        r'\\b\\d{3}-\\d{3}-\\d{4}\\b',  # Số điện thoại (ví dụ: 123-456-7890)\n        r'\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b',  # Email\n        r'\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b'  # Địa chỉ IP\n    ]\n    \n    for pattern in patterns:\n        text = re.sub(pattern, '[REDACTED]', text)\n    \n    return text\n\n# Ví dụ sử dụng hàm\ntext = \"Đây là một số thông tin nhạy cảm: 123-456-7890, example@example.com, 192.168.1.1\"\nche_thong_tin_nhay(text)\n```\n\nHàm `che_thong_tin_nhay` sử dụng biểu thức chính quy để tìm các mẫu thông tin nhạy cảm như số điện thoại, email và địa chỉ IP, và thay thế chúng bằng `[REDACTED"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "che_ca_hoi_thoai",
+  "can": "redact_messages",
+  "dat": false,
+  "so_the": 0,
+  "giay": 24.2,
+  "ma": "def che_ca_hoi_thoai(du_lieu):\n    du_lieu_che = []\n    for tin_nhan in du_lieu:\n        noi_dung_che = tin_nhan.replace(\"số điện thoại\", \"****-****\")\n        noi_dung_che = noi_dung_che.replace(\"email\", \"****@****.com\")\n        du_lieu_che.append(noi_dung_che)\n    return du_lieu_che"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "che_truoc_khi_ghi_nhat_ky",
+  "can": "scrub_for_log",
+  "dat": false,
+  "so_the": 0,
+  "giay": 37.8,
+  "ma": "import hashlib\n\ndef che_truoc_khi_ghi_nhat_ky(nhat_ky):\n    # Sử dụng SHA-256 để mã hóa bản rõ\n    hash_object = hashlib.sha256(nhat_ky.encode())\n    # Lấy giá trị hash dưới dạng hex\n    nhat_ky_ma_hoa = hash_object.hexdigest()\n    return nhat_ky_ma_hoa\n```\n\nMã trên sử dụng hàm `hashlib.sha256` để mã hóa bản rõ của nhật ký thành một chuỗi hash SHA-256, đảm bảo rằng thông tin bí mật không được lưu dưới dạng bản rõ."
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "xet_doi_lo_bi_mat",
+  "can": "is_secret_request",
+  "dat": false,
+  "so_the": 0,
+  "giay": 39.8,
+  "ma": "def xet_doi_lo_bi_mat(cau_hoi):\n    # Danh sách các từ thường xuất hiện trong câu hỏi đòi lộ bí mật\n    tu_danh_sach = [\"mật khẩu\", \"password\", \"chìa khóa\", \"key\", \"thông tin cá nhân\", \"private\", \"secret\", \"token\", \"credentials\"]\n    \n    # Chuyển đổi câu hỏi thành chữ thường và tách thành các từ\n    tu_cau_hoi = cau_hoi.lower().split()\n    \n    # Kiểm tra xem có từ nào trong danh sách xuất hiện trong câu hỏi không\n    for tu in tu_danh_sach:\n        if tu in tu_cau_hoi:\n            return True\n    \n    return False"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "xet_cau_tra_loi_yeu",
+  "can": "looks_weak",
+  "dat": false,
+  "so_the": 0,
+  "giay": 24.3,
+  "ma": "def xet_cau_tra_loi_yeu(cau_hoi, cau_tra_loi):\n    # Xét xem câu trả lời có yếu tới mức đáng hỏi lại nơi mạnh hơn\n    # Đây là một ví dụ đơn giản, bạn có thể tùy chỉnh logic dựa trên yêu cầu cụ thể\n    if len(cau_tra_loi) < len(cau_hoi):\n        return True\n    return False"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "xep_cau_hoi_vao_kieu",
+  "can": "loai",
+  "dat": false,
+  "so_the": 0,
+  "giay": 54.0,
+  "ma": "def xep_cau_hoi_vao_kieu(cau_hoi):\n    # Kiểm tra xem câu hỏi có phải là câu hỏi về số hay không\n    if cau_hoi.lower().endswith(('?', 'ko', 'không', 'muốn', 'tại sao')):\n        return 'Câu hỏi về số'\n    # Kiểm tra xem câu hỏi có phải là câu hỏi về sự kiện hay không\n    elif cau_hoi.lower().endswith(('khi', 'vào lúc', 'tại sao')):\n        return 'Câu hỏi về sự kiện'\n    # Kiểm tra xem câu hỏi có phải là câu hỏi về địa điểm hay không\n    elif cau_hoi.lower().endswith(('ở đâu', 'tại sao ở đây', 'tại sao ở đó')):\n        return 'Câu hỏi về địa điểm'\n    # Nếu không thuộc bất kỳ loại câu hỏi nào trên, trả về 'Câu hỏi khác'\n    else:\n        return 'Câu hỏi khác'"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "lay_yeu_cau_hinh_thuc",
+  "can": "loi_dan_dang",
+  "dat": false,
+  "so_the": 0,
+  "giay": 16.1,
+  "ma": "def lay_yeu_cau_hinh_thuc():\n    # Yêu cầu về hình thức trình bày\n    hinh_thuc = input(\"Hình thức trình bày (text, image, video, audio): \")\n    return hinh_thuc"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "nhac_khi_tien_sai_bac",
+  "can": "gan_canh_bao",
+  "dat": false,
+  "so_the": 0,
+  "giay": 29.0,
+  "ma": "def nhac_khi_tien_sai_bac(tien):\n    tien_str = str(tien)\n    if len(tien_str) > 3 and tien_str[-4] != '0':\n        return \"Cảnh báo: Số tiền lệch hẳn một bậc nghìn!\"\n    return \"\"\n\n# Ví dụ sử dụng\ntien = 1234567\nprint(nhac_khi_tien_sai_bac(tien))  # Kết quả: Cảnh báo: Số tiền lệch hẳn một bậc nghìn!"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "soi_so_tien_kha_nghi",
+  "can": "don_vi_dang_ngo",
+  "dat": false,
+  "so_the": 0,
+  "giay": 73.7,
+  "ma": "Dưới đây là mã Python cho hàm `soi_so_tien_kha_nghi`:\n\n```python\nimport re\n\ndef soi_so_tien_kha_nghi(cau):\n    # Định nghĩa các mẫu số tiền khả nghi\n    patterns = [\n        r'\\b\\d{1,3}(,\\d{3})*\\.\\d{2}\\b',  # Số tiền có dấu phẩy và 2 chữ số thập phân\n        r'\\b\\d{1,3}(,\\d{3})*\\b',        # Số tiền chỉ có số nguyên\n        r'\\b\\d{1,3}(,\\d{3})*\\.\\d{1}\\b',   # Số tiền có dấu phẩy và 1 chữ số thập phân\n        r'\\b\\d{1,3}(,\\d{3})*\\.\\d{3}\\b',   # Số tiền có dấu phẩy và 3 chữ số thập phân\n    ]\n\n    # Tìm tất cả các số tiền trong câu\n    so_tien = re.findall(r'\\b\\d{1,3}(,\\d{3})*\\.\\d{2}\\b', cau)\n\n    # Kiểm tra từng số tiền\n    for sotien in so_tien:\n        # Loại bỏ dấu phẩy\n        sotien = sotien.replace(',', '')\n\n        # Kiểm tra xem số tiền có phải là số thực hợp lệ không\n        try:\n            float(sotien)"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "ghi_dieu_can_nho",
+  "can": "remember",
+  "dat": false,
+  "so_the": 0,
+  "giay": 13.4,
+  "ma": "def ghi_dieu_can_nho(dieu_can_nho):\n    with open(\"dieu_can_nho.txt\", \"a\") as file:\n        file.write(dieu_can_nho + \"\\n\")"
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "doc_lenh_ghi_nho",
+  "can": "parse_remember",
+  "dat": false,
+  "so_the": 0,
+  "giay": 23.9,
+  "ma": "def doc_lenh_ghi_nho():\n    # giả sử rằng lệnh ghi nhớ được lưu trong một file text\n    try:\n        with open('lenh_ghi_nho.txt', 'r') as file:\n            lenh = file.read().strip()\n            return lenh\n    except FileNotFoundError:\n        return \"Không có lệnh ghi nhớ nào.\"\n    except Exception as e:\n        return f\"Đã xảy ra lỗi: {e}\""
+ },
+ {
+  "dieu_kien": "A · KHÔNG KHAY (tự do)",
+  "de": "dung_khoi_tri_nho",
+  "can": "as_prompt_block",
+  "dat": false,
+  "so_the": 0,
+  "giay": 12.3,
+  "ma": "def dung_khoi_tri_nho(nguoi_nhan, noi_dung):\n    return f\"Chào {nguoi_nhan}, nhớ rằng: {noi_dung}\""
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "noi_bay_gio_may_gio",
+  "can": "cau_gio",
+  "dat": true,
+  "so_the": 66,
+  "giay": 21.5,
+  "ma": "from core.dong_ho import cau_gio\n\ndef noi_bay_gio_may_gio():\n    now = datetime.datetime.now()\n    return cau_gio(now)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "dap_cau_hoi_co_phep_toan",
+  "can": "tinh_giup",
+  "dat": false,
+  "so_the": 66,
+  "giay": 21.8,
+  "ma": "from core.may_tinh import tinh_bieu_thuc\n\ndef dap_cau_hoi_co_phep_toan(text):\n    return tinh_bieu_thuc(text)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "lam_ra_ket_qua_day_phep",
+  "can": "tinh_bieu_thuc",
+  "dat": true,
+  "so_the": 66,
+  "giay": 23.3,
+  "ma": "from core.may_tinh import tinh_bieu_thuc\n\ndef lam_ra_ket_qua_day_phep(day_phep):\n    return tinh_bieu_thuc(day_phep)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "tim_an_so",
+  "can": "giai_phuong_trinh",
+  "dat": true,
+  "so_the": 66,
+  "giay": 18.2,
+  "ma": "from core.may_tinh import giai_phuong_trinh\n\ndef tim_an_so(text):\n    return giai_phuong_trinh(text)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "dap_ve_luot_cu",
+  "can": "tra_so",
+  "dat": false,
+  "so_the": 66,
+  "giay": 21.5,
+  "ma": "from core.nho_lai import nho_lai\n\ndef dap_ve_luot_cu(text, history, tam_nhin):\n    return nho_lai(text, history, tam_nhin)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "lay_lai_luot_da_troi",
+  "can": "nho_lai",
+  "dat": true,
+  "so_the": 66,
+  "giay": 26.5,
+  "ma": "from core.nho_lai import nho_lai\n\ndef lay_lai_luot_da_troi(text, history, tam_nhin):\n    return nho_lai(text, history, tam_nhin)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "bo_dau_thanh_khoa",
+  "can": "bo_dau",
+  "dat": true,
+  "so_the": 66,
+  "giay": 18.8,
+  "ma": "from core.khay_the import bo_dau\n\ndef bo_dau_thanh_khoa(cau):\n    return bo_dau(cau)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "chan_doi_tu_ra_ngoai",
+  "can": "la_chuyen_rieng_cua_sep",
+  "dat": false,
+  "so_the": 66,
+  "giay": 22.9,
+  "ma": "from core.secret_guard import is_secret_request\n\ndef chan_doi_tu_ra_ngoai(text):\n    if is_secret_request(text):\n        return \"Không thể chia sẻ thông tin cá nhân.\"\n    return None"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "xet_can_du_lieu_ngoai",
+  "can": "is_search_request",
+  "dat": true,
+  "so_the": 66,
+  "giay": 17.2,
+  "ma": "from core.web_search import is_search_request\n\ndef xet_can_du_lieu_ngoai(text):\n    return is_search_request(text)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "xet_phai_tu_xu_ly",
+  "can": "la_viec_tu_lam",
+  "dat": false,
+  "so_the": 66,
+  "giay": 16.4,
+  "ma": "from core.web_search import is_search_request\n\ndef xet_phai_tu_xu_ly(text):\n    return is_search_request(text)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "kiem_ket_noi",
+  "can": "mang_co_song",
+  "dat": true,
+  "so_the": 66,
+  "giay": 15.7,
+  "ma": "from core.web_search import mang_co_song\n\ndef kiem_ket_noi():\n    return mang_co_song(10)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "giu_phan_nguoi_viet",
+  "can": "loi_sep_noi",
+  "dat": false,
+  "so_the": 66,
+  "giay": 18.1,
+  "ma": "from core.khay_the import gan_phan_biet\n\ndef giu_phan_nguoi_viet(text):\n    return gan_phan_biet(text)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "tim_tren_mang",
+  "can": "search",
+  "dat": true,
+  "so_the": 66,
+  "giay": 28.6,
+  "ma": "from core.web_search import search, format_result\n\ndef tim_tren_mang(query, limit=5, timeout_s=10):\n    result = search(query, limit, timeout_s)\n    if result['ok']:\n        formatted_results = [format_result(res) for res in result['results']]\n        return formatted_results\n    else:\n        return None"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "dung_cau_kem_nguon",
+  "can": "format_result",
+  "dat": true,
+  "so_the": 66,
+  "giay": 17.0,
+  "ma": "from core.web_search import format_result\n\ndef dung_cau_kem_nguon(result):\n    return format_result(result)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "gom_dia_chi_da_doc",
+  "can": "sources_of",
+  "dat": true,
+  "so_the": 66,
+  "giay": 25.1,
+  "ma": "from core.doc_so_phien import loc_menh_lenh, sources_of\n\ndef gom_dia_chi_da_doc(results):\n    valid_sources = sources_of(results)\n    valid_sources = loc_menh_lenh(valid_sources)\n    return valid_sources"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "cat_dong_sai_khien",
+  "can": "loc_menh_lenh",
+  "dat": true,
+  "so_the": 66,
+  "giay": 25.9,
+  "ma": "from core.web_search import loc_menh_lenh\n\ndef cat_dong_sai_khien(chu):\n    return loc_menh_lenh(chu)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "che_thong_tin_nhay",
+  "can": "redact",
+  "dat": true,
+  "so_the": 66,
+  "giay": 16.5,
+  "ma": "from core.redact import redact\n\ndef che_thong_tin_nhay(text):\n    return redact(text)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "che_ca_hoi_thoai",
+  "can": "redact_messages",
+  "dat": true,
+  "so_the": 66,
+  "giay": 22.5,
+  "ma": "from core.redact import redact_messages\n\ndef che_ca_hoi_thoai(lich_su_tro_chuyen):\n    return redact_messages(lich_su_tro_chuyen)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "che_truoc_khi_ghi_nhat_ky",
+  "can": "scrub_for_log",
+  "dat": true,
+  "so_the": 66,
+  "giay": 21.6,
+  "ma": "from core.secret_guard import scrub_for_log\n\ndef che_truoc_khi_ghi_nhat_ky(text):\n    return scrub_for_log(text)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "xet_doi_lo_bi_mat",
+  "can": "is_secret_request",
+  "dat": true,
+  "so_the": 66,
+  "giay": 22.4,
+  "ma": "from core.secret_guard import is_secret_request\n\ndef xet_doi_lo_bi_mat(text):\n    return is_secret_request(text)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "xet_cau_tra_loi_yeu",
+  "can": "looks_weak",
+  "dat": false,
+  "so_the": 66,
+  "giay": 43.7,
+  "ma": "from core.chat_contract import valid_citations\n\ndef xet_cau_tra_loi_yeu(cau_tra_loi, cau_hoi):\n    # Xét xem câu trả lời có yếu tới mức đáng hỏi lại nơi mạnh hơn\n    if valid_citations([cau_tra_loi]):\n        return False  # Câu trả lời không yếu, không cần hỏi lại\n    else:\n        return True   # Câu trả lời yếu, cần hỏi lại nơi mạnh hơn"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "xep_cau_hoi_vao_kieu",
+  "can": "loai",
+  "dat": true,
+  "so_the": 66,
+  "giay": 54.4,
+  "ma": "from core.loai_cau_hoi import loai, loi_dan_dang\n\ndef xep_cau_hoi_vao_kieu(text):\n    cau_hoi_loai = loai(text)\n    loi_dan = loi_dan_dang(text)\n    \n    if cau_hoi_loai == \"TRA_CUU\":\n        return \"TRA_CUU\", loi_dan\n    elif cau_hoi_loai == \"AURA\":\n        return \"AURA\", loi_dan\n    else:\n        return \"KHAC\", loi_dan"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "lay_yeu_cau_hinh_thuc",
+  "can": "loi_dan_dang",
+  "dat": true,
+  "so_the": 66,
+  "giay": 26.5,
+  "ma": "from core.loai_cau_hoi import loi_dan_dang\n\ndef lay_yeu_cau_hinh_thuc(text):\n    return loi_dan_dang(text)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "nhac_khi_tien_sai_bac",
+  "can": "gan_canh_bao",
+  "dat": true,
+  "so_the": 66,
+  "giay": 27.5,
+  "ma": "from core.kiem_tien import gan_canh_bao\n\ndef nhac_khi_tien_sai_bac(text):\n    return gan_canh_bao(text)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "soi_so_tien_kha_nghi",
+  "can": "don_vi_dang_ngo",
+  "dat": true,
+  "so_the": 66,
+  "giay": 26.3,
+  "ma": "from core.kiem_tien import don_vi_dang_ngo\n\ndef soi_so_tien_kha_nghi(text):\n    return don_vi_dang_ngo(text)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "ghi_dieu_can_nho",
+  "can": "remember",
+  "dat": true,
+  "so_the": 66,
+  "giay": 20.3,
+  "ma": "from core.user_memory import remember\n\ndef ghi_dieu_can_nho(text):\n    remember(text)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "doc_lenh_ghi_nho",
+  "can": "parse_remember",
+  "dat": true,
+  "so_the": 66,
+  "giay": 21.5,
+  "ma": "from core.user_memory import parse_remember\n\ndef doc_lenh_ghi_nho():\n    return parse_remember(None)"
+ },
+ {
+  "dieu_kien": "B · KHAY ĐẦY (không lọc)",
+  "de": "dung_khoi_tri_nho",
+  "can": "as_prompt_block",
+  "dat": true,
+  "so_the": 66,
+  "giay": 20.9,
+  "ma": "from core.user_memory import as_prompt_block\n\ndef dung_khoi_tri_nho():\n    return as_prompt_block()"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "noi_bay_gio_may_gio",
+  "can": "cau_gio",
+  "dat": true,
+  "so_the": 15,
+  "giay": 13.7,
+  "ma": "from core.dong_ho import cau_gio\n\ndef noi_bay_gio_may_gio():\n    now = datetime.datetime.now()\n    cau_gio(now)"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "dap_cau_hoi_co_phep_toan",
+  "can": "tinh_giup",
+  "dat": false,
+  "so_the": 15,
+  "giay": 31.1,
+  "ma": "from core.may_tinh import tinh_bieu_thuc\n\ndef dap_cau_hoi_co_phep_toan(text, history, tam_nhin):\n    bieu_thuc = tam_nhin.get('bieu_thuc')\n    if bieu_thuc is not None:\n        ket_qua = tinh_bieu_thuc(bieu_thuc)\n        if ket_qua is not None:\n            return str(ket_qua)\n    return None"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "lam_ra_ket_qua_day_phep",
+  "can": "tinh_bieu_thuc",
+  "dat": true,
+  "so_the": 9,
+  "giay": 74.6,
+  "ma": "from core.may_tinh import tinh_bieu_thuc\n\ndef lam_ra_ket_qua_day_phep(day_phep):\n    ket_qua = None\n    for phep in day_phep:\n        ket_qua = tinh_bieu_thuc(phep)\n        if ket_qua is None:\n            break\n    return ket_qua"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "tim_an_so",
+  "can": "giai_phuong_trinh",
+  "dat": true,
+  "so_the": 15,
+  "giay": 76.6,
+  "ma": "from core.may_tinh import giai_phuong_trinh\n\ndef tim_an_so(text):\n    return giai_phuong_trinh(text)"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "dap_ve_luot_cu",
+  "can": "tra_so",
+  "dat": true,
+  "so_the": 14,
+  "giay": 77.4,
+  "ma": "from core.doc_so_phien import tra_so\n\ndef dap_ve_luot_cu(text, history):\n    luot_cu = tra_so(text, history)\n    if luot_cu is not None:\n        return luot_cu\n    else:\n        return \"Em không rõ\""
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "lay_lai_luot_da_troi",
+  "can": "nho_lai",
+  "dat": true,
+  "so_the": 11,
+  "giay": 65.7,
+  "ma": "from core.nho_lai import nho_lai\n\ndef lay_lai_luot_da_troi(text, history, tam_nhin):\n    return nho_lai(text, history, tam_nhin)"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "bo_dau_thanh_khoa",
+  "can": "bo_dau",
+  "dat": true,
+  "so_the": 12,
+  "giay": 58.9,
+  "ma": "from core.khay_the import bo_dau\n\ndef bo_dau_thanh_khoa(text):\n    return bo_dau(text)"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "chan_doi_tu_ra_ngoai",
+  "can": "la_chuyen_rieng_cua_sep",
+  "dat": false,
+  "so_the": 8,
+  "giay": 51.4,
+  "ma": "from core.secret_guard import is_secret_request\n\ndef chan_doi_tu_ra_ngoai(text):\n    if is_secret_request(text):\n        return True\n    return False"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "xet_can_du_lieu_ngoai",
+  "can": "is_search_request",
+  "dat": true,
+  "so_the": 13,
+  "giay": 74.0,
+  "ma": "from core.web_search import is_search_request\n\ndef xet_can_du_lieu_ngoai(text):\n    return is_search_request(text)"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "xet_phai_tu_xu_ly",
+  "can": "la_viec_tu_lam",
+  "dat": false,
+  "so_the": 8,
+  "giay": 89.5,
+  "ma": "from core.web_search import la_viec_tu_lam, is_search_request\nfrom core.loai_cau_hoi import loai\nfrom core.local_first_gateway import looks_weak\n\ndef xet_phai_tu_xu_ly(text, history):\n    # Kiểm tra xem câu hỏi có cần dữ liệu ngoài đầu model không\n    if is_search_request(text):\n        return True\n    \n    # Phân loại câu hỏi\n    cau_hoi_loai = loai(text)\n    \n    # Nếu câu hỏi có ý nghĩa và không phải là câu hỏi về chính AURA, chào hỏi, hay hỏ\n    if cau_hoi_loai != \"TRA_CUU\" and not looks_weak(text):\n        return True\n    \n    # Nếu câu hỏi không cần tra mạng và không phải là câu hỏi về chính AURA, chào hỏi, hay hỏ\n    return False"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "kiem_ket_noi",
+  "can": "mang_co_song",
+  "dat": true,
+  "so_the": 15,
+  "giay": 72.1,
+  "ma": "from core.web_search import mang_co_song\n\ndef kiem_ket_noi():\n    return mang_co_song(10)"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "giu_phan_nguoi_viet",
+  "can": "loi_sep_noi",
+  "dat": true,
+  "so_the": 12,
+  "giay": 66.9,
+  "ma": "from core.web_search import loi_sep_noi\n\ndef giu_phan_nguoi_viet(text):\n    return loi_sep_noi(text)"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "tim_tren_mang",
+  "can": "search",
+  "dat": false,
+  "so_the": 3,
+  "giay": 50.3,
+  "ma": "from core.omega import ghi_so\n\ndef tim_tren_mang(truy_van):\n    # Ghi truy vấn vào sổ chỉ ghi thêm\n    ghi_so(truy_van)\n    \n    # Thực hiện tìm kiếm trên mạng (đây là phần giả định)\n    # Trả về một số kết quả tìm kiếm\n    ket_qua_tim_kiem = [\n        \"Kết quả 1\",\n        \"Kết quả 2\",\n        \"Kết quả 3\"\n    ]\n    \n    return ket_qua_tim_kiem"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "dung_cau_kem_nguon",
+  "can": "format_result",
+  "dat": true,
+  "so_the": 15,
+  "giay": 70.1,
+  "ma": "from core.web_search import format_result, sources_of\n\ndef dung_cau_kem_nguon(result):\n    formatted_result = format_result(result)\n    sources = sources_of(result)\n    return f\"{formatted_result}\\n\\nSources: {', '.join(sources)}\""
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "gom_dia_chi_da_doc",
+  "can": "sources_of",
+  "dat": true,
+  "so_the": 9,
+  "giay": 46.9,
+  "ma": "from core.web_search import sources_of\n\ndef gom_dia_chi_da_doc():\n    return sources_of(results)"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "cat_dong_sai_khien",
+  "can": "loc_menh_lenh",
+  "dat": true,
+  "so_the": 15,
+  "giay": 61.4,
+  "ma": "from core.web_search import loc_menh_lenh\n\ndef cat_dong_sai_khien(chu):\n    return loc_menh_lenh(chu)"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "che_thong_tin_nhay",
+  "can": "redact",
+  "dat": true,
+  "so_the": 10,
+  "giay": 43.0,
+  "ma": "from core.redact import redact\n\ndef che_thong_tin_nhay(text):\n    return redact(text)"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "che_ca_hoi_thoai",
+  "can": "redact_messages",
+  "dat": true,
+  "so_the": 11,
+  "giay": 49.5,
+  "ma": "from core.redact import redact_messages\n\ndef che_ca_hoi_thoai(messages):\n    return redact_messages(messages)"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "che_truoc_khi_ghi_nhat_ky",
+  "can": "scrub_for_log",
+  "dat": true,
+  "so_the": 13,
+  "giay": 63.2,
+  "ma": "from core.secret_guard import scrub_for_log\n\ndef che_truoc_khi_ghi_nhat_ky(text):\n    return scrub_for_log(text)"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "xet_doi_lo_bi_mat",
+  "can": "is_secret_request",
+  "dat": true,
+  "so_the": 15,
+  "giay": 62.6,
+  "ma": "from core.secret_guard import is_secret_request\n\ndef xet_doi_lo_bi_mat(text):\n    return is_secret_request(text)"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "xet_cau_tra_loi_yeu",
+  "can": "looks_weak",
+  "dat": true,
+  "so_the": 15,
+  "giay": 68.6,
+  "ma": "from core.local_first_gateway import looks_weak\n\ndef xet_cau_tra_loi_yeu(cau_tra_loi):\n    return looks_weak(cau_tra_loi)"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "xep_cau_hoi_vao_kieu",
+  "can": "loai",
+  "dat": false,
+  "so_the": 15,
+  "giay": 137.2,
+  "ma": "from core.loai_cau_hoi import loai, loi_dan_dang\n\ndef xep_cau_hoi_vao_kieu(text):\n    loai_cau_hoi = loai(text)\n    loi_dan = loi_dan_dang(text)\n    \n    if loai_cau_hoi == \"TRA_CUU\":\n        # Xử lý câu hỏi tra cứu\n        pass\n    elif loai_cau_hoi == \"AURA\":\n        # Xử lý câu hỏi về chính AURA\n        pass\n    elif loai_cau_hoi == \"CHAO_HOI\":\n        # Xử lý câu hỏi chào hỏi\n        pass\n    elif loai_cau_hoi == \"HRO\":\n        # Xử lý câu hỏi hỏi về thời tiết\n        pass\n    elif loai_cau_hoi == \"HOC\":\n        # Xử lý câu hỏi hỏi về học hỏi\n        pass\n    elif loai_cau_hoi == \"SAP_XEP\":\n        # Xử lý câu hỏi sắp xếp\n        pass\n    elif loai_cau_hoi == \"SAP_XEP_THUOC_TU\":\n        # Xử lý câu hỏi sắp xếp theo thứ tự từ\n        pass\n    elif loai_cau_hoi == \"SAP_XEP_THUOC_THUOC_TU\":\n        # Xử lý câu hỏi sắp xếp theo thứ tự từ\n        pass\n    elif loai_cau_hoi == \"SAP_XEP_TH"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "lay_yeu_cau_hinh_thuc",
+  "can": "loi_dan_dang",
+  "dat": true,
+  "so_the": 15,
+  "giay": 67.5,
+  "ma": "from core.loai_cau_hoi import loi_dan_dang\n\ndef lay_yeu_cau_hinh_thuc(text):\n    return loi_dan_dang(text)"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "nhac_khi_tien_sai_bac",
+  "can": "gan_canh_bao",
+  "dat": false,
+  "so_the": 15,
+  "giay": 69.8,
+  "ma": "from core.kiem_tien import don_vi_dang_ngo\n\ndef nhac_khi_tien_sai_bac(text):\n    if don_vi_dang_ngo(text):\n        return f\"Nhắc nhở: Có số tiền lệch hẳn một bậc nghìn trong câu: {text}\"\n    return text"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "soi_so_tien_kha_nghi",
+  "can": "don_vi_dang_ngo",
+  "dat": true,
+  "so_the": 15,
+  "giay": 57.2,
+  "ma": "from core.kiem_tien import don_vi_dang_ngo\n\ndef soi_so_tien_kha_nghi(text):\n    return don_vi_dang_ngo(text)"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "ghi_dieu_can_nho",
+  "can": "remember",
+  "dat": true,
+  "so_the": 15,
+  "giay": 65.5,
+  "ma": "from core.user_memory import remember\n\ndef ghi_dieu_can_nho(text):\n    remember(text, confirmed_by_user=True)"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "doc_lenh_ghi_nho",
+  "can": "parse_remember",
+  "dat": true,
+  "so_the": 15,
+  "giay": 68.1,
+  "ma": "from core.user_memory import parse_remember\n\ndef doc_lenh_ghi_nho():\n    return parse_remember()"
+ },
+ {
+  "dieu_kien": "C · KHAY LỌC (-> 15 thẻ)",
+  "de": "dung_khoi_tri_nho",
+  "can": "as_prompt_block",
+  "dat": true,
+  "so_the": 15,
+  "giay": 64.8,
+  "ma": "from core.user_memory import as_prompt_block\n\ndef dung_khoi_tri_nho():\n    return as_prompt_block()"
+ }
+]

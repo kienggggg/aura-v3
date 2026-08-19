@@ -56,6 +56,23 @@ button{background:var(--me);color:#fff;border:0;border-radius:10px;padding:0 20p
 button:disabled{opacity:.5;cursor:default}
 .empty{color:var(--muted);text-align:center;margin:auto;max-width:420px}
 .think{color:var(--muted);font-style:italic}
+/* Thanh chọn phòng.
+   Đặt tên theo VIỆC, không theo tên riêng (AURA/Alpha/Beta/Omega): ba tuần
+   nữa mở lên thì "Beta" không tự nói nó làm gì, còn "Dựng" thì có. Nhãn phụ
+   giữ tên riêng cho ai thích gọi vậy. */
+#phong{max-width:820px;margin:0 auto 10px;display:flex;gap:8px;flex-wrap:wrap}
+#phong button{background:transparent;color:var(--muted);border:1px solid var(--line);
+  border-radius:999px;padding:6px 14px;font:inherit;font-size:.86rem;font-weight:500;
+  cursor:pointer;display:flex;align-items:center;gap:7px;transition:.12s}
+#phong button:hover{border-color:var(--me);color:var(--text)}
+#phong button[aria-pressed="true"]{background:var(--me);border-color:var(--me);
+  color:#fff;font-weight:600}
+#phong button .ten{opacity:.62;font-size:.78rem;font-weight:400}
+#phong button.chua{opacity:.42;cursor:not-allowed;border-style:dashed}
+#phong button.chua:hover{border-color:var(--line);color:var(--muted)}
+#phong button[aria-pressed="true"] .ten{opacity:.8}
+#viec{max-width:820px;margin:0 auto 8px;color:var(--muted);font-size:.8rem;
+  min-height:1.2em}
 </style>
 </head>
 <body>
@@ -74,6 +91,8 @@ button:disabled{opacity:.5;cursor:default}
 </div>
 
 <div id="composer">
+  <div id="phong" role="group" aria-label="Chọn phòng làm việc"></div>
+  <div id="viec"></div>
   <div class="wrap">
     <textarea id="box" maxlength="12000" placeholder="Nhắn cho AURA…" autofocus></textarea>
     <button id="send">Gửi</button>
@@ -281,6 +300,63 @@ function thinking(){
   }
 })();
 
+/* ------------------------------------------------------------------ PHÒNG
+   Sếp bấm phòng nào thì máy BIẾT CHẮC đang làm việc gì, thay vì để model
+   đoán từ câu hỏi. Biết chắc là điều kiện để nạp đúng bộ luật và gọi đúng
+   công cụ — xem thaoluan.md lượt 007-011.
+
+   `null` = Tự động: giữ nguyên hành vi cũ, `loai_cau_hoi.py` tự phân loại.
+   Đó là mặc định, vì 4/5 câu hỏi thường ngày không thuộc phòng nào cả. */
+/* Tên riêng do Sếp đặt (16/08). Chữ VIỆC đứng trước vì nó tự giải thích;
+   tên riêng làm nhãn phụ vì Sếp quen gọi vậy.
+   `san` = phòng đã chạy được thật; phòng chưa xong thì nút mờ và nói rõ. */
+const PHONG = [
+  {id: null,   icon: '⚡', ten: 'Tự động', phu: '',      san: true,
+   goi: 'AURA tự phân loại câu hỏi'},
+  {id: 'viet', icon: '✍️', ten: 'Viết',    phu: 'AURA',  san: true,
+   goi: 'Viết chương truyện, bài viết — bám bible và văn phong'},
+  {id: 'tra',  icon: '🔍', ten: 'Tra',     phu: 'Zeta',  san: true,
+   goi: 'Tra thông tin — bắt buộc kèm nguồn kiểm chứng được'},
+  {id: 'dung', icon: '🎬', ten: 'Dựng',    phu: 'Alpha', san: false,
+   goi: 'Dựng video 60 giây — chạy bằng script, chưa nối vào màn hình chat'},
+  {id: 'sua',  icon: '🔧', ten: 'Sửa',     phu: 'Delta', san: false,
+   goi: 'Vá lỗi mã — bộ khung chưa đứng vững, xem ANTIGRAVITY_REVIEW_WRITER_05'},
+  {id: 'nhac', icon: '🎵', ten: 'Nhạc',    phu: 'Omega', san: false,
+   goi: 'Làm nhạc — CHƯA CÓ GÌ, chưa đo được model nào chạy nổi trên máy này'},
+];
+let phongDangChon = null;
+
+(function dungThanhPhong(){
+  const oPhong = document.getElementById('phong');
+  const oViec  = document.getElementById('viec');
+  PHONG.forEach(p => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('aria-pressed', String(p.id === phongDangChon));
+    b.title = p.goi;
+    // Phòng chưa xong thì hiện nhưng KHÔNG bấm được. Hiện để Sếp biết nó nằm
+    // trong kế hoạch; khoá để không ai bấm rồi tưởng AURA làm được việc đó.
+    if (!p.san) { b.disabled = true; b.classList.add('chua'); }
+    b.appendChild(document.createTextNode(p.icon + ' ' + p.ten));
+    if (p.phu) {
+      const s = document.createElement('span');
+      s.className = 'ten';
+      s.textContent = p.phu;
+      b.appendChild(s);
+    }
+    b.onclick = () => {
+      phongDangChon = p.id;
+      Array.from(oPhong.children).forEach((n, i) =>
+        n.setAttribute('aria-pressed', String(PHONG[i].id === phongDangChon)));
+      oViec.textContent = p.goi;
+      box.placeholder = p.id ? `${p.ten} — nhắn cho AURA…` : 'Nhắn cho AURA…';
+      box.focus();
+    };
+    oPhong.appendChild(b);
+  });
+  oViec.textContent = PHONG[0].goi;
+})();
+
 async function ask(){
   const text = box.value.trim();
   if (!text) return;
@@ -298,7 +374,11 @@ async function ask(){
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({text, session_id: SID}),
+      // `phong` chỉ gửi khi Sếp CHỌN. Không chọn thì không có trường này,
+      // nên máy chủ cũ chưa biết trường đó vẫn chạy y như trước.
+      body: JSON.stringify(phongDangChon
+        ? {text, session_id: SID, phong: phongDangChon}
+        : {text, session_id: SID}),
       signal: controller.signal,
     });
     const raw = await res.text();

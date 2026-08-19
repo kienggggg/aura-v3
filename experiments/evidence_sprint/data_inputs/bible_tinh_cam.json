@@ -1,0 +1,25 @@
+{
+  "project_id": "proj_the_loai_nhe_01",
+  "_vi_sao": "Đề bài THỂ LOẠI NHIỀU TƯ LIỆU — tình cảm đời thường. Dựng 19/08/2026 để đo giả thuyết của Sếp: văn AURA không hợp truyện nặng nề mà hợp truyện nhẹ. Cùng khung với bible.json (2 nhân vật must_appear, 3 chương, viết ch03) để so được.",
+  "title": "Quán Cà Phê Cuối Ngõ",
+  "setting": "Một con ngõ nhỏ ở Hà Nội, mùa thu. Cuối ngõ có quán cà phê cũ nằm dưới tán cây bàng, bàn ghế gỗ đã mòn, tường vôi vàng bong từng mảng. Buổi sáng có tiếng rao bánh mì, buổi chiều nắng nghiêng qua khe tường thành vệt dài trên nền gạch. Khách quen phần lớn là người trong ngõ: bà bán rau, mấy sinh viên trọ gần đấy, một ông cụ ngày nào cũng ngồi đúng chỗ cạnh cửa sổ.",
+  "characters": [
+    {
+      "name": "Diệu",
+      "role": "Nhân vật chính",
+      "description": "Hai mươi sáu tuổi, về tiếp quản quán cà phê của bà ngoại sau khi bỏ công việc văn phòng ở Sài Gòn. Pha cà phê chưa quen tay, hay ghi nhầm đơn. Ít nói với người lạ nhưng nhớ rất kỹ thói quen của từng khách quen: ai uống ngọt, ai ngồi chỗ nào.",
+      "must_appear": true
+    },
+    {
+      "name": "Hoàng",
+      "role": "Nhân vật phụ",
+      "description": "Hai mươi tám tuổi, thợ sửa đàn guitar có tiệm nhỏ đối diện quán. Sáng nào cũng sang mua một ly đen đá và ngồi đúng cái bàn khuất góc. Nói chuyện chậm, hay cười trước khi nói. Tay trái có vết chai vì nghề.",
+      "must_appear": true
+    }
+  ],
+  "plot_outline": {
+    "ch01": "Diệu về nhận quán, loay hoay với cái máy xay cũ và một cuốn sổ ghi nợ của bà ngoại.",
+    "ch02": "Hoàng thành khách quen. Diệu nhận ra anh luôn trả thừa tiền và không lấy lại.",
+    "ch03": "Một buổi chiều mưa, quán vắng, Diệu tìm thấy tên Hoàng trong cuốn sổ nợ cũ của bà ngoại — ghi từ tám năm trước, khoản tiền chưa bao giờ được xoá. Hai người ngồi lại nói chuyện đến khi tạnh mưa."
+  }
+}

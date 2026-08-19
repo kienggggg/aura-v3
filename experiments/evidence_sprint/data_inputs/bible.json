@@ -1,0 +1,24 @@
+{
+  "project_id": "proj_evidence_01",
+  "title": "Thành phố Bụi",
+  "setting": "Một thành phố cyberpunk hoang tàn ở thế kỷ 22, nơi ánh sáng mặt trời bị che khuất bởi những tòa tháp khổng lồ và khói mù. Công nghệ cấy ghép sinh học phổ biến nhưng thuộc về tầng lớp giàu có. Người nghèo sống dưới các khu ổ chuột ngập trong nước thải và ánh đèn neon hỏng.",
+  "characters": [
+    {
+      "name": "Kael",
+      "role": "Nhân vật chính",
+      "description": "Một cựu lính đánh thuê bị phản bội, nay làm nghề thu gom linh kiện điện tử phế liệu. Trên mặt có một vết sẹo dài do dao phay năng lượng gây ra. Tính cách lạnh lùng, ít nói nhưng luôn bảo vệ những kẻ yếu thế.",
+      "must_appear": true
+    },
+    {
+      "name": "Lyra",
+      "role": "Nhân vật phụ",
+      "description": "Một nữ hacker trẻ tuổi mồ côi, có cánh tay trái là đồ cấy ghép tự chế từ phế liệu. Rất lanh lợi, hoạt ngôn, thường mang theo một con robot bọ cánh cứng nhỏ làm do thám.",
+      "must_appear": true
+    }
+  ],
+  "plot_outline": {
+    "ch01": "Kael tìm thấy một lõi dữ liệu kỳ lạ trong đống phế liệu.",
+    "ch02": "Lyra giải mã lõi dữ liệu, phát hiện bí mật của tập đoàn Apex.",
+    "ch03": "Kael và Lyra bị sát thủ của Apex truy sát tại khu chợ đen Sector 4."
+  }
+}

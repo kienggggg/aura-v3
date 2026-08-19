@@ -206,3 +206,17 @@ Sếp đọc kỹ và bắt lỗi rất nhanh. Nên:
 
 Commit viết tiếng Việt không dấu, thân bài kể **cái gì đã đo và số ra sao** —
 không kể "đã sửa file X".
+
+---
+
+## 7. Kỷ luật Bằng chứng & Chống Gian lận (Evidence Sprint & Agents)
+
+Xem chi tiết tại:
+- `KY_LUAT_THUC_THI.md` (chuẩn run evidence và tiêu chuẩn 4 phòng Writer, Studio, Scout, Alpha).
+- `.agents/rules/agent_discipline.md` (luật chống fake-PASS, tách rời worker-verifier, fail-closed).
+
+Ba nguyên tắc thép:
+1. **Bằng chứng trên đĩa là chân lý duy nhất:** File thật, byte thật, SHA-256 thật tính từ đĩa, validator độc lập (`ffprobe`, SAPI, AST, crawler receipt). Cấm stub rác 1 dòng và fake PASS.
+2. **Worker không được tự chấm PASS:** Runner chỉ sinh file; Verifier độc lập mới có quyền ghi trạng thái.
+3. **Fail-Closed:** Lỗi là `FAIL` (exit 1) hoặc `BLOCKED` (exit 2). Cấm nuốt lỗi, cấm SHA rỗng, cấm file 0 byte.
+

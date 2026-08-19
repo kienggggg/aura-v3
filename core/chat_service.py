@@ -25,7 +25,12 @@ from core.chat_contract import (
     valid_citations,
 )
 from core.kiem_tien import gan_canh_bao
-from core.loai_cau_hoi import SANG_TAC as LOAI_SANG_TAC, TRA_CUU as LOAI_TRA_CUU, loai as loai_cau_hoi
+from core.loai_cau_hoi import (
+    SANG_TAC as LOAI_SANG_TAC,
+    TRA_CUU as LOAI_TRA_CUU,
+    TU_NGHI as LOAI_TU_NGHI,
+    loai as loai_cau_hoi,
+)
 from core.web_search import (
     mang_co_song,
     is_search_request,
@@ -128,7 +133,23 @@ class DeterministicFreshnessPolicy:
         #
         # SÁNG TÁC thì ngược lại, phải chặn: "viết một bài thơ về Hồ Chí Minh"
         # có tên riêng nhưng đi tra 30 giây để rồi vẫn phải tự làm thơ.
-        nhan = loai_cau_hoi(request.text)
+        # SẾP CHỌN PHÒNG THÌ SẾP THẮNG BỘ PHÂN LOẠI.
+        #
+        # Bộ phân loại đoán từ câu chữ, và nó đoán sai được — 13/08 nó đẩy câu
+        # "hôm nay ngày mấy" đi tra mạng và AURA trả về ngày 06/08 kèm 4 nguồn,
+        # sai 7 ngày, trong khi `cau_gio()` biết đúng.
+        #
+        # Khi Sếp bấm một phòng, đó là DỮ KIỆN chứ không phải suy đoán: Sếp
+        # biết mình đang làm gì. Không có lý do gì để đi đoán lại.
+        PHONG_SANG_NHAN = {
+            "viet": LOAI_SANG_TAC,   # viết truyện: tự làm, không tra
+            "tra": LOAI_TRA_CUU,     # tra cứu: bắt buộc có nguồn
+            "sua": LOAI_TU_NGHI,     # vá lỗi mã: tự làm
+        }
+        # "dung" (Studio) CỐ Ý không có ở đây: dựng video là một dây chuyền
+        # chạy bằng script, màn hình chat chưa làm được. Thà để nó rơi xuống
+        # đường phân loại thường còn hơn giả vờ có phòng đó.
+        nhan = PHONG_SANG_NHAN.get(request.phong) or loai_cau_hoi(request.text)
         if nhan == LOAI_TRA_CUU:
             return True
         if nhan == LOAI_SANG_TAC:
@@ -167,6 +188,10 @@ class _NullWebSearch:
 # Ân hạn CHỈ để ghi lại một lượt đã quá giờ.  Đủ cho một lần ghi đĩa, và có
 # trần nên một cái sổ treo cũng không giữ Sếp lại thêm được bao lâu.
 _AN_HAN_GHI_SO = 2.0
+
+# Hạn giờ cho lượt PHẢI ĐỌC NGUỒN. Xem chú thích ở chỗ dùng: tra mạng 7,1 giây,
+# phần còn lại là model đọc nguồn rồi viết ở 5,05 tok/s. 90 giây không đủ.
+_HAN_GIO_CO_NGUON = 180.0
 
 # Mất mạng KHÁC nguồn xấu.  Câu này nói đúng chuyện gì đang xảy ra và Sếp phải
 # làm gì — chứ không đổ cho chất lượng nguồn khi cáp mạng mới là thứ đứt.
@@ -380,6 +405,20 @@ class ChatService:
             policy_requires_web = self._freshness.requires_web(safe_request)
             sources: tuple[SourceCitation, ...] = ()
             if policy_requires_web:
+                # ĐƯỜNG CÓ NGUỒN ĐƯỢC THÊM GIỜ, và đây là số học.
+                #
+                # 16/08/2026: câu "Kể về Hà Nội" ép vào phòng Tra trả về HTTP
+                # 504. Đo từng khúc thì tra mạng chỉ mất 7,1 giây — phần còn
+                # lại là model ĐỌC hai nguồn rồi viết, ở 5,05 tok/s.
+                #
+                # Đường tự nghĩ chỉ có prompt của Sếp. Đường có nguồn phải nhét
+                # thêm cả khối nguồn vào ngữ cảnh, nên vừa prefill lâu hơn vừa
+                # viết dài hơn. Bắt hai đường dùng chung một hạn 90 giây là bắt
+                # đường nặng chạy bằng ngân sách của đường nhẹ.
+                #
+                # Chỉ nới ở ĐÚNG nhánh này; câu thường vẫn phải trả lời trong
+                # 90 giây, không ai được mượn thêm giờ chỉ vì viết dài.
+                deadline = max(deadline, started + _HAN_GIO_CO_NGUON)
                 da_goi_mang = True
                 stage = CHAT_STAGE_WEB
                 sources = await self._search_with_evidence(safe_request, deadline)

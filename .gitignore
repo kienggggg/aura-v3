@@ -32,3 +32,6 @@ Thumbs.db
 .DS_Store
 .idea/
 .vscode/
+
+# rac don 16/08: ban quay man hinh 141MB + catalog cong nghe khong dung den
+_rac/

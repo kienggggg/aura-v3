@@ -1,0 +1,12 @@
+{
+  "style_id": "tu_su_hoi_uc",
+  "name": "Tự sự, hồi ức (Truyện ký)",
+  "_vi_sao": "Năm luật, song song với style_card_tinh_cam.json. Khác đúng một chỗ có chủ ý: ngôi thứ nhất và thì hồi tưởng — đó chính là biến số của thể loại này. Hai luật cuối giữ nguyên để chặn cùng hai tật đã đo được ở văn AURA.",
+  "rules": [
+    "Viết bằng ngôi thứ nhất, giọng người đã lớn kể lại chuyện hồi nhỏ. Được phép xen một câu nhìn lại từ hiện tại, nhưng nhiều nhất hai lần trong cả chương.",
+    "Kể bằng hành động và đồ vật cụ thể: tay làm gì, trên bàn có gì, nghe thấy tiếng gì. Cảm xúc để người đọc tự suy ra, không gọi tên nó.",
+    "Tập trung vào chi tiết đời thường có thật: mùi dầu máy, tiếng dép lê, nét bút bi trên bản đồ, hộp thiếc gỉ ở góc.",
+    "Mỗi đoạn văn nhiều nhất MỘT hình ảnh so sánh. Không dồn ẩn dụ, không dùng từ Hán Việt sáo rỗng.",
+    "Không dùng ví von phóng đại về thời gian hay tầm vóc (kiểu 'ngàn năm', 'cả vũ trụ', 'định mệnh'). Mốc thời gian phải là mốc đời người: năm tôi mười hai tuổi, mùa hè năm ấy, nhiều năm sau."
+  ]
+}

@@ -1,0 +1,151 @@
+{
+ "_vi_sao": "28 đề cho phép đo khay thẻ. Sáu đề của các lượt trước quá ít: chênh lệch ±1 đề là nhiễu, mà tôi đã ba lần đọc ±1 thành kết luận. 28 đề thì một đề chỉ còn 3,6%.",
+ "_luat_ra_de": [
+  "Mỗi đề nhắm ĐÚNG MỘT hàm có thật trong core/.",
+  "Mô tả việc KHÔNG được chứa tên hàm hay mảnh tên nó — lộ tên thì bên TỰ DO cũng đoán ra, và phép so hỏng. Có test máy kiểm chuyện này.",
+  "Mô tả viết theo VIỆC CẦN LÀM, không chép tài liệu của hàm — chép tài liệu thì bộ lọc (vốn so với tài liệu) tự thắng, thành đo vòng tròn.",
+  "Không lấy hàm của chính khay_the/cua_hoc_vet: chúng vừa viết hôm nay, model chưa từng thấy nhưng cũng không phải việc nghiệp vụ thật."
+ ],
+ "de": [
+  [
+   "noi_bay_gio_may_gio",
+   "cho người dùng biết thời điểm hiện tại theo đồng hồ của máy",
+   "cau_gio"
+  ],
+  [
+   "dap_cau_hoi_co_phep_toan",
+   "đáp lại một câu hỏi trong đó có phép toán, phải cho ra con số đúng",
+   "tinh_giup"
+  ],
+  [
+   "lam_ra_ket_qua_day_phep",
+   "lấy kết quả số học của riêng một dãy phép toán đã tách sẵn",
+   "tinh_bieu_thuc"
+  ],
+  [
+   "tim_an_so",
+   "tìm giá trị của ẩn trong một đẳng thức bậc nhất người dùng viết ra",
+   "giai_phuong_trinh"
+  ],
+  [
+   "dap_ve_luot_cu",
+   "đáp lại khi người dùng nhắc tới một lượt trò chuyện đã qua",
+   "tra_so"
+  ],
+  [
+   "lay_lai_luot_da_troi",
+   "lấy lại nguyên văn một lượt đã rơi khỏi cửa sổ ngữ cảnh",
+   "nho_lai"
+  ],
+  [
+   "bo_dau_thanh_khoa",
+   "chuyển câu tiếng Việt có dấu thành dạng trơn để đối chiếu",
+   "bo_dau"
+  ],
+  [
+   "chan_doi_tu_ra_ngoai",
+   "chặn không cho đẩy đời tư của chủ máy ra bên ngoài",
+   "la_chuyen_rieng_cua_sep"
+  ],
+  [
+   "xet_can_du_lieu_ngoai",
+   "xét xem câu hỏi có đòi dữ liệu nằm ngoài hiểu biết sẵn có không",
+   "is_search_request"
+  ],
+  [
+   "xet_phai_tu_xu_ly",
+   "xét xem cái này AURA phải tự xử lý thay vì đi tra bên ngoài",
+   "la_viec_tu_lam"
+  ],
+  [
+   "kiem_ket_noi",
+   "kiểm tra máy còn ra được bên ngoài không trước khi thử tải gì",
+   "mang_co_song"
+  ],
+  [
+   "giu_phan_nguoi_viet",
+   "giữ lại phần chữ do người thật gõ, bỏ đường dẫn và mã dán kèm",
+   "loi_sep_noi"
+  ],
+  [
+   "tim_tren_mang",
+   "lấy về một số kết quả từ dịch vụ tìm kiếm cho một truy vấn",
+   "search"
+  ],
+  [
+   "dung_cau_kem_nguon",
+   "dựng câu trả lời sao cho chỗ lấy thông tin không thể bị bỏ sót",
+   "format_result"
+  ],
+  [
+   "gom_dia_chi_da_doc",
+   "gom danh sách địa chỉ đã đọc để chứng minh có đọc thật",
+   "sources_of"
+  ],
+  [
+   "cat_dong_sai_khien",
+   "cắt bỏ những dòng sai khiến lẫn trong đoạn trích lấy từ bên ngoài",
+   "loc_menh_lenh"
+  ],
+  [
+   "che_thong_tin_nhay",
+   "che thông tin nhạy cảm trong một đoạn chữ trước khi đưa đi",
+   "redact"
+  ],
+  [
+   "che_ca_hoi_thoai",
+   "che thông tin nhạy cảm trong cả một danh sách lượt trò chuyện",
+   "redact_messages"
+  ],
+  [
+   "che_truoc_khi_ghi_nhat_ky",
+   "che bí mật ngay trước lúc ghi xuống nhật ký, không lưu bản rõ",
+   "scrub_for_log"
+  ],
+  [
+   "xet_doi_lo_bi_mat",
+   "xét xem câu hỏi có đang đòi lộ ra giá trị của một bí mật không",
+   "is_secret_request"
+  ],
+  [
+   "xet_cau_tra_loi_yeu",
+   "xét xem câu trả lời có yếu tới mức đáng hỏi lại nơi mạnh hơn",
+   "looks_weak"
+  ],
+  [
+   "xep_cau_hoi_vao_kieu",
+   "xếp câu hỏi vào đúng kiểu của nó",
+   "loai"
+  ],
+  [
+   "lay_yeu_cau_hinh_thuc",
+   "lấy yêu cầu về hình thức trình bày để gắn cạnh câu hỏi",
+   "loi_dan_dang"
+  ],
+  [
+   "nhac_khi_tien_sai_bac",
+   "gắn một dòng nhắc khi con số tiền trong câu lệch hẳn một bậc nghìn",
+   "gan_canh_bao"
+  ],
+  [
+   "soi_so_tien_kha_nghi",
+   "soi xem trong câu có con số tiền nào sai bậc khả nghi không",
+   "don_vi_dang_ngo"
+  ],
+  [
+   "ghi_dieu_can_nho",
+   "ghi một điều vào trí nhớ lâu dài sau khi chủ máy đã xác nhận",
+   "remember"
+  ],
+  [
+   "doc_lenh_ghi_nho",
+   "đọc xem chủ máy có đang ra lệnh ghi nhớ điều gì không",
+   "parse_remember"
+  ],
+  [
+   "dung_khoi_tri_nho",
+   "dựng khối chữ ngắn về những điều đang nhớ để chèn vào lời nhắc",
+   "as_prompt_block"
+  ]
+ ]
+}

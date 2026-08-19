@@ -1,0 +1,25 @@
+{
+  "project_id": "proj_the_loai_nhe_02",
+  "_vi_sao": "Đề bài THỂ LOẠI ÍT TƯ LIỆU — truyện ký/tự sự, đúng cặp so sánh Sếp nêu 19/08. Cùng khung với bible_tinh_cam.json (2 nhân vật, 3 chương, viết ch03) để chênh lệch quy được cho THỂ LOẠI chứ không cho đề bài dễ/khó.",
+  "title": "Những Chuyến Xe Của Bố",
+  "setting": "Một thị trấn ven quốc lộ ở miền Trung, những năm 2000. Nhà nằm sát đường, đêm nào cũng nghe xe tải chạy qua. Bố làm nghề lái xe đường dài, mỗi chuyến đi mươi ngày mới về. Trong nhà có cái bàn gỗ kê sát cửa sổ, trên tường treo tấm bản đồ Việt Nam bố đánh dấu bằng bút bi những nơi đã qua.",
+  "characters": [
+    {
+      "name": "Tôi",
+      "role": "Người kể chuyện",
+      "description": "Kể lại chuyện hồi mười hai tuổi bằng giọng của người đã lớn. Hồi ấy hay ngồi ở bậc cửa đợi tiếng còi xe của bố. Nhớ chi tiết vụn vặt hơn nhớ sự kiện lớn: mùi dầu máy trên áo bố, cách bố gấp tờ tiền, tiếng dép lê trong bếp lúc ba giờ sáng.",
+      "must_appear": true
+    },
+    {
+      "name": "Bố",
+      "role": "Nhân vật chính trong hồi ức",
+      "description": "Bốn mươi mốt tuổi ở thời điểm được kể. Ít nói, về đến nhà là đi tắm rồi ngủ. Không bao giờ kể chuyện đi đường. Mỗi chuyến về đều mang một thứ nhỏ cho con: hòn sỏi lạ, vỏ ốc, một tờ vé xe của tỉnh khác.",
+      "must_appear": true
+    }
+  ],
+  "plot_outline": {
+    "ch01": "Tôi kể thói quen ngồi bậc cửa đợi bố, và cách phân biệt tiếng còi xe bố với xe người khác.",
+    "ch02": "Một chuyến bố về muộn ba ngày. Mẹ không nói gì, chỉ nấu cơm nhiều hơn thường lệ.",
+    "ch03": "Nhiều năm sau, tôi dọn nhà cũ và tìm thấy tấm bản đồ trên tường cùng cái hộp thiếc đựng những thứ bố mang về. Tôi ngồi đếm lại, và nhận ra mình chưa từng hỏi bố một câu nào về những chuyến đi ấy."
+  }
+}

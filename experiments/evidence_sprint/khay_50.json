@@ -1,0 +1,362 @@
+[
+ {
+  "ten": "valid_citations",
+  "mo_dun": "core.chat_contract",
+  "chu_ky": "valid_citations(citations)",
+  "mo_ta": "Return valid, URL-distinct citations without repairing bad evidence."
+ },
+ {
+  "ten": "tra_so",
+  "mo_dun": "core.doc_so_phien",
+  "chu_ky": "tra_so(text, history)",
+  "mo_ta": "Sếp hỏi về một lượt cũ -> trả câu đó ra sẵn, hoặc `None` nếu không hỏi."
+ },
+ {
+  "ten": "tra_loi_thang",
+  "mo_dun": "core.doc_so_phien",
+  "chu_ky": "tra_loi_thang(text, history)",
+  "mo_ta": "Câu trả lời HOÀN CHỈNH cho Sếp, hoặc `None` nếu đây không phải câu hỏi ấy."
+ },
+ {
+  "ten": "cau_gio",
+  "mo_dun": "core.dong_ho",
+  "chu_ky": "cau_gio(now)",
+  "mo_ta": "Một dòng tiếng Việt nói rõ bây giờ là lúc nào, theo giờ máy của Sếp."
+ },
+ {
+  "ten": "don_vi_dang_ngo",
+  "mo_dun": "core.kiem_tien",
+  "chu_ky": "don_vi_dang_ngo(text)",
+  "mo_ta": "True khi trong câu có một con số tiền lệch hẳn một bậc nghìn."
+ },
+ {
+  "ten": "gan_canh_bao",
+  "mo_dun": "core.kiem_tien",
+  "chu_ky": "gan_canh_bao(text)",
+  "mo_ta": "Thêm một dòng cảnh báo nếu phát hiện đơn vị đáng ngờ; không sửa số."
+ },
+ {
+  "ten": "loai",
+  "mo_dun": "core.loai_cau_hoi",
+  "chu_ky": "loai(text)",
+  "mo_ta": "Phân loại câu hỏi. Thứ tự xét CÓ Ý NGHĨA."
+ },
+ {
+  "ten": "loi_dan_dang",
+  "mo_dun": "core.loai_cau_hoi",
+  "chu_ky": "loi_dan_dang(text)",
+  "mo_ta": "Lời dặn về DẠNG đầu ra, gắn cạnh câu hỏi. `None` nếu không cần."
+ },
+ {
+  "ten": "looks_weak",
+  "mo_dun": "core.local_first_gateway",
+  "chu_ky": "looks_weak(text)",
+  "mo_ta": "Câu trả lời có đáng mượn não thầy không."
+ },
+ {
+  "ten": "tinh_bieu_thuc",
+  "mo_dun": "core.may_tinh",
+  "chu_ky": "tinh_bieu_thuc(bieu_thuc)",
+  "mo_ta": "Tính một biểu thức số học thuần. Trả `None` nếu không phải phép tính."
+ },
+ {
+  "ten": "giai_phuong_trinh",
+  "mo_dun": "core.may_tinh",
+  "chu_ky": "giai_phuong_trinh(text)",
+  "mo_ta": "Giải phương trình bậc nhất một ẩn, hoặc `None` nếu không phải."
+ },
+ {
+  "ten": "tinh_giup",
+  "mo_dun": "core.may_tinh",
+  "chu_ky": "tinh_giup(text)",
+  "mo_ta": "Một dòng \"đã tính sẵn\" để nhét vào lời dặn, hoặc `None` nếu không có gì."
+ },
+ {
+  "ten": "nho_lai",
+  "mo_dun": "core.nho_lai",
+  "chu_ky": "nho_lai(text, history, tam_nhin)",
+  "mo_ta": "Sếp hỏi về thứ đã rơi khỏi cửa sổ -> lôi nguyên văn lượt cũ ra."
+ },
+ {
+  "ten": "quet",
+  "mo_dun": "core.omega",
+  "chu_ky": "quet()",
+  "mo_ta": ""
+ },
+ {
+  "ten": "chon_ngan",
+  "mo_dun": "core.omega",
+  "chu_ky": "chon_ngan(viec)",
+  "mo_ta": "Máy rút gọn còn TRAN_NGAN mục trước khi đưa model."
+ },
+ {
+  "ten": "ghi_so",
+  "mo_dun": "core.omega",
+  "chu_ky": "ghi_so(viec)",
+  "mo_ta": "Sổ CHỈ GHI THÊM. Mục đã có thì bỏ qua, không sửa, không xoá."
+ },
+ {
+  "ten": "xep_hang",
+  "mo_dun": "core.omega",
+  "chu_ky": "xep_hang(ngan)",
+  "mo_ta": "Model xếp thứ tự ưu tiên. Trả về (thứ tự đã lọc, lời của model, giây)."
+ },
+ {
+  "ten": "bao_cao",
+  "mo_dun": "core.omega",
+  "chu_ky": "bao_cao()",
+  "mo_ta": ""
+ },
+ {
+  "ten": "lan_chay_cuoi",
+  "mo_dun": "core.omega",
+  "chu_ky": "lan_chay_cuoi()",
+  "mo_ta": ""
+ },
+ {
+  "ten": "den_ca",
+  "mo_dun": "core.omega",
+  "chu_ky": "den_ca(moi_gio)",
+  "mo_ta": "(đã đến ca chưa, còn bao nhiêu giờ nữa)."
+ },
+ {
+  "ten": "dong_ca",
+  "mo_dun": "core.omega",
+  "chu_ky": "dong_ca(so_viec, so_moi, bao)",
+  "mo_ta": ""
+ },
+ {
+  "ten": "chay_ca",
+  "mo_dun": "core.omega",
+  "chu_ky": "chay_ca(moi_gio, ep)",
+  "mo_ta": "Chạy một ca nếu đã đến giờ. Trả về (có chạy không, câu để in)."
+ },
+ {
+  "ten": "redact",
+  "mo_dun": "core.redact",
+  "chu_ky": "redact(text)",
+  "mo_ta": "Che thông tin nhạy cảm trong một chuỗi."
+ },
+ {
+  "ten": "redact_messages",
+  "mo_dun": "core.redact",
+  "chu_ky": "redact_messages(messages)",
+  "mo_ta": "Che thông tin nhạy cảm trong nội dung của một danh sách message chat."
+ },
+ {
+  "ten": "is_secret_request",
+  "mo_dun": "core.secret_guard",
+  "chu_ky": "is_secret_request(text)",
+  "mo_ta": "True khi câu hỏi đang ĐÒI GIÁ TRỊ của một bí mật."
+ },
+ {
+  "ten": "scrub_for_log",
+  "mo_dun": "core.secret_guard",
+  "chu_ky": "scrub_for_log(text)",
+  "mo_ta": "Che bí mật TRƯỚC khi ghi nhật ký. Không bao giờ lưu bản rõ."
+ },
+ {
+  "ten": "list_facts",
+  "mo_dun": "core.user_memory",
+  "chu_ky": "list_facts()",
+  "mo_ta": "Mọi điều AURA đang nhớ, theo đúng thứ tự trong tệp."
+ },
+ {
+  "ten": "remember",
+  "mo_dun": "core.user_memory",
+  "chu_ky": "remember(text)",
+  "mo_ta": "Ghi một điều vào trí nhớ.  CHỈ khi Sếp xác nhận."
+ },
+ {
+  "ten": "forget",
+  "mo_dun": "core.user_memory",
+  "chu_ky": "forget(fact_id)",
+  "mo_ta": "Quên một điều.  True nếu có thứ để quên."
+ },
+ {
+  "ten": "update",
+  "mo_dun": "core.user_memory",
+  "chu_ky": "update(fact_id, text)",
+  "mo_ta": "Sửa một điều đã nhớ.  Sếp sửa thẳng trong tệp cũng có tác dụng y hệt."
+ },
+ {
+  "ten": "parse_remember",
+  "mo_dun": "core.user_memory",
+  "chu_ky": "parse_remember(text)",
+  "mo_ta": "Trả nội dung cần nhớ nếu Sếp đang RA LỆNH nhớ, ngược lại None."
+ },
+ {
+  "ten": "as_prompt_block",
+  "mo_dun": "core.user_memory",
+  "chu_ky": "as_prompt_block()",
+  "mo_ta": "Khối ngắn để nhét vào prompt.  Rỗng nếu chưa nhớ gì."
+ },
+ {
+  "ten": "la_viec_tu_lam",
+  "mo_dun": "core.web_search",
+  "chu_ky": "la_viec_tu_lam(text)",
+  "mo_ta": "Việc AURA phải TỰ LÀM — tra mạng không thay được, chỉ tốn thời gian."
+ },
+ {
+  "ten": "la_chuyen_rieng_cua_sep",
+  "mo_dun": "core.web_search",
+  "chu_ky": "la_chuyen_rieng_cua_sep(text)",
+  "mo_ta": "Câu này hỏi về dữ kiện riêng của Sếp — internet không giúp được."
+ },
+ {
+  "ten": "bo_dau",
+  "mo_dun": "core.web_search",
+  "chu_ky": "bo_dau(text)",
+  "mo_ta": "Bỏ dấu tiếng Việt: \"tỷ giá hiện nay\" -> \"ty gia hien nay\"."
+ },
+ {
+  "ten": "mang_co_song",
+  "mo_dun": "core.web_search",
+  "chu_ky": "mang_co_song(han_giay)",
+  "mo_ta": "Máy có ra được Internet không — hỏi tầng ổ cắm, không tải gì về."
+ },
+ {
+  "ten": "loi_sep_noi",
+  "mo_dun": "core.web_search",
+  "chu_ky": "loi_sep_noi(text)",
+  "mo_ta": "Bỏ đường dẫn/URL/mã, chỉ giữ phần Sếp THẬT SỰ viết ra."
+ },
+ {
+  "ten": "is_search_request",
+  "mo_dun": "core.web_search",
+  "chu_ky": "is_search_request(text)",
+  "mo_ta": "True khi câu hỏi cần dữ liệu ngoài đầu model."
+ },
+ {
+  "ten": "search",
+  "mo_dun": "core.web_search",
+  "chu_ky": "search(query, limit, timeout_s)",
+  "mo_ta": "Tra mạng.  Hỏng ở bất kỳ khâu nào cũng trả `ok=False`, không bao giờ đoán."
+ },
+ {
+  "ten": "format_result",
+  "mo_dun": "core.web_search",
+  "chu_ky": "format_result(result)",
+  "mo_ta": "Dựng câu trả lời sao cho nguồn KHÔNG THỂ bị bỏ sót."
+ },
+ {
+  "ten": "loc_menh_lenh",
+  "mo_dun": "core.web_search",
+  "chu_ky": "loc_menh_lenh(chu)",
+  "mo_ta": "Cắt các dòng ra lệnh khỏi đoạn trích của nguồn."
+ },
+ {
+  "ten": "sources_of",
+  "mo_dun": "core.web_search",
+  "chu_ky": "sources_of(results)",
+  "mo_ta": "Gom URL đã dùng — để tầng trên chứng minh nó thật sự đọc nguồn nào."
+ },
+ {
+  "ten": "build_chat_runtime",
+  "mo_dun": "interface.chat_adapters",
+  "chu_ky": "build_chat_runtime()",
+  "mo_ta": "Build one Chat v1 runtime without importing the old orchestrator."
+ },
+ {
+  "ten": "chat_page",
+  "mo_dun": "interface.chat_api",
+  "chu_ky": "chat_page(_request)",
+  "mo_ta": ""
+ },
+ {
+  "ten": "api_history",
+  "mo_dun": "interface.chat_api",
+  "chu_ky": "api_history(request)",
+  "mo_ta": ""
+ },
+ {
+  "ten": "api_chat",
+  "mo_dun": "interface.chat_api",
+  "chu_ky": "api_chat(request)",
+  "mo_ta": ""
+ },
+ {
+  "ten": "memory_page",
+  "mo_dun": "interface.chat_api",
+  "chu_ky": "memory_page(_request)",
+  "mo_ta": ""
+ },
+ {
+  "ten": "api_memory",
+  "mo_dun": "interface.chat_api",
+  "chu_ky": "api_memory(request)",
+  "mo_ta": ""
+ },
+ {
+  "ten": "attach_chat_routes",
+  "mo_dun": "interface.chat_api",
+  "chu_ky": "attach_chat_routes(app)",
+  "mo_ta": "Attach the local Chat v1 front door to an aiohttp application."
+ },
+ {
+  "ten": "require_loopback",
+  "mo_dun": "interface.chat_app",
+  "chu_ky": "require_loopback(host)",
+  "mo_ta": "Accept localhost/loopback literals and reject every LAN/public bind."
+ },
+ {
+  "ten": "api_status",
+  "mo_dun": "interface.chat_app",
+  "chu_ky": "api_status(request)",
+  "mo_ta": ""
+ },
+ {
+  "ten": "create_chat_app",
+  "mo_dun": "interface.chat_app",
+  "chu_ky": "create_chat_app()",
+  "mo_ta": "Create the four-route Chat-only app without contacting any provider."
+ },
+ {
+  "ten": "build_parser",
+  "mo_dun": "interface.chat_app",
+  "chu_ky": "build_parser()",
+  "mo_ta": ""
+ },
+ {
+  "ten": "main",
+  "mo_dun": "interface.chat_app",
+  "chu_ky": "main(argv)",
+  "mo_ta": ""
+ },
+ {
+  "ten": "get_real_desktop",
+  "mo_dun": "tools.create_cli_hub_shortcut",
+  "chu_ky": "get_real_desktop()",
+  "mo_ta": "Lấy đúng đường dẫn Desktop thực tế của Windows (kể cả khi dùng OneDrive)."
+ },
+ {
+  "ten": "create_shortcuts",
+  "mo_dun": "tools.create_cli_hub_shortcut",
+  "chu_ky": "create_shortcuts()",
+  "mo_ta": ""
+ },
+ {
+  "ten": "create_shortcut",
+  "mo_dun": "tools.create_desktop_shortcut",
+  "chu_ky": "create_shortcut()",
+  "mo_ta": ""
+ },
+ {
+  "ten": "doc",
+  "mo_dun": "tools.dem_so_phien",
+  "chu_ky": "doc(thu_muc)",
+  "mo_ta": "-> (bản ghi hợp lệ, số tệp, số dòng bỏ vì hỏng)."
+ },
+ {
+  "ten": "nhan_dang_ngo",
+  "mo_dun": "tools.dem_so_phien",
+  "chu_ky": "nhan_dang_ngo(ban_ghi, tran_giay)",
+  "mo_ta": "Lượt ghi `timeout` mà thời lượng KHÔNG chạm trần -> nhãn sai."
+ },
+ {
+  "ten": "mot_don",
+  "mo_dun": "tools.do_tiem_lenh_qua_nguon",
+  "chu_ky": "mot_don(ten, chu_doc, dau_hieu)",
+  "mo_ta": ""
+ }
+]

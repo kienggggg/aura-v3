@@ -1,0 +1,12 @@
+{
+  "style_id": "tinh_cam_doi_thuong",
+  "name": "Nhẹ nhàng, đời thường (Tình cảm)",
+  "_vi_sao": "Năm luật, cùng số lượng với style_card.json để so được. Luật 4 và 5 đặt riêng để chặn đúng hai tật đã ĐO ĐƯỢC ở văn AURA 19/08: dồn ví von to tát (bốn hình ảnh cực đại trong một đoạn 400 từ), và ví von kéo thời gian đi quá xa ('vết thương chưa lành từ ngàn năm về trước' — Sếp bắt được, chuyên gia mây không thấy).",
+  "rules": [
+    "Viết bằng ngôi thứ ba, điểm nhìn hạn chế bám theo Diệu.",
+    "Kể bằng hành động và đồ vật cụ thể: tay làm gì, mắt nhìn đâu, trên bàn có gì. Cảm xúc để người đọc tự suy ra, không gọi tên nó.",
+    "Tập trung vào chi tiết đời thường có thật: mùi cà phê, tiếng mưa trên mái tôn, vết ố trên mặt bàn, tiếng rao ngoài ngõ.",
+    "Mỗi đoạn văn nhiều nhất MỘT hình ảnh so sánh. Không dồn ẩn dụ, không dùng từ Hán Việt sáo rỗng.",
+    "Không dùng ví von phóng đại về thời gian hay tầm vóc (kiểu 'ngàn năm', 'cả vũ trụ', 'định mệnh'). Mốc thời gian phải là mốc đời người: hôm qua, tám năm trước, hồi bà còn sống."
+  ]
+}

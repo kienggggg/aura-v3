@@ -1,0 +1,37 @@
+[
+ {
+  "de": "dap_cau_hoi_co_phep_toan",
+  "can": "tinh_giup",
+  "chon_khi_hoi": "tinh_bieu_thuc",
+  "dat_khi_viet_ma": false,
+  "loi": "CHON: tinh_bieu_thuc  \nVISAO: Hàm này trực tiếp tính toán biểu thức số học và trả về kết quả, phù hợp với yêu cầu cần trả ra con số đúng.  \nLOAI: giai_phuong_trinh  \nVì hàm này không phù hợp với yêu cầu cần tính toán biểu thức số học, nên loại bỏ."
+ },
+ {
+  "de": "dap_ve_luot_cu",
+  "can": "tra_so",
+  "chon_khi_hoi": "tra_so",
+  "dat_khi_viet_ma": false,
+  "loi": "CHON: tra_so\nVISAO: Hàm này sẽ trả về câu trả lời của lượt trò chuyện đã qua mà người dùng nhắc tới.\nLOAI: None, vì đây là một hàm đơn giản và không cần phân loại thêm."
+ },
+ {
+  "de": "chan_doi_tu_ra_ngoai",
+  "can": "la_chuyen_rieng_cua_sep",
+  "chon_khi_hoi": "is_secret_request",
+  "dat_khi_viet_ma": false,
+  "loi": "CHON: is_secret_request\nVISAO: Hàm này sẽ kiểm tra xem câu hỏi có liên quan đến thông tin cá nhân hay không, từ đó ngăn chặn việc chia sẻ thông tin đời tư của chủ máy ra bên ngoài.\nLOAI: is_secret_request\nVISAO: Hàm này đã được cân nhắc và chọn vì nó trực tiếp liên quan đến việc kiểm tra và ngăn chặn việc chia sẻ thông tin cá nhân, đảm bảo rằng chỉ có thông tin công cộng mới được xử lý."
+ },
+ {
+  "de": "xet_phai_tu_xu_ly",
+  "can": "la_viec_tu_lam",
+  "chon_khi_hoi": "valid_citations",
+  "dat_khi_viet_ma": false,
+  "loi": "CHON: valid_citations\nVISAO: Hàm này sẽ giúp AURA xác định và loại bỏ các trích dẫn không hợp lệ hoặc trùng lặp, đảm bảo rằng chỉ những trích dẫn đáng tin cậy và độc đáo mới được sử dụng.\nLOAI: loai_cau_hoi\nVISAO: Hàm này sẽ giúp AURA phân loại câu hỏi, xác định loại câu hỏi và cung cấp lời dặn phù hợp, giúp AURA xử lý câu hỏi một cách hiệu quả và chính xác."
+ },
+ {
+  "de": "giu_phan_nguoi_viet",
+  "can": "loi_sep_noi",
+  "chon_khi_hoi": "loi_sep_noi",
+  "dat_khi_viet_ma": false,
+  "loi": "CHON: loi_sep_noi  \nVISAO: Hàm này sẽ giúp chúng ta loại bỏ đường dẫn và mã dán kèm trong văn bản, chỉ giữ lại phần văn bản gốc do người thật gõ. Điều này đảm bảo rằng khi chúng ta xử lý văn bản, chúng ta đang làm việc với nội dung chính xác mà không bị ảnh hưởng bởi các liên kết hoặc mã không cần thiết.  \nLOAI: tools.dem_so_phien  \nVì hàm `loi_sep_noi` nằm trong nhóm `tools.dem_so_phien`, và nó phù hợp với yêu cầu của chúng ta để loại bỏ đường dẫn và mã dán kèm trong văn bản."
+ }
+]

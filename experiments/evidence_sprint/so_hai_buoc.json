@@ -1,0 +1,90 @@
+[
+ {
+  "de": "noi_bay_gio_may_gio",
+  "can": "cau_gio",
+  "chon": "cau_gio",
+  "chon_dung": true,
+  "dung_the_chon": true,
+  "dat": true,
+  "loi_chon": "CHON: cau_gio\n\nVISAO: In ra thời điểm hiện tại theo đồng hồ của máy.",
+  "ma": "from core.dong_ho import cau_gio\n\ndef noi_bay_gio_may_gio():\n    now = datetime.datetime.now()\n    cau_gio(now)\n\n# Ví dụ sử dụng hàm\nnoi_bay_gio_may_gio()",
+  "giay": 246.8
+ },
+ {
+  "de": "dap_cau_hoi_co_phep_toan",
+  "can": "tinh_giup",
+  "chon": "tinh_bieu_thuc",
+  "chon_dung": false,
+  "dung_the_chon": true,
+  "dat": false,
+  "loi_chon": "CHON: tinh_bieu_thuc  \nVISAO: Hàm này sẽ tính toán biểu thức số học và trả về kết quả chính xác.",
+  "ma": "from core.may_tinh import tinh_bieu_thuc\n\ndef dap_cau_hoi_co_phep_toan(cau_hoi):\n    # Tìm vị trí của phép toán trong câu hỏi\n    toan_tu = None\n    for tu in ['+', '-', '*', '/']:\n        if tu in cau_hoi:\n            toan_tu = tu\n            break\n    \n    if toan_tu is None:\n        return None  # Không có phép toán trong câu hỏi\n    \n    # Tách biểu thức số học\n    bieu_thuc = cau_hoi.split(toan_tu)\n    if len(bieu_thuc) != 2:\n        return None  # Biểu thức số học không hợp lệ\n    \n    # Tính giá trị biểu thức\n    try:\n        ket_qua = tinh_bieu_thuc(bieu_thuc[0].strip() + toan_tu + bieu_thuc[1].strip())\n        return ket_qua\n    except:\n        return None  # Biểu thức số học không hợp lệ",
+  "giay": 93.2
+ },
+ {
+  "de": "lam_ra_ket_qua_day_phep",
+  "can": "tinh_bieu_thuc",
+  "chon": "tinh_bieu_thuc",
+  "chon_dung": true,
+  "dung_the_chon": true,
+  "dat": true,
+  "loi_chon": "CHON: tinh_bieu_thuc  \nVISAO: Hàm này tính biểu thức số học thuần, phù hợp cho việc lấy kết quả số học từ một dãy phép toán đã tách sẵn.",
+  "ma": "from core.may_tinh import tinh_bieu_thuc\n\ndef lam_ra_ket_qua_day_phep(day_phep):\n    ket_qua = None\n    for phep in day_phep:\n        ket_qua = tinh_bieu_thuc(phep)\n        if ket_qua is None:\n            break\n    return ket_qua",
+  "giay": 60.3
+ },
+ {
+  "de": "tim_an_so",
+  "can": "giai_phuong_trinh",
+  "chon": "giai_phuong_trinh",
+  "chon_dung": true,
+  "dung_the_chon": false,
+  "dat": false,
+  "loi_chon": "CHON: giai_phuong_trinh  \nVISAO: Giải phương trình bậc nhất một ẩn.",
+  "ma": "from core.may_tinh import giai_phuong_trinh\n\ndef tim_an_so(text):\n    # Xóa khoảng trắng và chuyển sang chữ thường\n    text = text.replace(\" \", \"\").lower()\n    \n    # Kiểm tra xem có chứa biến x không\n    if 'x' not in text:\n        return None\n    \n    # Tách phương trình thành phần trái và phải bằng nhau\n    if '=' not in text:\n        return None\n    \n    left, right = text.split('=')\n    \n    # Xóa dấu ngoặc đơn nếu có\n    left = left.replace('(', '').replace(')', '')\n    right = right.replace('(', '').replace(')', '')\n    \n    # Xóa dấu phẩy nếu có\n    left = left.replace(',', '')\n    right = right.replace(',', '')\n    \n    # Xóa các phép tính không cần thiết\n    left = left.replace('+0', '').replace('-0', '')\n    right = right.replace('+0', '').replace('-0', '')\n    \n    # Thay đổi dấu trừ thành số âm\n    left = left.replace('-', '+-')\n    right = right.replace('-', '+-')\n    \n    # Tách các hạng tử\n    left_terms = left.split('+')\n    right_terms = right.split('+')\n    \n    # Tạo danh sách các hạng tử có biến x và các hạng tử không có biến x\n    x_terms = []\n    constant_terms = []\n    \n    for term in left_terms:\n        if 'x' in term:\n            x_terms.append(term)\n        else",
+  "giay": 116.3
+ },
+ {
+  "de": "dap_ve_luot_cu",
+  "can": "tra_so",
+  "chon": "tra_so",
+  "chon_dung": true,
+  "dung_the_chon": true,
+  "dat": true,
+  "loi_chon": "CHON: tra_so  \nVISAO: Trả lại lượt trò chuyện đã qua.",
+  "ma": "from core.doc_so_phien import tra_so\n\ndef dap_ve_luot_cu(text, history):\n    luot_cu = tra_so(text, history)\n    if luot_cu is not None:\n        return luot_cu\n    else:\n        return \"Em không rõ\"",
+  "giay": 43.1
+ },
+ {
+  "de": "lay_lai_luot_da_troi",
+  "can": "nho_lai",
+  "chon": "nho_lai",
+  "chon_dung": true,
+  "dung_the_chon": true,
+  "dat": true,
+  "loi_chon": "CHON: nho_lai\n\nVISAO: Sếp hỏi về thứ đã rơi khỏi cửa sổ -> lôi nguyên văn lượt cũ ra.",
+  "ma": "from core.nho_lai import nho_lai\n\ndef lay_lai_luot_da_troi(text, history, tam_nhin):\n    return nho_lai(text, history, tam_nhin)",
+  "giay": 42.4
+ },
+ {
+  "de": "bo_dau_thanh_khoa",
+  "can": "bo_dau",
+  "chon": "bo_dau",
+  "chon_dung": true,
+  "dung_the_chon": true,
+  "dat": true,
+  "loi_chon": "CHON: bo_dau  \nVISAO: Bỏ dấu tiếng Việt để so sánh.",
+  "ma": "from core.khay_the import bo_dau\n\ndef bo_dau_thanh_khoa(cau):\n    # Bỏ dấu tiếng Việt\n    cau_bo_dau = bo_dau(cau)\n    # Chuyển sang dạng trơn bằng cách thay thế các ký tự đặc biệt\n    cau_tron = cau_bo_dau.replace(' ', '').lower()\n    return cau_tron",
+  "giay": 48.9
+ },
+ {
+  "de": "chan_doi_tu_ra_ngoai",
+  "can": "la_chuyen_rieng_cua_sep",
+  "chon": "is_secret_request",
+  "chon_dung": false,
+  "dung_the_chon": true,
+  "dat": false,
+  "loi_chon": "CHON: is_secret_request\n\nVISAO: Kiểm tra xem câu hỏi có liên quan đến thông tin bí mật hay không.",
+  "ma": "from core.secret_guard import is_secret_request\n\ndef chan_doi_tu_ra_ngoai(text):\n    if is_secret_request(text):\n        raise ValueError(\"Không được phép chia sẻ thông tin cá nhân.\")\n    return text",
+  "giay": 43.0
+ }
+]

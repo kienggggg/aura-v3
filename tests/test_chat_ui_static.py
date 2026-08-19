@@ -56,7 +56,13 @@ def test_tab_session_uses_sessionstorage_and_uuid_shape():
 def test_ui_uses_exact_chat_v1_fields_and_bounded_input():
     html = _html()
     assert 'maxlength="12000"' in html
-    assert "JSON.stringify({text, session_id: SID})" in html
+    # 16/08/2026: thêm thanh chọn phòng, nên payload có thêm `phong` — nhưng
+    # CHỈ khi Sếp chọn. Không chọn thì trường đó không tồn tại, và máy chủ cũ
+    # chưa biết `phong` vẫn chạy y như trước. Test giữ cả HAI khẳng định:
+    #   - đường không chọn phòng phải y hệt hợp đồng cũ
+    #   - đường có chọn phòng chỉ được THÊM `phong`, không đổi hai trường kia
+    assert "{text, session_id: SID}" in html
+    assert "{text, session_id: SID, phong: phongDangChon}" in html
     assert "data.text" in html
     assert "data.latency_ms" in html
     assert "data.sources" in html

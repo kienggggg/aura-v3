@@ -107,6 +107,12 @@ class ChatRequest:
     actor_id: str
     channel: Channel | str
     text: str
+    # Phòng Sếp đang làm việc, do NGƯỜI chọn trên thanh nút — không phải model
+    # đoán. Rỗng = để `loai_cau_hoi` tự phân loại như cũ.
+    #
+    # Có giá trị mặc định nên mọi chỗ đang dựng ChatRequest bằng 5 tham số vẫn
+    # chạy y nguyên; đây là thêm chứ không phải đổi hợp đồng.
+    phong: str = ""
 
     def validation_errors(self) -> tuple[str, ...]:
         errors: list[str] = []

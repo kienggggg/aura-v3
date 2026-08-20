@@ -35,3 +35,6 @@ Thumbs.db
 
 # rac don 16/08: ban quay man hinh 141MB + catalog cong nghe khong dung den
 _rac/
+
+# venv rieng cho phep do LibCST (29 MB, khong dua vao git)
+.venv-cst/

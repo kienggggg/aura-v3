@@ -94,3 +94,51 @@ dán chữ "PASS". Bốn cửa ra `0` thì gửi lại, tôi soát bằng cách 
 
 Trong lúc chưa xong: **chưa dùng app này để sửa mã thật.** Chạy thử và học thì
 được.
+
+---
+
+**BỔ SUNG — đọc trước khi bắt đầu VIỆC 1.**
+
+Sau khi giao bản trên, tôi đã đo thử **LibCST** (Meta, MIT) xem có thay được bộ
+đọc/sinh mã không. Đo chứ không đọc tài liệu:
+
+```
+.venv-cst\Scripts\python.exe -X utf8 tools\do_libcst.py     -> mã thoát 0
+
+1. mở rồi lưu, không sửa gì        : khớp từng byte 67/67 (55 ms/tệp, 16 tệp CRLF)
+2. CHẠM mọi câu lệnh qua with_changes: 3.888 nút, khớp từng byte 67/67
+3. đổi thật một tên biến           : đúng 4 dòng đáng đổi, không dòng nào khác
+   giữ chú kiểu · giá trị mặc định · kiểu trả về · elif · chú thích cuối dòng
+   trên elif · dấu thăng trong chuỗi — CÓ hết
+```
+
+Đặt cạnh bản v1: **sửa một chỗ rồi lưu, v1 giữ nguyên byte 49,8%, LibCST 100%
+trên 3.888 nút.** `elif` giữ nguyên thay vì thành `else:`.
+
+Lý do gốc: `ast` **cố ý** vứt dấu cách, chú thích, và cả `elif` (nó chỉ là nút
+`If` lồng trong `orelse`, không có cờ phân biệt). Bạn phải tự bù bằng
+`line_start`/`duoi_dong`/`ma_tho` — và cả bốn lỗi đều sinh ra từ chỗ bù đó. Không
+phải bạn làm ẩu; nền móng thiếu.
+
+**Nếu đổi sang LibCST thì VIỆC 1, 2, 3 biến mất** chứ không phải được vá.
+**VIỆC 4 (Origin) và VIỆC 5 (test) vẫn phải làm** — không liên quan.
+
+Cái giá, nói cùng lúc:
+
+- LibCST **chỉ có bên Python** — `validator.js` và 22 test parity không dùng
+  được. Bên trình duyệt phải gọi máy chủ để mở/lưu; phần kiểm đỏ/vàng vẫn chạy
+  tại chỗ vì nó soi cây thẻ, không soi mã. **Đây là chỗ phải quyết trước khi
+  viết.**
+- Chậm hơn `ast` khoảng 50 lần (55 ms so với ~1 ms mỗi tệp). Mở một tệp không ai
+  thấy; quét cả kho mất 3,7 giây.
+- 29 MB, có phần biên dịch sẵn bằng Rust, cài vào venv riêng `.venv-cst`.
+- **Vẫn cần thẻ `ma_tho`** — LibCST lo chuyện *giữ nguyên*, không lo chuyện bộ 11
+  thẻ tả được bao nhiêu. Khác biệt: nút thẻ không tả được thì hiện nguyên văn và
+  không ai đụng, thay vì bị ép vào thẻ rồi mất dữ liệu.
+- Phải viết lại `doc_tep_py_sang_cay_the` + `luu_cay_the_ra_tep_py`, khoảng 400
+  dòng. **Giao diện, 5 đỏ, 4 vàng, sandbox, 4 lớp bảo mật giữ nguyên hết.**
+
+**Đề nghị:** làm VIỆC 4 và VIỆC 5 trước (nhỏ, độc lập với mọi hướng), rồi thay bộ
+đọc bằng LibCST thay cho VIỆC 1–3. Bốn cửa trong `tools\do_cua_cung_the.py`
+**không đổi** — vẫn là cửa nghiệm thu. Nếu LibCST vướng gì mà **đo ra được** thì
+nói, quay lại VIỆC 1–3 vẫn kịp.

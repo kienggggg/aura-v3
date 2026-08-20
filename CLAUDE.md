@@ -209,7 +209,50 @@ không kể "đã sửa file X".
 
 ---
 
-## 7. Kỷ luật Bằng chứng & Chống Gian lận (Evidence Sprint & Agents)
+## 7. Kế hoạch phải qua duyệt, và người duyệt phải CHẠY THỬ
+
+Ngày 19/08/2026, Antigravity gửi kế hoạch app-thẻ để Sếp duyệt **trước khi viết
+dòng mã nào**. Duyệt bắt được bốn thứ, và **cả bốn đều bắt bằng một lệnh chạy
+vài giây**, không bắt bằng đọc kỹ:
+
+| kế hoạch viết | chạy thử ra |
+|---|---|
+| "giới hạn 256 MB RAM" | `import resource` → `ModuleNotFoundError`. API Unix, Windows không có |
+| "`cwd` ở thư mục tạm, không cấp quyền ghi ra ngoài" | ghi bằng đường dẫn tuyệt đối → **GHI ĐƯỢC** |
+| "chỉ mở mã do chính app tạo" | Sếp bác: công cụ không mở nổi tệp ngoài là đồ chơi |
+| "10 thẻ, không thêm không bớt" | đã lỗi thời sau khi Sếp bác điều trên |
+
+Nếu để code xong rồi mới thấy, **cả bốn đều phải viết lại**. Và cái đầu tiên còn
+có nguy cơ đi vào tài liệu thành *"đã có sandbox 256 MB"* rồi nằm đó vĩnh viễn —
+đúng loại câu mà cả tệp này sinh ra để chống.
+
+**Luật:**
+
+1. **Dựng mới một hệ thống thì gửi kế hoạch trước, không viết mã trước.** Sửa
+   một lỗi thì cứ sửa; dựng một app, một phòng, một máy đo thì phải có kế hoạch
+   qua mắt người khác.
+2. **Người duyệt phải CHẠY THỬ mọi con số và mọi lời hứa kỹ thuật.** Đọc kỹ
+   không bắt được `resource` không tồn tại trên Windows. Một lệnh ba dòng thì
+   bắt được.
+3. **Lời hứa an toàn phải kiểm trước tiên.** "Cô lập", "sandbox", "không có
+   quyền" — ba chữ ấy người đọc sẽ TIN, và tin sai thì mất tệp. Kiểm được thì
+   kiểm; kiểm không được thì viết **"CHƯA chặn được"**, đừng viết "đã chặn".
+4. **Kế hoạch sửa rồi thì gửi lại bản sửa.** Antigravity gửi bản 2 vẫn dùng số
+   liệu bản 1 vì chưa nhận bản sửa của tài liệu giao việc. Không phải lỗi của
+   nó — lỗi ở khâu chuyển tin, mà khâu ấy thuộc về Sếp.
+
+Chiều ngược lại cũng đúng và cũng đắt: **cùng ngày ấy tôi làm ngược — dựng
+trước, đo sau, và chín lần phát hiện bộ chấm của chính mình sai SAU khi đã báo
+số.** Bóc khối markdown, model tự định nghĩa rồi gọi hàm của chính nó, thẻ ba ô
+mơ hồ, gieo lỗi tuần tự làm lệch chỉ số. Cả bốn đều **sinh ra số đẹp trước khi
+bị bắt**.
+
+Nên luật này không phải để soi người khác. Nó là: **trước khi tin một con số —
+của mình hay của ai — hãy chạy thử cái sinh ra nó.**
+
+---
+
+## 8. Kỷ luật Bằng chứng & Chống Gian lận (Evidence Sprint & Agents)
 
 Xem chi tiết tại:
 - `KY_LUAT_THUC_THI.md` (chuẩn run evidence và tiêu chuẩn 4 phòng Writer, Studio, Scout, Alpha).

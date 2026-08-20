@@ -299,11 +299,21 @@ def cua_4_tu_kiem(doc, sinh_dong):
     theo_the = {}
     vi_du = []
     tong_dong_vat_ly = 0
+    # ĐẾM THEO TỪNG TỆP, gom bằng TẬP rồi mới cộng số phần tử.
+    #
+    # Hai lỗi phải tránh cùng lúc, đã dính cả hai trong ngày 20/08:
+    #   cộng dồn `line_end - line_start + 1` -> thẻ khối tính cả thân nó rồi
+    #     từng thẻ con tính lại chính những dòng ấy: ra 113,7%, mà một tỉ lệ
+    #     vượt 100% là dấu hiệu công thức sai chứ không phải kết quả tốt;
+    #   dùng MỘT tập chung cho cả kho -> dòng 5 của tệp A đè dòng 5 của tệp B,
+    #     lần này lại đếm THIẾU.
     dong_the_that = 0
+    _dong_tep: set = set()
 
     for p in _tep_py():
         dong = p.read_text(encoding="utf-8").splitlines()
         tong_dong_vat_ly += len(dong)
+        _dong_tep = set()
         try:
             rec = doc(p)
         except Exception:
@@ -311,7 +321,7 @@ def cua_4_tu_kiem(doc, sinh_dong):
             continue
 
         def di(ns, muc):
-            nonlocal tong, sai, tho, dong_the_that
+            nonlocal tong, sai, tho
             for n in ns:
                 if n.ma == "ma_tho":
                     tho += 1
@@ -319,9 +329,10 @@ def cua_4_tu_kiem(doc, sinh_dong):
                     continue
                 tong += 1
                 if n.line_start and n.line_end:
-                    dong_the_that += max(1, n.line_end - n.line_start + 1)
+                    _dong_tep.update(
+                        range(n.line_start, (n.line_end or n.line_start) + 1))
                 elif n.line_start:
-                    dong_the_that += 1
+                    _dong_tep.add(n.line_start or 0)
                 o = theo_the.setdefault(n.ma, [0, 0])
                 o[0] += 1
                 if n.line_start is None:
@@ -349,6 +360,7 @@ def cua_4_tu_kiem(doc, sinh_dong):
                                       "sinh": ra.strip()[:90]})
                 di(n.than, muc + 1)
         di(rec.tree, 0)
+        dong_the_that += len(_dong_tep)     # cộng SAU khi gom hết một tệp
     return {
         "ten": "Cửa 4 — thẻ tả sai nguồn phải bị hạ xuống ma_tho",
         "dat": sai == 0, "the_that": tong, "tho": tho, "sai": sai,
@@ -397,11 +409,21 @@ def cua_4_doi_that(doc, luu):
     theo_the = {}
     vi_du = []
     tong_dong_vat_ly = 0
+    # ĐẾM THEO TỪNG TỆP, gom bằng TẬP rồi mới cộng số phần tử.
+    #
+    # Hai lỗi phải tránh cùng lúc, đã dính cả hai trong ngày 20/08:
+    #   cộng dồn `line_end - line_start + 1` -> thẻ khối tính cả thân nó rồi
+    #     từng thẻ con tính lại chính những dòng ấy: ra 113,7%, mà một tỉ lệ
+    #     vượt 100% là dấu hiệu công thức sai chứ không phải kết quả tốt;
+    #   dùng MỘT tập chung cho cả kho -> dòng 5 của tệp A đè dòng 5 của tệp B,
+    #     lần này lại đếm THIẾU.
     dong_the_that = 0
+    _dong_tep: set = set()
 
     for p in _tep_py():
         goc = p.read_text(encoding="utf-8").splitlines()
         tong_dong_vat_ly += len(goc)
+        _dong_tep = set()
         try:
             rec = doc(p)
         except Exception:
@@ -421,9 +443,10 @@ def cua_4_doi_that(doc, luu):
                 continue                       # thẻ không có ô nào sửa được
             tong += 1
             if n.line_start and n.line_end:
-                dong_the_that += max(1, n.line_end - n.line_start + 1)
+                _dong_tep.update(
+                    range(n.line_start, (n.line_end or n.line_start) + 1))
             elif n.line_start:
-                dong_the_that += 1
+                _dong_tep.add(n.line_start or 0)
             v = theo_the.setdefault(n.ma, [0, 0])
             v[0] += 1
             cu = n.o[o]
@@ -454,6 +477,7 @@ def cua_4_doi_that(doc, luu):
                                   "dong": n.line_start, "o": o,
                                   "lan_ra": [] if gon else ["truoc/sau lech"],
                                   "goc": goc[n.line_start - 1].strip()[:70]})
+        dong_the_that += len(_dong_tep)     # cộng SAU khi gom hết một tệp
     return {
         "ten": "Cửa 4 — đổi thật một ô, vết sửa nằm gọn trong thẻ ấy",
         "dat": (tong > 0) and (sai == 0), "the_that": tong, "tho": tho, "sai": sai,

@@ -130,6 +130,7 @@ async def _body_of(request: web.Request) -> dict[str, object]:
 
 
 async def chat_page(_request: web.Request) -> web.Response:
+    """Trả trang chat cho trình duyệt."""
     return web.FileResponse(_WEB_DIR / "chat.html")
 
 
@@ -144,6 +145,7 @@ def _history_probe(session_id: str) -> ChatRequest:
 
 
 async def api_history(request: web.Request) -> web.Response:
+    """Lấy lại các lượt trò chuyện cũ của một phiên, đọc từ sổ phiên."""
     raw_session = request.query.get("session_id", "")
     session_id = raw_session if isinstance(raw_session, str) else ""
     probe = _history_probe(session_id)
@@ -181,6 +183,11 @@ async def api_history(request: web.Request) -> web.Response:
 
 
 async def api_chat(request: web.Request) -> web.Response:
+    """Nhận một câu người dùng gõ, trả lời, và ghi cả lượt vào sổ phiên.
+
+    Tên phòng chỉ nhận từ danh sách đóng — trình duyệt là chỗ người lạ gửi
+    chữ tới, không có lý do tin một chuỗi tuỳ ý rồi đem đi tra bảng.
+    """
     body = await _body_of(request)
     raw_session = body.get("session_id", "")
     raw_text = body.get("text", "")
@@ -210,10 +217,12 @@ async def api_chat(request: web.Request) -> web.Response:
 # a model response never becomes a fact merely because it appeared in chat.
 # --------------------------------------------------------------------------- #
 async def memory_page(_request: web.Request) -> web.Response:
+    """Trả trang xem và sửa trí nhớ dài hạn cho trình duyệt."""
     return web.FileResponse(_WEB_DIR / "memory.html")
 
 
 async def api_memory(request: web.Request) -> web.Response:
+    """Đọc, thêm hoặc xoá một điều AURA đang nhớ về Sếp."""
     from core import user_memory
 
     if request.method == "GET":

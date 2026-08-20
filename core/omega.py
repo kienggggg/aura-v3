@@ -93,6 +93,11 @@ def _doc(f: Path):
 # TẦNG MÁY — mọi thứ dưới đây là phép đo, không có phán đoán nào
 # --------------------------------------------------------------------------- #
 def quet() -> list[Viec]:
+    """Soát mọi lượt chạy trong kho lượt, tìm ra các vấn đề cần người xử lý.
+
+    Bỏ qua lượt giả do bộ sinh dữ liệu thử đẻ ra, và gộp các lượt trùng băm
+    làm một.
+    """
     ra: list[Viec] = []
     if not RUNS.is_dir():
         return ra
@@ -283,6 +288,11 @@ def xep_hang(ngan: list[Viec]) -> tuple[list[int], str, float]:
 
 # --------------------------------------------------------------------------- #
 def bao_cao() -> Path:
+    """Dựng bản báo cáo Markdown cho một ca: quét, vào sổ, model xếp hạng.
+
+    Máy đếm và gom; model chỉ được xếp thứ tự và viết nhận xét. Trả về đường
+    dẫn tệp báo cáo vừa ghi.
+    """
     viec = quet()
     moi = ghi_so(viec)
     ngan = chon_ngan(viec)
@@ -334,6 +344,7 @@ MOI_GIO = 12.0          # một ca 12 tiếng, đổi bằng --moi-gio=
 
 
 def lan_chay_cuoi() -> datetime | None:
+    """Lúc nào Omega đóng ca gần nhất, đọc từ sổ nhịp. Chưa chạy bao giờ thì `None`."""
     d = _doc(NHIP) or {}
     try:
         return datetime.fromisoformat(d["xong_luc"])
@@ -351,6 +362,11 @@ def den_ca(moi_gio: float = MOI_GIO) -> tuple[bool, float]:
 
 
 def dong_ca(so_viec: int, so_moi: int, bao: Path) -> None:
+    """Ghi mốc kết thúc một ca làm việc vào sổ nhịp, kèm số vấn đề tìm được.
+
+    Ghi giờ theo UTC vì `den_ca` so hai mốc với nhau; giờ địa phương thì mỗi
+    lần đổi múi hoặc giờ mùa hè là nhịp ca nhảy một cục.
+    """
     NHA_OMEGA.mkdir(parents=True, exist_ok=True)
     NHIP.write_text(json.dumps(
         {"xong_luc": datetime.now(timezone.utc).isoformat(timespec="seconds"),

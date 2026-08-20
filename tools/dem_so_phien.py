@@ -103,6 +103,7 @@ def _bang(tieu_de: str, dem: Counter, tong: int) -> None:
 
 
 def main() -> int:
+    """Đếm số lượt đã vào sổ phiên và in ra cho người đọc."""
     # Ép UTF-8 Ở ĐÂY, không phải lúc import: đổi `sys.stdout` ở cấp module thì
     # chỉ cần `import dem_so_phien` là bộ bắt output của pytest gãy
     # ("I/O operation on closed file"), và cả tệp thành không test được.

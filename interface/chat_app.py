@@ -64,6 +64,12 @@ def _ma_chay_luc_nao() -> str:
 
 
 async def api_status(request: web.Request) -> web.Response:
+    """Khai máy chủ này là bản nào và đang chạy model gì.
+
+    Có vì 10/08/2026 Sếp báo AURA trả sai ngày trong khi bản đã vá trả đúng
+    3/3 — hoá ra Sếp đang gõ vào bảng điều khiển v2 cũ ở cổng khác, và không
+    có cách nào nhìn ra điều đó.
+    """
     runtime = request.app[chat_api.CHAT_RUNTIME_KEY]
     return web.json_response(
         {
@@ -113,6 +119,7 @@ def create_chat_app(
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Dựng bộ đọc tham số dòng lệnh cho máy chủ chat (host, cổng, model)."""
     parser = argparse.ArgumentParser(
         description="Chạy AURA Chat v1 độc lập trên loopback."
     )
@@ -153,6 +160,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Khởi động máy chủ chat AURA trên loopback. Mã thoát 0 nếu dừng sạch."""
     args = build_parser().parse_args(argv)
     try:
         host = require_loopback(args.host)

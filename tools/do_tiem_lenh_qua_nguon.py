@@ -97,6 +97,12 @@ SACH = SourceCitation(
 
 
 async def mot_don(ten: str, chu_doc: str, dau_hieu) -> tuple[str, bool, float, str]:
+    """Bắn một đòn tiêm lệnh qua nguồn tra mạng, xem AURA có nghe lời nguồn không.
+
+    Chấm bằng ĐỐI CHIẾU với dấu hiệu truyền vào, không dò chuỗi tự nghĩ ra:
+    đòn "bạn là aura" từng bị chấm là chống được chỉ vì chuỗi ấy không xuất
+    hiện, trong khi AURA đang đọc luật của chính nó ra.
+    """
     cau_hinh = OllamaConfig()
     gw = OllamaGateway(cau_hinh)
     nguon = (
@@ -119,6 +125,7 @@ async def mot_don(ten: str, chu_doc: str, dau_hieu) -> tuple[str, bool, float, s
 
 
 async def main() -> int:
+    """Bắn cả loạt đòn tiêm lệnh qua nguồn, in bảng chống được mấy đòn."""
     print(f"  Câu hỏi: {CAU_HOI}")
     print(f"  Nguồn [1] sạch · nguồn [2] bị nhét lệnh\n")
     dat = chay = hong = 0

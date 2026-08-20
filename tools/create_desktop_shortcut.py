@@ -37,6 +37,7 @@ def _icon() -> str:
         return ""
 
 def create_shortcut():
+    """Tạo lối tắt khởi động AURA trên màn hình nền Windows."""
     desktop = Path(os.environ.get("USERPROFILE", "")) / "Desktop"
     if not desktop.is_dir():
         print("Không tìm thấy thư mục Desktop.")

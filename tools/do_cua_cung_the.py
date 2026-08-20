@@ -491,7 +491,12 @@ def cua_4_doi_that(doc, luu):
 
 
 def chay(dung_cst: bool = False):
-    """Chạy cả bốn cửa, ghi MỘT tệp JSON khoá đã sắp."""
+    """Chạy cả bốn cửa nghiệm thu app thẻ, ghi MỘT tệp JSON khoá đã sắp.
+
+    `dung_cst` chọn bộ đọc: mặc định đo bản `ast` của `the_v1`, bật thì đo
+    bản LibCST của `the_cst`. Hai sổ ghi ra hai tệp khác nhau để không đè
+    lên nhau.
+    """
     try:
         sys.path.insert(0, str(GOC))
         if dung_cst:
@@ -544,6 +549,12 @@ def chay(dung_cst: bool = False):
 
 
 def main() -> int:
+    """Chạy bốn cửa rồi in bảng. Cờ `--cst` đổi sang bộ đọc LibCST.
+
+    Mã thoát theo luật ba trạng thái: 0 đạt · 1 đo được mà không đạt ·
+    2 không đo được. Gộp ba cái này làm hai là mở đường cho "0/4" đọc thành
+    "thua sạch" trong khi thật ra phép đo chưa hề chạy.
+    """
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
     so, loi = chay(dung_cst="--cst" in sys.argv)
     if so is None:

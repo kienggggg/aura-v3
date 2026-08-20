@@ -259,10 +259,18 @@ def _doc_ngay(text: str, hom_nay: date) -> date | None:
 
 
 def tinh_giup(text: str, *, now: datetime | None = None) -> str | None:
-    """Một dòng "đã tính sẵn" để nhét vào lời dặn, hoặc `None` nếu không có gì.
+    """Bắt câu hỏi có phép toán trong lời người dùng và tính sẵn con số đúng.
+
+    Nhận cả phương trình, khoảng cách ngày, và dãy phép tính; không thấy gì thì
+    trả `None`.
 
     Trả về CHUỖI chứ không phải số, vì thứ đi vào lời dặn là một câu khẳng định
     mà model chỉ việc chép lại — mọi cách khác đều là mời nó tính lại.
+
+    Dòng đầu cũ tả GIÁ TRỊ TRẢ VỀ ("Một dòng đã tính sẵn để nhét vào lời dặn")
+    chứ không tả VIỆC. Đo 20/08: thẻ này rơi khỏi cả khay 96 thẻ vì không chung
+    chữ nào với việc "đáp lại một câu hỏi trong đó có phép toán". Dòng đầu
+    docstring là thứ duy nhất khay đọc để xếp hạng — nó phải nói hàm LÀM GÌ.
     """
     goc = (text or "").strip()
     if not goc:

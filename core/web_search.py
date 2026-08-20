@@ -400,7 +400,16 @@ def _mcporter_argv(call: str) -> list[str]:
 
 
 def search(query: str, limit: int = 5, timeout_s: int = _TIMEOUT_S) -> SearchResult:
-    """Tra mạng.  Hỏng ở bất kỳ khâu nào cũng trả `ok=False`, không bao giờ đoán."""
+    """Gửi một truy vấn tới dịch vụ tìm kiếm Exa, lấy về tối đa 8 nguồn.
+
+    Hỏng ở bất kỳ khâu nào cũng trả `ok=False`, không bao giờ đoán.
+
+    Dòng đầu cũ là hai chữ "Tra mạng." — đúng nhưng quá ngắn để tra lại được.
+    Đo 20/08: khay thẻ chấm theo từ khoá, mà "Tra mạng" không chung một chữ nào
+    với việc "lấy kết quả từ dịch vụ tìm kiếm cho một truy vấn", nên thẻ này rơi
+    khỏi cả khay 96 thẻ — không model nào chọn được nó. Docstring ngắn không
+    phải docstring gọn; nó là một hàm không ai tra ra.
+    """
     now = datetime.now().astimezone().strftime("%d/%m/%Y %H:%M")
     if query is not None and not isinstance(query, str):
         return SearchResult("", False, now, error="Câu cần tra không hợp lệ.")

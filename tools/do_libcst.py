@@ -62,6 +62,7 @@ def _tep():
 
 
 def main() -> int:
+    """Đo LibCST giữ nguyên byte trên mã của kho. Mã thoát 0 / 1 / 2."""
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
     try:
         import libcst as cst

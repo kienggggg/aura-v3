@@ -187,6 +187,7 @@ def doc_chuoi_py_sang_cay_the(nguon: str,
 
 
 def doc_tep_py_sang_cay_the(duong_dan: Path | str) -> BanGhiCST:
+    """Đọc một tệp .py trên đĩa thành cây thẻ, giữ nguyên từng byte bản gốc."""
     p = Path(duong_dan)
     return doc_chuoi_py_sang_cay_the(p.read_bytes().decode("utf-8"), str(p))
 

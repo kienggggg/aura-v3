@@ -44,6 +44,7 @@ def get_real_desktop() -> Path:
 
 
 def create_shortcuts():
+    """Tạo lối tắt CLI Hub trên màn hình nền và trong kho, kèm biểu tượng."""
     real_desktop = get_real_desktop()
     destinations = [real_desktop / "AURA CLI Hub.lnk", PROJECT_ROOT / "AURA CLI Hub.lnk"]
 

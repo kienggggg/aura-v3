@@ -79,6 +79,7 @@ CHUA_DONG = ("run_20260816_010908_dfc823eb", "run_20260816_011933_1774efb2")
 
 
 def main() -> int:
+    """Đóng các lượt còn treo trong sổ bằng cách ghi `audit.json` kèm lý do."""
     sys.stdout.reconfigure(encoding="utf-8")
     for ten, (tt, ly_do) in DONG.items():
         d = R / ten

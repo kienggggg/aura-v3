@@ -278,6 +278,7 @@ def dung_trang(so: dict) -> str:
 
 
 def main() -> int:
+    """In bảng và dựng trang HTML từ sổ bốn cửa. Mã thoát 0 đạt / 1 trượt / 2 chưa có sổ."""
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
     if not SO.is_file():
         print("KHÔNG ĐO ĐƯỢC: chưa có %s" % SO)

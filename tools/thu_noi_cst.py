@@ -64,6 +64,7 @@ from interface.the_app import tao_app
 
 
 async def chay():
+    """Dựng máy chủ thật với bộ đọc LibCST thay trong bộ nhớ, rồi đo cửa 5."""
     TAM.parent.mkdir(parents=True, exist_ok=True)
     TAM.write_text(MAU, encoding="utf-8")
     h = {"X-Auth-Token": the_api.AUTH_TOKEN}

@@ -53,14 +53,18 @@ GOC = NHA.parent.parent
 sys.path.insert(0, str(GOC))
 sys.path.insert(0, str(NHA))
 
-from core.the_cst import doc_chuoi_py_sang_cay_the, luu_cay_the_ra_tep_py  # noqa: E402
+from core.the_cst import (doc_chuoi_py_sang_cay_the,           # noqa: E402
+                          luu_cay_the_ra_tep_py,
+                          O_HUU_HAN as O_HUU_HAN_THE)
 from dung_de_loi import chay_test, dot_bien                                # noqa: E402
 
 MODEL = "qwen2.5-coder:7b"     # ĐÚNG model của nền 2/9, đừng đổi
 TRAN_LUOT = 4                  # ĐÚNG trần của nền 2/9
 PY = str(GOC / "venv" / "Scripts" / "python.exe")
 EP_KHUON = "--ep" in sys.argv
-SO = NHA / ("so_sua_loi_the_ep.json" if EP_KHUON else "so_sua_loi_the.json")
+BO_SAU = "--sau" in sys.argv          # bổ thẻ biểu thức, bản vẽ của Sếp 20/08
+SO = NHA / ("so_sua_loi_the_%s.json" % ("sau" if BO_SAU else "ep")
+            if EP_KHUON else "so_sua_loi_the.json")
 TRAN_THE = 60                  # số thẻ tối đa bày ra cho model
 OLLAMA = "http://127.0.0.1:11434/api/generate"
 
@@ -101,7 +105,7 @@ def bay_the(nguon: str, dong_nghi: set[int] | None = None):
     Chỉ bày thẻ THẬT có ô sửa được. Thẻ `ma_tho` bày ra cũng vô ích: model
     không sửa được nó bằng một ô, mà nó chiếm chỗ trong ngữ cảnh.
     """
-    rec = doc_chuoi_py_sang_cay_the(nguon)
+    rec = doc_chuoi_py_sang_cay_the(nguon, bo_sau=BO_SAU)
     ds = [n for n in _phang(rec.tree) if n.ma != "ma_tho" and n.o]
     if dong_nghi:
         loc = [n for n in ds if n.line_start in dong_nghi]
@@ -125,16 +129,27 @@ O_HUU_HAN: dict[str, list[str]] = {}
 
 
 def dung_khuon(ban_do: dict) -> dict:
-    """JSON Schema cho câu trả lời: id ép vào thẻ CÓ THẬT, ô ép vào ô CÓ THẬT."""
+    """JSON Schema cho câu trả lời: id ép vào thẻ CÓ THẬT, ô ép vào ô CÓ THẬT.
+
+    Ô nào thuộc thẻ biểu thức thì ép luôn GIÁ TRỊ vào tập hữu hạn. Gom theo
+    TÊN Ô chứ không theo thẻ, vì lược đồ JSON không nói được "ô này phụ thuộc
+    id kia" — nên `phep` nhận hợp của mọi tập `phep`. Vẫn chặt hơn chữ tự do
+    rất nhiều: 23 ký hiệu thay vì vô hạn, và model không nhét nổi cả hàm vào.
+    """
     o_co = sorted({k for n in ban_do.values() for k in n.o})
+    hh: dict[str, set] = {}
+    for n in ban_do.values():
+        for o_ten, ds in O_HUU_HAN_THE.get(n.ma, {}).items():
+            if o_ten in n.o:
+                hh.setdefault(o_ten, set()).update(ds)
     return {
         "type": "object",
         "properties": {
             "id": {"type": "string", "enum": sorted(ban_do)},
             "o": {
                 "type": "object",
-                "properties": {k: ({"type": "string", "enum": O_HUU_HAN[k]}
-                                   if k in O_HUU_HAN else {"type": "string"})
+                "properties": {k: ({"type": "string", "enum": sorted(hh[k])}
+                                   if k in hh else {"type": "string"})
                                for k in o_co},
                 "minProperties": 1,
             },
@@ -326,7 +341,8 @@ def main() -> int:
     dung_the = sum(1 for x in so if x.get("chon_dung_the"))
     print("\n" + "=" * 62)
     print("  CHẶNG C%s — sửa lỗi bằng ĐỔI MỘT Ô THẺ"
-          % ("2 (ÉP KHUÔN)" if EP_KHUON else ""))
+          % ("3 (ÉP KHUÔN + BỔ SÂU)" if BO_SAU else
+             "2 (ÉP KHUÔN)" if EP_KHUON else ""))
     print("=" * 62)
     print("  nền (viết lại cả hàm)     : 2/9")
     if EP_KHUON:

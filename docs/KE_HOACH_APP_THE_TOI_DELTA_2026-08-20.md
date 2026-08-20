@@ -87,7 +87,7 @@ Luật chung: **mỗi chặng viết ngưỡng trước khi đo.** Không đạt
 không nới ngưỡng. Ba trạng thái không gộp: *đạt · đo được mà không đạt · không
 đo được.*
 
-### CHẶNG A — chốt điểm vận hành khay *(đang chạy)*
+### CHẶNG A — chốt điểm vận hành khay *(gần xong, xem mục 8)*
 
 Còn thiếu một số: khay 30 (trần 28/28). Nếu 30 > 24/28 thì điểm vận hành lại
 dịch, nếu không thì chốt **giữ 15**.
@@ -289,3 +289,52 @@ chỗ đột biến nằm trong thẻ thật  >= 80%   -> sang C     (đo đư�
 Ghi rõ đây là **cửa đổi sau khi thấy số**, để người sau biết mà nghi. Lý do đổi
 nằm ở 7.1 và có thể tra lại; nếu Sếp thấy không thuyết phục thì giữ nguyên cửa
 cũ và dừng ở đây.
+
+---
+
+## 8. KẾT QUẢ CHẶNG A — điểm vận hành là cỡ khay lớn hơn nhiều so với tưởng
+
+```
+                        trần    chọn đúng   đúng/khi có mặt   giây
+docstring cũ,  giữ 8    23/28   23/28       23/23 = 100%       271
+docstring cũ,  giữ 15   25/28   22/28       22/25 =  88%      1008
+docstring mới, giữ 8    23/28   22/28       22/23 =  96%       322
+docstring mới, giữ 15   26/28   24/28       24/26 =  92%       505
+docstring mới, giữ 30   28/28   25/28       25/28 =  89%       875
+```
+
+Ở **giữ 30 trần đã bão hoà 28/28**, nên cả ba đề trượt đều là **model chọn sai**,
+không còn đề nào do bộ lọc đánh rơi. Đó là lần đầu trong cả loạt đo.
+
+### 8.1 Hai xu hướng kéo ngược nhau, và chỗ giao là điểm vận hành
+
+```
+khay to hơn  ->  trần cao hơn          23 -> 26 -> 28/28
+khay to hơn  ->  model chính xác kém   100% -> 92% -> 89%
+```
+
+Tích của hai cái ấy đạt đỉnh ở khay to, không phải khay nhỏ. Quyết định "giữ 8"
+của các lượt trước **đúng với khay chưa có docstring** và sai với khay bây giờ —
+không phải quyết định sai lúc ấy, mà là nền đã đổi dưới chân nó.
+
+### 8.2 Trần bão hoà ở giữ 24, không phải 30
+
+Đo đường trần, không cần model:
+
+```
+giữ 15..19   26/28    thiếu tra_so, looks_weak
+giữ 20..22   27/28    thiếu looks_weak
+giữ 24       28/28    <- bão hoà từ đây
+giữ 26..30   28/28
+```
+
+Nên **giữ 24 có cùng trần với giữ 30 mà khay nhỏ hơn 20%** — theo luật đã đặt ở
+mục 3 (*"hoà thì lấy cỡ nhỏ hơn"*), nếu 24 ra bằng hoặc hơn 25/28 thì chốt 24.
+Đang đo.
+
+### 8.3 Cái giá phải nói kèm
+
+Khay 30 chậm **2,7 lần** khay 8 (875s so với 322s cho 28 đề). Với Delta — nơi
+mỗi đề có thêm vòng thử lại — chi phí ấy nhân lên. Nếu chặng C thấy thời gian là
+chỗ nghẽn thì **giữ 15 (24/28, 505s)** là điểm đánh đổi hợp lý, và phải ghi rõ
+là đánh đổi chứ không phải điểm tối ưu.

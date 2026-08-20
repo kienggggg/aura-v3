@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import random
 import re
 import shutil
@@ -43,12 +44,16 @@ sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
 
 from core.khay_the import bang_khay, loc_khay, sinh_khay        # noqa: E402
 from dung_de_loi import DotBien, chay_test, dot_bien            # noqa: E402
+from dinh_vi import cat_ham, ham_da_chay, test_do_nao          # noqa: E402
 
 GOC = Path(__file__).resolve().parent.parent.parent
 NHA = Path(__file__).resolve().parent
 OLLAMA = "http://127.0.0.1:11434/api/generate"
 MODEL = "qwen2.5-coder:7b"
 TRAN_LUOT = 4              # trần thử sai
+PY = str(GOC / "venv" / "Scripts" / "python.exe")
+# Tắt được để đo lại bản cũ mà không sửa mã — cùng tệp, cùng đề, một biến.
+DUNG_DINH_VI = os.environ.get("SUA_LOI_DINH_VI", "1") != "0"
 TRAN_MA = 9000             # ký tự mã đưa cho model
 
 
@@ -125,6 +130,27 @@ def mot_de(tam: Path, d: dict, khay_day: list, co_the: int) -> dict:
     f.write_text(ma, encoding="utf-8")
 
     _, loi = chay_test(tam, tep_test)
+
+    # ĐỊNH VỊ BẰNG MÁY, rồi chỉ đưa hàm nghi ngờ thay vì cả tệp.
+    #
+    # Ba AI đọc số 2/9 đều xếp hướng này hạng nhất, và cùng nói một điều: đừng
+    # bắt model 7B vừa TÌM lỗi vừa SỬA lỗi. Máy chạy test đỏ dưới `sys.settrace`,
+    # ghi lại hàm nào của tệp nguồn thực sự chạy — hàm không chạy thì không thể
+    # gây đỏ.
+    #
+    # Đo được 19/08 trên ba tệp: web_search cắt còn 40% (tệp rối nhất, và cũng
+    # là tệp trước giờ 0/3), may_tinh còn 66%, dong_ho giữ 100% (chỉ có 1 hàm).
+    #
+    # ĐỔI ĐÚNG MỘT BIẾN so với lượt 2/9: vẫn model ấy, đề ấy, cách chấm ấy,
+    # trần 4 lượt ấy. Chỉ khác chỗ mã đưa vào.
+    ma_dua = ma
+    ham_nghi: list[str] = []
+    if DUNG_DINH_VI:
+        do = test_do_nao(tam, tep_test, PY)
+        if do:
+            ham_nghi = ham_da_chay(tam, tep, do[0], PY)
+            if ham_nghi:
+                ma_dua = cat_ham(ma, ham_nghi)
     lich_su = ""
     ghi = []
     try:
@@ -133,8 +159,10 @@ def mot_de(tam: Path, d: dict, khay_day: list, co_the: int) -> dict:
             if co_the:
                 k = loc_khay(khay_day, d.get("goi_y", tep), co_the)
                 khay = f"\nKHAY HÀM CÓ SẴN trong kho (dùng nếu cần):\n{bang_khay(k)}\n"
+            nhan = (f", chỉ các hàm test đỏ chạy qua: {', '.join(ham_nghi)}"
+                    if ham_nghi and len(ma_dua) < len(ma) else "")
             p = (f"Bạn sửa lỗi mã Python. Test đang ĐỎ.\n"
-                 f"{khay}\n=== MÃ NGUỒN ({tep}) ===\n{ma[:TRAN_MA]}\n"
+                 f"{khay}\n=== MÃ NGUỒN ({tep}{nhan}) ===\n{ma_dua[:TRAN_MA]}\n"
                  f"=== PYTEST BÁO ===\n{loi[-1000:]}\n{lich_su}"
                  f"\nTrả lời ĐÚNG khuôn hai phần:\n"
                  f"SUYLUAN:\n<bạn nghĩ lỗi nằm ở đâu, vì sao, và vì sao chọn cách "
@@ -151,11 +179,16 @@ def mot_de(tam: Path, d: dict, khay_day: list, co_the: int) -> dict:
             f.write_text(sua, encoding="utf-8")
             m2, bao = chay_test(tam, tep_test)
             if m2 == 0:
-                return {"trang_thai": "dat", "luot": luot, "ghi": ghi}
+                return {"trang_thai": "dat", "luot": luot, "ghi": ghi,
+                        "ham_nghi": ham_nghi}
+            # `ma` là TOÀN VĂN tệp (để vá tiếp), `ma_dua` là phần cắt cho model.
+            # Trộn hai cái là đưa cả tệp trở lại từ lượt 2 và mất luôn phép đo.
             ma, loi = sua, bao
+            ma_dua = cat_ham(sua, ham_nghi) if ham_nghi else sua
             lich_su = (f"\n=== LƯỢT {luot} VẪN ĐỎ ===\n{bao[-500:]}\n"
                        f"Đừng lặp lại cách đó.\n")
-        return {"trang_thai": "het_luot", "luot": TRAN_LUOT, "ghi": ghi}
+        return {"trang_thai": "het_luot", "luot": TRAN_LUOT, "ghi": ghi,
+                "ham_nghi": ham_nghi}
     finally:
         f.write_text(goc, encoding="utf-8")
 

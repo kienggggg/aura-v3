@@ -9,10 +9,12 @@ Triển khai 4 LỚP BẢO MẬT BẮT BUỘC theo Mục 13.2 & 14.2:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import secrets
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
+from urllib.parse import urlsplit
 
 from aiohttp import web
 
@@ -22,11 +24,40 @@ from core.the_v1 import (
     FileSourceRecord,
     TheNode,
     chay_ma_python_sandbox,
-    doc_tep_py_sang_cay_the,
     kiem_tra_cay_the,
-    luu_cay_the_ra_tep_py,
     sinh_ma_python,
 )
+
+# BỘ ĐỌC/GHI ĐI QUA LibCST, KHÔNG QUA `ast` — đổi 20/08/2026.
+#
+# `ast` cố ý vứt dấu cách, chú thích, và cả `elif`, nên bản cũ đo được: gõ lại y
+# giá trị cũ rồi lưu chỉ giữ nguyên byte 49,8%; 18,1% đổi nghĩa âm thầm; 9,3%
+# vỡ cú pháp. Nặng nhất là `elif X:` sinh thành `else:` — MẤT LUÔN ĐIỀU KIỆN,
+# 28/40 chỗ. Đường thật qua HTTP cũng phá mã y vậy (`tools/do_duong_that.py`).
+#
+# `the_cst` giữ THAM CHIẾU tới nút cây, lưu thì chỉ thay đúng ô bị đổi, nên thứ
+# người dùng không chạm vào thì không thể xê dịch. Đo trên 68 tệp: 5.672 thẻ
+# giữ nguyên byte 100%, 0 đổi nghĩa, 0 vỡ cú pháp; đường thật 9/9.
+#
+# `the_v1` CỐ Ý ở lại: `sinh_ma_python` còn dùng để dựng tệp .py MỚI từ khay thẻ
+# (không có bản gốc nào để giữ), và `tools/do_cua_cung_the.py` không cờ vẫn đo
+# bản `ast` để hai bên so được với nhau. Đừng gỡ.
+from core.the_cst import (
+    doc_chuoi_py_sang_cay_the as _doc_chuoi_cst,
+    doc_tep_py_sang_cay_the,
+    luu_cay_the_ra_tep_py,
+)
+
+
+def doc_chuoi_py_sang_cay_the(nguon, duong_dan=None):
+    """Bọc lại đúng một chỗ: handler lưu truyền BYTES, `the_cst` nhận CHUỖI.
+
+    Bọc ở tầng này thay vì nới chữ ký của `the_cst` — bộ đọc chỉ nên biết một
+    kiểu đầu vào, còn chuyện HTTP trả về byte là việc của tầng HTTP.
+    """
+    if isinstance(nguon, (bytes, bytearray)):
+        nguon = bytes(nguon).decode("utf-8")
+    return _doc_chuoi_cst(nguon, duong_dan)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 STATIC_DIR = PROJECT_ROOT / "interface" / "web" / "the_v1"
@@ -57,13 +88,70 @@ def xac_thuc_request(request: web.Request) -> bool:
     return True
 
 
+LOOPBACK: Set[str] = {"127.0.0.1", "localhost", "::1"}
+
+
 def kiem_tra_origin_hop_le(request: web.Request) -> bool:
-    """Kiểm tra Origin / Referer chỉ chấp nhận từ loopback."""
-    origin = request.headers.get("Origin") or request.headers.get("Referer") or ""
-    if not origin:
-        # Request cùng nguồn (direct/same-origin)
+    """Kiểm tra chặt chẽ Origin / Referer ngăn chặn CSRF và Hostname giả."""
+    origin = request.headers.get("Origin")
+    referer = request.headers.get("Referer")
+
+    # 1. Nếu có Origin header (ưu tiên số 1)
+    if origin is not None:
+        origin = origin.strip()
+        if not origin:
+            return True
+        try:
+            u = urlsplit(origin)
+        except Exception:
+            return False
+        if u.scheme.lower() not in ("http", "https"):
+            return False
+        if u.username or u.password:
+            return False
+        if u.path not in ("", "/") or u.query or u.fragment:
+            return False
+        if (u.hostname or "").lower() not in LOOPBACK:
+            return False
+        try:
+            if u.port is not None and not (1 <= u.port <= 65535):
+                return False
+        except ValueError:
+            return False
         return True
-    return "127.0.0.1" in origin or "localhost" in origin
+
+    # 2. Nếu không có Origin nhưng có Referer
+    if referer is not None:
+        referer = referer.strip()
+        if not referer:
+            return True
+        try:
+            u = urlsplit(referer)
+        except Exception:
+            return False
+        if u.scheme.lower() not in ("http", "https"):
+            return False
+        if u.username or u.password:
+            return False
+        if (u.hostname or "").lower() not in LOOPBACK:
+            return False
+        try:
+            if u.port is not None and not (1 <= u.port <= 65535):
+                return False
+        except ValueError:
+            return False
+        return True
+
+    # 3. Không có cả Origin lẫn Referer (Direct call / cùng nguồn không gửi header)
+    return True
+
+
+def _co_the_da_sua(nodes: List[TheNode]) -> bool:
+    """Kiểm tra đệ quy xem có bất kỳ thẻ nào được đánh dấu da_sua hay không."""
+    for n in nodes:
+        if n.da_sua or _co_the_da_sua(n.than):
+            return True
+    return False
 
 
 def kiem_tra_duong_dan_an_toan(duong_dan_str: str) -> Optional[Path]:
@@ -203,7 +291,7 @@ async def api_chay_ma(request: web.Request) -> web.Response:
 
 
 async def api_mo_tep(request: web.Request) -> web.Response:
-    """POST /api/mo_tep — Mở một tệp .py từ đĩa, chuyển thành cây thẻ."""
+    """POST /api/mo_tep — Mở một tệp .py từ đĩa, chuyển thành cây thẻ kèm SHA-256."""
     if not xac_thuc_request(request):
         return web.json_response({"error": "403 Forbidden: Mã thông hành không hợp lệ"}, status=403)
     if not kiem_tra_origin_hop_le(request):
@@ -216,6 +304,8 @@ async def api_mo_tep(request: web.Request) -> web.Response:
         if not safe_path or not safe_path.is_file():
             return web.json_response({"error": f"Đường dẫn tệp không hợp lệ hoặc không tồn tại: {duong_dan_str}"}, status=400)
 
+        raw_bytes = safe_path.read_bytes()
+        sha256_hash = hashlib.sha256(raw_bytes).hexdigest()
         record = doc_tep_py_sang_cay_the(safe_path)
         # Thêm vào whitelist phiên
         OPENED_FILES_WHITELIST.add(str(safe_path))
@@ -226,6 +316,7 @@ async def api_mo_tep(request: web.Request) -> web.Response:
             "tree": [n.to_dict() for n in record.tree],
             "newline": "CRLF" if record.newline == "\r\n" else "LF",
             "so_dong": len(record.lines),
+            "sha256": sha256_hash,
         })
     except Exception as e:
         return web.json_response({"error": f"Lỗi mở tệp .py: {str(e)}"}, status=500)
@@ -248,26 +339,47 @@ async def api_luu_tep(request: web.Request) -> web.Response:
         tree_data = data.get("tree", [])
         nodes = [TheNode.from_dict(item) for item in tree_data]
         kieu_luu = data.get("kieu_luu", "py")  # "py" hoặc "json"
+        expected_sha = data.get("expected_sha256") or data.get("sha256")
 
         if kieu_luu == "json" or safe_path.suffix.lower() == ".json":
             json_text = json.dumps(tree_data, ensure_ascii=False, indent=2)
             safe_path.write_text(json_text, encoding="utf-8")
+            new_bytes = safe_path.read_bytes()
+            new_sha = hashlib.sha256(new_bytes).hexdigest()
         else:
             # Lưu ngược vào file .py
             if safe_path.is_file():
                 raw_bytes_goc = safe_path.read_bytes()
+                current_sha = hashlib.sha256(raw_bytes_goc).hexdigest()
+                if expected_sha and current_sha != expected_sha:
+                    return web.json_response({
+                        "error": "409 Conflict: Tệp trên đĩa đã bị thay đổi bên ngoài",
+                        "status": 409,
+                        "current_sha256": current_sha,
+                        "expected_sha256": expected_sha,
+                    }, status=409)
+
                 record = doc_chuoi_py_sang_cay_the(raw_bytes_goc, str(safe_path))
                 record.tree = nodes
-                record.has_modifications = bool(data.get("has_modifications", True))
+                has_mod = bool(data.get("has_modifications", False)) or _co_the_da_sua(nodes)
+                record.has_modifications = has_mod
                 out_bytes = luu_cay_the_ra_tep_py(record)
                 safe_path.write_bytes(out_bytes)
+                new_sha = hashlib.sha256(out_bytes).hexdigest()
             else:
                 # Tạo file .py mới
                 code_text = sinh_ma_python(nodes)
-                safe_path.write_text(code_text, encoding="utf-8")
+                out_bytes = code_text.encode("utf-8")
+                safe_path.write_bytes(out_bytes)
+                new_sha = hashlib.sha256(out_bytes).hexdigest()
 
         OPENED_FILES_WHITELIST.add(str(safe_path))
-        return web.json_response({"status": "PASS", "duong_dan": str(safe_path), "thong_diep": "Lưu tệp thành công"})
+        return web.json_response({
+            "status": "PASS",
+            "duong_dan": str(safe_path),
+            "thong_diep": "Lưu tệp thành công",
+            "sha256": new_sha,
+        })
     except Exception as e:
         return web.json_response({"error": f"Lỗi lưu tệp: {str(e)}"}, status=500)
 

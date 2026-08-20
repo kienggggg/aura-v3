@@ -197,6 +197,7 @@ class TheNode:
             "ma": self.ma,
             "o": dict(self.o),
             "than": [child.to_dict() for child in self.than],
+            "da_sua": self.da_sua,
         }
         if self.line_start is not None:
             res["vi_tri"] = {
@@ -212,6 +213,7 @@ class TheNode:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> TheNode:
         vi_tri = data.get("vi_tri", {})
+        da_sua = bool(data.get("da_sua", False) or vi_tri.get("da_sua", False))
         return cls(
             id=str(data.get("id", "")),
             ma=str(data.get("ma", "")),
@@ -222,6 +224,7 @@ class TheNode:
             indent=vi_tri.get("indent", 0),
             duoi_dong=vi_tri.get("duoi_dong", ""),
             raw_text=data.get("raw_text"),
+            da_sua=da_sua,
         )
 
 

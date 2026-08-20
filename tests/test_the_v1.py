@@ -35,16 +35,25 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # ==============================================================================
 
 def test_cua_cung_1_mo_luu_lossless_toan_bo_kho_ma():
-    """Mở mọi tệp .py trong core/, interface/, tools/, không sửa gì -> Lưu lại.
+    """Mở mọi tệp .py trong core/, interface/, tools/, tests/, ép đi qua bộ sinh mã -> Lưu lại.
     Tệp lưu ra phải GIỐNG HỆT TỪNG BYTE (SHA-256 khớp 100%).
     """
     py_files: list[Path] = []
     for d in ("core", "interface", "tools", "tests"):
         target_dir = PROJECT_ROOT / d
         if target_dir.is_dir():
-            py_files.extend([p for p in target_dir.glob("*.py") if p.is_file()])
+            py_files.extend(sorted([p for p in target_dir.rglob("*.py") if p.is_file()]))
 
-    assert len(py_files) >= 30, f"Phải tìm thấy ít nhất 30 tệp .py trong kho (tìm thấy {len(py_files)})"
+    assert len(py_files) >= 50, f"Phải tìm thấy ít nhất 50 tệp .py trong kho (tìm thấy {len(py_files)})"
+
+    def _phang(nodes):
+        ra = []
+        def di(ns):
+            for n in ns:
+                ra.append(n)
+                di(n.than)
+        di(nodes)
+        return ra
 
     so_tep_pass = 0
     for p in py_files:
@@ -53,14 +62,21 @@ def test_cua_cung_1_mo_luu_lossless_toan_bo_kho_ma():
 
         # Mở -> Cây thẻ
         record = doc_tep_py_sang_cay_the(p)
-        # Lưu lại
-        output_bytes = luu_cay_the_ra_tep_py(record)
-        sha_output = hashlib.sha256(output_bytes).hexdigest()
+        ds = _phang(record.tree)
 
-        assert sha_output == sha_original, (
-            f"Thất bại cửa cứng 1 tại file {p.relative_to(PROJECT_ROOT)}: "
-            f"SHA ban đầu={sha_original}, SHA sau lưu={sha_output}"
-        )
+        # Ép đi qua bộ sinh mã: từng thẻ gõ lại y giá trị cũ
+        for n in ds:
+            for m in ds:
+                m.da_sua = False
+            n.da_sua = True
+            record.has_modifications = True
+            output_bytes = luu_cay_the_ra_tep_py(record)
+            sha_output = hashlib.sha256(output_bytes).hexdigest()
+
+            assert sha_output == sha_original, (
+                f"Thất bại cửa cứng 1 tại file {p.relative_to(PROJECT_ROOT)} (thẻ {n.ma} dòng {n.line_start}): "
+                f"SHA ban đầu={sha_original}, SHA sau lưu={sha_output}"
+            )
         so_tep_pass += 1
 
     assert so_tep_pass == len(py_files)
@@ -320,7 +336,7 @@ def test_dem_so_lan_dung_the_xN():
 # ==============================================================================
 
 def test_api_bao_mat_4_lop():
-    """Kiểm tra 4 lớp bảo mật của API máy chủ."""
+    """Kiểm tra 4 lớp bảo mật của API máy chủ bao gồm kiểm tra Origin / Referer toàn diện."""
     import asyncio
     from aiohttp.test_utils import TestClient, TestServer
     from interface import the_api
@@ -351,7 +367,7 @@ def test_api_bao_mat_4_lop():
             resp_valid = await client.post(
                 "/api/kiem",
                 json={"tree": []},
-                headers={"X-Auth-Token": valid_token}
+                headers={"X-Auth-Token": valid_token, "Origin": "http://127.0.0.1:8099"}
             )
             assert resp_valid.status == 200
             data = await resp_valid.json()
@@ -361,22 +377,156 @@ def test_api_bao_mat_4_lop():
             resp_traversal = await client.post(
                 "/api/luu_tep",
                 json={"duong_dan": "../../evil.py", "tree": []},
-                headers={"X-Auth-Token": valid_token}
+                headers={"X-Auth-Token": valid_token, "Origin": "http://127.0.0.1:8099"}
             )
             assert resp_traversal.status == 403
 
-            # 5. Gọi từ Origin lạ (CSRF attack simulation) -> Phải trả về 403
-            resp_csrf = await client.post(
-                "/api/kiem",
-                json={"tree": []},
-                headers={"X-Auth-Token": valid_token, "Origin": "http://malicious-site.com"}
-            )
-            assert resp_csrf.status == 403
+            # 5. Các trường hợp Origin không hợp lệ -> Phải trả về 403
+            invalid_origins = [
+                "http://malicious-site.com",
+                "http://127.0.0.1.evil.com",
+                "http://localhost.evil.com",
+                "http://evil.com/?x=127.0.0.1",
+                "http://not-localhost.tld",
+                "http://evil.com@localhost",
+                "ftp://localhost",
+                "//localhost",
+                "http://localhost/path",
+                "http://localhost:99999",
+            ]
+            for bad_origin in invalid_origins:
+                resp_bad_origin = await client.post(
+                    "/api/kiem",
+                    json={"tree": []},
+                    headers={"X-Auth-Token": valid_token, "Origin": bad_origin}
+                )
+                assert resp_bad_origin.status == 403, f"Origin {bad_origin} phải bị chặn 403"
+
+            # 6. Origin hợp lệ (loopback chuẩn) -> 200 OK
+            valid_origins = [
+                "http://127.0.0.1:8099",
+                "http://localhost:8099",
+                "https://127.0.0.1",
+                "http://127.0.0.1",
+            ]
+            for ok_origin in valid_origins:
+                resp_ok = await client.post(
+                    "/api/kiem",
+                    json={"tree": []},
+                    headers={"X-Auth-Token": valid_token, "Origin": ok_origin}
+                )
+                assert resp_ok.status == 200, f"Origin {ok_origin} phải được chấp nhận 200"
 
         finally:
             await client.close()
 
     asyncio.run(_run_checks())
+
+
+def test_api_e2e_mo_sua_luu_tep_http(tmp_path):
+    """Test E2E thực tế qua HTTP: POST /api/mo_tep -> Sửa JSON -> POST /api/luu_tep -> Đọc lại đĩa.
+    
+    Chứng minh:
+    1. Giá trị mới thật sự được ghi xuống đĩa qua API.
+    2. Chỉ span dự kiến đổi, các dòng khác giữ nguyên byte.
+    3. Chú thích cuối dòng, elif, chú kiểu, giá trị mặc định, newline không bị mất.
+    4. Trả về SHA-256 mới và kiểm tra xung đột 409 Conflict nếu tệp trên đĩa bị thay đổi ngoài ý muốn.
+    5. Không gán da_sua trực tiếp lên object Python mà truyền qua JSON API.
+    """
+    import asyncio
+    from aiohttp.test_utils import TestClient, TestServer
+    from interface import the_api
+    from interface.the_app import tao_app
+
+    test_file = tmp_path / "sample_e2e.py"
+    sample_code = (
+        '# Header comment\n'
+        'x = 10      # giá trị khởi tạo\n'
+        'print("Xong")\n'
+    )
+    raw_sample = sample_code.encode("utf-8")
+    test_file.write_bytes(raw_sample)
+    the_api.ALLOWED_ROOTS.append(tmp_path.resolve())
+
+    async def _run():
+        app = tao_app()
+        server = TestServer(app)
+        client = TestClient(server)
+        await client.start_server()
+
+        try:
+            token = the_api.AUTH_TOKEN
+            headers = {
+                "X-Auth-Token": token,
+                "Origin": "http://127.0.0.1:8099",
+            }
+
+            # 1. Mở tệp qua API
+            resp_open = await client.post(
+                "/api/mo_tep",
+                json={"duong_dan": str(test_file)},
+                headers=headers
+            )
+            assert resp_open.status == 200
+            data_open = await resp_open.json()
+            assert "tree" in data_open
+            assert "sha256" in data_open
+            original_sha = data_open["sha256"]
+            assert original_sha == hashlib.sha256(sample_code.encode("utf-8")).hexdigest()
+
+            tree = data_open["tree"]
+            # 2. Tìm thẻ gán 'x = 10' và sửa giá trị thành '99' qua JSON thuần túy
+            found = False
+            for node in tree:
+                if node.get("ma") == "gan" and node.get("o", {}).get("ten_bien") == "x":
+                    node["o"]["gia_tri"] = "99"
+                    node["da_sua"] = True
+                    found = True
+                    break
+            assert found, "Phải tìm thấy thẻ gán x trong cây JSON"
+
+            # 3. Lưu tệp qua API với expected_sha256
+            resp_save = await client.post(
+                "/api/luu_tep",
+                json={
+                    "duong_dan": str(test_file),
+                    "tree": tree,
+                    "expected_sha256": original_sha,
+                    "has_modifications": True
+                },
+                headers=headers
+            )
+            assert resp_save.status == 200
+            data_save = await resp_save.json()
+            assert data_save.get("status") == "PASS"
+            new_sha = data_save.get("sha256")
+
+            # 4. Đọc lại từ đĩa để xác thực
+            saved_disk = test_file.read_text(encoding="utf-8")
+            assert hashlib.sha256(saved_disk.encode("utf-8")).hexdigest() == new_sha
+            assert 'x = 99      # giá trị khởi tạo' in saved_disk
+            assert '# Header comment' in saved_disk
+            assert 'print("Xong")' in saved_disk
+
+            # 5. Kiểm tra 409 Conflict: Sửa file ngoài luồng rồi gửi yêu cầu lưu với expected_sha cũ
+            test_file.write_bytes((sample_code + "\n# Sửa bên ngoài\n").encode("utf-8"))
+            resp_conflict = await client.post(
+                "/api/luu_tep",
+                json={
+                    "duong_dan": str(test_file),
+                    "tree": tree,
+                    "expected_sha256": original_sha,
+                },
+                headers=headers
+            )
+            assert resp_conflict.status == 409
+            data_conflict = await resp_conflict.json()
+            assert "409 Conflict" in data_conflict.get("error", "")
+
+        finally:
+            await client.close()
+
+    asyncio.run(_run())
 
 
 def test_sandbox_chay_ma_thanh_cong():

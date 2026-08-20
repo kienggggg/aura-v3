@@ -1,0 +1,412 @@
+# -*- coding: utf-8 -*-
+"""test_the_v1.py — Bộ kiểm thử nghiêm ngặt theo đúng kỷ luật AURA v3.
+
+Bao gồm:
+1. CỬA CỨNG 1: Mở - Lưu không đổi 1 byte trên toàn bộ ~40 file .py của kho (SHA-256 match 100%).
+2. CỬA CỨNG 2: Sửa 1 ô -> Giữ nguyên chú thích cuối dòng (cắt bằng end_col_offset, không bị lừa bởi # trong chuỗi) và giữ nguyên các dòng khác.
+3. Test thẻ `ma_tho` cho các cấu trúc phức tạp.
+4. Test sinh mã Python chuẩn cho 10 thẻ.
+5. Test 5 LỖI ĐỎ và 4 CẢNH BÁO VÀNG.
+6. Test Sandbox thực thi (timeout 5s, bắt stdout/stderr, tiến trình con).
+"""
+from __future__ import annotations
+
+import hashlib
+from pathlib import Path
+import pytest
+
+from core.the_v1 import (
+    BO_THE_V1,
+    TheNode,
+    chay_ma_python_sandbox,
+    doc_chuoi_py_sang_cay_the,
+    doc_tep_py_sang_cay_the,
+    kiem_tra_cay_the,
+    luu_cay_the_ra_tep_py,
+    sinh_dong_the_don,
+    sinh_ma_python,
+)
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+# ==============================================================================
+# CỬA CỨNG 1: MỞ — LƯU — KHÔNG ĐỔI MỘT BYTE (SHA-256 TRÊN TOÀN BỘ FILE .PY)
+# ==============================================================================
+
+def test_cua_cung_1_mo_luu_lossless_toan_bo_kho_ma():
+    """Mở mọi tệp .py trong core/, interface/, tools/, không sửa gì -> Lưu lại.
+    Tệp lưu ra phải GIỐNG HỆT TỪNG BYTE (SHA-256 khớp 100%).
+    """
+    py_files: list[Path] = []
+    for d in ("core", "interface", "tools", "tests"):
+        target_dir = PROJECT_ROOT / d
+        if target_dir.is_dir():
+            py_files.extend([p for p in target_dir.glob("*.py") if p.is_file()])
+
+    assert len(py_files) >= 30, f"Phải tìm thấy ít nhất 30 tệp .py trong kho (tìm thấy {len(py_files)})"
+
+    so_tep_pass = 0
+    for p in py_files:
+        raw_bytes_original = p.read_bytes()
+        sha_original = hashlib.sha256(raw_bytes_original).hexdigest()
+
+        # Mở -> Cây thẻ
+        record = doc_tep_py_sang_cay_the(p)
+        # Lưu lại
+        output_bytes = luu_cay_the_ra_tep_py(record)
+        sha_output = hashlib.sha256(output_bytes).hexdigest()
+
+        assert sha_output == sha_original, (
+            f"Thất bại cửa cứng 1 tại file {p.relative_to(PROJECT_ROOT)}: "
+            f"SHA ban đầu={sha_original}, SHA sau lưu={sha_output}"
+        )
+        so_tep_pass += 1
+
+    assert so_tep_pass == len(py_files)
+
+
+# ==============================================================================
+# CỬA CỨNG 2: SỬA 1 Ô — GIỮ NGUYÊN CHÚ THÍCH CUỐI DÒNG VÀ 0 BYTE LỆCH DÒNG KHÁC
+# ==============================================================================
+
+def test_cua_cung_2_sua_o_giu_nguyen_chu_thich_cuoi_dong():
+    """Kiểm tra trường duoi_dong trích xuất bằng end_col_offset.
+    Khi sửa 1 ô, chú thích cuối dòng còn nguyên, và các dòng khác không đổi byte nào.
+    """
+    sample_code = (
+        '# Header docstring\n'
+        'CHAT_STAGE_INPUT = "input_check"      # kiểm dữ liệu vào + cổng nội dung\n'
+        'x = 10  # biến đếm\n'
+        'd = ["# Omega — báo cáo " + "gio", ""]  # có # trong chuỗi và có cả comment\n'
+        'print("Xong")\n'
+    )
+    raw_bytes = sample_code.encode("utf-8")
+    record = doc_chuoi_py_sang_cay_the(raw_bytes)
+
+    # Tìm thẻ gán CHAT_STAGE_INPUT
+    target_node = None
+    for node in record.tree:
+        if node.ma == "gan" and node.o.get("ten_bien") == "CHAT_STAGE_INPUT":
+            target_node = node
+            break
+
+    assert target_node is not None, "Phải tìm thấy thẻ gán CHAT_STAGE_INPUT"
+    assert "# kiểm dữ liệu vào + cổng nội dung" in target_node.duoi_dong
+
+    # Sửa giá trị của ô gia_tri
+    target_node.o["gia_tri"] = '"input_check_v2"'
+    target_node.da_sua = True
+    record.has_modifications = True
+
+    # Lưu lại
+    saved_bytes = luu_cay_the_ra_tep_py(record)
+    saved_text = saved_bytes.decode("utf-8")
+
+    # Kiểm tra: dòng CHAT_STAGE_INPUT được cập nhật giá trị mới VÀ giữ nguyên chú thích
+    assert 'CHAT_STAGE_INPUT = "input_check_v2"      # kiểm dữ liệu vào + cổng nội dung' in saved_text
+    # Kiểm tra: dòng chú thích header và các dòng khác vẫn nguyên vẹn
+    assert "# Header docstring" in saved_text
+    assert 'x = 10  # biến đếm' in saved_text
+    assert 'd = ["# Omega — báo cáo " + "gio", ""]  # có # trong chuỗi và có cả comment' in saved_text
+
+
+def test_trich_duoi_dong_khong_bi_lua_boi_hash_trong_chuoi():
+    """Kiểm tra trường hợp có dấu # nằm trong chuỗi (Mục 15).
+    Dùng end_col_offset đảm bảo không bao giờ cắt nhầm chuỗi có chứa #.
+    """
+    sample_code = 'd = ["# Omega — báo cáo " + gio, ""]\n'
+    record = doc_chuoi_py_sang_cay_the(sample_code.encode("utf-8"))
+    
+    node = record.tree[0]
+    assert node.ma == "gan"
+    assert node.o["ten_bien"] == "d"
+    assert node.o["gia_tri"] == '["# Omega — báo cáo " + gio, ""]'
+    assert node.duoi_dong == ""  # Không có chú thích thật sau dấu ngoặc vuông
+
+
+# ==============================================================================
+# TEST THẺ MÃ THÔ & BỘ 10 THẺ LỆNH CHUẨN
+# ==============================================================================
+
+def test_the_ma_tho_chua_cau_truc_phuc_tap():
+    """Các cấu trúc phức tạp (import, class, async with, @decorator) thành thẻ ma_tho."""
+    code = (
+        'import os\n'
+        'from dataclasses import dataclass\n'
+        '\n'
+        '@dataclass\n'
+        'class Config:\n'
+        '    host: str = "127.0.0.1"\n'
+        '\n'
+        'async def chay():\n'
+        '    async with lock:\n'
+        '        pass\n'
+    )
+    record = doc_chuoi_py_sang_cay_the(code.encode("utf-8"))
+    assert len(record.tree) >= 1
+    for node in record.tree:
+        assert node.ma == "ma_tho"
+        assert node.o.get("nguyen_van") is not None
+
+
+def test_sinh_ma_python_10_the_chuan():
+    """Kiểm tra sinh mã Python chuẩn thụt lề 4 spaces cho 10 thẻ cố định."""
+    nodes = [
+        TheNode(id="1", ma="ham", o={"ten_ham": "cong", "tham_so": "a, b"}, than=[
+            TheNode(id="2", ma="tra_ve", o={"gia_tri": "a + b"}),
+        ]),
+        TheNode(id="3", ma="gan", o={"ten_bien": "ket_qua", "gia_tri": "cong(5, 7)"}),
+        TheNode(id="4", ma="neu", o={"dieu_kien": "ket_qua > 10"}, than=[
+            TheNode(id="5", ma="in_ra", o={"noi_dung": '"Lớn hơn 10"'}),
+        ]),
+        TheNode(id="6", ma="nguoc_lai", o={}, than=[
+            TheNode(id="7", ma="in_ra", o={"noi_dung": '"Nhỏ hơn hoặc bằng 10"'}),
+        ]),
+        TheNode(id="8", ma="lap_moi", o={"bien": "i", "day": "range(3)"}, than=[
+            TheNode(id="9", ma="in_ra", o={"noi_dung": "i"}),
+        ]),
+        TheNode(id="10", ma="lap_khi", o={"dieu_kien": "ket_qua > 0"}, than=[
+            TheNode(id="11", ma="gan", o={"ten_bien": "ket_qua", "gia_tri": "ket_qua - 1"}),
+        ]),
+        TheNode(id="12", ma="goi_ham", o={"ten_ham": "cong", "doi_so": "1, 2"}),
+        TheNode(id="13", ma="pheptinh", o={"trai": "x", "phep": "+", "phai": "y"}),
+    ]
+
+    generated_code = sinh_ma_python(nodes)
+    expected_snippets = [
+        "def cong(a, b):",
+        "    return a + b",
+        "ket_qua = cong(5, 7)",
+        "if ket_qua > 10:",
+        '    print("Lớn hơn 10")',
+        "else:",
+        '    print("Nhỏ hơn hoặc bằng 10")',
+        "for i in range(3):",
+        "    print(i)",
+        "while ket_qua > 0:",
+        "    ket_qua = ket_qua - 1",
+        "cong(1, 2)",
+        "x + y",
+    ]
+    for snippet in expected_snippets:
+        assert snippet in generated_code, f"Thiếu đoạn mã sinh: {snippet}\nToàn bộ mã:\n{generated_code}"
+
+
+# ==============================================================================
+# TEST 5 LỖI ĐỎ & 4 CẢNH BÁO VÀNG
+# ==============================================================================
+
+def test_loi_do_1_o_bat_buoc_trong():
+    """Lỗi ĐỎ 1: Ô bắt buộc còn trống."""
+    nodes = [
+        TheNode(id="1", ma="gan", o={"ten_bien": "", "gia_tri": "10"}),  # thiếu ten_bien
+    ]
+    res = kiem_tra_cay_the(nodes)
+    assert not res.hop_le
+    assert res.so_loi_do >= 1
+    assert any(d.ma_loi == "empty_required_field" for d in res.danh_sach)
+
+
+def test_loi_do_2_nguoc_lai_khong_sau_neu():
+    """Lỗi ĐỎ 2: nguoc_lai không đứng ngay sau neu."""
+    nodes = [
+        TheNode(id="1", ma="in_ra", o={"noi_dung": '"A"'}),
+        TheNode(id="2", ma="nguoc_lai", o={}, than=[
+            TheNode(id="3", ma="in_ra", o={"noi_dung": '"B"'}),
+        ]),
+    ]
+    res = kiem_tra_cay_the(nodes)
+    assert not res.hop_le
+    assert any(d.ma_loi == "orphan_else" for d in res.danh_sach)
+
+
+def test_loi_do_3_tra_ve_ngoai_ham():
+    """Lỗi ĐỎ 3: tra_ve nằm ngoài mọi ham."""
+    nodes = [
+        TheNode(id="1", ma="tra_ve", o={"gia_tri": "42"}),
+    ]
+    res = kiem_tra_cay_the(nodes)
+    assert not res.hop_le
+    assert any(d.ma_loi == "return_outside_function" for d in res.danh_sach)
+
+
+def test_loi_do_4_bien_dung_chua_gan():
+    """Lỗi ĐỎ 4: Tên biến dùng mà chưa từng gán."""
+    nodes = [
+        TheNode(id="1", ma="in_ra", o={"noi_dung": "chua_tung_gan + 5"}),
+    ]
+    res = kiem_tra_cay_the(nodes)
+    assert not res.hop_le
+    assert any(d.ma_loi == "undefined_variable" for d in res.danh_sach)
+
+
+def test_loi_do_5_than_rong_trong_the_co_than():
+    """Lỗi ĐỎ 5: Chuỗi thẻ rỗng bên trong thẻ có thân."""
+    nodes = [
+        TheNode(id="1", ma="neu", o={"dieu_kien": "True"}, than=[]),  # than rỗng
+    ]
+    res = kiem_tra_cay_the(nodes)
+    assert not res.hop_le
+    assert any(d.ma_loi == "empty_body" for d in res.danh_sach)
+
+
+def test_canh_bao_vang_1_bien_gan_khong_dung():
+    """Cảnh báo VÀNG 1: Biến gán rồi không dùng lần nào."""
+    nodes = [
+        TheNode(id="1", ma="gan", o={"ten_bien": "bien_thua", "gia_tri": "100"}),
+        TheNode(id="2", ma="in_ra", o={"noi_dung": '"Xin chao"'}),
+    ]
+    res = kiem_tra_cay_the(nodes)
+    assert res.hop_le  # Vẫn hợp lệ (không có lỗi Đỏ)
+    assert res.so_canh_bao_vang >= 1
+    assert any(d.ma_loi == "unused_variable" for d in res.danh_sach)
+
+
+def test_canh_bao_vang_2_lap_khi_khong_doi_bien_dieu_kien():
+    """Cảnh báo VÀNG 2: lap_khi điều kiện không đổi trong thân (nguy cơ lặp vô tận)."""
+    nodes = [
+        TheNode(id="1", ma="gan", o={"ten_bien": "x", "gia_tri": "10"}),
+        TheNode(id="2", ma="lap_khi", o={"dieu_kien": "x > 0"}, than=[
+            TheNode(id="3", ma="in_ra", o={"noi_dung": "x"}),  # không gán lại x
+        ]),
+    ]
+    res = kiem_tra_cay_the(nodes)
+    assert res.hop_le
+    assert any(d.ma_loi == "potential_infinite_loop" for d in res.danh_sach)
+
+
+def test_canh_bao_vang_3_the_sau_tra_ve():
+    """Cảnh báo VÀNG 3: Thẻ nằm sau tra_ve trong cùng một thân (dead code)."""
+    nodes = [
+        TheNode(id="1", ma="ham", o={"ten_ham": "f", "tham_so": ""}, than=[
+            TheNode(id="2", ma="tra_ve", o={"gia_tri": "1"}),
+            TheNode(id="3", ma="in_ra", o={"noi_dung": '"Khong bao gio chay"'}),
+        ]),
+    ]
+    res = kiem_tra_cay_the(nodes)
+    assert res.hop_le
+    assert any(d.ma_loi == "unreachable_code" for d in res.danh_sach)
+
+
+def test_canh_bao_vang_4_long_sau_qua_4_tang():
+    """Cảnh báo VÀNG 4: Lồng sâu quá 4 tầng."""
+    n5 = TheNode(id="5", ma="in_ra", o={"noi_dung": '"Sau 5 tầng"'})
+    n4 = TheNode(id="4", ma="neu", o={"dieu_kien": "True"}, than=[n5])
+    n3 = TheNode(id="3", ma="neu", o={"dieu_kien": "True"}, than=[n4])
+    n2 = TheNode(id="2", ma="neu", o={"dieu_kien": "True"}, than=[n3])
+    n1 = TheNode(id="1", ma="neu", o={"dieu_kien": "True"}, than=[n2])
+    root = [TheNode(id="0", ma="neu", o={"dieu_kien": "True"}, than=[n1])]
+
+    res = kiem_tra_cay_the(root)
+    assert any(d.ma_loi == "excessive_nesting" for d in res.danh_sach)
+
+
+def test_dem_so_lan_dung_the_xN():
+    """Kiểm tra bộ đếm ×N đếm chính xác số lần dùng từng thẻ."""
+    nodes = [
+        TheNode(id="1", ma="gan", o={"ten_bien": "a", "gia_tri": "1"}),
+        TheNode(id="2", ma="gan", o={"ten_bien": "b", "gia_tri": "2"}),
+        TheNode(id="3", ma="in_ra", o={"noi_dung": "a + b"}),
+    ]
+    res = kiem_tra_cay_the(nodes)
+    assert res.so_lan_dung_the["gan"] == 2
+    assert res.so_lan_dung_the["in_ra"] == 1
+    assert res.so_lan_dung_the["neu"] == 0
+
+
+# ==============================================================================
+# TEST 4 LỚP BẢO MẬT API MÁY CHỦ (MỤC 13.2 & 14.2)
+# ==============================================================================
+
+def test_api_bao_mat_4_lop():
+    """Kiểm tra 4 lớp bảo mật của API máy chủ."""
+    import asyncio
+    from aiohttp.test_utils import TestClient, TestServer
+    from interface import the_api
+    from interface.the_app import tao_app
+
+    async def _run_checks():
+        app = tao_app()
+        server = TestServer(app)
+        client = TestClient(server)
+        await client.start_server()
+
+        try:
+            valid_token = the_api.AUTH_TOKEN
+
+            # 1. Gọi thiếu Auth token -> Phải trả về 403
+            resp_no_token = await client.post("/api/kiem", json={"tree": []})
+            assert resp_no_token.status == 403
+
+            # 2. Gọi sai Auth token -> Phải trả về 403
+            resp_wrong_token = await client.post(
+                "/api/kiem",
+                json={"tree": []},
+                headers={"X-Auth-Token": "wrong_token_12345"}
+            )
+            assert resp_wrong_token.status == 403
+
+            # 3. Gọi đúng Auth token qua header X-Auth-Token -> 200 OK
+            resp_valid = await client.post(
+                "/api/kiem",
+                json={"tree": []},
+                headers={"X-Auth-Token": valid_token}
+            )
+            assert resp_valid.status == 200
+            data = await resp_valid.json()
+            assert "hop_le" in data
+
+            # 4. Ghi file chứa '..' (Path traversal) -> Phải trả về 403
+            resp_traversal = await client.post(
+                "/api/luu_tep",
+                json={"duong_dan": "../../evil.py", "tree": []},
+                headers={"X-Auth-Token": valid_token}
+            )
+            assert resp_traversal.status == 403
+
+            # 5. Gọi từ Origin lạ (CSRF attack simulation) -> Phải trả về 403
+            resp_csrf = await client.post(
+                "/api/kiem",
+                json={"tree": []},
+                headers={"X-Auth-Token": valid_token, "Origin": "http://malicious-site.com"}
+            )
+            assert resp_csrf.status == 403
+
+        finally:
+            await client.close()
+
+    asyncio.run(_run_checks())
+
+
+def test_sandbox_chay_ma_thanh_cong():
+    """Chạy mã in kết quả -> Status PASS, bắt đúng stdout."""
+    code = (
+        'def cong(a, b):\n'
+        '    return a + b\n'
+        'print(cong(5, 7))\n'
+    )
+    res = chay_ma_python_sandbox(code, timeout=5.0)
+    assert res.status == "PASS"
+    assert res.exit_code == 0
+    assert res.stdout.strip() == "12"
+    assert not res.timed_out
+
+
+def test_sandbox_chay_ma_loi_cu_phap_hoac_runtime():
+    """Chạy mã lỗi runtime -> Status ERROR, bắt đúng stderr và exit_code != 0."""
+    code = 'print(1 / 0)\n'
+    res = chay_ma_python_sandbox(code, timeout=5.0)
+    assert res.status == "ERROR"
+    assert res.exit_code != 0
+    assert "ZeroDivisionError" in res.stderr
+
+
+def test_sandbox_chong_lap_vo_han_timeout_5s():
+    """Chạy vòng lặp vô hạn -> Kill sau timeout (thử với timeout=1.0s trong test để chạy nhanh)."""
+    code = 'while True:\n    pass\n'
+    res = chay_ma_python_sandbox(code, timeout=1.0)
+    assert res.status == "TIMEOUT"
+    assert res.timed_out
+    assert res.exit_code == 124
+    assert "[TIMEOUT]" in res.stderr

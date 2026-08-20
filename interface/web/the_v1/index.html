@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AURA THẺ v1 — Lập trình bằng Thẻ Trực Quan</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="theme-dark">
+  <!-- Top Navigation / Toolbar -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="9" rx="2"></rect>
+          <rect x="14" y="3" width="7" height="5" rx="2"></rect>
+          <rect x="14" y="12" width="7" height="9" rx="2"></rect>
+          <rect x="3" y="16" width="7" height="5" rx="2"></rect>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-title">AURA THẺ</span>
+        <span class="brand-version">v1.0</span>
+      </div>
+    </div>
+
+    <!-- Active File Badge -->
+    <div class="file-status-bar" id="fileStatusBar">
+      <span class="file-icon">📄</span>
+      <span class="file-name" id="currentFileName">Chương trình mới (Chưa lưu)</span>
+      <span class="file-badge" id="fileModifiedBadge" style="display: none;">Đã sửa</span>
+    </div>
+
+    <!-- Actions -->
+    <div class="header-actions">
+      <button class="btn btn-secondary" id="btnNew" title="Tạo chương trình mới (Xoá canvas)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Mới
+      </button>
+      <button class="btn btn-secondary" id="btnSamples" title="Mở danh sách bài mẫu">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Mẫu Bài
+      </button>
+      <button class="btn btn-secondary" id="btnOpenFile" title="Mở tệp .py hoặc .json">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        Mở Tệp
+      </button>
+      <button class="btn btn-secondary" id="btnSaveFile" title="Lưu tệp">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Lưu Tệp
+      </button>
+      
+      <div class="divider-v"></div>
+
+      <button class="btn btn-primary" id="btnRun" title="Chạy chương trình trong tiến trình riêng (Ctrl+Enter)">
+        <svg class="run-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <span id="runBtnText">CHẠY THỬ</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main App Layout (3 Columns) -->
+  <main class="app-main">
+    <!-- Left Column: KHAY THẺ (Toolbox) -->
+    <aside class="sidebar-left">
+      <div class="sidebar-header">
+        <h2 class="sidebar-title">Khay Thẻ Lệnh</h2>
+        <div class="search-box">
+          <input type="text" id="toolSearch" placeholder="Tìm thẻ..." autocomplete="off">
+          <span class="search-icon">🔍</span>
+        </div>
+      </div>
+
+      <div class="toolbox-content" id="toolboxContainer">
+        <!-- Rendered dynamically by app.js with 5 category groups -->
+      </div>
+
+      <div class="toolbox-footer">
+        <div class="tip-box">
+          <span class="tip-icon">💡</span>
+          <span class="tip-text">Kéo thẻ vào vùng soạn thảo hoặc click thẻ để chèn nhanh.</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center Column: VÙNG SOẠN THẢO (Canvas) -->
+    <section class="canvas-center">
+      <div class="canvas-toolbar">
+        <div class="canvas-status">
+          <span class="status-indicator" id="overallStatusDot"></span>
+          <span class="status-text" id="overallStatusText">0 Lỗi · 0 Cảnh báo</span>
+        </div>
+
+        <div class="canvas-actions">
+          <button class="icon-btn" id="btnUndo" title="Hoàn tác (Ctrl+Z)">↶</button>
+          <button class="icon-btn" id="btnRedo" title="Làm lại (Ctrl+Y)">↷</button>
+          <button class="icon-btn" id="btnClearCanvas" title="Xoá toàn bộ">🗑️</button>
+        </div>
+      </div>
+
+      <!-- Card Workspace Drop Zone -->
+      <div class="canvas-workspace" id="canvasWorkspace">
+        <div class="card-chain-container" id="cardChainRoot">
+          <!-- Cards rendered here with dynamic SVG chain links -->
+        </div>
+
+        <div class="empty-canvas-guide" id="emptyCanvasGuide">
+          <div class="guide-illustration">🧩</div>
+          <h3>Vùng soạn thảo đang trống</h3>
+          <p>Nhặt thẻ từ khay bên trái thả vào đây, hoặc click vào một thẻ để bắt đầu lắp ghép chương trình.</p>
+          <button class="btn btn-secondary btn-sm" id="btnLoadSampleIntro">Thử bài mẫu: Hàm cộng hai số</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: MÃ PYTHON, CHẨN ĐOÁN & TERMINAL -->
+    <aside class="sidebar-right">
+      <!-- Top Half: Code Preview & Diagnostics Tabs -->
+      <div class="right-top-pane">
+        <div class="pane-tabs">
+          <button class="tab-btn active" data-tab="tabCode">
+            <span class="tab-icon">🐍</span> Mã Python
+          </button>
+          <button class="tab-btn" data-tab="tabDiag">
+            <span class="tab-icon">🔍</span> Chẩn đoán (<span id="diagBadge">0</span>)
+          </button>
+        </div>
+
+        <div class="tab-contents">
+          <!-- Tab 1: Python Code Preview -->
+          <div class="tab-pane active" id="tabCode">
+            <div class="code-preview-header">
+              <span class="code-lang">Python 3 (Thụt lề 4 spaces)</span>
+              <button class="btn-copy" id="btnCopyCode" title="Sao chép mã Python">Sao chép</button>
+            </div>
+            <pre class="code-preview-body"><code id="pythonCodeOutput"># Mã Python sinh từ chuỗi thẻ sẽ hiển thị ở đây...</code></pre>
+          </div>
+
+          <!-- Tab 2: Diagnostics Panel -->
+          <div class="tab-pane" id="tabDiag">
+            <div class="diag-header">
+              <div class="diag-counters">
+                <span class="badge-do" id="badgeCountDo">0 ĐỎ (Lỗi)</span>
+                <span class="badge-vang" id="badgeCountVang">0 VÀNG (Cảnh báo)</span>
+              </div>
+            </div>
+            <div class="diag-list" id="diagList">
+              <!-- Diagnostics items rendered here -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Half: Terminal Output -->
+      <div class="right-bottom-pane">
+        <div class="terminal-header">
+          <div class="terminal-title-bar">
+            <span class="term-dot dot-red"></span>
+            <span class="term-dot dot-yellow"></span>
+            <span class="term-dot dot-green"></span>
+            <span class="terminal-title">Terminal Chạy Thử</span>
+          </div>
+          <div class="terminal-meta" id="terminalMeta">
+            <span class="meta-status ready" id="metaStatus">SẴN SÀNG</span>
+            <span class="meta-time" id="metaTime">-- ms</span>
+          </div>
+        </div>
+
+        <div class="terminal-body" id="terminalBody">
+          <div class="term-line term-dim">> Sẵn sàng chạy. Bấm nút "CHẠY THỬ" hoặc nhấn Ctrl+Enter.</div>
+        </div>
+
+        <div class="terminal-footer">
+          <span class="sandbox-badge">
+            <span class="shield-icon">🛡️</span> Sandbox: Trần 5s | Tiến trình riêng | CHƯA chặn được ghi tệp | Chưa có trần RAM
+          </span>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Modals -->
+  <!-- 1. Modal Mẫu Bài -->
+  <div class="modal-overlay" id="samplesModal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Chọn Bài Mẫu Có Sẵn</h3>
+        <button class="modal-close" id="btnCloseSamples">✕</button>
+      </div>
+      <div class="modal-body" id="samplesListContainer">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Modal Mở Tệp .py -->
+  <div class="modal-overlay" id="openFileModal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Mở Tệp Python (.py) hoặc JSON (.json)</h3>
+        <button class="modal-close" id="btnCloseOpenFile">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="openFilePath">Đường dẫn tệp trên máy:</label>
+          <input type="text" id="openFilePath" placeholder="Ví dụ: D:/AURA_v3/core/may_tinh.py hoặc tests/test_dong_ho.py" class="form-input">
+          <span class="form-help">Hỗ trợ mở mọi file .py. Cấu trúc phức tạp sẽ được bọc nguyên vẹn trong Thẻ Mã Thô.</span>
+        </div>
+
+        <div class="recent-files-box">
+          <h4>Gợi ý tệp trong kho AURA:</h4>
+          <div class="file-chips" id="repoFileChips">
+            <span class="chip" data-path="core/may_tinh.py">core/may_tinh.py</span>
+            <span class="chip" data-path="core/dong_ho.py">core/dong_ho.py</span>
+            <span class="chip" data-path="core/secret_guard.py">core/secret_guard.py</span>
+            <span class="chip" data-path="interface/chat_app.py">interface/chat_app.py</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelOpenFile">Hủy</button>
+        <button class="btn btn-primary" id="btnConfirmOpenFile">Mở Tệp Ngay</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Modal Lưu Tệp -->
+  <div class="modal-overlay" id="saveFileModal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Lưu Chương Trình</h3>
+        <button class="modal-close" id="btnCloseSaveFile">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="saveFilePath">Đường dẫn lưu tệp (.py hoặc .json):</label>
+          <input type="text" id="saveFilePath" placeholder="Ví dụ: my_program.py hoặc data/test.json" class="form-input">
+        </div>
+        <div class="save-options">
+          <label class="radio-label">
+            <input type="radio" name="saveType" value="py" checked>
+            <span>Lưu dạng mã nguồn Python (.py) — Bảo toàn chú thích</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="saveType" value="json">
+            <span>Lưu dạng cây thẻ JSON (.json) — Mở lại trên app</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelSaveFile">Hủy</button>
+        <button class="btn btn-primary" id="btnConfirmSaveFile">Lưu Tệp</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/static/validator.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

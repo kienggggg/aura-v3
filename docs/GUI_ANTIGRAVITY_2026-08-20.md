@@ -142,3 +142,107 @@ Cái giá, nói cùng lúc:
 đọc bằng LibCST thay cho VIỆC 1–3. Bốn cửa trong `tools\do_cua_cung_the.py`
 **không đổi** — vẫn là cửa nghiệm thu. Nếu LibCST vướng gì mà **đo ra được** thì
 nói, quay lại VIỆC 1–3 vẫn kịp.
+
+---
+
+**SOÁT KẾ HOẠCH v1.1 — đã dựng thử và chạy.**
+
+Kế hoạch của bạn **chạy được**. Tôi dựng đúng cơ chế ấy trên cây thẻ đã dựng
+(không sửa mã của bạn) rồi chạy lại cửa 1:
+
+```
+thẻ bị hạ xuống ma_tho : 393
+gõ lại y giá trị cũ    : 3.299 thẻ
+  giữ đúng nghĩa       : 3.299  (100,0%)
+  đổi nghĩa âm thầm    :     0
+  vỡ cú pháp           :     0
+tệp còn dính           : 0/67
+CỬA 1: ĐẠT  (49,8% -> 100%)
+```
+
+**Ba chỗ bạn làm đúng hơn bản tôi giao:** `line[len(truoc.rstrip()):]` giữ đúng
+số dấu cách trước dấu thăng (bản tôi cắt từ cột token nên mất khoảng trắng, phải
+bù bằng luật thêm một dấu cách — cách của bạn sạch hơn) · `muc = (indent or 0)
+// 4` đúng chỗ tôi từng sai · chia thẻ khối/thẻ lẻ khi so nguồn khớp đúng bốn
+cửa.
+
+**Chỗ tôi nghi mà hoá ra không có:** tôi ngờ `_apply_node` sinh lại nguyên thẻ
+cha khi thẻ con bị sửa sẽ làm mất dòng trống giữa các câu lệnh. Chạy thử: không
+xảy ra.
+
+**Nhưng cái giá phải nói ra:**
+
+```
+dòng còn sửa được bằng THẺ THẬT (15.469 dòng mã)
+  v1 hiện tại        39%
+  v1.1 sau tự kiểm   14%     <- 3.918 dòng nữa rơi vào mã thô
+```
+
+Hạ một thẻ khối xuống `ma_tho` thì **nuốt cả thân**. Luật `elif` — *"hạ cấp toàn
+bộ khối if...elif thành ma_tho"* — nuốt nguyên chuỗi điều kiện, mà `If` đứng thứ
+sáu trong kho (548 chỗ). Kết quả: an toàn tuyệt đối, nhưng **86% số dòng hiện ra
+dưới dạng chữ** — một trình soạn thảo có màu, không còn là lập trình bằng thẻ.
+
+**Không phải lỗi kế hoạch.** Cái giá ấy sinh từ nền móng: `ast` vứt dấu cách và
+chú thích, nên cách duy nhất giữ nguyên là không đụng vào.
+
+| | cửa 1 | dòng sửa được bằng thẻ |
+|---|---|---|
+| v1 hiện tại | 49,8% | 39% |
+| v1.1 (tự kiểm + hạ cấp) | **100%** | **14%** |
+| LibCST | **100%** | **39% trở lên** |
+
+**Đề nghị chốt:** làm ngay VIỆC 4 (Origin) và VIỆC 5 (test) — hai việc nhỏ, đúng
+như kế hoạch bạn viết, không phụ thuộc hướng nào. Còn VIỆC 1–3 thì **khoan**, chờ
+Sếp quyết giữa vá bằng `ast` hay thay bằng LibCST. Cả hai đường đều đưa cửa 1 lên
+100%; khác nhau ở chỗ còn lại bao nhiêu thẻ để dùng.
+
+---
+
+**CÂU HỎI CỦA SẾP: cú pháp hữu hạn, hàm vô vàn — giải thế nào.**
+
+Đếm trên đúng kho này: **2.700+ lượt gọi · 576 tên hàm khác nhau · 390 hàm/lớp
+kho tự viết · 84 module**. Vô vàn là thật. Nhưng nó **không** làm nổ số LOẠI thẻ.
+
+**Tầng 1 — thẻ cú pháp: hữu hạn, đóng.** Python có ~29 loại câu lệnh, kho dùng
+**24**. Bộ 11 thẻ phủ khoảng 7. Còn thiếu, kèm số lượt dùng thật:
+
+```
+Assert       828  <- nhiều thứ ba trong kho mà chưa có thẻ
+ImportFrom   313      Import        185
+AnnAssign    208  <- chính là lý do thẻ Gán tả sai 95 lần
+AsyncFunctionDef 147  ClassDef      137
+Try           95      Raise          95
+AugAssign     70  <- x += 1
+Continue      50      With           26
+Pass · Break · Global · Nonlocal · Delete · AsyncWith
+```
+
+Làm hết 24 thẻ là **xong vĩnh viễn**. Cài thêm nghìn thư viện cũng không sinh ra
+loại câu lệnh thứ 25.
+
+**Tầng 2 — thẻ lệnh: vô vàn, nhưng chỉ cần MỘT loại thẻ.** 576 tên hàm khác nhau
+nhưng về cú pháp tất cả đều là `Call`. Thẻ `Gọi hàm` đã có. `print`, `len`,
+`docling.convert`, `tinh_giup` — **tên hàm là dữ liệu trong ô, không phải loại
+thẻ mới.**
+
+**Tầng 3 — khay: chỗ giải bài toán "tìm".** Vấn đề thật không phải "có bao nhiêu
+thẻ" mà "làm sao người dùng biết `docling.convert()` tồn tại". `core/khay_the.py`
+đã giải: sinh khay từ AST của kho, lọc 8 thẻ hợp việc. Đo trên 28 đề:
+**0/28 → 20/28**.
+
+Phủ sóng giải thích vì sao khay phải **lọc theo việc** chứ không cố định:
+
+```
+  8 tên đầu bảng phủ 21,7% lượt gọi      100 tên  68,5%
+ 20 tên             35,1%                200 tên  84,7%
+ 50 tên             52,1%                400 tên  96,0%
+```
+
+8 thẻ cố định chỉ phủ 21,7%. Nhưng 8 thẻ **chọn đúng cho việc đang làm** thì đủ —
+20/28 là bằng chứng.
+
+**Việc nên làm sau 5 việc trên:** thêm thẻ cú pháp theo đúng thứ tự số lượt dùng
+— `Assert` trước, rồi `Import`, `AnnAssign`, `ClassDef`, `Try`+`Raise`. Nhưng chỉ
+**trên nền LibCST** thì thêm thẻ mới mới an toàn; trên nền `ast`, mỗi thẻ mới là
+một cơ hội mất dữ liệu mới — đúng cách 178 thẻ `Định nghĩa hàm` đã mất chú kiểu.

@@ -206,3 +206,86 @@ Needle lần đầu là 22/28, một giờ sau là 23/28 — chênh một đề 
 **Phải ghim khay vào một tệp trước khi so hai bộ lọc.** Chưa làm, và nó là việc
 đầu tiên của chặng B. Không có nó thì mọi số so sánh trong kế hoạch này đều
 lung lay một đề.
+
+---
+
+## 7. KẾT QUẢ CHẶNG B — và ngưỡng tôi đặt trước đã đo nhầm thứ
+
+```
+venv\Scripts\python.exe -X utf8 experiments\evidence_sprint\do_phu_the_delta.py
+```
+
+### 7.1 Hai con số, và chúng không nói cùng một điều
+
+```
+độ phủ dòng trung bình, tệp đã chuẩn hoá  : 45,7%   -> DƯỚI ngưỡng 60%
+chỗ đột biến nằm trong thẻ THẬT           : 28/29 = 97%
+mỗi đột biến chạm mấy dòng                : 29/29 đúng MỘT dòng
+mỗi đột biến chạm mấy thẻ                 : 29/29 đúng MỘT thẻ
+```
+
+**Ngưỡng tôi viết ở mục 3 — "≥60% dòng nằm trong thẻ thật" — đo nhầm thứ.**
+
+Độ phủ trung bình trả lời câu *"bao nhiêu phần của tệp sửa được bằng thẻ"*.
+Nhưng câu quyết định là *"chỗ CẦN sửa có nằm trong thẻ không"*, và hai câu ấy
+tách nhau rất xa: phủ 45,7% mà 97% chỗ cần sửa vẫn nằm trong thẻ.
+
+Tôi có ghi con số sắc hơn ấy vào lời dặn của bộ đo **trước khi chạy** — *"trung
+bình cao mà đúng chỗ cần sửa lại là `ma_tho` thì vẫn hỏng"* — nhưng **không gắn
+ngưỡng cho nó**, và để mã thoát dựa vào con số trung bình. Đó là lỗi đặt ngưỡng
+của tôi, không phải kết quả xấu của phép đo.
+
+Nên **không tự đổi cửa sau khi thấy số**. Ghi cả hai, và để Sếp quyết.
+
+### 7.2 Đột biến rơi vào loại thẻ nào
+
+```
+neu       15      <- điều kiện `if`, đúng thẻ có ô `dieu_kien`
+gan        7
+tra_ve     5
+goi_ham    1
+ma_tho     1      <- chỗ duy nhất thẻ không tả nổi
+```
+
+15/29 là đổi điều kiện `if` — `<` thành `<=`, lật `not`. Sửa nó qua thẻ là **đổi
+đúng một ô `dieu_kien`**. Đây là hình dạng thuận nhất có thể cho hướng thẻ.
+
+Chỗ duy nhất rơi vào mã thô, `user_memory.py:83`:
+
+```python
+fact = {'id': f'm-{uuid.uuid4().hex[:9]}', 'text': clean, 'meta': f"{datet...
+```
+
+Một `gan` với biểu thức từ điển lồng f-string — bộ đọc hạ xuống mã thô.
+
+### 7.3 Một phát hiện đổi cách hiểu bài toán
+
+`dung_de_loi.dot_bien` trả `ast.unparse(...)`, và `do_sua_loi.py:130` ghi thẳng
+bản ấy ra đĩa. **Tệp Delta mở ra không phải tệp trong kho** — nó đã bị chuẩn
+hoá, sạch chú thích, biểu thức duỗi thẳng.
+
+Điều đó cắt cả hai chiều:
+
+- Thế mạnh lớn nhất của app thẻ (giữ chú thích, `elif`, chú kiểu) **phần lớn vô
+  dụng ở đây** — không còn chú thích nào để giữ.
+- Nhưng chuẩn hoá lại **nâng độ phủ**: 40,0% → 45,7%, vì biểu thức nhiều dòng bị
+  duỗi thành một dòng. Sáu trên tám tệp tăng; riêng `dong_ho.py` (35,0 → 23,1)
+  và `secret_guard.py` (28,7 → 24,1) thì giảm.
+
+### 7.4 Đề nghị
+
+Ba con số `28/29`, `29/29 một dòng`, `29/29 một thẻ` nói rằng **bề mặt sửa thu
+được đúng như giả thuyết chặng C cần**. Ngưỡng trung bình 45,7% nói ngược lại,
+nhưng nó đo cái khác.
+
+Đề nghị **sang chặng C**, và đổi cửa chặn của chặng B thành:
+
+```
+chỗ đột biến nằm trong thẻ thật  >= 80%   -> sang C     (đo được: 97%)
+                                  50..79%  -> cân lại
+                                  <  50%   -> dừng
+```
+
+Ghi rõ đây là **cửa đổi sau khi thấy số**, để người sau biết mà nghi. Lý do đổi
+nằm ở 7.1 và có thể tra lại; nếu Sếp thấy không thuyết phục thì giữ nguyên cửa
+cũ và dừng ở đây.

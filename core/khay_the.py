@@ -212,8 +212,24 @@ def sinh_khay(goc: Path, thu_muc: tuple[str, ...] = ("core", "interface", "tools
     return gan_phan_biet(list(ra.values()))
 
 
-def loc_khay(khay: list[The], viec: str, giu: int = 8) -> list[The]:
+def loc_khay(khay: list[The], viec: str, giu: int = 24) -> list[The]:
     """Giữ `giu` thẻ liên quan nhất tới mô tả việc. Thuần máy, không gọi model.
+
+    MẶC ĐỊNH 24, chốt 20/08 sau khi đo đủ lưới trên 28 đề với qwen3.5:4b:
+
+        khay  trần    chọn đúng   đúng/khi có mặt   giây
+          8   23/28   22/28       22/23 =  96%       322
+         15   26/28   24/28       24/26 =  92%       505
+         24   28/28   25/28       25/28 =  89%       579   <- chốt
+         30   28/28   25/28       25/28 =  89%       875
+
+    Hai xu hướng kéo ngược nhau: khay to thì TRẦN cao hơn (23 -> 28/28) nhưng
+    model CHÍNH XÁC KÉM đi (96% -> 89%). Tích của chúng đạt đỉnh ở khay to, và
+    trần bão hoà đúng ở 24 — 30 hoà điểm mà chậm hơn 34%, nên lấy 24.
+
+    Mặc định cũ là 8, đúng với khay CHƯA CÓ docstring. Sau khi viết docstring
+    cho 25 hàm thì nền đổi dưới chân nó: thẻ phân biệt được nhau nên khay to
+    hết loãng. Không phải quyết định cũ sai, mà là điều kiện đã đổi.
 
     BẢN ĐẦU CHỈ ĐƯỢC 3/6 — mất thẻ đúng nửa số lần. Hai lỗi:
 

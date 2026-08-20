@@ -338,3 +338,73 @@ Khay 30 chậm **2,7 lần** khay 8 (875s so với 322s cho 28 đề). Với Del
 mỗi đề có thêm vòng thử lại — chi phí ấy nhân lên. Nếu chặng C thấy thời gian là
 chỗ nghẽn thì **giữ 15 (24/28, 505s)** là điểm đánh đổi hợp lý, và phải ghi rõ
 là đánh đổi chứ không phải điểm tối ưu.
+
+---
+
+## 9. CÔNG BỐ ĐƯỢC KHÔNG — quét lịch sử git, thứ chưa ai tra
+
+Sếp lo: *"ở chung một thư mục thì sau này push repo đóng gói có lộ hết bản nội
+bộ không?"* Codex trả lời đúng phần nguyên tắc — **cùng thư mục thì không lộ,
+cùng LỊCH SỬ mới lộ**. Nhưng chưa ai đo lịch sử của v3.
+
+Quét cả **41 commit** bằng khuôn khoá thật của 11 nhà cung cấp (OpenAI, Google
+AIza, GitHub ghp, Anthropic, Slack, AWS, Telegram, HuggingFace, khoá riêng PEM,
+token iCal):
+
+```
+số giá trị khớp khác nhau : 1
+giá trị ấy                : sk-abc123def456ghi789jkl
+nằm ở                     : tests/test_chat_api.py · test_secret_guard.py
+                            · test_user_memory.py
+```
+
+**Một khoá giả duy nhất, trong ba tệp test** — `test_secret_guard.py` phải có
+khoá giả để thử chính bộ chặn bí mật.
+
+```
+.env / data/ từng được commit  : KHÔNG
+.env.example                   : 1 commit, toàn chữ giữ chỗ, khoá để RỖNG
+```
+
+**Lịch sử v3 công bố được.** Đây là khác biệt cốt lõi với v2 — nơi commit
+`88e8c07` có ~20 khoá thật và luật số 1 của kho là *không đẩy lên GitHub*. Khi
+tách v3 ngày 12/08 lịch sử được dựng mới, và bản quét này xác nhận nó sạch.
+
+**Nhưng ba chỗ vẫn phải xử trước khi đẩy:**
+
+1. **Lời commit là nhật ký.** 49 dòng nhắc "Sếp", nhiều lời commit kể chuyện
+   nội bộ (ai bắt lỗi ai, phòng nào hỏng). Không phải bí mật, nhưng là chuyện
+   riêng của nhóm. Quyết định trước: giữ nguyên (minh bạch) hay dựng nhánh
+   public với lời commit gọn.
+2. **`data/` đang bị `.gitignore` bỏ qua** — tốt cho bảo mật, nhưng chính vì thế
+   mọi sổ đo đều KHÔNG vào git. Đã chép số sang `docs/`; phải giữ thói quen đó.
+3. **Quét lại ngay trước khi đẩy, không tin bản quét hôm nay.** Ba AI đang commit
+   liên tục.
+
+## 10. APP ĐÃ DỰNG XONG PHẦN LÕI — chạy thử 20/08 lúc 19:07
+
+Không phải kế hoạch, là ảnh chụp màn hình chữ của app đang chạy:
+
+```
+KHAY THẺ LỆNH — 5 nhóm, 11 loại thẻ, có bộ đếm ×N
+  ĐIỀU KHIỂN  Nếu · Ngược lại · Lặp mỗi · Lặp khi
+  DỮ LIỆU     Gán · Phép tính
+  VÀO/RA      In ra
+  HÀM         Định nghĩa hàm · Gọi hàm · Trả về
+  MÃ THÔ      Mã thô
+
+VÙNG SOẠN THẢO — 3 thẻ đã lắp, sinh ra:
+  def cong(a, b):
+      return a + b
+  print(cong(5, 7))
+
+CHẨN ĐOÁN  Hợp lệ · 0 Lỗi · 0 Cảnh báo
+TERMINAL   "Chạy mã đang tắt mặc định. App vẫn mở, sửa, kiểm tra và lưu bình thường."
+KHAI BÁO   "Sandbox: Trần 5s | Tiến trình riêng | CHƯA chặn được ghi tệp"
+```
+
+Kèm 23 test app xanh, 22 test parity xanh, 5 cửa nghiệm thu ĐẠT.
+
+**Câu "bao giờ mới dựng app" đã có câu trả lời: app dựng rồi.** Thứ còn lại
+không phải dựng app mà là **đóng gói để phát hành** — và đó là danh sách của
+Codex, không phải danh sách mới.

@@ -59,16 +59,25 @@ from dung_de_loi import chay_test, dot_bien                                # noq
 MODEL = "qwen2.5-coder:7b"     # ĐÚNG model của nền 2/9, đừng đổi
 TRAN_LUOT = 4                  # ĐÚNG trần của nền 2/9
 PY = str(GOC / "venv" / "Scripts" / "python.exe")
-SO = NHA / "so_sua_loi_the.json"
+EP_KHUON = "--ep" in sys.argv
+SO = NHA / ("so_sua_loi_the_ep.json" if EP_KHUON else "so_sua_loi_the.json")
 TRAN_THE = 60                  # số thẻ tối đa bày ra cho model
 OLLAMA = "http://127.0.0.1:11434/api/generate"
 
 
-def hoi(p: str) -> tuple[str, float]:
+def hoi(p: str, khuon: dict | None = None) -> tuple[str, float]:
+    """Hỏi model. `khuon` là JSON Schema — Ollama ÉP câu trả lời vào đúng nó.
+
+    Đo 20/08: Ollama 0.32.14 nhận `format` là cả một lược đồ, kể cả `enum`. Nên
+    `id` thẻ ép được vào danh sách thẻ CÓ THẬT, và ô có tập giá trị hữu hạn ép
+    được vào đúng tập ấy — model không còn chỗ để bịa id `75` hay xuất JSON gãy.
+    """
     b = {"model": MODEL, "prompt": p, "stream": False, "think": False,
          "keep_alive": "5m",
          "options": {"seed": 42, "temperature": 0.2, "num_predict": 200,
                      "num_ctx": 8192}}
+    if khuon:
+        b["format"] = khuon
     r = urllib.request.Request(OLLAMA, data=json.dumps(b).encode(),
                                method="POST",
                                headers={"Content-Type": "application/json"})
@@ -108,6 +117,30 @@ def bay_the(nguon: str, dong_nghi: set[int] | None = None):
         d.append("  %-14s dòng %-4s %-10s %s\n      | %s"
                  % (n.id, n.line_start, n.ma, o, goc))
     return "\n".join(d), rec, {n.id: n for n in ds}
+
+
+# Ô nào có tập giá trị HỮU HẠN thì ép luôn vào tập ấy. Ngoài danh sách này thì
+# để model gõ tự do — ép bừa một tập không đầy đủ còn tệ hơn không ép.
+O_HUU_HAN: dict[str, list[str]] = {}
+
+
+def dung_khuon(ban_do: dict) -> dict:
+    """JSON Schema cho câu trả lời: id ép vào thẻ CÓ THẬT, ô ép vào ô CÓ THẬT."""
+    o_co = sorted({k for n in ban_do.values() for k in n.o})
+    return {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string", "enum": sorted(ban_do)},
+            "o": {
+                "type": "object",
+                "properties": {k: ({"type": "string", "enum": O_HUU_HAN[k]}
+                                   if k in O_HUU_HAN else {"type": "string"})
+                               for k in o_co},
+                "minProperties": 1,
+            },
+        },
+        "required": ["id", "o"],
+    }
 
 
 def doc_tra_loi(ra: str) -> tuple[dict | None, str]:
@@ -190,7 +223,7 @@ def mot_de(tam: Path, d: dict) -> dict:
                  "SUYLUAN:\n<lỗi nằm ở thẻ nào, vì sao — tối đa 3 câu>\n"
                  "JSON:\n{\"id\": \"<id thẻ>\", \"o\": {\"<tên ô>\": \"<giá trị mới>\"}}\n"
                  % (tep, bang, loi[-900:], lich_su))
-            ra, giay = hoi(p)
+            ra, giay = hoi(p, dung_khuon(ban_do) if EP_KHUON else None)
             tra, hong = doc_tra_loi(ra)
             suy = ra.split("JSON")[0].replace("SUYLUAN:", "").strip()[:400]
             if tra is None:
@@ -253,7 +286,8 @@ def main() -> int:
                 cho = [x["cho"] for x in rng.sample(ds, so_loi)]
                 de.append({"tep": tep, "tep_test": ds[0]["tep_test"],
                            "cho": cho, "so_loi": so_loi})
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 9   # nền chỉ có 9 đề
+    so_tay = [a for a in sys.argv[1:] if a.isdigit()]
+    n = int(so_tay[0]) if so_tay else 9   # nền chỉ có 9 đề
     de = de[:n]
 
     so = []
@@ -291,9 +325,12 @@ def main() -> int:
     kdd = sum(1 for x in so if x["trang_thai"] == "khong_do_duoc")
     dung_the = sum(1 for x in so if x.get("chon_dung_the"))
     print("\n" + "=" * 62)
-    print("  CHẶNG C — sửa lỗi bằng ĐỔI MỘT Ô THẺ")
+    print("  CHẶNG C%s — sửa lỗi bằng ĐỔI MỘT Ô THẺ"
+          % ("2 (ÉP KHUÔN)" if EP_KHUON else ""))
     print("=" * 62)
     print("  nền (viết lại cả hàm)     : 2/9")
+    if EP_KHUON:
+        print("  chặng C (thẻ, chưa ép)    : 1/9")
     print("  đạt                       : %d/%d" % (dat, len(so)))
     print("  vỡ chỗ khác (test đề xanh nhưng cả bộ đỏ): %d" % vo)
     print("  hết lượt                  : %d" % het)

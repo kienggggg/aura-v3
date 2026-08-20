@@ -24,8 +24,19 @@ def _e(x) -> str:
     return html.escape(str(x), quote=True)
 
 
+# Tên hiển thị nạp từ sổ JSON (sổ lấy từ BO_THE_V1). Mã `gan` là khoá trong
+# máy nên buộc không dấu; chữ người đọc thấy phải là "Gán".
+TEN_THE: dict = {}
+
+
+def _ten(ma: str) -> str:
+    t = TEN_THE.get(ma)
+    return ("%s (%s)" % (t, ma)) if t else str(ma)
+
+
 def in_bang(so: dict) -> None:
     """Bảng cho người đọc trên terminal."""
+    TEN_THE.update(so.get("ten_the") or {})
     print("=" * 68)
     print("  BỐN CỬA NGHIỆM THU — APP LẬP TRÌNH BẰNG THẺ")
     print("  %s · %d tệp .py · %s" % (so["luc"], so["so_tep"],
@@ -51,8 +62,8 @@ def in_bang(so: dict) -> None:
             print("    giữ được: %d   MẤT: %d" % (c["co"], c["mat"]))
             for k, v in c["theo_the"].items():
                 if v["co_ct"]:
-                    print("      %-10s %2d có, %2d mất %s"
-                          % (k, v["co_ct"], v["mat"],
+                    print("      %-22s %2d có, %2d mất %s"
+                          % (_ten(k), v["co_ct"], v["mat"],
                              "(thẻ khối)" if v["khoi"] else ""))
         elif "thu" in c:
             for t in c["thu"]:
@@ -65,7 +76,7 @@ def in_bang(so: dict) -> None:
             print("    kho tả bằng thẻ   : %.1f%%" % c["phu_song"])
             for k, v in c["theo_the"].items():
                 if v["sai"]:
-                    print("      %-10s %4d thẻ, %4d tả SAI" % (k, v["tong"], v["sai"]))
+                    print("      %-22s %4d thẻ, %4d tả SAI" % (_ten(k), v["tong"], v["sai"]))
     print("\n" + "=" * 68)
     print("  TỔNG: %s" % ("ĐẠT CẢ BỐN CỬA" if so["dat_het"]
                           else "CHƯA ĐẠT — xem data/the_v1/bao_cao.html"))
@@ -157,7 +168,7 @@ def _cua_1(c) -> str:
         for v in c["vi_du"][:25]:
             h.append('<tr><td><code>%s:%s</code></td><td>%s</td>'
                      '<td class="x">%s</td><td><code>%s</code></td></tr>'
-                     % (_e(v["tep"]), _e(v["dong"]), _e(v["the"]),
+                     % (_e(v["tep"]), _e(v["dong"]), _e(_ten(v["the"])),
                         _e(v["loai"]), _e(v["goc"])))
         h.append("</table></div></details>")
     return o + "".join(h)
@@ -175,13 +186,13 @@ def _cua_2(c) -> str:
             continue
         h.append('<tr><td><code>%s</code></td><td>%d</td>'
                  '<td class="%s">%d</td><td class="mo">%s</td></tr>'
-                 % (_e(k), v["co_ct"], "x" if v["mat"] else "v", v["mat"],
+                 % (_e(_ten(k)), v["co_ct"], "x" if v["mat"] else "v", v["mat"],
                     "thẻ khối" if v["khoi"] else "thẻ lẻ"))
     h.append("</table></div>")
     for v in c["vi_du"][:8]:
         h.append('<div class="mui"><code>%s:%s</code> · thẻ <code>%s</code>%s'
                  '<br><span class="g">mất:</span> <code>%s</code></div>'
-                 % (_e(v["tep"]), _e(v["dong"]), _e(v["the"]),
+                 % (_e(v["tep"]), _e(v["dong"]), _e(_ten(v["the"])),
                     " (thẻ khối)" if v["khoi"] else "", _e(v["chu_thich"])))
     return o + "".join(h)
 
@@ -214,7 +225,7 @@ def _cua_4(c) -> str:
     for k, v in c["theo_the"].items():
         h.append('<tr><td><code>%s</code></td><td>%d</td>'
                  '<td class="%s">%d</td><td>%.0f%%</td></tr>'
-                 % (_e(k), v["tong"], "x" if v["sai"] else "v", v["sai"],
+                 % (_e(_ten(k)), v["tong"], "x" if v["sai"] else "v", v["sai"],
                     100 * (v["tong"] - v["sai"]) / max(v["tong"], 1)))
     h.append("</table></div>")
     if c["vi_du"]:
@@ -223,7 +234,7 @@ def _cua_4(c) -> str:
             h.append('<div class="mui"><code>%s:%s</code> · <code>%s</code>'
                      '<br><span class="g">gốc :</span> <code>%s</code>'
                      '<br><span class="g">sinh:</span> <code>%s</code></div>'
-                     % (_e(v["tep"]), _e(v["dong"]), _e(v["the"]),
+                     % (_e(v["tep"]), _e(v["dong"]), _e(_ten(v["the"])),
                         _e(v["goc"]), _e(v["sinh"])))
         h.append("</details>")
     return o + "".join(h)
@@ -231,6 +242,7 @@ def _cua_4(c) -> str:
 
 def dung_trang(so: dict) -> str:
     """Dựng HTML TỪ sổ JSON — không nhận dữ liệu nào khác."""
+    TEN_THE.update(so.get("ten_the") or {})
     than = []
     ve = (_cua_1, _cua_2, _cua_3, _cua_4)
     for i, c in enumerate(so["cua"]):

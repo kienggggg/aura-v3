@@ -341,7 +341,18 @@ def chay():
         cua_3_origin(kiem_tra_origin_hop_le),
         cua_4_tu_kiem(doc_tep_py_sang_cay_the, sinh_dong_the_don),
     ]
+    # Tên hiển thị lấy TỪ `BO_THE_V1`, không chép tay sang đây. Mã `gan` là
+    # khoá trong máy (khoá JSON, tên biến JS/Python) nên buộc không dấu; chữ
+    # người đọc thấy là `ten` = "Gán", và app đã làm đúng chỗ đó từ đầu — chỉ
+    # bảng của tôi trước 20/08 in mã máy ra cho người đọc.
+    try:
+        from core.the_v1 import BO_THE_V1
+        ten_the = {k: v.ten for k, v in BO_THE_V1.items()}
+    except Exception:
+        ten_the = {}
+
     so = {
+        "ten_the": ten_the,
         "luc": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
         "kho": str(GOC),
         "thu_muc_quet": list(THU_MUC),

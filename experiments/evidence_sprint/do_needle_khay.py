@@ -37,7 +37,10 @@ from core.khay_the import loc_khay, sinh_khay          # noqa: E402
 
 DE = GOC / "experiments" / "evidence_sprint" / "de_khay.json"
 SO = GOC / "data" / "evidence_sprint" / "needle_vs_qwen.json"
-GIU = 8                        # cỡ khay đã chốt ở lượt trước
+# Cỡ khay: đặt bằng cờ `--giu N`, mặc định 8 (cỡ đã chốt ở lượt trước).
+# Trần bộ lọc đo được 20/08 SAU khi sửa `loc_khay`:
+#   giữ 8 -> 23/28 · giữ 15 -> 25/28 · giữ 30 -> 26/28 · giữ 96 -> 28/28
+GIU = 8
 OLLAMA = "http://127.0.0.1:11434/api/generate"
 MODEL = "qwen3.5:4b"
 
@@ -142,6 +145,9 @@ def main() -> int:
     if not bo:
         print("KHÔNG ĐO ĐƯỢC: thiếu cờ --needle hoặc --qwen")
         return 2
+    global GIU
+    if "--giu" in sys.argv:
+        GIU = int(sys.argv[sys.argv.index("--giu") + 1])
     de = _nap_de()
     khay = sinh_khay(GOC)
     if not de or not khay:
@@ -163,7 +169,7 @@ def main() -> int:
     cu = {}
     if SO.is_file():
         cu = json.loads(SO.read_text(encoding="utf-8"))
-    cu[bo] = {"dat": dat, "tran_khay": tran, "tong": len(ra), "hong": hong,
+    cu["%s_giu%d" % (bo, GIU)] = {"dat": dat, "tran_khay": tran, "tong": len(ra), "hong": hong,
               "giay_nap": t_nap, "tong_giay": tong_giay, "giu": GIU,
               "luc": time.strftime("%Y-%m-%dT%H:%M:%S"), "chi_tiet": ra}
     SO.write_text(json.dumps(cu, ensure_ascii=False, sort_keys=True, indent=1),

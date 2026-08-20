@@ -86,6 +86,18 @@ class The:
     def tu_khoa(self) -> set[str]:
         return _tu(self.ten) | _tu(self.mo_ta)
 
+    def tu_tai_lieu(self) -> set[str]:
+        """Từ chỉ có trong TOÀN VĂN tài liệu, không có ở tên hay dòng đầu.
+
+        `mo_ta` là DÒNG ĐẦU docstring, mà dòng đầu hay tả GIÁ TRỊ TRẢ VỀ chứ
+        không tả việc: `tinh_giup` mở đầu bằng *"Một dòng 'đã tính sẵn' để nhét
+        vào lời dặn"*. Đo 20/08: chấm thêm toàn văn kéo trần khay 15 thẻ từ
+        24/28 lên 25/28, và cứu đúng `la_chuyen_rieng_cua_sep` — việc "chặn
+        không cho đẩy đời tư của chủ máy ra ngoài" chung `day`/`doi`/`may` với
+        thân tài liệu mà không chung chữ nào với dòng đầu.
+        """
+        return _tu(self.tai_lieu) - self.tu_khoa()
+
     def dong_khay(self) -> str:
         d = f"  {self.chu_ky}   (từ {self.mo_dun})"
         if self.mo_ta:
@@ -224,14 +236,14 @@ def loc_khay(khay: list[The], viec: str, giu: int = 8) -> list[The]:
     # độ hiếm: từ càng ít thẻ chứa thì càng đáng tin
     dem: dict[str, int] = {}
     for t in khay:
-        for w in t.tu_khoa():
+        for w in t.tu_khoa() | t.tu_tai_lieu():
             dem[w] = dem.get(w, 0) + 1
     n = len(khay)
 
     tu_viec = _tu(viec)
     cham = []
     for t in khay:
-        tu_ten, tu_mo = _tu(t.ten), _tu(t.mo_ta)
+        tu_ten, tu_mo, tu_tl = _tu(t.ten), _tu(t.mo_ta), t.tu_tai_lieu()
         d = 0.0
         for w in tu_viec:
             if w not in dem:
@@ -241,10 +253,20 @@ def loc_khay(khay: list[The], viec: str, giu: int = 8) -> list[The]:
                 d += 3.0 * hiem
             elif w in tu_mo:
                 d += 1.0 * hiem
-        if d > 0:
-            # hoà thì mô tả NGẮN thắng — dài là dễ trùng nhờ nhiễu
-            cham.append((d, -len(t.mo_ta), t))
+            elif w in tu_tl:
+                # NỬA ĐIỂM cho thân tài liệu. Đo 20/08 cả hai mức: 0,5 kéo trần
+                # khay 15 từ 24/28 lên 25/28, còn 1,0 thì TỤT xuống 24/28 — thân
+                # tài liệu dài nên trọng số đủ mạnh là kéo cả thẻ nhiễu lên.
+                d += 0.5 * hiem
+        # hoà thì mô tả NGẮN thắng — dài là dễ trùng nhờ nhiễu
+        cham.append((d, -len(t.mo_ta), t))
     cham.sort(key=lambda x: (x[0], x[1]), reverse=True)
+    # KHÔNG loại thẻ điểm 0 nữa, chỉ xếp chúng xuống cuối.
+    #
+    # Bản cũ có `if d > 0` nên thẻ không khớp từ nào bị vứt HẲN, và `giu` mất
+    # nghĩa: đo 20/08, xin cả 96 thẻ vẫn chỉ nhận về 25/28 đáp án đúng, ba đề
+    # KHÔNG MODEL NÀO thắng được. Nay xin 96 thì nhận đủ 28/28 — trần khay bằng
+    # đúng cỡ khay, còn thắng hay không là việc của model.
     return [t for _, _, t in cham[:giu]]
 
 

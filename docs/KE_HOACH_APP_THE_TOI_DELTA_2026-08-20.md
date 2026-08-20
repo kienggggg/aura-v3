@@ -408,3 +408,79 @@ Kèm 23 test app xanh, 22 test parity xanh, 5 cửa nghiệm thu ĐẠT.
 **Câu "bao giờ mới dựng app" đã có câu trả lời: app dựng rồi.** Thứ còn lại
 không phải dựng app mà là **đóng gói để phát hành** — và đó là danh sách của
 Codex, không phải danh sách mới.
+
+---
+
+## 11. KẾT QUẢ CHẶNG C — 1/9, dưới ngưỡng. Và phép đo bị nhiễm một lỗi cơ học
+
+```
+nền (viết lại cả hàm)   2/9
+sửa bằng đổi một ô thẻ  1/9        <- DƯỚI nền
+vỡ chỗ khác             0
+hết lượt                8
+tổng thời gian          49 phút    (nền tốn ~3 giờ)
+```
+
+Ngưỡng đặt trước: `<= 2/9 -> không hơn nền, đóng hồ sơ`. **1/9 rơi vào đó. Đóng.**
+
+### 11.1 Chẩn đoán rõ hơn con số
+
+```
+chọn ĐÚNG thẻ nhưng sai giá trị : 0
+chọn SAI thẻ                    : 8
+```
+
+**Không có một trường hợp nào model tìm đúng thẻ rồi sửa hỏng.** Toàn bộ thất
+bại nằm ở khâu **tìm**, không ở khâu **sửa**.
+
+Giả thuyết của chặng C là *"bề mặt sửa quá rộng"*. Số này nói bề mặt sửa **chưa
+bao giờ là vấn đề**.
+
+### 11.2 Nhưng phép đo bị nhiễm, phải nói ra
+
+Bóc 33 lượt hỏi trong 9 đề:
+
+```
+ô mới giống hệt ô cũ, không có gì để sửa   10
+JSON hỏng (thiếu dấu phẩy, thừa dữ liệu)    8
+không thấy JSON trong câu trả lời           3
+model bịa id thẻ ('75')                     2
+áp được                                     5
+```
+
+**13/33 lượt = 39% chết ở KHUÔN CÂU TRẢ LỜI**, chưa kịp chạm tới ý tưởng thẻ.
+`qwen2.5-coder:7b` không xuất nổi JSON sạch ổn định.
+
+Nên kết quả 1/9 **không phải là "ý tưởng thẻ sai"** — nó là *"ý tưởng thẻ chưa
+được thử tử tế"*. Tôi không lường trước chuyện khuôn JSON là rào, và đó là lỗi
+thiết kế phép đo của tôi.
+
+**Vẫn đóng hồ sơ theo ngưỡng đã đặt.** Không nới ngưỡng sau khi thấy số. Nếu mở
+lại thì phải là một phép đo MỚI, có tên khác, và ghi rõ nó thay gì.
+
+### 11.3 Bức tường thật: ĐỊNH VỊ
+
+Ghép với thứ đã đo hôm nay thì bức tường hiện rõ:
+
+```
+máy định vị bằng phổ thực thi   3 mức, cả 3 TRƯỢT
+model định vị bằng chọn thẻ     1/9
+```
+
+**Hai đường độc lập, cùng gãy ở đúng một chỗ.** Câu hỏi của Delta không phải
+*"sửa thế nào"* mà là *"lỗi ở đâu"*, và chưa cách nào trả lời được.
+
+Đó là kết quả đáng giá nhất của chặng C, và nó chỉ có được vì phép đo **tách
+riêng hai trục** thay vì gộp thành một con số đạt/trượt.
+
+### 11.4 Hai chỗ rẻ và đo được, nếu quay lại hướng này
+
+Không đề nghị làm ngay — hồ sơ đang đóng. Ghi để người sau khỏi mò:
+
+1. **Ép khuôn câu trả lời bằng ràng buộc giải mã.** 39% lượt chết vì JSON. Với
+   ô chỉ có 2 giá trị (`and`/`or` — 11/29 đề), model không cần biết viết JSON,
+   nó chỉ cần chọn một trong hai. Đo được: bổ thẻ sâu đưa **13/29 = 45%** việc
+   sửa xuống mức "chọn 1 trong ≤6".
+2. **Đưa dòng nghi ngờ vào lời hỏi.** Hiện model tự tìm trong cả cây thẻ.
+   `dinh_vi.py` cho được tập dòng đã chạy — chưa đủ để định vị ở mức hàm, nhưng
+   ở mức THẺ thì nó thu hẹp mạnh hơn nhiều. Chưa đo.

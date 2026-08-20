@@ -74,6 +74,8 @@ def in_bang(so: dict) -> None:
             print("    thẻ thật          : %d  (tả sai %d)" % (c["the_that"], c["sai"]))
             print("    mảnh ma_tho       : %d" % c["tho"])
             print("    kho tả bằng thẻ   : %.1f%%" % c["phu_song"])
+            if "phu_song_dong" in c:
+                print("    dòng tả bằng thẻ  : %.1f%%" % c["phu_song_dong"])
             for k, v in c["theo_the"].items():
                 if v["sai"]:
                     print("      %-22s %4d thẻ, %4d tả SAI" % (_ten(k), v["tong"], v["sai"]))
@@ -233,9 +235,11 @@ def _cua_4(c) -> str:
         for v in c["vi_du"][:14]:
             h.append('<div class="mui"><code>%s:%s</code> · <code>%s</code>'
                      '<br><span class="g">gốc :</span> <code>%s</code>'
-                     '<br><span class="g">sinh:</span> <code>%s</code></div>'
+                     '<br><span class="g">%s:</span> <code>%s</code></div>'
                      % (_e(v["tep"]), _e(v["dong"]), _e(_ten(v["the"])),
-                        _e(v["goc"]), _e(v["sinh"])))
+                        _e(v["goc"]),
+                        "sinh" if "sinh" in v else "ô sửa",
+                        _e(v.get("sinh", v.get("o", "")))))
         h.append("</details>")
     return o + "".join(h)
 

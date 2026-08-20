@@ -60,7 +60,7 @@ def _tep_py():
     for d in THU_MUC:
         t = GOC / d
         if t.is_dir():
-            ra += sorted(p for p in t.glob("*.py") if p.is_file())
+            ra += sorted(p for p in t.rglob("*.py") if p.is_file())
     return ra
 
 
@@ -100,12 +100,9 @@ def _chu_thich_that(nguon):
 def cua_1_go_lai_y_cu(doc, luu):
     """Mở một thẻ, gõ lại ĐÚNG giá trị cũ, lưu -> tệp không được đổi byte nào.
 
-    Đây là việc người dùng làm hằng ngày, và là phép thử mà đường tắt
-    `raw_bytes` không đỡ được.
+    Hợp đồng P1: Yêu cầu 100% byte-exact (n_y_byte == n_the), không chấp nhận
+    chỉ cùng AST nếu lệch byte. Lỗi mở/parser/writer làm cửa trượt ngay lập tức.
     """
-    # Tách RIÊNG "y hệt byte" khỏi "cùng nghĩa". Gộp lại thì mất một tin: có
-    # những chỗ khác byte mà chương trình không đổi (dòng gập lại, ngoặc thừa).
-    # Số byte nghiêm hơn nhưng số nghĩa mới là số quyết định app có hại hay không.
     n_the = n_nguyen = n_doi = n_vo = n_y_byte = 0
     theo_tep = []
     vi_du = []
@@ -119,7 +116,8 @@ def cua_1_go_lai_y_cu(doc, luu):
         try:
             rec = doc(p)
         except Exception as e:
-            theo_tep.append({"tep": p.name, "the": 0, "hong": 0,
+            n_vo += 1
+            theo_tep.append({"tep": p.name, "the": 0, "hong": 1,
                              "loi_mo": type(e).__name__})
             continue
         ds = _phang(rec.tree)
@@ -144,9 +142,11 @@ def cua_1_go_lai_y_cu(doc, luu):
             try:
                 if ast.dump(ast.parse(ra)) == cay_goc:
                     n_nguyen += 1          # khác byte nhưng cùng nghĩa
-                    continue
-                n_doi += 1
-                loai = "doi_nghia"
+                    n_doi += 1             # Hợp đồng P1: lệch byte là không đạt Cửa 1
+                    loai = "lech_byte"
+                else:
+                    n_doi += 1
+                    loai = "doi_nghia"
             except SyntaxError:
                 n_vo += 1
                 loai = "vo_cu_phap"
@@ -161,7 +161,7 @@ def cua_1_go_lai_y_cu(doc, luu):
         theo_tep.append({"tep": p.name, "the": len(ds), "hong": hong})
     return {
         "ten": "Cửa 1 — gõ lại y giá trị cũ, tệp phải không đổi byte",
-        "dat": (n_doi + n_vo) == 0,
+        "dat": (n_the > 0) and (n_doi == 0) and (n_vo == 0) and (n_y_byte == n_the),
         "the": n_the, "nguyen": n_nguyen, "y_het_byte": n_y_byte,
         "doi_nghia": n_doi, "vo_cu_phap": n_vo,
         "tep_dinh": sum(1 for x in theo_tep if x.get("hong")),
@@ -172,10 +172,11 @@ def cua_1_go_lai_y_cu(doc, luu):
 
 
 # ------------------------------------------------------------------- cửa 2
-def cua_2_chu_thich(doc, sinh_dong):
-    """Chú thích cuối dòng phải còn nguyên — thẻ LẺ và thẻ KHỐI như nhau.
+def cua_2_chu_thich(doc, luu):
+    """Chú thích cuối dòng phải còn nguyên sau khi lưu — thẻ LẺ và thẻ KHỐI như nhau.
 
-    Bản v1: thẻ lẻ 21/21 giữ được, thẻ khối 0/4.
+    Hợp đồng P1: Sửa một ô trên thẻ có chú thích rồi lưu ra đĩa/bytes, kiểm tra
+    chú thích có thật sự xuất hiện ở tệp đầu ra không. Lỗi parser/writer làm cửa trượt.
     """
     co = mat = 0
     theo_the = {}
@@ -188,33 +189,38 @@ def cua_2_chu_thich(doc, sinh_dong):
         try:
             rec = doc(p)
         except Exception:
+            mat += len(ct)
             continue
 
-        def di(ns, muc):
-            nonlocal co, mat
-            for n in ns:
-                if n.ma != "ma_tho" and n.line_start in ct:
-                    o = theo_the.setdefault(n.ma, [0, 0])
-                    o[0] += 1
-                    try:
-                        ra = sinh_dong(n, _muc(n))
-                    except Exception:
-                        ra = ""
-                    if ct[n.line_start] in ra:
-                        co += 1
-                    else:
-                        mat += 1
-                        o[1] += 1
-                        if len(vi_du) < 20:
-                            vi_du.append({"tep": p.name, "the": n.ma,
-                                          "dong": n.line_start,
-                                          "chu_thich": ct[n.line_start][:70],
-                                          "khoi": n.ma in KHOI})
-                di(n.than, muc + 1)
-        di(rec.tree, 0)
+        ds = _phang(rec.tree)
+        for n in ds:
+            if n.ma != "ma_tho" and n.line_start in ct:
+                o = theo_the.setdefault(n.ma, [0, 0])
+                o[0] += 1
+                # Đánh dấu đã sửa và lưu để kiểm tra thực tế sau ghi
+                for m in ds:
+                    m.da_sua = False
+                n.da_sua = True
+                rec.has_modifications = True
+                try:
+                    out_text = luu(rec).decode("utf-8")
+                except Exception:
+                    out_text = ""
+                n.da_sua = False
+
+                if ct[n.line_start] in out_text:
+                    co += 1
+                else:
+                    mat += 1
+                    o[1] += 1
+                    if len(vi_du) < 20:
+                        vi_du.append({"tep": p.name, "the": n.ma,
+                                      "dong": n.line_start,
+                                      "chu_thich": ct[n.line_start][:70],
+                                      "khoi": n.ma in KHOI})
     return {
-        "ten": "Cửa 2 — chú thích cuối dòng phải còn, kể cả trên thẻ khối",
-        "dat": mat == 0, "co": co, "mat": mat,
+        "ten": "Cửa 2 — chú thích cuối dòng phải còn sau khi lưu, kể cả trên thẻ khối",
+        "dat": (co > 0) and (mat == 0), "co": co, "mat": mat,
         "theo_the": {k: {"co_ct": v[0], "mat": v[1], "khoi": k in KHOI}
                      for k, v in sorted(theo_the.items())},
         "vi_du": vi_du,
@@ -223,27 +229,50 @@ def cua_2_chu_thich(doc, sinh_dong):
 
 # ------------------------------------------------------------------- cửa 3
 def cua_3_origin(kiem):
-    """Origin phải so BẰNG NHAU trên hostname, không dò chuỗi con.
+    """Origin phải so BẰNG NHAU trên hostname, chặn scheme lạ, userinfo, path, port sai.
 
-    Bản v1 dùng `"127.0.0.1" in origin`, nên http://127.0.0.1.evil.com lọt —
-    gõ vào máy chủ đang chạy ra mã 200. Ở đây gọi thẳng hàm, không cần dựng
-    máy chủ, nên cửa này chạy được trong CI.
+    Hợp đồng P1: Kiểm tra toàn diện 14 phép thử HTTP Origin và Referer.
     """
     class _Gia:
-        def __init__(self, o):
-            self.headers = {"Origin": o} if o else {}
+        def __init__(self, o=None, r=None):
+            self.headers = {}
+            if o is not None:
+                self.headers["Origin"] = o
+            if r is not None:
+                self.headers["Referer"] = r
 
     thu = [
-        ("http://127.0.0.1:8088", True, "trang that"),
-        ("http://localhost:8088", True, "trang that"),
-        ("", True, "cung nguon, khong co Origin"),
-        ("https://evil.example", False, "trang la"),
-        ("http://127.0.0.1.evil.com", False, "ten mien GIA chua 127.0.0.1"),
-        ("http://localhost.evil.com", False, "ten mien GIA chua localhost"),
-        ("http://evil.com/?x=127.0.0.1", False, "127.0.0.1 nam trong query"),
-        ("http://not-localhost.tld", False, "localhost la hau to"),
+        (_Gia("http://127.0.0.1:8088"), True, "trang that 127.0.0.1"),
+        (_Gia("http://localhost:8088"), True, "trang that localhost"),
+        (_Gia("http://[::1]:8088"), True, "trang that IPv6 loopback"),
+        (_Gia(""), True, "cung nguon, khong co Origin"),
+        (_Gia("https://evil.example"), False, "trang la"),
+        (_Gia("http://127.0.0.1.evil.com"), False, "ten mien GIA chua 127.0.0.1"),
+        (_Gia("http://localhost.evil.com"), False, "ten mien GIA chua localhost"),
+        (_Gia("http://evil.com/?x=127.0.0.1"), False, "127.0.0.1 nam trong query"),
+        (_Gia("http://not-localhost.tld"), False, "localhost la hau to"),
+        (_Gia("http://evil.com@localhost"), False, "chua userinfo"),
+        (_Gia("ftp://localhost"), False, "scheme khong hop le (ftp)"),
+        (_Gia("//localhost"), False, "thieu scheme"),
+        (_Gia("http://localhost/path"), False, "Origin khong duoc chua path"),
+        (_Gia("http://localhost:99999"), False, "port ngoai pham vi"),
+        (_Gia(None, "http://localhost:8088/app"), True, "Referer loopback hop le"),
+        (_Gia(None, "http://evil.com/app"), False, "Referer trang la"),
     ]
     ra, sai = [], 0
+    for req_obj, mong, ghi in thu:
+        try:
+            that = bool(kiem(req_obj))
+        except Exception as e:
+            that = None
+            ghi = ghi + " [" + type(e).__name__ + "]"
+        ok = that is mong
+        if not ok:
+            sai += 1
+        ra.append({"origin": req_obj.headers.get("Origin") or req_obj.headers.get("Referer") or "(khong co)",
+                   "mong": mong, "that": that, "dat": ok, "ghi": ghi})
+    return {"ten": "Cửa 3 — Origin so bằng hostname, không dò chuỗi con",
+            "dat": sai == 0, "sai": sai, "tong": len(thu), "thu": ra}
     for o, mong, ghi in thu:
         try:
             that = bool(kiem(_Gia(o)))
@@ -269,21 +298,30 @@ def cua_4_tu_kiem(doc, sinh_dong):
     tong = sai = tho = 0
     theo_the = {}
     vi_du = []
+    tong_dong_vat_ly = 0
+    dong_the_that = 0
+
     for p in _tep_py():
         dong = p.read_text(encoding="utf-8").splitlines()
+        tong_dong_vat_ly += len(dong)
         try:
             rec = doc(p)
         except Exception:
+            sai += 1
             continue
 
         def di(ns, muc):
-            nonlocal tong, sai, tho
+            nonlocal tong, sai, tho, dong_the_that
             for n in ns:
                 if n.ma == "ma_tho":
                     tho += 1
                     di(n.than, muc + 1)
                     continue
                 tong += 1
+                if n.line_start and n.line_end:
+                    dong_the_that += max(1, n.line_end - n.line_start + 1)
+                elif n.line_start:
+                    dong_the_that += 1
                 o = theo_the.setdefault(n.ma, [0, 0])
                 o[0] += 1
                 if n.line_start is None:
@@ -315,6 +353,7 @@ def cua_4_tu_kiem(doc, sinh_dong):
         "ten": "Cửa 4 — thẻ tả sai nguồn phải bị hạ xuống ma_tho",
         "dat": sai == 0, "the_that": tong, "tho": tho, "sai": sai,
         "phu_song": round(100 * (tong - sai) / max(tong + tho, 1), 1),
+        "phu_song_dong": round(100 * dong_the_that / max(tong_dong_vat_ly, 1), 1),
         "theo_the": {k: {"tong": v[0], "sai": v[1]}
                      for k, v in sorted(theo_the.items(),
                                         key=lambda x: -x[1][0])},
@@ -322,24 +361,136 @@ def cua_4_tu_kiem(doc, sinh_dong):
     }
 
 
-def chay():
+# Ô là MỘT biểu thức -> bọc ngoặc là cách sửa hợp lệ với mọi hình dạng.
+O_BIEU_THUC = ("gia_tri", "dieu_kien", "day")
+# Ô là DANH SÁCH ĐỐI SỐ -> bọc ngoặc thì hỏng: `(parents=True, exist_ok=True)`
+# không phải biểu thức. ĐÃ SAI MỘT LẦN 20/08, 59 thẻ Gọi hàm bị chấm trượt oan.
+# Thêm một đối số vị trí ở ĐẦU thì hợp lệ với cả `*args` lẫn `**kwargs`.
+O_DOI_SO = ("doi_so", "noi_dung")
+O_TEN = ("ten_bien", "ten_ham", "bien")
+O_DOI = O_BIEU_THUC + O_DOI_SO
+
+
+def _dot_bien(o: str, kieu: str, cu: str) -> str:
+    """Đổi ô sao cho VẪN HỢP CÚ PHÁP với mọi hình dạng đối số."""
+    if kieu == "ten":
+        return cu + "_zz"
+    thu = (["0, " + cu, "(" + cu + ")"] if o in O_DOI_SO
+           else ["(" + cu + ")"])
+    for x in thu:
+        try:
+            ast.parse("_(%s)" % x if o in O_DOI_SO else "_ = %s" % x)
+            return x
+        except SyntaxError:
+            continue
+    return cu + " "                    # không đổi được thì để bộ đo tự bắt
+
+
+def cua_4_doi_that(doc, luu):
+    """Đổi THẬT một ô: chỉ dòng của thẻ đó được đổi, không dòng nào khác.
+
+    Bản CST không dựng lại dòng từ ô bao giờ, nên câu hỏi "thẻ tả đúng nguồn
+    không" của cửa 4 cũ không còn nghĩa. Câu hỏi tương đương mà MẠNH HƠN: sửa
+    một ô thì vết sửa có nằm gọn trong thẻ ấy không, hay lan sang chỗ khác.
+    """
+    tong = sai = tho = 0
+    theo_the = {}
+    vi_du = []
+    tong_dong_vat_ly = 0
+    dong_the_that = 0
+
+    for p in _tep_py():
+        goc = p.read_text(encoding="utf-8").splitlines()
+        tong_dong_vat_ly += len(goc)
+        try:
+            rec = doc(p)
+        except Exception:
+            sai += 1
+            continue
+        ds = _phang(rec.tree)
+        for n in ds:
+            if n.ma == "ma_tho":
+                tho += 1
+                continue
+            o = next((k for k in O_DOI if k in n.o and n.o[k].strip()), None)
+            kieu = "bieu_thuc"
+            if o is None:
+                o = next((k for k in O_TEN if k in n.o and n.o[k].strip()), None)
+                kieu = "ten"
+            if o is None:
+                continue                       # thẻ không có ô nào sửa được
+            tong += 1
+            if n.line_start and n.line_end:
+                dong_the_that += max(1, n.line_end - n.line_start + 1)
+            elif n.line_start:
+                dong_the_that += 1
+            v = theo_the.setdefault(n.ma, [0, 0])
+            v[0] += 1
+            cu = n.o[o]
+            n.o[o] = _dot_bien(o, kieu, cu)
+            n.da_sua = True
+            rec.has_modifications = True
+            try:
+                ra = luu(rec).decode("utf-8").splitlines()
+            except Exception:
+                ra = None
+            n.o[o] = cu                        # trả lại nguyên trạng
+            n.da_sua = False
+            if ra is None:
+                sai += 1
+                v[1] += 1
+                continue
+            # SO ĐẦU VÀ ĐUÔI, không so theo chỉ số dòng tuyệt đối.
+            d = n.line_start - 1
+            c = (n.line_end or n.line_start)
+            duoi = len(goc) - c
+            gon = (goc[:d] == ra[:d]
+                   and (duoi == 0 or goc[c:] == ra[len(ra) - duoi:]))
+            if not gon or ra == goc:
+                sai += 1
+                v[1] += 1
+                if len(vi_du) < 20:
+                    vi_du.append({"tep": p.name, "the": n.ma,
+                                  "dong": n.line_start, "o": o,
+                                  "lan_ra": [] if gon else ["truoc/sau lech"],
+                                  "goc": goc[n.line_start - 1].strip()[:70]})
+    return {
+        "ten": "Cửa 4 — đổi thật một ô, vết sửa nằm gọn trong thẻ ấy",
+        "dat": (tong > 0) and (sai == 0), "the_that": tong, "tho": tho, "sai": sai,
+        "phu_song": round(100 * tong / max(tong + tho, 1), 1),
+        "phu_song_dong": round(100 * dong_the_that / max(tong_dong_vat_ly, 1), 1),
+        "theo_the": {k: {"tong": v[0], "sai": v[1]}
+                     for k, v in sorted(theo_the.items(),
+                                        key=lambda x: -x[1][0])},
+        "vi_du": vi_du,
+    }
+
+
+def chay(dung_cst: bool = False):
     """Chạy cả bốn cửa, ghi MỘT tệp JSON khoá đã sắp."""
     try:
         sys.path.insert(0, str(GOC))
-        from core.the_v1 import (doc_tep_py_sang_cay_the,
-                                 luu_cay_the_ra_tep_py, sinh_dong_the_don)
+        if dung_cst:
+            from core.the_cst import (doc_tep_py_sang_cay_the,
+                                      luu_cay_the_ra_tep_py,
+                                      sinh_dong_the_don)
+        else:
+            from core.the_v1 import (doc_tep_py_sang_cay_the,
+                                      luu_cay_the_ra_tep_py, sinh_dong_the_don)
         from interface.the_api import kiem_tra_origin_hop_le
     except Exception as e:
-        return None, "khong nap duoc core.the_v1 / interface.the_api: %r" % (e,)
+        return None, "khong nap duoc bo doc / interface.the_api: %r" % (e,)
 
     if not _tep_py():
         return None, "khong tim thay tep .py nao trong %s" % (THU_MUC,)
 
     cua = [
         cua_1_go_lai_y_cu(doc_tep_py_sang_cay_the, luu_cay_the_ra_tep_py),
-        cua_2_chu_thich(doc_tep_py_sang_cay_the, sinh_dong_the_don),
+        cua_2_chu_thich(doc_tep_py_sang_cay_the, luu_cay_the_ra_tep_py),
         cua_3_origin(kiem_tra_origin_hop_le),
-        cua_4_tu_kiem(doc_tep_py_sang_cay_the, sinh_dong_the_don),
+        (cua_4_doi_that(doc_tep_py_sang_cay_the, luu_cay_the_ra_tep_py)
+         if dung_cst else
+         cua_4_tu_kiem(doc_tep_py_sang_cay_the, sinh_dong_the_don)),
     ]
     # Tên hiển thị lấy TỪ `BO_THE_V1`, không chép tay sang đây. Mã `gan` là
     # khoá trong máy (khoá JSON, tên biến JS/Python) nên buộc không dấu; chữ
@@ -352,6 +503,7 @@ def chay():
         ten_the = {}
 
     so = {
+        "bo_doc": "the_cst (LibCST)" if dung_cst else "the_v1 (ast)",
         "ten_the": ten_the,
         "luc": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
         "kho": str(GOC),
@@ -361,7 +513,7 @@ def chay():
         "cua": cua,
     }
     RA.mkdir(parents=True, exist_ok=True)
-    (RA / "cua_cung.json").write_text(
+    (RA / ("cua_cung_cst.json" if dung_cst else "cua_cung.json")).write_text(
         json.dumps(so, ensure_ascii=False, sort_keys=True, indent=1),
         encoding="utf-8")
     return so, ""
@@ -369,18 +521,22 @@ def chay():
 
 def main() -> int:
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-    so, loi = chay()
+    so, loi = chay(dung_cst="--cst" in sys.argv)
     if so is None:
         print("KHONG DO DUOC: " + loi)
         return 2                       # khong do duoc, KHAC voi truot
     from bao_cao_cua_cung import in_bang, dung_trang, TRANG
     # doc LAI tu dia, khong dung `so` trong RAM: bang nguoi doc phai dung tu
     # dung so JSON da ghi (luat CLAUDE.md muc 5)
-    tu_so = json.loads((RA / "cua_cung.json").read_text(encoding="utf-8"))
+    ten_so = "cua_cung_cst.json" if "--cst" in sys.argv else "cua_cung.json"
+    tu_so = json.loads((RA / ten_so).read_text(encoding="utf-8"))
     in_bang(tu_so)
-    TRANG.write_text(dung_trang(tu_so), encoding="utf-8")
+    from pathlib import Path as _P
+    trang = (TRANG.with_name("bao_cao_cst.html") if "--cst" in sys.argv
+             else TRANG)
+    trang.write_text(dung_trang(tu_so), encoding="utf-8")
     print("\nso   : " + str(RA / "cua_cung.json"))
-    print("trang: " + str(TRANG))
+    print("trang: " + str(trang))
     return 0 if tu_so["dat_het"] else 1
 
 

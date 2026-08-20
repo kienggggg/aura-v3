@@ -271,3 +271,86 @@ def the_da_cu(khay: list[The], goc: Path) -> list[The]:
     """
     moi = {t.ten: t.bam for t in sinh_khay(goc)}
     return [t for t in khay if moi.get(t.ten) != t.bam]
+
+
+# ---------------------------------------------------------------------------
+# THẺ TỪ THƯ VIỆN CÀI NGOÀI
+#
+# Sếp hỏi 20/08: thư viện mới tải về và hàm người dùng tự viết thì app lấy đâu
+# ra mô tả để phân loại. Đo trên chính máy này:
+#
+#     hàm kho tự viết (280 hàm)   48% có docstring · 90% CÓ CHÚ KIỂU
+#     libcst   222 hàm   100% có tài liệu      pathlib  100%
+#     re        94%      json 88%   aiohttp 89%   yaml 33%  <- kém nhất
+#
+# Nên KHÔNG cần hỏi model để biết một hàm làm gì: `inspect` đọc thẳng được chữ
+# ký và tài liệu mà người viết thư viện đã để sẵn. Máy đọc cái có thật; model
+# chỉ được đụng vào chỗ máy đọc không ra, và khi đó vẫn phải vào sổ kèm băm.
+#
+# `sinh_khay` ở trên đọc MÃ NGUỒN của kho bằng AST. Hàm dưới đây đọc GÓI ĐÃ CÀI
+# bằng introspect — nhiều gói không phát hành mã nguồn, nhưng chữ ký và tài liệu
+# thì luôn có trong đối tượng đang chạy.
+# ---------------------------------------------------------------------------
+
+def sinh_khay_thu_vien(goi_ten: tuple[str, ...],
+                       toi_da_moi_goi: int = 40) -> list[The]:
+    """Sinh thẻ từ gói đã cài, bằng `inspect`, không đọc tệp mã nguồn.
+
+    Băm dựng từ PHIÊN BẢN GÓI + chữ ký + dòng tài liệu đầu, nên nâng cấp gói là
+    băm lệch và `the_da_cu` bắt được — cùng cơ chế đã dùng cho mã của kho.
+    Không có băm thì thẻ sẽ âm thầm mô tả sai sau mỗi lần `pip install -U`.
+    """
+    import importlib
+    import importlib.metadata as md
+    import inspect
+
+    ra: list[The] = []
+    for ten_goi in goi_ten:
+        try:
+            m = importlib.import_module(ten_goi)
+        except Exception:
+            continue                       # gói chưa cài thì bỏ qua, không nổ
+        try:
+            ban = md.version(ten_goi)
+        except Exception:
+            ban = getattr(m, "__version__", "?")
+        # `__all__` là danh sách tác giả gói CÔNG BỐ; `dir()` là tất cả những gì
+        # lọt ra ngoài. Ưu tiên cái tác giả công bố.
+        ten_ds = list(getattr(m, "__all__", None) or
+                      [x for x in dir(m) if not x.startswith("_")])
+        dem = 0
+        for nm in ten_ds:
+            if dem >= toi_da_moi_goi:
+                break
+            o = getattr(m, nm, None)
+            if o is None or not (inspect.isfunction(o) or inspect.isclass(o)
+                                 or inspect.isbuiltin(o)):
+                continue
+            try:
+                ck = "%s%s" % (nm, inspect.signature(o))
+            except (TypeError, ValueError):
+                ck = "%s(...)" % nm         # gói C không luôn có chữ ký
+            tai_lieu = (inspect.getdoc(o) or "").strip()
+            d = tai_lieu.splitlines()
+            ra.append(The(
+                ten="%s.%s" % (ten_goi, nm),
+                mo_dun="%s %s" % (ten_goi, ban),
+                chu_ky=ck if len(ck) <= 120 else ck[:117] + "...",
+                mo_ta=(d[0] if d else "")[:90],
+                bam=hashlib.sha256(
+                    ("%s|%s|%s" % (ban, ck, d[0] if d else ""))
+                    .encode("utf-8")).hexdigest()[:12],
+                tai_lieu=tai_lieu,
+            ))
+            dem += 1
+    return gan_phan_biet(ra)
+
+
+def khay_day_du(goc: Path, goi_ten: tuple[str, ...] = ()) -> list[The]:
+    """Khay gộp: hàm của kho (đọc mã) + hàm của gói đã cài (introspect).
+
+    Hai nguồn KHÁC NHAU nên giữ riêng hai hàm sinh, chỉ gộp ở đây — thẻ kho có
+    băm theo mã nguồn, thẻ gói có băm theo phiên bản, và trộn hai cách băm vào
+    một hàm là mở đường cho một loại thẻ cũ đi mà không ai bắt được.
+    """
+    return sinh_khay(goc) + sinh_khay_thu_vien(goi_ten)

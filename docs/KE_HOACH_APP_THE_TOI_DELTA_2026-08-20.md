@@ -546,3 +546,87 @@ C2   0/9   xoá lỗi khuôn    — lộ ra 61% lượt model không có gì đ�
 
 Mỗi lần gỡ một rào thì rào sau hiện ra. Đó không phải thất bại của phép đo — đó
 chính là việc của phép đo: bóc ra ba lớp mà một con số "2/9" không nói được.
+
+---
+
+## 13. CHẶNG C3 — bổ sâu + ép giá trị: 0/9. Và dự đoán của tôi SAI
+
+```
+nền (viết lại cả hàm)     2/9
+C  (thẻ, chưa ép)         1/9
+C2 (thẻ + ép khuôn)       0/9
+C3 (thẻ + ép + bổ sâu)    0/9
+CHỌN ĐÚNG THẺ             1/9   <- không nhúc nhích qua cả ba lượt
+```
+
+Ngưỡng đặt trước cho C3: `<= 1/9 -> đóng hẳn hướng thẻ cho Delta`. **0/9. Đóng.**
+
+### 13.1 Tôi dự đoán `dong_ho` sẽ đạt. Nó trượt.
+
+Lý lẽ của tôi: `now and X` bổ thành thẻ `va_hoac` có ô `phep` chỉ nhận `and` hoặc
+`or`; đang là `and` nên lựa chọn khác duy nhất chính là đáp án. Nhại lại trở nên
+bất khả thi.
+
+Thực tế bốn lượt:
+
+```
+luot 1  id='gan_7'  o={'gia_tri': 'now and datetime.now().astimezone()'}  y hệt cũ
+luot 2  id='gan_7'  o={'gia_tri': 'now and datetime.now().astimezone()'}  y hệt cũ
+luot 3  id='gan_7'  o={'gia_tri': 'now and datetime.now().astimezone()'}  y hệt cũ
+luot 4  id='gan_7'  o={'gia_tri': 'now and datetime.now().astimezone()'}  y hệt cũ
+```
+
+Model chọn thẻ **cha** (`gan`, ô chữ tự do), không chọn thẻ `va_hoac` con.
+
+Kiểm lại: thẻ `va_hoac_8` **CÓ** trong danh sách bày ra, hiện rõ `phep: 'and'`,
+và cả tệp chỉ có 8 thẻ nên **không phải bị cắt**. Model nhìn thấy và bỏ qua.
+
+### 13.2 Con số đóng lại toàn bộ hướng này
+
+Bóc cả 36 lượt của C3:
+
+```
+model trỏ vào thẻ câu lệnh   36/36   (gan 24 · tra_ve 12)
+model trỏ vào thẻ biểu thức   0/36   = 0%
+ô được sửa                    gia_tri x36  — ô CHỮ TỰ DO, không phải enum
+nhại lại giá trị cũ           32/36 = 89%
+```
+
+**Ràng buộc enum chưa bao giờ được kích hoạt, vì model không lần nào chọn một
+thẻ có enum.** Xây xong, bày ra, và bị bỏ qua 36/36 lần.
+
+### 13.3 Bài học, và nó là thứ đáng giá nhất của cả ba lượt
+
+**Hạ ngưỡng cho NGƯỜI không phải hạ ngưỡng cho MODEL.**
+
+Bản vẽ của Sếp hạ ngưỡng thật cho người: gắn thay vì gõ, và đo được 45% việc sửa
+xuống mức "chọn 1 trong ≤6". Cơ chế cũng chạy đúng — đổi ô `phep` thì đúng một
+dòng đổi, chú thích giữ nguyên cả khoảng trắng.
+
+Nhưng **đưa cho model một lựa chọn dễ hơn không làm nó chọn cái dễ hơn.** Model
+đi thẳng tới ô chữ tự do vì đó là chỗ trông giống "mã" nhất. Muốn nó dùng thẻ
+hẹp thì phải **không cho** dùng thẻ rộng, chứ không phải mời.
+
+### 13.4 Một biến thể CHƯA THỬ, ghi để người sau khỏi mò
+
+Không chạy — hồ sơ đang đóng theo ngưỡng. Nhưng nó là hệ quả trực tiếp của 13.3:
+
+**Giấu ô chữ tự do khi có thẻ con tả được nó.** Nếu thẻ `gan` không bày ô
+`gia_tri` ra khi biểu thức của nó đã bổ thành `va_hoac`, thì model **buộc** phải
+đi qua thẻ con — không còn chỗ nào khác để bấm.
+
+Đó là "ép" thật, khác với "mời". Muốn thử thì phải là phép đo mới, tên khác, và
+ghi rõ nó thay gì.
+
+### 13.5 Bức tường vẫn nguyên: ĐỊNH VỊ
+
+```
+máy định vị bằng phổ thực thi   3 mức, cả 3 TRƯỢT
+model định vị bằng chọn thẻ     1/9, không đổi qua C · C2 · C3
+```
+
+Ba lượt đo đổi cách trình bày, cách ép khuôn, độ sâu của thẻ — **con số "chọn
+đúng thẻ" đứng yên ở 1/9 suốt cả ba.** Không cách trình bày nào chạm tới nó.
+
+Đó là kết luận của chặng C: **vấn đề của Delta không nằm ở chỗ sửa, nó nằm ở chỗ
+tìm.** Và chưa có công cụ nào trong kho trả lời được câu ấy.

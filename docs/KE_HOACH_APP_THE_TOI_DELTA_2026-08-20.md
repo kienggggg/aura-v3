@@ -484,3 +484,65 @@ Không đề nghị làm ngay — hồ sơ đang đóng. Ghi để người sau 
 2. **Đưa dòng nghi ngờ vào lời hỏi.** Hiện model tự tìm trong cả cây thẻ.
    `dinh_vi.py` cho được tập dòng đã chạy — chưa đủ để định vị ở mức hàm, nhưng
    ở mức THẺ thì nó thu hẹp mạnh hơn nhiều. Chưa đo.
+
+---
+
+## 12. CHẶNG C2 — ép khuôn: 0/9. Ràng buộc ĂN, nhưng nó CHUYỂN chỗ hỏng
+
+```
+nền (viết lại cả hàm)     2/9
+C  (thẻ, chưa ép)         1/9
+C2 (thẻ + ép khuôn)       0/9
+CHỌN ĐÚNG THẺ             1/9   <- y hệt C
+```
+
+Dự đoán ghi trước khi chạy (commit `e413252`): *"không đạt 5/9, vì lỗi khuôn chỉ
+chiếm 39% lượt còn lỗi định vị chiếm 100% đề trượt"*. Đúng, và tệ hơn thế.
+
+### 12.1 Cơ chế nói ngược với con số
+
+```
+                        C (33 lượt)   C2 (36 lượt)
+chết ở khuôn            36%           6%      <- ràng buộc ĂN
+áp được tới mã          15%           31%     <- gấp đôi
+NHẠI LẠI ô cũ           30%           61%     <- gấp đôi, chỗ nghẽn MỚI
+```
+
+JSON hỏng 9→0, bịa id thẻ 4→0. **Ép khuôn làm đúng việc của nó.** Nhưng điểm
+tụt, vì nó **chuyển** chỗ hỏng từ *"không viết nổi khuôn"* sang *"không có gì để
+nói"*. Bỏ rào cú pháp đi thì lộ ra chỗ trống bên dưới.
+
+Đây là lý do phải đo cơ chế chứ không chỉ đo điểm. Nhìn `1/9 -> 0/9` thì kết
+luận "ép khuôn phản tác dụng"; nhìn cơ chế thì thấy ràng buộc **thành công** ở
+đúng thứ nó nhắm, và cái nó để lộ ra mới là bài toán thật.
+
+### 12.2 Ca sắc nhất — `dong_ho.py`
+
+Đột biến `or` → `and`. Sửa đúng là đổi lại `or`.
+
+```
+C  lượt 1: 'now or  datetime.now().astimezone()'   -> ĐẠT ngay
+C2 lượt 1: 'now and datetime.now().astimezone()'    y hệt cũ
+   lượt 2: '...astimezone(timezone.utc)'            đi thêm timezone
+   lượt 3: 'datetime.datetime.now()...'             thêm nữa
+   lượt 4: y hệt lượt 3
+```
+
+Model **không đụng vào chữ `and` lần nào** — nó đi sửa chỗ khác. Ràng buộc không
+gây ra chuyện đó; model chỉ đơn giản là không tìm ra.
+
+Và đây đúng là ca mà **bổ thẻ sâu** giải quyết: `now and X` bổ thành thẻ
+`va_hoac` có ô `phep` chỉ nhận `and` hoặc `or`. Đang là `and`, nên **lựa chọn
+khác duy nhất chính là đáp án** — và enum làm việc *nhại lại* trở nên bất khả
+thi khi thử lại.
+
+### 12.3 Ba lượt đo, ba lớp khác nhau
+
+```
+nền  2/9   viết lại cả hàm  — mỗi lượt là một cơ hội làm hỏng dòng khác
+C    1/9   thu bề mặt sửa   — nhưng 36% lượt chết ở khuôn JSON
+C2   0/9   xoá lỗi khuôn    — lộ ra 61% lượt model không có gì để nói
+```
+
+Mỗi lần gỡ một rào thì rào sau hiện ra. Đó không phải thất bại của phép đo — đó
+chính là việc của phép đo: bóc ra ba lớp mà một con số "2/9" không nói được.

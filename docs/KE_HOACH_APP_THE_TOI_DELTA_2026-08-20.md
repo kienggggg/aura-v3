@@ -630,3 +630,94 @@ Ba lượt đo đổi cách trình bày, cách ép khuôn, độ sâu của th�
 
 Đó là kết luận của chặng C: **vấn đề của Delta không nằm ở chỗ sửa, nó nằm ở chỗ
 tìm.** Và chưa có công cụ nào trong kho trả lời được câu ấy.
+
+---
+
+## 14. CẨM NANG DELTA — ý của Sếp, đo bằng máy, không cần model
+
+Sếp đề: *"cấy luật — lỗi cơ bản nào thì liên quan loại thẻ chức năng nào; thẻ đã
+phân theo chức năng rồi, khay lại ít thẻ, nên đặt luật được."*
+
+Ý này **khác hẳn C · C2 · C3**: ba lượt kia đổi cách SỬA, ý này nhắm vào chỗ
+TÌM — đúng chỗ đang gãy. Và nó **đo được không cần model**.
+
+Bộ đột biến có đúng năm loại, mỗi loại ứng thẳng một loại thẻ. Bảng dưới đọc từ
+`dung_de_loi.DotBien`, **không suy từ đáp án** (suy từ đáp án là fit vào bộ đề).
+
+### 14.1 Lỗi pytest KHÔNG nói ra được loại thẻ
+
+```
+phu_dinh    "assert None == 4"
+hang_so     "assert False is True"
+va_hoac     "assert False is True"     <- GIỐNG HỆT TỪNG CHỮ
+hang_bool   "assert True is False"
+```
+
+Hai loại đột biến khác nhau sinh **đúng một câu lỗi**. Trần của một cuốn cẩm nang
+chấm theo lỗi:
+
+```
+chữ ký = chỉ tên ngoại lệ                3 nhóm    13/29 = 45%
+chữ ký = ngoại lệ + KHUÔN dòng assert   19 nhóm    24/29 = 83%
+đoán bừa (chọn loại đông nhất)                      8/29 = 28%
+```
+
+**Con số 83% là bẫy.** 19 nhóm trên 29 đề nghĩa là 15 nhóm chỉ có MỘT đề — ở đó
+"trần" chỉ là tự nhớ lại chính nó. Bóc ra:
+
+```
+nhóm chỉ 1 đề    15 nhóm, 15 đề   -> vô nghĩa
+nhóm >= 2 đề      4 nhóm, 14 đề   -> đoán đúng 9/14 = 64%, đoán bừa 43%
+```
+
+**64% so với 43%** — có tín hiệu thật, nhưng khiêm tốn, và n=14 thì một đề là 7
+điểm phần trăm.
+
+Hai luật **sạch** có thật, dùng được ngay:
+
+```
+IndexError                          -> luôn là hằng số (2/2)
+một khuôn assert dài               -> luôn là hằng số (2/2)
+```
+
+Nhóm đông nhất — `AssertionError: assert False is True` — **lẫn 4 loại**
+(`hang_bool` 4 · `hang_so` 2 · `va_hoac` 1 · `phu_dinh` 1). Không luật nào tách
+được, vì thông tin không có ở đó.
+
+### 14.2 Biết đúng loại thẻ thì thu hẹp bao nhiêu
+
+Đây mới là câu quyết định cẩm nang có đáng xây không:
+
+```
+thẻ bày ra hiện nay       trung bình 103   (ít nhất 8, nhiều nhất 221)
+sau khi lọc theo loại      trung bình  37   -> còn 36%
+
+theo từng loại:
+  phu_dinh     6,6 thẻ    <- thu hẹp MẠNH
+  va_hoac     10,9 thẻ    <- thu hẹp mạnh
+  so_sanh     22,0 thẻ
+  hang_so     64,8 thẻ    <- gần như KHÔNG thu hẹp
+  hang_bool   80,0 thẻ    <- gần như KHÔNG thu hẹp
+```
+
+### 14.3 Kết luận: cẩm nang ĐÁNG XÂY, nhưng chỉ cho ba loại
+
+Ba loại **toán tử** (`phu_dinh` · `va_hoac` · `so_sanh`) là chỗ cẩm nang trả
+tiền, và chúng cũng đúng là ba loại **có ô enum**:
+
+```
+lỗi -> đoán đúng loại (64%) -> còn 7..22 thẻ -> mỗi thẻ có ô 2..10 giá trị
+```
+
+So với hiện nay: model chọn đúng thẻ **1/9 = 11%** trên trung bình 103 thẻ.
+
+Hai loại **hằng số** thì cẩm nang gần như vô dụng — hằng nằm trong mọi biểu
+thức, lọc theo loại còn 65–80 thẻ. Muốn thu hẹp chúng phải dùng tín hiệu khác
+(giá trị trong lỗi so với hằng trong mã), chưa đo.
+
+**Đây là hướng đầu tiên trong cả ngày chạm được vào bức tường ĐỊNH VỊ.** C · C2 ·
+C3 đều đổi cách sửa và con số `chọn đúng thẻ` đứng yên 1/9; cẩm nang đổi cách
+tìm, và số đo nói nó thu hẹp được thật.
+
+Chưa xây — mới đo trần. Xây thì phải viết luật từ **taxonomy đột biến**, không
+viết từ 29 đáp án, và đo trên bộ đề khác.

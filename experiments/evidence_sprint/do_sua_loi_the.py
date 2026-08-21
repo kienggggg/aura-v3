@@ -266,8 +266,16 @@ def mot_de(tam: Path, d: dict) -> dict:
                      "--no-header", "-p", "no:cacheprovider"],
                     capture_output=True, text=True, encoding="utf-8",
                     errors="replace", cwd=str(tam), timeout=600)
+                # XANH KHÔNG PHẢI ĐÚNG — xem lời dặn cùng tên trong
+                # do_sua_loi.py. Chấm thêm: có khôi phục đúng bản gốc không.
+                try:
+                    dung_nghia = (ast.dump(ast.parse(moi.decode("utf-8")))
+                                  == ast.dump(ast.parse(ast.unparse(ast.parse(goc)))))
+                except SyntaxError:
+                    dung_nghia = False
                 return {"trang_thai": "dat" if x.returncode == 0 else "vo_cho_khac",
                         "luot": luot, "ghi": ghi, "chon_dung_the": chon_dung,
+                        "dung_nghia": dung_nghia,
                         "ca_bo": (x.stdout or "")[-200:]}
             ma, loi = moi.decode("utf-8"), bao
             lich_su = ("\n=== LƯỢT %d VẪN ĐỎ ===\n%s\nĐừng lặp lại cách đó.\n"
@@ -353,6 +361,8 @@ def main() -> int:
     print("  không đo được             : %d" % kdd)
     print("  CHỌN ĐÚNG THẺ             : %d/%d   <- đo riêng với 'sửa đúng giá trị'"
           % (dung_the, len(so)))
+    print("  trong số ĐẠT, ĐÚNG NGHĨA  : %d/%d   <- xanh mà khôi phục đúng bản gốc"
+          % (sum(1 for x in so if x.get("dung_nghia")), dat))
     print("  tổng thời gian            : %.0f phút"
           % (sum(x.get("giay", 0) for x in so) / 60))
     print("  sổ: %s" % SO)

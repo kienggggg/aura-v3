@@ -172,15 +172,30 @@ def mot_de(tam: Path, d: dict, khay_day: list, co_the: int) -> dict:
             suy, va = tach(ra)
             sua, hong = ap_ham(ma, va)
             ghi.append({"luot": luot, "suy_luan": suy, "giay": round(g, 1),
-                        "hong": hong, "va": va[:600]})
+                        "hong": hong, "va": va})
             if hong:
                 lich_su = (f"\n=== LƯỢT {luot} CỦA BẠN KHÔNG ÁP ĐƯỢC ===\n{hong}\n")
                 continue
             f.write_text(sua, encoding="utf-8")
             m2, bao = chay_test(tam, tep_test)
             if m2 == 0:
+                # XANH KHÔNG PHẢI ĐÚNG — Sếp bắt được 20/08, và có bằng chứng:
+                # đề dong_ho, mã gốc `now or datetime.now()...`, đột biến đổi
+                # thành `and`, model viết `now if now else ...` rồi test xanh.
+                # Lý lẽ model nêu ra thì sai hẳn ("hàm không nhận được đối số
+                # now"). Nó xanh, nhưng không phải vì nó hiểu.
+                #
+                # Nên chấm thêm một cột: bản vá có KHÔI PHỤC ĐÚNG bản gốc không.
+                # E1 đã có cột này (`khoi_phuc_goc`); các bộ đo model thì chưa,
+                # nên mọi con số "n/9" từ trước tới nay đều là "n/9 XANH", chưa
+                # ai biết bao nhiêu trong đó là "đúng nghĩa".
+                try:
+                    dung_nghia = (ast.dump(ast.parse(sua))
+                                  == ast.dump(ast.parse(ast.unparse(ast.parse(goc)))))
+                except SyntaxError:
+                    dung_nghia = False
                 return {"trang_thai": "dat", "luot": luot, "ghi": ghi,
-                        "ham_nghi": ham_nghi}
+                        "dung_nghia": dung_nghia, "ham_nghi": ham_nghi}
             # `ma` là TOÀN VĂN tệp (để vá tiếp), `ma_dua` là phần cắt cho model.
             # Trộn hai cái là đưa cả tệp trở lại từ lượt 2 và mất luôn phép đo.
             ma, loi = sua, bao

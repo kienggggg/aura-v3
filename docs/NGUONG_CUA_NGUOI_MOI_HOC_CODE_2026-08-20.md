@@ -53,12 +53,17 @@ Ba phép đo độc lập cùng chỉ vào đó:
 máy định vị bằng phổ thực thi   3 mức, cả 3 TRƯỢT
    vì đột biến `<`->`<=` không tạo đường đi mới — cùng luồng, khác GIÁ TRỊ
 model định vị bằng chọn thẻ     1/9, không nhúc nhích qua C·C2·C3
-máy lật ngược từng chỗ (E1)     3/9 — và 3/3 với lỗi ĐƠN, 0/6 với lỗi kép
+máy lật ngược từng chỗ (E1)     3/9 — và 3/4 với lỗi ĐƠN, 0/5 với lỗi kép
 ```
 
 E1 là bằng chứng sạch nhất: khi máy **chạy thật 53 lần** để xem giá trị nào đổi
-thì nó giải được **mọi** đề một lỗi. Không suy luận, không model — chỉ là **nhìn
-được quãng giữa**.
+thì nó giải được **3 trong 4** đề một lỗi. Không suy luận, không model — chỉ là
+**nhìn được quãng giữa**.
+
+*(Sửa 21/08: chỗ này trước ghi "mọi đề một lỗi" và "3/3". Sổ
+`data/evidence_sprint/lat_nguoc.json` có **4** đề một lỗi, không phải 3 —
+`loai_cau_hoi.py` 1 lỗi TRƯỢT sau 6,3 giây. Đúng là **3/4**. Con số sai này đã
+lan sang kế hoạch của Antigravity trước khi bắt được.)*
 
 ## 4. Vì sao THẺ không lay chuyển được con số
 

@@ -1,0 +1,45 @@
+[
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 26.8,
+    "truoc_loc": 65,
+    "sau_loc": 15,
+    "model_tra": "1",
+    "chon": 1
+   },
+   {
+    "luot": 2,
+    "giay": 5.1,
+    "truoc_loc": 65,
+    "sau_loc": 4,
+    "model_tra": "1",
+    "chon": 1
+   },
+   {
+    "luot": 3,
+    "giay": 0.5,
+    "truoc_loc": 65,
+    "sau_loc": 15,
+    "model_tra": "1",
+    "chon": 1
+   },
+   {
+    "luot": 4,
+    "giay": 0.5,
+    "truoc_loc": 65,
+    "sau_loc": 4,
+    "model_tra": "1",
+    "chon": 1
+   }
+  ],
+  "dung_nghia": false,
+  "mo_ta_gieo": "chỗ 55: so sánh Lt",
+  "tep": "core/may_tinh.py",
+  "so_loi": 1,
+  "giay": 107.5
+ }
+]

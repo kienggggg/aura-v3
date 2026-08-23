@@ -1,0 +1,478 @@
+[
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 213.2,
+    "suy_luan": "{\n  \"id\": \"ham_46\",\n  \"o\": {\"tham_so\": \"text: str, now: datetime.date = datetime.date.today()\"}\n}",
+    "id": "ham_46",
+    "o": {
+     "tham_so": "text: str, now: datetime.date = datetime.date.today()"
+    },
+    "chon_dung_the": false,
+    "hong": ""
+   },
+   {
+    "luot": 2,
+    "giay": 111.7,
+    "suy_luan": "{\n  \"id\": \"ham_46\",\n  \"o\": {\n    \"tham_so\": \"text: str, now: datetime.date = datetime.date.today()\"\n  }\n}",
+    "id": "ham_46",
+    "o": {
+     "tham_so": "text: str, now: datetime.date = datetime.date.today()"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 3,
+    "giay": 19.2,
+    "suy_luan": "{\n  \"id\": \"ham_46\",\n  \"o\": {\n    \"tham_so\": \"text: str, now: datetime.date = datetime.date.today()\"\n  }\n}",
+    "id": "ham_46",
+    "o": {
+     "tham_so": "text: str, now: datetime.date = datetime.date.today()"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 4,
+    "giay": 19.0,
+    "suy_luan": "{\n  \"id\": \"ham_46\",\n  \"o\": {\n    \"tham_so\": \"text: str, now: datetime.date = datetime.date.today()\"\n  }\n}",
+    "id": "ham_46",
+    "o": {
+     "tham_so": "text: str, now: datetime.date = datetime.date.today()"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   }
+  ],
+  "chon_dung_the": false,
+  "tep": "core/may_tinh.py",
+  "so_loi": 1,
+  "giay": 365.5
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 240.0,
+    "hong": "không thấy JSON trong câu trả lời",
+    "ra": "{\n  \"id\": \"ham_46\",\n  \"o\": {\n    \"gia_tri\": \"def giai_phuong_trinh(text: str) -> str | None:\\n    goc = (text or '').strip()\\n    if '=' not in goc:\\n        return None\\n    khop = re.search('([0-9a-z\\\\s+\\\\-*/^().]+=[0-9a-z\\\\s+\\\\-*/^().]+)', goc)\\n    if not khop:\\n        return None\\n    pt = kho"
+   },
+   {
+    "luot": 2,
+    "giay": 24.7,
+    "suy_luan": "{ \"id\": \"tra_ve_75\", \"o\": { \"gia_tri\": \"f'ĐÃ GIẢI SẴN. Trả lời đúng ý này: \\\"{an} = {_goi_gon(nghiem)}\\\"\" } }",
+    "id": "tra_ve_75",
+    "o": {
+     "gia_tri": "f'ĐÃ GIẢI SẴN. Trả lời đúng ý này: \"{an} = {_goi_gon(nghiem)}\""
+    },
+    "chon_dung_the": false,
+    "hong": "áp thẻ hỏng: ParserSyntaxError('tokenizer error: unterminated string literal', line"
+   },
+   {
+    "luot": 3,
+    "giay": 24.7,
+    "suy_luan": "{\n  \"id\": \"tra_ve_75\",\n  \"o\": {\"gia_tri\": \"f'ĐÃ GIẢI SẴN. Trả lời đúng ý này: \\\"{an} = {_goi_gon(nghiem)}\\\"'\"}\n}",
+    "id": "tra_ve_75",
+    "o": {
+     "gia_tri": "f'ĐÃ GIẢI SẴN. Trả lời đúng ý này: \"{an} = {_goi_gon(nghiem)}\"'"
+    },
+    "chon_dung_the": false,
+    "hong": ""
+   },
+   {
+    "luot": 4,
+    "giay": 60.3,
+    "suy_luan": "{\n  \"id\": \"tra_ve_75\",\n  \"o\": {\n    \"gia_tri\": \"f'ĐÃ GIẢI SẴN. Trả lời đúng ý này: \\\"{an} = {_goi_gon(nghiem)}\\\"'\"\n  }\n}",
+    "id": "tra_ve_75",
+    "o": {
+     "gia_tri": "f'ĐÃ GIẢI SẴN. Trả lời đúng ý này: \"{an} = {_goi_gon(nghiem)}\"'"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   }
+  ],
+  "chon_dung_the": false,
+  "tep": "core/may_tinh.py",
+  "so_loi": 2,
+  "giay": 351.8
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 161.2,
+    "hong": "không thấy JSON trong câu trả lời",
+    "ra": "{\n  \"id\": \"ham_46\",\n  \"o\": {\n    \"gia_tri\": \"def giai_phuong_trinh(text: str) -> str | None:\\n    goc = (text or '').strip()\\n    if '=' not in goc:\\n        return None\\n    khop = re.search('([0-9a-z\\\\s+\\\\-*/^().]+=[0-9a-z\\\\s+\\\\-*/^().]+)', goc)\\n    if khop:\\n        pt = khop.group(1).replace('^"
+   },
+   {
+    "luot": 2,
+    "giay": 18.5,
+    "suy_luan": "{ \"id\": \"ham_46\", \"o\": { \"tham_so\": \"text: str, now: datetime.date = datetime.date.today()\" } }",
+    "id": "ham_46",
+    "o": {
+     "tham_so": "text: str, now: datetime.date = datetime.date.today()"
+    },
+    "chon_dung_the": false,
+    "hong": ""
+   },
+   {
+    "luot": 3,
+    "giay": 109.5,
+    "suy_luan": "{\n  \"id\": \"ham_46\",\n  \"o\": {\n    \"tham_so\": \"text: str, now: datetime.date = datetime.date.today()\"\n  }\n}",
+    "id": "ham_46",
+    "o": {
+     "tham_so": "text: str, now: datetime.date = datetime.date.today()"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 4,
+    "giay": 18.8,
+    "suy_luan": "{\n  \"id\": \"ham_46\",\n  \"o\": {\n    \"tham_so\": \"text: str, now: datetime.date = datetime.date.today()\"\n  }\n}",
+    "id": "ham_46",
+    "o": {
+     "tham_so": "text: str, now: datetime.date = datetime.date.today()"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   }
+  ],
+  "chon_dung_the": false,
+  "tep": "core/may_tinh.py",
+  "so_loi": 3,
+  "giay": 310.4
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 220.1,
+    "suy_luan": "{\n  \"id\": \"gan_72\",\n  \"o\": {\n    \"gia_tri\": \"loi_sep_noi(text).lower().strip()\"\n  }\n}",
+    "id": "gan_72",
+    "o": {
+     "gia_tri": "loi_sep_noi(text).lower().strip()"
+    },
+    "chon_dung_the": false,
+    "hong": ""
+   },
+   {
+    "luot": 2,
+    "giay": 86.8,
+    "suy_luan": "{\n  \"id\": \"gan_81\",\n  \"o\": {\n    \"gia_tri\": \"(value or '').strip()\"\n  }\n}",
+    "id": "gan_81",
+    "o": {
+     "gia_tri": "(value or '').strip()"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 3,
+    "giay": 18.7,
+    "suy_luan": "{\n  \"id\": \"gan_72\",\n  \"o\": {\n    \"gia_tri\": \"loi_sep_noi(text).lower().strip()\"\n  }\n}",
+    "id": "gan_72",
+    "o": {
+     "gia_tri": "loi_sep_noi(text).lower().strip()"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 4,
+    "giay": 18.2,
+    "suy_luan": "{\n  \"id\": \"gan_72\",\n  \"o\": {\n    \"gia_tri\": \"loi_sep_noi(text).lower().strip()\"\n  }\n}",
+    "id": "gan_72",
+    "o": {
+     "gia_tri": "loi_sep_noi(text).lower().strip()"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   }
+  ],
+  "chon_dung_the": false,
+  "tep": "core/web_search.py",
+  "so_loi": 1,
+  "giay": 346.0
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 79.7,
+    "suy_luan": "{\n  \"id\": \"gan_24\",\n  \"o\": {\n    \"gia_tri\": \"('tra mạng', 'tra cứu', 'tìm giúp', 'tìm hộ', 'search', 'goo')\"\n  }\n}",
+    "id": "gan_24",
+    "o": {
+     "gia_tri": "('tra mạng', 'tra cứu', 'tìm giúp', 'tìm hộ', 'search', 'goo')"
+    },
+    "chon_dung_the": false,
+    "hong": ""
+   },
+   {
+    "luot": 2,
+    "giay": 37.5,
+    "suy_luan": "{\n  \"id\": \"gan_20\",\n  \"o\": {\n    \"gia_tri\": \"500\"\n  }\n}",
+    "id": "gan_20",
+    "o": {
+     "gia_tri": "500"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 3,
+    "giay": 16.9,
+    "suy_luan": "{\n  \"id\": \"gan_20\",\n  \"o\": {\n    \"gia_tri\": \"500\"\n  }\n}",
+    "id": "gan_20",
+    "o": {
+     "gia_tri": "500"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 4,
+    "giay": 16.7,
+    "suy_luan": "{\n  \"id\": \"gan_20\",\n  \"o\": {\n    \"gia_tri\": \"500\"\n  }\n}",
+    "id": "gan_20",
+    "o": {
+     "gia_tri": "500"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   }
+  ],
+  "chon_dung_the": false,
+  "tep": "core/web_search.py",
+  "so_loi": 2,
+  "giay": 152.8
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 31.0,
+    "suy_luan": "{\n  \"id\": \"gan_33\",\n  \"o\": {\"gia_tri\": \"(text or '').lower()\"}\n}",
+    "id": "gan_33",
+    "o": {
+     "gia_tri": "(text or '').lower()"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 2,
+    "giay": 17.8,
+    "suy_luan": "{\n  \"id\": \"gan_33\",\n  \"o\": {\n    \"gia_tri\": \"(text or '').lower()\"\n  }\n}",
+    "id": "gan_33",
+    "o": {
+     "gia_tri": "(text or '').lower()"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 3,
+    "giay": 17.5,
+    "suy_luan": "{\n  \"id\": \"gan_33\",\n  \"o\": {\n    \"gia_tri\": \"(text or '').lower()\"\n  }\n}",
+    "id": "gan_33",
+    "o": {
+     "gia_tri": "(text or '').lower()"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 4,
+    "giay": 18.2,
+    "suy_luan": "{\n  \"id\": \"gan_33\",\n  \"o\": {\n    \"gia_tri\": \"(text or '').lower()\"\n  }\n}",
+    "id": "gan_33",
+    "o": {
+     "gia_tri": "(text or '').lower()"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   }
+  ],
+  "chon_dung_the": false,
+  "tep": "core/web_search.py",
+  "so_loi": 3,
+  "giay": 88.6
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 55.7,
+    "suy_luan": "{\n  \"id\": \"gan_7\",\n  \"o\": {\n    \"gia_tri\": \"now and datetime.now().astimezone()\"\n  }\n}",
+    "id": "gan_7",
+    "o": {
+     "gia_tri": "now and datetime.now().astimezone()"
+    },
+    "chon_dung_the": true,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 2,
+    "giay": 15.1,
+    "suy_luan": "{\n  \"id\": \"gan_7\",\n  \"o\": {\n    \"gia_tri\": \"now and datetime.now().astimezone(timezone.utc)\"\n  }\n}",
+    "id": "gan_7",
+    "o": {
+     "gia_tri": "now and datetime.now().astimezone(timezone.utc)"
+    },
+    "chon_dung_the": true,
+    "hong": ""
+   },
+   {
+    "luot": 3,
+    "giay": 47.5,
+    "suy_luan": "{\n  \"id\": \"gan_7\",\n  \"o\": {\n    \"gia_tri\": \"now and datetime.datetime.now().astimezone(datetime.timezone.utc)\"\n  }\n}",
+    "id": "gan_7",
+    "o": {
+     "gia_tri": "now and datetime.datetime.now().astimezone(datetime.timezone.utc)"
+    },
+    "chon_dung_the": true,
+    "hong": ""
+   },
+   {
+    "luot": 4,
+    "giay": 52.2,
+    "suy_luan": "{\n  \"id\": \"gan_7\",\n  \"o\": {\n    \"gia_tri\": \"now and datetime.datetime.now().astimezone(datetime.timezone.utc)\"\n  }\n}",
+    "id": "gan_7",
+    "o": {
+     "gia_tri": "now and datetime.datetime.now().astimezone(datetime.timezone.utc)"
+    },
+    "chon_dung_the": true,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   }
+  ],
+  "chon_dung_the": true,
+  "tep": "core/dong_ho.py",
+  "so_loi": 1,
+  "giay": 173.8
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 200.4,
+    "suy_luan": "{\n  \"id\": \"gan_26\",\n  \"o\": {\n    \"gia_tri\": \"_bo_dau(text).strip()\"\n  }\n}",
+    "id": "gan_26",
+    "o": {
+     "gia_tri": "_bo_dau(text).strip()"
+    },
+    "chon_dung_the": false,
+    "hong": ""
+   },
+   {
+    "luot": 2,
+    "giay": 114.0,
+    "suy_luan": "{\n  \"id\": \"gan_26\",\n  \"o\": {\n    \"gia_tri\": \"_bo_dau(text).strip().lower()\"\n  }\n}",
+    "id": "gan_26",
+    "o": {
+     "gia_tri": "_bo_dau(text).strip().lower()"
+    },
+    "chon_dung_the": false,
+    "hong": ""
+   },
+   {
+    "luot": 3,
+    "giay": 116.7,
+    "suy_luan": "{\n  \"id\": \"gan_11\",\n  \"o\": {\n    \"gia_tri\": \"re.compile('(?<!\\\\\\\\w)la\\\\\\\\s+ai(?!\\\\\\\\w)')\"\n  }\n}",
+    "id": "gan_11",
+    "o": {
+     "gia_tri": "re.compile('(?<!\\\\w)la\\\\s+ai(?!\\\\w)')"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 4,
+    "giay": 20.5,
+    "suy_luan": "{\n  \"id\": \"gan_11\",\n  \"o\": {\n    \"gia_tri\": \"re.compile('(?<!\\\\\\\\w)la\\\\\\\\s+ai(?!\\\\\\\\w)')\"\n  }\n}",
+    "id": "gan_11",
+    "o": {
+     "gia_tri": "re.compile('(?<!\\\\w)la\\\\s+ai(?!\\\\w)')"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   }
+  ],
+  "chon_dung_the": false,
+  "tep": "core/loai_cau_hoi.py",
+  "so_loi": 1,
+  "giay": 455.2
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 112.9,
+    "suy_luan": "{\n  \"id\": \"gan_20\",\n  \"o\": {\n    \"gia_tri\": \"unicodedata.normalize('NFD', (text or '').strip().lower())\"\n  }\n}",
+    "id": "gan_20",
+    "o": {
+     "gia_tri": "unicodedata.normalize('NFD', (text or '').strip().lower())"
+    },
+    "chon_dung_the": false,
+    "hong": ""
+   },
+   {
+    "luot": 2,
+    "giay": 129.6,
+    "suy_luan": "{\n  \"id\": \"gan_20\",\n  \"o\": {\n    \"gia_tri\": \"unicodedata.normalize('NFD', (text or '').strip().lower()) if text else ''\"\n  }\n}",
+    "id": "gan_20",
+    "o": {
+     "gia_tri": "unicodedata.normalize('NFD', (text or '').strip().lower()) if text else ''"
+    },
+    "chon_dung_the": false,
+    "hong": ""
+   },
+   {
+    "luot": 3,
+    "giay": 131.9,
+    "suy_luan": "{\n  \"id\": \"gan_20\",\n  \"o\": {\n    \"gia_tri\": \"unicodedata.normalize('NFD', (text or '').strip().lower()) if text else ''\"\n  }\n}",
+    "id": "gan_20",
+    "o": {
+     "gia_tri": "unicodedata.normalize('NFD', (text or '').strip().lower()) if text else ''"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 4,
+    "giay": 21.4,
+    "suy_luan": "{\n  \"id\": \"gan_20\",\n  \"o\": {\n    \"gia_tri\": \"unicodedata.normalize('NFD', (text or '').strip().lower()) if text else ''\"\n  }\n}",
+    "id": "gan_20",
+    "o": {
+     "gia_tri": "unicodedata.normalize('NFD', (text or '').strip().lower()) if text else ''"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   }
+  ],
+  "chon_dung_the": false,
+  "tep": "core/loai_cau_hoi.py",
+  "so_loi": 2,
+  "giay": 400.5
+ }
+]

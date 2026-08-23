@@ -18,6 +18,12 @@ BA CON SỐ, không gộp:
     Needle      chọn đúng / 28
     qwen        chọn đúng / 28
 
+    CHU Y 22/08/2026: `.venv-needle` (589 MB) DA XOA. Needle do xong va bi
+    loai bang so - 7/28 de, 25% luot sap. So van con o
+    `data/evidence_sprint/needle_vs_qwen.json` va
+    `docs/DO_NEEDLE_VA_KHAY_2026-08-20.md`. Muon chay lai thi phai DUNG LAI
+    venv truoc, khong phai chi goi lenh duoi day.
+
     .venv-needle\\Scripts\\python.exe -X utf8 experiments\\evidence_sprint\\do_needle_khay.py --needle
     venv\\Scripts\\python.exe        -X utf8 experiments\\evidence_sprint\\do_needle_khay.py --qwen
 """

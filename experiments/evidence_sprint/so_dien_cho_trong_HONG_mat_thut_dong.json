@@ -1,0 +1,471 @@
+[
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 270.8,
+    "tra_ve": [
+     "if cach >= 0:"
+    ],
+    "hong": "vỡ cú pháp: unindent does not match any outer indentation level (<unknow"
+   },
+   {
+    "luot": 2,
+    "giay": 13.9,
+    "tra_ve": [
+     "if cach >= 0:"
+    ],
+    "hong": "vỡ cú pháp: unindent does not match any outer indentation level (<unknow"
+   },
+   {
+    "luot": 3,
+    "giay": 13.0,
+    "tra_ve": [
+     "if cach >= 0:"
+    ],
+    "hong": "vỡ cú pháp: unindent does not match any outer indentation level (<unknow"
+   },
+   {
+    "luot": 4,
+    "giay": 13.0,
+    "tra_ve": [
+     "if cach >= 0:"
+    ],
+    "hong": "vỡ cú pháp: unindent does not match any outer indentation level (<unknow"
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 1,
+  "dap_an": [
+   "if nam is None and moc < hom_nay:"
+  ],
+  "tep": "core/may_tinh.py",
+  "so_loi": 1,
+  "giay": 311.6
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 222.8,
+    "tra_ve": [
+     "raise ValueError('chỉ nhận số')",
+     "raise ValueError('ngày không hợp lệ')"
+    ],
+    "hong": "vỡ cú pháp: expected an indented block after 'if' statement on line 35 ("
+   },
+   {
+    "luot": 2,
+    "giay": 16.3,
+    "tra_ve": [
+     "raise ValueError('chỉ nhận số')",
+     "raise ValueError('ngày không hợp lệ')"
+    ],
+    "hong": "vỡ cú pháp: expected an indented block after 'if' statement on line 35 ("
+   },
+   {
+    "luot": 3,
+    "giay": 17.1,
+    "tra_ve": [
+     "raise ValueError('chỉ nhận số')",
+     "moc = date(y + 1, m, d)"
+    ],
+    "hong": "vỡ cú pháp: expected an indented block after 'if' statement on line 35 ("
+   },
+   {
+    "luot": 4,
+    "giay": 17.7,
+    "tra_ve": [
+     "raise ValueError('chỉ nhận số')",
+     "raise ValueError('ngày không hợp lệ')"
+    ],
+    "hong": "vỡ cú pháp: expected an indented block after 'if' statement on line 35 ("
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 2,
+  "dap_an": [
+   "if isinstance(nut.value, bool) or not isinstance(nut.value, (int, floa",
+   "if nam is None and moc < hom_nay:"
+  ],
+  "tep": "core/may_tinh.py",
+  "so_loi": 2,
+  "giay": 274.8
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 229.3,
+    "tra_ve": [
+     "return None",
+     "    moc = date(y + 1, m, d)",
+     "        return None",
+     "    ket_qua = tinh_bieu_thuc(bieu_thuc)",
+     "        ket_qua = tinh_bieu_thuc(bieu_thuc)"
+    ],
+    "hong": "vỡ cú pháp: unexpected indent (<unknown>, line 83)"
+   },
+   {
+    "luot": 2,
+    "giay": 29.8,
+    "tra_ve": [
+     "return None",
+     "    moc = date(y, m, d)",
+     "    if moc < hom_nay:",
+     "        return None",
+     "    return moc",
+     "    if ket_qua is None:"
+    ],
+    "hong": "vỡ cú pháp: unexpected indent (<unknown>, line 83)"
+   },
+   {
+    "luot": 3,
+    "giay": 35.1,
+    "tra_ve": [
+     "return None",
+     "    moc = date(y, m, d)",
+     "    if moc < hom_nay:",
+     "        return None",
+     "    try:",
+     "        moc = date(y + 1, m, d)"
+    ],
+    "hong": "vỡ cú pháp: unexpected indent (<unknown>, line 83)"
+   },
+   {
+    "luot": 4,
+    "giay": 38.7,
+    "tra_ve": [
+     "return None",
+     "    moc = date(y, m, d)",
+     "    if moc < hom_nay:",
+     "        return None",
+     "    return moc",
+     "    ket_qua = tinh_bieu_thuc(bieu_thuc)"
+    ],
+    "hong": "vỡ cú pháp: unexpected indent (<unknown>, line 83)"
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 3,
+  "dap_an": [
+   "if not khop:",
+   "if nam is None and moc < hom_nay:",
+   "bieu_thuc = _rut_bieu_thuc(goc) or ''"
+  ],
+  "tep": "core/may_tinh.py",
+  "so_loi": 3,
+  "giay": 334.1
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 213.8,
+    "tra_ve": [
+     "host = f'[{hostname}]' if address else hostname"
+    ],
+    "hong": "vỡ cú pháp: expected an indented block after 'if' statement on line 297 "
+   },
+   {
+    "luot": 2,
+    "giay": 14.5,
+    "tra_ve": [
+     "if not address.is_global:",
+     "    return None"
+    ],
+    "hong": "vỡ cú pháp: expected an indented block after 'if' statement on line 297 "
+   },
+   {
+    "luot": 3,
+    "giay": 15.9,
+    "tra_ve": [
+     "if address is not None and (not address.is_global):",
+     "            return None"
+    ],
+    "hong": "vỡ cú pháp: expected an indented block after 'if' statement on line 297 "
+   },
+   {
+    "luot": 4,
+    "giay": 15.4,
+    "tra_ve": [
+     "if address is not None and (not address.is_global):",
+     "            return None"
+    ],
+    "hong": "vỡ cú pháp: expected an indented block after 'if' statement on line 297 "
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 1,
+  "dap_an": [
+   "return SearchResult(query, False, now, error='Tra xong nhưng không có "
+  ],
+  "tep": "core/web_search.py",
+  "so_loi": 1,
+  "giay": 260.5
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 215.5,
+    "tra_ve": [
+     "def to_dict(self) -> dict:",
+     "        return {'query': self.query, 'ok': self.ok, 'fetched_at': self.fetched_at, 'sources': [s.to_dict() for s in self.sources], 'error': self.error}"
+    ],
+    "hong": "vỡ cú pháp: unindent does not match any outer indentation level (<unknow"
+   },
+   {
+    "luot": 2,
+    "giay": 22.5,
+    "tra_ve": [
+     "def test_boc_duoc_nguon_that(run):",
+     "        run(_Proc(stdout=_EXA_OUTPUT))",
+     "        res = search(\"kimi k3\")",
+     "        assert res.ok is True"
+    ],
+    "hong": "vỡ cú pháp: unindent does not match any outer indentation level (<unknow"
+   },
+   {
+    "luot": 3,
+    "giay": 21.7,
+    "tra_ve": [
+     "def test_boc_duoc_nguon_that(run):",
+     "        run(_Proc(stdout=_EXA_OUTPUT))",
+     "        res = search(\"kimi k3\")",
+     "        assert res.ok is True"
+    ],
+    "hong": "vỡ cú pháp: unindent does not match any outer indentation level (<unknow"
+   },
+   {
+    "luot": 4,
+    "giay": 26.5,
+    "tra_ve": [
+     "def to_dict(self) -> dict:",
+     "        return {'query': self.query, 'ok': self.ok, 'fetched_at': self.fetched_at, 'sources': [s.to_dict() for s in self.sources], 'error': self.error}"
+    ],
+    "hong": "vỡ cú pháp: unindent does not match any outer indentation level (<unknow"
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 2,
+  "dap_an": [
+   "if not query:",
+   "return SearchResult(query, False, now, error=f'Câu cần tra dài quá {_M"
+  ],
+  "tep": "core/web_search.py",
+  "so_loi": 2,
+  "giay": 287.0
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 212.4,
+    "tra_ve": [
+     "host = f'[{hostname}]' if address else hostname",
+     "    return urlunsplit((parsed.scheme, host, parsed.path, parsed.query, parsed.fragment))"
+    ]
+   },
+   {
+    "luot": 2,
+    "giay": 19.4,
+    "tra_ve": [
+     "host = f'[{hostname}]' if address else hostname",
+     "    return urlunsplit((parsed.scheme, host, parsed.path, parsed.query, parsed.fragment))"
+    ]
+   },
+   {
+    "luot": 3,
+    "giay": 18.7,
+    "tra_ve": [
+     "host = f'[{hostname}]' if address else hostname",
+     "    return urlunsplit((parsed.scheme, host, parsed.path, parsed.query, parsed.fragment))"
+    ]
+   },
+   {
+    "luot": 4,
+    "giay": 18.7,
+    "tra_ve": [
+     "host = f'[{hostname}]' if address else hostname",
+     "    return urlunsplit((parsed.scheme, host, parsed.path, parsed.query, parsed.fragment))"
+    ]
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 3,
+  "dap_an": [
+   "raw_query = query or ''",
+   "if not query:",
+   "return SearchResult(query, False, now, error=f'Câu cần tra dài quá {_M"
+  ],
+  "tep": "core/web_search.py",
+  "so_loi": 3,
+  "giay": 274.3
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 53.0,
+    "tra_ve": [
+     "hien_tai = now if now else datetime.now()"
+    ],
+    "hong": "vỡ cú pháp: unexpected indent (<unknown>, line 24)"
+   },
+   {
+    "luot": 2,
+    "giay": 7.9,
+    "tra_ve": [
+     "hien_tai = now if now else datetime.now()"
+    ],
+    "hong": "vỡ cú pháp: unexpected indent (<unknown>, line 24)"
+   },
+   {
+    "luot": 3,
+    "giay": 8.0,
+    "tra_ve": [
+     "hien_tai = now if now is not None else datetime.now()"
+    ],
+    "hong": "vỡ cú pháp: unexpected indent (<unknown>, line 24)"
+   },
+   {
+    "luot": 4,
+    "giay": 610.6,
+    "tra_ve": [
+     "hien_tai = now if now else datetime.now()"
+    ],
+    "hong": "vỡ cú pháp: unexpected indent (<unknown>, line 24)"
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 1,
+  "dap_an": [
+   "hien_tai = now or datetime.now().astimezone()"
+  ],
+  "tep": "core/dong_ho.py",
+  "so_loi": 1,
+  "giay": 680.6
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 162.7,
+    "tra_ve": [
+     "return TRA_CUU"
+    ],
+    "hong": "vỡ cú pháp: unexpected indent (<unknown>, line 69)"
+   },
+   {
+    "luot": 2,
+    "giay": 9.8,
+    "tra_ve": [
+     "return TRA_CUU"
+    ],
+    "hong": "vỡ cú pháp: unexpected indent (<unknown>, line 69)"
+   },
+   {
+    "luot": 3,
+    "giay": 8.6,
+    "tra_ve": [
+     "return TRA_CUU"
+    ],
+    "hong": "vỡ cú pháp: unexpected indent (<unknown>, line 69)"
+   },
+   {
+    "luot": 4,
+    "giay": 8.6,
+    "tra_ve": [
+     "return TRA_CUU"
+    ],
+    "hong": "vỡ cú pháp: unexpected indent (<unknown>, line 69)"
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 1,
+  "dap_an": [
+   "if not isinstance(text, str) or not text.strip():"
+  ],
+  "tep": "core/loai_cau_hoi.py",
+  "so_loi": 1,
+  "giay": 193.1
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 161.2,
+    "tra_ve": [
+     "if not isinstance(text, str) and (not text.strip()):",
+     "        return SANG_TAC",
+     "    if not isinstance(text, str) and (not text.strip()):",
+     "        return TRA_CUU"
+    ],
+    "hong": "vỡ cú pháp: unindent does not match any outer indentation level (<unknow"
+   },
+   {
+    "luot": 2,
+    "giay": 27.0,
+    "tra_ve": [
+     "return TU_NGHI",
+     "    moc = _bo_dau(text)",
+     "    if _SANG_TAC.search(moc):",
+     "        return SANG_TAC",
+     "    if not isinstance(text, str) and (not text.strip()):",
+     "        return TU_NGHI"
+    ],
+    "hong": "vỡ cú pháp: unexpected indent (<unknown>, line 69)"
+   },
+   {
+    "luot": 3,
+    "giay": 23.8,
+    "tra_ve": [
+     "return TU_NGHI",
+     "    moc = _bo_dau(text)",
+     "    if _SANG_TAC.search(moc):",
+     "        return SANG_TAC",
+     "    if not isinstance(text, str) and (not text.strip()):",
+     "        return TU_NGHI"
+    ],
+    "hong": "vỡ cú pháp: unexpected indent (<unknown>, line 69)"
+   },
+   {
+    "luot": 4,
+    "giay": 13.5,
+    "tra_ve": [
+     "return TRA_CUU",
+     "    if not isinstance(text, str) and (not text.strip()):"
+    ],
+    "hong": "vỡ cú pháp: unexpected indent (<unknown>, line 69)"
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 2,
+  "dap_an": [
+   "if not isinstance(text, str) or not text.strip():",
+   "if _HOI_GIO_MAY.search(moc) and (not _TEN_RIENG.search(text)):"
+  ],
+  "tep": "core/loai_cau_hoi.py",
+  "so_loi": 2,
+  "giay": 226.5
+ }
+]

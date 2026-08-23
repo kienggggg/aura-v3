@@ -1,0 +1,918 @@
+[
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 218.6,
+    "tra_ve": [
+     "if cach >= 0:",
+     "    return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"Còn {cach} ngày nữa đến {moc:%d/%m/%Y}.\"'",
+     "return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"{moc:%d/%m/%Y} đã qua {-cach} ngày rồi.\"'"
+    ],
+    "chan": "dong 1: `if cach >= 0:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 2,
+    "giay": 33.3,
+    "tra_ve": [
+     "if cach >= 0:",
+     "    return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"Còn {cach} ngày nữa đến {moc:%d/%m/%Y}.\"'",
+     "return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"{moc:%d/%m/%Y} đã qua {-cach} ngày rồi.\"'"
+    ],
+    "chan": "dong 1: `if cach >= 0:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 3,
+    "giay": 33.4,
+    "tra_ve": [
+     "if cach >= 0:",
+     "    return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"Còn {cach} ngày nữa đến {moc:%d/%m/%Y}.\"'",
+     "return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"{moc:%d/%m/%Y} đã qua {-cach} ngày rồi.\"'"
+    ],
+    "chan": "dong 1: `if cach >= 0:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 4,
+    "giay": 36.0,
+    "tra_ve": [
+     "if cach >= 0:",
+     "            return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"Còn {cach} ngày nữa đến {moc:%d/%m/%Y}.\"'",
+     "        return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"{moc:%d/%m/%Y} đã qua {-cach} ngày rồi.\"'"
+    ],
+    "chan": "dong 1: `if cach >= 0:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 5,
+    "giay": 34.1,
+    "tra_ve": [
+     "if cach >= 0:",
+     "    return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"Còn {cach} ngày nữa đến {moc:%d/%m/%Y}.\"'",
+     "return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"{moc:%d/%m/%Y} đã qua {-cach} ngày rồi.\"'"
+    ],
+    "chan": "dong 1: `if cach >= 0:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 6,
+    "giay": 34.4,
+    "tra_ve": [
+     "if cach >= 0:",
+     "            return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"Còn {cach} ngày nữa đến {moc:%d/%m/%Y}.\"'",
+     "        return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"{moc:%d/%m/%Y} đã qua {-cach} ngày rồi.\"'"
+    ],
+    "chan": "dong 1: `if cach >= 0:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 7,
+    "giay": 33.4,
+    "tra_ve": [
+     "if cach >= 0:",
+     "    return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"Còn {cach} ngày nữa đến {moc:%d/%m/%Y}.\"'",
+     "return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"{moc:%d/%m/%Y} đã qua {-cach} ngày rồi.\"'"
+    ],
+    "chan": "dong 1: `if cach >= 0:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 8,
+    "giay": 34.0,
+    "tra_ve": [
+     "if cach >= 0:",
+     "    return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"Còn {cach} ngày nữa đến {moc:%d/%m/%Y}.\"'",
+     "return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"{moc:%d/%m/%Y} đã qua {-cach} ngày rồi.\"'"
+    ],
+    "chan": "dong 1: `if cach >= 0:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 9,
+    "giay": 35.6,
+    "tra_ve": [
+     "if cach >= 0:",
+     "    return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"Còn {cach} ngày nữa đến {moc:%d/%m/%Y}.\"'",
+     "return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"{moc:%d/%m/%Y} đã qua {-cach} ngày rồi.\"'"
+    ],
+    "chan": "dong 1: `if cach >= 0:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 10,
+    "giay": 33.3,
+    "tra_ve": [
+     "if cach >= 0:",
+     "            return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"Còn {cach} ngày nữa đến {moc:%d/%m/%Y}.\"'",
+     "        return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"{moc:%d/%m/%Y} đã qua {-cach} ngày rồi.\"'"
+    ],
+    "chan": "dong 1: `if cach >= 0:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 1,
+  "dap_an": [
+   "if nam is None and moc < hom_nay:"
+  ],
+  "tep": "core/may_tinh.py",
+  "so_loi": 1,
+  "giay": 526.8
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 195.6,
+    "tra_ve": [
+     "raise ValueError('chỉ nhận số')",
+     "raise ValueError('một ngày')"
+    ],
+    "chan": "dong 1: `raise ValueError('chỉ nhận số')` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 2,
+    "giay": 13.7,
+    "tra_ve": [
+     "raise ValueError('chỉ nhận số')",
+     "try:",
+     "    moc = date(y + 1, m, d)"
+    ],
+    "chan": "dong 1: `raise ValueError('chỉ nhận số')` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 3,
+    "giay": 13.6,
+    "tra_ve": [
+     "raise ValueError('chỉ nhận số')",
+     "try:",
+     "    moc = date(y + 1, m, d)"
+    ],
+    "chan": "dong 1: `raise ValueError('chỉ nhận số')` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 4,
+    "giay": 13.6,
+    "tra_ve": [
+     "raise ValueError('chỉ nhận số')",
+     "try:",
+     "    moc = date(y + 1, m, d)"
+    ],
+    "chan": "dong 1: `raise ValueError('chỉ nhận số')` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 5,
+    "giay": 14.1,
+    "tra_ve": [
+     "raise ValueError('chỉ nhận số')",
+     "try:",
+     "    moc = date(y + 1, m, d)"
+    ],
+    "chan": "dong 1: `raise ValueError('chỉ nhận số')` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 6,
+    "giay": 14.3,
+    "tra_ve": [
+     "raise ValueError('chỉ nhận số')",
+     "try:",
+     "    moc = date(y + 1, m, d)"
+    ],
+    "chan": "dong 1: `raise ValueError('chỉ nhận số')` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 7,
+    "giay": 13.7,
+    "tra_ve": [
+     "raise ValueError('chỉ nhận số')",
+     "try:",
+     "    moc = date(y + 1, m, d)"
+    ],
+    "chan": "dong 1: `raise ValueError('chỉ nhận số')` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 8,
+    "giay": 14.5,
+    "tra_ve": [
+     "raise ValueError('chỉ nhận số')",
+     "try:",
+     "    moc = date(y + 1, m, d)"
+    ],
+    "chan": "dong 1: `raise ValueError('chỉ nhận số')` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 9,
+    "giay": 14.7,
+    "tra_ve": [
+     "raise ValueError('chỉ nhận số')",
+     "try:",
+     "    moc = date(y + 1, m, d)"
+    ],
+    "chan": "dong 1: `raise ValueError('chỉ nhận số')` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 10,
+    "giay": 14.1,
+    "tra_ve": [
+     "raise ValueError('chỉ nhận số')",
+     "try:",
+     "    moc = date(y + 1, m, d)"
+    ],
+    "chan": "dong 1: `raise ValueError('chỉ nhận số')` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 2,
+  "dap_an": [
+   "if isinstance(nut.value, bool) or not isinstance(nut.value, (int, floa",
+   "if nam is None and moc < hom_nay:"
+  ],
+  "tep": "core/may_tinh.py",
+  "so_loi": 2,
+  "giay": 322.7
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 226.5,
+    "tra_ve": [
+     "return None",
+     "    moc = date(y + 1, m, d)",
+     "        return None",
+     "    ket_qua = tinh_bieu_thuc(bieu_thuc)",
+     "        ket_qua = tinh_bieu_thuc(bieu_thuc)"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 2,
+    "giay": 18.6,
+    "tra_ve": [
+     "return None",
+     "    moc = date(y, m, d)",
+     "    if moc < hom_nay:",
+     "        return None",
+     "    return moc"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 3,
+    "giay": 24.8,
+    "tra_ve": [
+     "return None",
+     "    moc = date(y + 1, m, d)",
+     "        return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"{bieu_thuc.strip()} = {_goi_gon(ket_qua)}.\"'"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 4,
+    "giay": 23.7,
+    "tra_ve": [
+     "return None",
+     "    moc = date(y + 1, m, d)",
+     "        return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"{bieu_thuc.strip()} = {_goi_gon(ket_qua)}.\"'"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 5,
+    "giay": 16.6,
+    "tra_ve": [
+     "return None",
+     "    moc = date(y, m, d)",
+     "    return moc",
+     "    ket_qua = tinh_bieu_thuc(bieu_thuc)"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 6,
+    "giay": 18.4,
+    "tra_ve": [
+     "return None",
+     "    moc = date(y, m, d)",
+     "    return moc",
+     "    ket_qua = tinh_bieu_thuc(bieu_thuc)"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 7,
+    "giay": 16.9,
+    "tra_ve": [
+     "return None",
+     "    moc = date(y, m, d)",
+     "    return moc",
+     "    ket_qua = tinh_bieu_thuc(bieu_thuc)"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 8,
+    "giay": 23.4,
+    "tra_ve": [
+     "return None",
+     "    moc = date(y + 1, m, d)",
+     "        return None",
+     "    ket_qua = tinh_bieu_thuc(bieu_thuc)",
+     "        ket_qua = tinh_bieu_thuc(bieu_thuc)"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 9,
+    "giay": 23.0,
+    "tra_ve": [
+     "return None",
+     "    moc = date(y + 1, m, d)",
+     "        return f'ĐÃ TÍNH SẴN. Trả lời đúng ý này: \"{bieu_thuc.strip()} = {_goi_gon(ket_qua)}.\"'"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 10,
+    "giay": 16.6,
+    "tra_ve": [
+     "return None",
+     "    moc = date(y, m, d)",
+     "    return moc",
+     "    ket_qua = tinh_bieu_thuc(bieu_thuc)"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 3,
+  "dap_an": [
+   "if not khop:",
+   "if nam is None and moc < hom_nay:",
+   "bieu_thuc = _rut_bieu_thuc(goc) or ''"
+  ],
+  "tep": "core/may_tinh.py",
+  "so_loi": 3,
+  "giay": 409.2
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 190.4,
+    "tra_ve": [
+     "f'[{hostname}]'"
+    ],
+    "chan": "dong 1: o nay phai la cau lenh loai Return, ban viet loai Expr."
+   },
+   {
+    "luot": 2,
+    "giay": 9.9,
+    "tra_ve": [
+     "return None"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 3,
+    "giay": 6.8,
+    "tra_ve": [
+     "return None"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 4,
+    "giay": 6.8,
+    "tra_ve": [
+     "return None"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 5,
+    "giay": 6.8,
+    "tra_ve": [
+     "return None"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 6,
+    "giay": 6.9,
+    "tra_ve": [
+     "return None"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 7,
+    "giay": 6.8,
+    "tra_ve": [
+     "return None"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 8,
+    "giay": 6.8,
+    "tra_ve": [
+     "return None"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 9,
+    "giay": 7.0,
+    "tra_ve": [
+     "return None"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 10,
+    "giay": 6.8,
+    "tra_ve": [
+     "return None"
+    ],
+    "chan": "dong 1: `return None` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 1,
+  "dap_an": [
+   "return SearchResult(query, False, now, error='Tra xong nhưng không có "
+  ],
+  "tep": "core/web_search.py",
+  "so_loi": 1,
+  "giay": 256.0
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 202.6,
+    "tra_ve": [
+     "def to_dict(self) -> dict:",
+     "        return {'query': self.query, 'ok': self.ok, 'fetched_at': self.fetched_at, 'sources': [s.to_dict() for s in self.sources], 'error': self.error}"
+    ],
+    "chan": "dong 1: `def to_dict(self) -> dict:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 2,
+    "giay": 31.7,
+    "tra_ve": [
+     "def to_dict(self) -> dict:",
+     "        return {'title': self.title, 'url': self.url, 'snippet': self.snippet}",
+     "    def to_dict(self) -> dict:",
+     "        return {'query': self.query, 'ok': self.ok, 'fetched_at': self.fetched_at, 'sources': [s.to_dict() for s in self.sources], 'error': self.error}"
+    ],
+    "chan": "dong 1: `def to_dict(self) -> dict:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 3,
+    "giay": 31.2,
+    "tra_ve": [
+     "def to_dict(self) -> dict:",
+     "    return {'title': self.title, 'url': self.url, 'snippet': self.snippet}",
+     "def to_dict(self) -> dict:",
+     "    return {'query': self.query, 'ok': self.ok, 'fetched_at': self.fetched_at, 'sources': [s.to_dict() for s in self.sources], 'error': self.error}"
+    ],
+    "chan": "dong 1: `def to_dict(self) -> dict:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 4,
+    "giay": 31.9,
+    "tra_ve": [
+     "def to_dict(self) -> dict:",
+     "        return {'title': self.title, 'url': self.url, 'snippet': self.snippet}",
+     "    def to_dict(self) -> dict:",
+     "        return {'query': self.query, 'ok': self.ok, 'fetched_at': self.fetched_at, 'sources': [s.to_dict() for s in self.sources], 'error': self.error}"
+    ],
+    "chan": "dong 1: `def to_dict(self) -> dict:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 5,
+    "giay": 31.7,
+    "tra_ve": [
+     "def to_dict(self) -> dict:",
+     "        return {'title': self.title, 'url': self.url, 'snippet': self.snippet}",
+     "    def to_dict(self) -> dict:",
+     "        return {'query': self.query, 'ok': self.ok, 'fetched_at': self.fetched_at, 'sources': [s.to_dict() for s in self.sources], 'error': self.error}"
+    ],
+    "chan": "dong 1: `def to_dict(self) -> dict:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 6,
+    "giay": 31.6,
+    "tra_ve": [
+     "def to_dict(self) -> dict:",
+     "        return {'title': self.title, 'url': self.url, 'snippet': self.snippet}",
+     "    def to_dict(self) -> dict:",
+     "        return {'query': self.query, 'ok': self.ok, 'fetched_at': self.fetched_at, 'sources': [s.to_dict() for s in self.sources], 'error': self.error}"
+    ],
+    "chan": "dong 1: `def to_dict(self) -> dict:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 7,
+    "giay": 31.7,
+    "tra_ve": [
+     "def to_dict(self) -> dict:",
+     "        return {'title': self.title, 'url': self.url, 'snippet': self.snippet}",
+     "    def to_dict(self) -> dict:",
+     "        return {'query': self.query, 'ok': self.ok, 'fetched_at': self.fetched_at, 'sources': [s.to_dict() for s in self.sources], 'error': self.error}"
+    ],
+    "chan": "dong 1: `def to_dict(self) -> dict:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 8,
+    "giay": 31.7,
+    "tra_ve": [
+     "def to_dict(self) -> dict:",
+     "        return {'title': self.title, 'url': self.url, 'snippet': self.snippet}",
+     "    def to_dict(self) -> dict:",
+     "        return {'query': self.query, 'ok': self.ok, 'fetched_at': self.fetched_at, 'sources': [s.to_dict() for s in self.sources], 'error': self.error}"
+    ],
+    "chan": "dong 1: `def to_dict(self) -> dict:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 9,
+    "giay": 31.8,
+    "tra_ve": [
+     "def to_dict(self) -> dict:",
+     "        return {'title': self.title, 'url': self.url, 'snippet': self.snippet}",
+     "    def to_dict(self) -> dict:",
+     "        return {'query': self.query, 'ok': self.ok, 'fetched_at': self.fetched_at, 'sources': [s.to_dict() for s in self.sources], 'error': self.error}"
+    ],
+    "chan": "dong 1: `def to_dict(self) -> dict:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 10,
+    "giay": 32.3,
+    "tra_ve": [
+     "def to_dict(self) -> dict:",
+     "        return {'title': self.title, 'url': self.url, 'snippet': self.snippet}",
+     "    def to_dict(self) -> dict:",
+     "        return {'query': self.query, 'ok': self.ok, 'fetched_at': self.fetched_at, 'sources': [s.to_dict() for s in self.sources], 'error': self.error}"
+    ],
+    "chan": "dong 1: `def to_dict(self) -> dict:` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 2,
+  "dap_an": [
+   "if not query:",
+   "return SearchResult(query, False, now, error=f'Câu cần tra dài quá {_M"
+  ],
+  "tep": "core/web_search.py",
+  "so_loi": 2,
+  "giay": 488.9
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 193.2,
+    "tra_ve": [
+     "host = f'[{hostname}]' if address else hostname",
+     "    return urlunsplit((parsed.scheme, host, parsed.path, parsed.query, parsed.fragment))"
+    ]
+   },
+   {
+    "luot": 2,
+    "giay": 10.2,
+    "tra_ve": [
+     "return f'[{hostname}]'"
+    ]
+   },
+   {
+    "luot": 3,
+    "giay": 11.4,
+    "tra_ve": [
+     "host = f'[{hostname}]' if address else hostname"
+    ]
+   },
+   {
+    "luot": 4,
+    "giay": 11.4,
+    "tra_ve": [
+     "host = f'[{hostname}]' if address else hostname"
+    ]
+   },
+   {
+    "luot": 5,
+    "giay": 11.3,
+    "tra_ve": [
+     "host = f'[{hostname}]' if address else hostname"
+    ]
+   },
+   {
+    "luot": 6,
+    "giay": 11.3,
+    "tra_ve": [
+     "host = f'[{hostname}]' if address else hostname"
+    ]
+   },
+   {
+    "luot": 7,
+    "giay": 11.3,
+    "tra_ve": [
+     "host = f'[{hostname}]' if address else hostname"
+    ]
+   },
+   {
+    "luot": 8,
+    "giay": 9.5,
+    "tra_ve": [
+     "return f'[{hostname}]'"
+    ]
+   },
+   {
+    "luot": 9,
+    "giay": 9.6,
+    "tra_ve": [
+     "return f'[{hostname}]'"
+    ]
+   },
+   {
+    "luot": 10,
+    "giay": 11.3,
+    "tra_ve": [
+     "host = f'[{hostname}]' if address else hostname"
+    ]
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 3,
+  "dap_an": [
+   "raw_query = query or ''",
+   "if not query:",
+   "return SearchResult(query, False, now, error=f'Câu cần tra dài quá {_M"
+  ],
+  "tep": "core/web_search.py",
+  "so_loi": 3,
+  "giay": 296.4
+ },
+ {
+  "trang_thai": "dat",
+  "luot": 1,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 320.1,
+    "tra_ve": [
+     "hien_tai = now if now is not None else datetime.now()"
+    ]
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 1,
+  "dap_an": [
+   "hien_tai = now or datetime.now().astimezone()"
+  ],
+  "tep": "core/dong_ho.py",
+  "so_loi": 1,
+  "giay": 322.3
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 143.0,
+    "tra_ve": [
+     "return TRA_CUU"
+    ],
+    "chan": "dong 1: `return TRA_CUU` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 2,
+    "giay": 8.1,
+    "tra_ve": [
+     "return TRA_CUU"
+    ],
+    "chan": "dong 1: `return TRA_CUU` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 3,
+    "giay": 8.0,
+    "tra_ve": [
+     "return TRA_CUU"
+    ],
+    "chan": "dong 1: `return TRA_CUU` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 4,
+    "giay": 8.0,
+    "tra_ve": [
+     "return TRA_CUU"
+    ],
+    "chan": "dong 1: `return TRA_CUU` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 5,
+    "giay": 8.0,
+    "tra_ve": [
+     "return TRA_CUU"
+    ],
+    "chan": "dong 1: `return TRA_CUU` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 6,
+    "giay": 7.9,
+    "tra_ve": [
+     "return TRA_CUU"
+    ],
+    "chan": "dong 1: `return TRA_CUU` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 7,
+    "giay": 8.4,
+    "tra_ve": [
+     "return TRA_CUU"
+    ],
+    "chan": "dong 1: `return TRA_CUU` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 8,
+    "giay": 8.2,
+    "tra_ve": [
+     "return TRA_CUU"
+    ],
+    "chan": "dong 1: `return TRA_CUU` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 9,
+    "giay": 8.1,
+    "tra_ve": [
+     "return TRA_CUU"
+    ],
+    "chan": "dong 1: `return TRA_CUU` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 10,
+    "giay": 8.0,
+    "tra_ve": [
+     "return TRA_CUU"
+    ],
+    "chan": "dong 1: `return TRA_CUU` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 1,
+  "dap_an": [
+   "if not isinstance(text, str) or not text.strip():"
+  ],
+  "tep": "core/loai_cau_hoi.py",
+  "so_loi": 1,
+  "giay": 216.3
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 156.0,
+    "tra_ve": [
+     "if not isinstance(text, str) and (not text.strip()):",
+     "        return SANG_TAC",
+     "    if not isinstance(text, str) and (not text.strip()):",
+     "        return TRA_CUU"
+    ],
+    "chan": "dong 1: do CHINH LA dong dang do. Khong duoc dien lai no."
+   },
+   {
+    "luot": 2,
+    "giay": 22.6,
+    "tra_ve": [
+     "return TU_NGHI",
+     "    moc = _bo_dau(text)",
+     "    if _SANG_TAC.search(moc):",
+     "        return SANG_TAC",
+     "    if not isinstance(text, str) and (not text.strip()):",
+     "        return TU_NGHI"
+    ],
+    "chan": "dong 1: `return TU_NGHI` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 3,
+    "giay": 38.8,
+    "tra_ve": [
+     "return TU_NGHI",
+     "    moc = _bo_dau(text)",
+     "    if _SANG_TAC.search(moc):",
+     "        return SANG_TAC",
+     "    if _HOI_NGUOI.search(moc):",
+     "        return TRA_CUU"
+    ],
+    "chan": "dong 1: `return TU_NGHI` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 4,
+    "giay": 38.8,
+    "tra_ve": [
+     "return TU_NGHI",
+     "    moc = _bo_dau(text)",
+     "    if _SANG_TAC.search(moc):",
+     "        return SANG_TAC",
+     "    if not isinstance(text, str) and (not text.strip()):",
+     "        return TU_NGHI"
+    ],
+    "chan": "dong 1: `return TU_NGHI` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 5,
+    "giay": 23.1,
+    "tra_ve": [
+     "return TU_NGHI",
+     "    moc = _bo_dau(text)",
+     "    if _SANG_TAC.search(moc):",
+     "        return SANG_TAC",
+     "    if _HOI_NGUOI.search(moc):",
+     "        return TRA_CUU"
+    ],
+    "chan": "dong 1: `return TU_NGHI` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 6,
+    "giay": 22.6,
+    "tra_ve": [
+     "return TU_NGHI",
+     "    moc = _bo_dau(text)",
+     "    if _SANG_TAC.search(moc):",
+     "        return SANG_TAC",
+     "    if _HOI_NGUOI.search(moc):",
+     "        return TRA_CUU"
+    ],
+    "chan": "dong 1: `return TU_NGHI` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 7,
+    "giay": 38.8,
+    "tra_ve": [
+     "return TU_NGHI",
+     "    moc = _bo_dau(text)",
+     "    if _SANG_TAC.search(moc):",
+     "        return SANG_TAC",
+     "    if not isinstance(text, str) and (not text.strip()):",
+     "        return TU_NGHI"
+    ],
+    "chan": "dong 1: `return TU_NGHI` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 8,
+    "giay": 22.6,
+    "tra_ve": [
+     "return TU_NGHI",
+     "    moc = _bo_dau(text)",
+     "    if _SANG_TAC.search(moc):",
+     "        return SANG_TAC",
+     "    if _HOI_NGUOI.search(moc):",
+     "        return TRA_CUU"
+    ],
+    "chan": "dong 1: `return TU_NGHI` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 9,
+    "giay": 22.7,
+    "tra_ve": [
+     "return TU_NGHI",
+     "    moc = _bo_dau(text)",
+     "    if _SANG_TAC.search(moc):",
+     "        return SANG_TAC",
+     "    if _HOI_NGUOI.search(moc):",
+     "        return TRA_CUU"
+    ],
+    "chan": "dong 1: `return TU_NGHI` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   },
+   {
+    "luot": 10,
+    "giay": 22.8,
+    "tra_ve": [
+     "return TU_NGHI",
+     "    moc = _bo_dau(text)",
+     "    if _SANG_TAC.search(moc):",
+     "        return SANG_TAC",
+     "    if _HOI_NGUOI.search(moc):",
+     "        return TRA_CUU"
+    ],
+    "chan": "dong 1: `return TU_NGHI` da co nguyen van o cho khac trong ma. O trong phai la mot dong KHAC, khong phai ban sao."
+   }
+  ],
+  "dung_nghia": false,
+  "so_cho_khoet": 2,
+  "dap_an": [
+   "if not isinstance(text, str) or not text.strip():",
+   "if _HOI_GIO_MAY.search(moc) and (not _TEN_RIENG.search(text)):"
+  ],
+  "tep": "core/loai_cau_hoi.py",
+  "so_loi": 2,
+  "giay": 409.5
+ }
+]

@@ -1,0 +1,338 @@
+[
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 500.2,
+    "hong": "",
+    "va": "```python\ndef _doc_ngay(text: str, hom_nay: date) -> date | None:\n    khop = _NGAY_THANG.search(_bo_dau(text or ''))\n    if not khop:\n        return None\n    ngay = int(khop.group(1) or khop.group(4))\n    thang = int(khop.group(2) or khop.group(5))\n    nam = int(khop.group(3) or khop.group(6) or hom_nay.year)\n    if thang < 1 or thang > 12 or ngay < 1 or ngay > 31:\n        return None\n    return date(nam, thang, ngay)\n```"
+   },
+   {
+    "luot": 2,
+    "giay": 194.4,
+    "hong": "bản vá vỡ cú pháp: unterminated triple-quoted string literal (detected at line ",
+    "va": "```python\ndef tinh_giup(text: str, *, now: datetime | None=None) -> str | None:\n    \"\"\"Bắt câu hỏi có phép toán trong lời người dùng và tính sẵn con số đúng.\n\n    Nhận cả phương trình, khoảng cách ngày, và dãy phép tính; không thấy gì thì\n    trả `None`.\n\n    Trả về CHUỖI chứ không phải số, vì thứ đi vào lời dặn là một câu khẳng định mà model chỉ việc chép lại — mọi c\n```"
+   },
+   {
+    "luot": 3,
+    "giay": 55.4,
+    "hong": "bản vá vỡ cú pháp: unterminated triple-quoted string literal (detected at line ",
+    "va": "```python\ndef tinh_giup(text: str, *, now: datetime | None=None) -> str | None:\n    \"\"\"Bắt câu hỏi có phép toán trong lời người dùng và tính sẵn con số đúng.\n\n    Nhận cả phương trình, khoảng cách ngày, và dãy phép tính; không thấy gì thì\n    trả `None`.\n\n    Trả về CHUỖI chứ không phải số, vì thứ đi vào lời dặn là một câu khẳng định mà model chỉ việc chép lại — mọi c\n```"
+   },
+   {
+    "luot": 4,
+    "giay": 55.1,
+    "hong": "bản vá vỡ cú pháp: unterminated triple-quoted string literal (detected at line ",
+    "va": "```python\ndef tinh_giup(text: str, *, now: datetime | None=None) -> str | None:\n    \"\"\"Bắt câu hỏi có phép toán trong lời người dùng và tính sẵn con số đúng.\n\n    Nhận cả phương trình, khoảng cách ngày, và dãy phép tính; không thấy gì thì\n    trả `None`.\n\n    Trả về CHUỖI chứ không phải số, vì thứ đi vào lời dặn là một câu khẳng định mà model chỉ việc chép lại — mọi c\n```"
+   }
+  ],
+  "trung_ban_goc": false,
+  "ham": [
+   "_doc_ngay"
+  ],
+  "tep": "core/may_tinh.py",
+  "so_loi": 1,
+  "giay": 807.3
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 506.3,
+    "hong": "",
+    "va": "```python\ndef _tinh_cay(nut: ast.AST, an: tuple[str, float] | None=None) -> float:\n    if isinstance(nut, ast.Num):\n        return nut.n\n    elif isinstance(nut, ast.BinOp):\n        return _PHEP[type(nut.op)](_tinh_cay(nut.left, an), _tinh_cay(nut.right, an))\n    elif isinstance(nut, ast.UnaryOp):\n        return _PHEP[type(nut.op)](_tinh_cay(nut.operand, an))\n    elif isinstance(nut, ast.Name):\n        if an and nut.id == an[0]:\n            return an[1]\n        else:\n            raise ValueError(f\"Tên không hợp lệ: {nut.id}\")\n    else:\n        raise ValueError(f\"Kiểu node không hợp lệ: {type(nut)}\")\n\ndef _doc_ngay(text: str, hom_nay: date) -> date | None:\n    khop = _NGAY_THANG.search(text)\n    if khop:\n        ngay, thang, nam = khop.groups()\n        nam = nam or hom_nay.year\n        thang = thang or hom_nay.month\n        ngay = ngay or hom_nay.day\n        return date(int(nam), int(thang), int(ngay))\n    return None\n```"
+   },
+   {
+    "luot": 2,
+    "giay": 409.1,
+    "hong": "",
+    "va": "```python\ndef tinh_bieu_thuc(bieu_thuc: str) -> float | None:\n    sach = (bieu_thuc or '').strip().replace('×', '*').replace('÷', '/')\n    sach = sach.replace('^', '**').replace(',', '.')\n    if not sach or not re.fullmatch('[0-9\\\\s+\\\\-*/%().]+', sach):\n        return None\n    if not any((ch.isdigit() for ch in sach)) or not any((ch in sach for ch in '+-*/%')):\n        return None\n    try:\n        return _tinh_cay(ast.parse(sach, mode='eval').body)\n    except (SyntaxError, ValueError, TypeError, ZeroDivisionError, OverflowError, RecursionError):\n        return None\n\ndef tinh_giup(text: str, *, now: datetime | None=None) -> str | None:\n    goc = (text or '').strip()\n    if not goc:\n        return None\n    hom_nay = (now or datetime.now()).date()\n    khong_dau = _bo_dau(goc)\n    pt = giai_phuong_trinh(goc)\n    if pt is not None:\n        return pt\n    if _HOI_CACH_NGAY.search(khong_dau):\n        moc = _doc_ngay(khong_dau, hom_nay)\n        if moc:\n            ngay_hien_tai = hom_nay\n            ngay_ket_thuc = moc\n            if ngay_ket_thuc < ngay_hien_tai:\n                ngay_ket_thuc += timedelta(days=365)\n            ngay_con_lai = (ngay_ket_thuc - ngay_hien_tai).days\n            return f'Chưa có {ngay_con_lai} ngày nữa đến {ngay_ket_thuc.strftime(\"%d/%m/%Y\")}.' if ngay_con_lai > 0 else 'Đã đến ngày 1 tháng 9.'\n    return None\n```"
+   },
+   {
+    "luot": 3,
+    "giay": 376.9,
+    "hong": "",
+    "va": "```python\ndef tinh_bieu_thuc(bieu_thuc: str) -> float | None:\n    sach = (bieu_thuc or '').strip().replace('×', '*').replace('÷', '/')\n    sach = sach.replace('^', '**').replace(',', '.')\n    if not sach or not re.fullmatch('[0-9\\\\s+\\\\-*/%().]+', sach):\n        return None\n    if not any((ch.isdigit() for ch in sach)) or not any((ch in sach for ch in '+-*/%')):\n        return None\n    try:\n        return _tinh_cay(ast.parse(sach, mode='eval').body)\n    except (SyntaxError, ValueError, TypeError, ZeroDivisionError, OverflowError, RecursionError):\n        return None\n\ndef tinh_giup(text: str, *, now: datetime | None=None) -> str | None:\n    goc = (text or '').strip()\n    if not goc:\n        return None\n    hom_nay = (now or datetime.now()).date()\n    khong_dau = _bo_dau(goc)\n    pt = giai_phuong_trinh(goc)\n    if pt is not None:\n        return pt\n    if _HOI_CACH_NGAY.search(khong_dau):\n        moc = _doc_ngay(khong_dau, hom_nay)\n        if moc:\n            ngay_hien_tai = hom_nay\n            ngay_ket_thuc = moc\n            if ngay_ket_thuc < ngay_hien_tai:\n                ngay_ket_thuc += timedelta(days=365)\n            ngay_con_lai = (ngay_ket_thuc - ngay_hien_tai).days\n            return f\"Chưa có {ngay_con_lai} ngày nữa đến {ngay_ket_thuc.strftime('%d/%m/%Y')}.\" if ngay_con_lai > 0 else 'Đã đến ngày 1 tháng 9.'\n    return None\n```"
+   },
+   {
+    "luot": 4,
+    "giay": 177.7,
+    "hong": "",
+    "va": "```python\ndef tinh_bieu_thuc(bieu_thuc: str) -> float | None:\n    sach = (bieu_thuc or '').strip().replace('×', '*').replace('÷', '/')\n    sach = sach.replace('^', '**').replace(',', '.')\n    if not sach or not re.fullmatch('[0-9\\\\s+\\\\-*/%().]+', sach):\n        return None\n    if not any((ch.isdigit() for ch in sach)) or not any((ch in sach for ch in '+-*/%')):\n        return None\n    try:\n        return _tinh_cay(ast.parse(sach, mode='eval').body)\n    except (SyntaxError, ValueError, TypeError, ZeroDivisionError, OverflowError, RecursionError):\n        return None\n\ndef tinh_giup(text: str, *, now: datetime | None=None) -> str | None:\n    goc = (text or '').strip()\n    if not goc:\n        return None\n    hom_nay = (now or datetime.now()).date()\n    khong_dau = _bo_dau(goc)\n    pt = giai_phuong_trinh(goc)\n    if pt is not None:\n        return pt\n    if _HOI_CACH_NGAY.search(khong_dau):\n        moc = _doc_ngay(khong_dau, hom_nay)\n        if moc:\n            ngay_hien_tai = hom_nay\n            ngay_ket_thuc = moc\n            if ngay_ket_thuc < ngay_hien_tai:\n                ngay_ket_thuc += timedelta(days=365)\n            ngay_con_lai = (ngay_ket_thuc - ngay_hien_tai).days\n            return f\"Chưa có {ngay_con_lai} ngày nữa đến {ngay_ket_thuc.strftime('%d/%m/%Y')}.\" if ngay_con_lai > 0 else 'Đã đến ngày 1 tháng 9.'\n    return None\n```"
+   }
+  ],
+  "trung_ban_goc": false,
+  "ham": [
+   "_doc_ngay",
+   "_tinh_cay"
+  ],
+  "tep": "core/may_tinh.py",
+  "so_loi": 2,
+  "giay": 1475.2
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 624.8,
+    "hong": "",
+    "va": "```python\ndef giai_phuong_trinh(text: str) -> str | None:\n    \"\"\"Giải phương trình bậc nhất một ẩn, hoặc `None` nếu không phải.\n\n    Fail-closed ở mọi chỗ nghi ngờ: nhiều ẩn, không bậc nhất, vô nghiệm, vô số\n    nghiệm — tất cả trả `None`.\n    \"\"\"\n    text = _bo_dau(text or '')\n    if not re.fullmatch(r'\\s*[+-]?\\d+\\s*x\\s*=\\s*[+-]?\\d+\\s*', text):\n        return None\n    a, b = map(int, re.findall(r'\\d+', text))\n    if a == 0:\n        return None\n    return f'x = {b / a:.2f}'\n\n\ndef _doc_ngay(text: str, hom_nay: date) -> date | None:\n    \"\"\"Đọc ngày từ chuỗi.\"\"\"\n    khop = _NGAY_THANG.fullmatch(text)\n    if khop:\n        ngay, thang, nam = khop.groups()\n        thang = int(thang) if thang else hom_nay.month\n        nam = int(nam) if nam else hom_nay.year\n        ngay = int(ngay)\n        if ngay > 31 or thang > 12 or nam < hom_nay.year:\n            return None\n        return date(nam, thang, ngay)\n    khop = _HOI_CACH_NGAY.fullmatch(text)\n    if khop:\n        return hom_nay + timedelta(days=1)\n    return None\n\n\ndef tinh_giup(text: str, *, now: datetime | None=None) -> str | None:\n    \"\"\"Bắt câu hỏi có phép toán trong lời người dùng và tính sẵn con số đúng.\n\n    Nhận cả phương trình, khoảng cách ngày, và dãy phép tính; không thấy gì thì\n    trả `None`.\n\n    Trả về CHUỖI chứ không phải số, vì thứ đi vào lời dặn là một câu khẳng định\n    mà model chỉ việc chép lại — mọi cách khác đều là mời nó tính lại.\n\n    Dòng đầu cũ tả GIÁ TRỊ TRẢ VỀ (\"Một dòng đã tính sẵn để nhét vào lời dặn\")\n"
+   },
+   {
+    "luot": 2,
+    "giay": 501.3,
+    "hong": "",
+    "va": "```python\ndef giai_phuong_trinh(text: str) -> str | None:\n    \"\"\"Giải phương trình bậc nhất một ẩn, hoặc `None` nếu không phải.\n\n    Fail-closed ở mọi chỗ nghi ngờ: nhiều ẩn, không bậc nhất, vô nghiệm, vô số\n    nghiệm — tất cả trả `None`.\n    \"\"\"\n    text = _bo_dau(text or '')\n    if not re.fullmatch('\\\\s*[+-]?\\\\d+\\\\s*x\\\\s*=\\\\s*[+-]?\\\\d+\\\\s*', text):\n        return None\n    a, b = map(int, re.findall('\\\\d+', text))\n    if a == 0:\n        return None\n    return f'x = {b / a:.2f}'\n\ndef tinh_giup(text: str, *, now: datetime | None=None) -> str | None:\n    \"\"\"Bắt câu hỏi có phép toán trong lời người dùng và tính sẵn con số đúng.\n\n    Nhận cả phương trình, khoảng cách ngày, và dãy phép tính; không thấy gì thì\n    trả `None`.\n\n    Trả về CHUỖI chứ không phải số, vì thứ đi vào lời dặn là một câu khẳng định\n    mà model chỉ việc chép lại — mọi cách khác đều là mời nó tính lại.\n\n    Dòng đầu cũ tả GIÁ TRỊ TRẢ VỀ (\"Một dòng đã tính sẵn để nhét vào lời dặn\")\n    chứ không tả VIỆC. Đo 20/08: thẻ này rơi khỏi cả khay 96 thẻ vì không chung\n    chữ nào với việc \"đáp lại một câu hỏi trong đó có phép toán\". Dòng đầu\n    docstring là thứ duy nhất khay đọc để xếp hạng — nó phải nói hàm LÀM GÌ.\n    \"\"\"\n    text = _bo_dau(text or '')\n    bieu_thuc = _rut_bieu_thuc(text)\n    if bieu_thuc:\n        ket_qua = tinh_bieu_thuc(bieu_thuc)\n        if ket_qua is not None:\n            return f'{text} = {_goi_gon(ket_qua)}'\n    ngay = _doc_ngay(text, now or datetime.now())\n    if ngay:\n        return f'{tex"
+   },
+   {
+    "luot": 3,
+    "giay": 299.8,
+    "hong": "",
+    "va": "```python\ndef giai_phuong_trinh(text: str) -> str | None:\n    \"\"\"Giải phương trình bậc nhất một ẩn, hoặc `None` nếu không phải.\n\n    Fail-closed ở mọi chỗ nghi ngờ: nhiều ẩn, không bậc nhất, vô nghiệm, vô số\n    nghiệm — tất cả trả `None`.\n    \"\"\"\n    text = _bo_dau(text or '')\n    if not re.fullmatch('\\\\s*[+-]?\\\\d+\\\\s*x\\\\s*=\\\\s*[+-]?\\\\d+\\\\s*', text):\n        return None\n    a, b = map(int, re.findall('\\\\d+', text))\n    if a == 0:\n        return None\n    return f'x = {b / a:.2f}'\n\ndef tinh_giup(text: str, *, now: datetime | None=None) -> str | None:\n    \"\"\"Bắt câu hỏi có phép toán trong lời người dùng và tính sẵn con số đúng.\n\n    Nhận cả phương trình, khoảng cách ngày, và dãy phép tính; không thấy gì thì\n    trả `None`.\n\n    Trả về CHUỖI chứ không phải số, vì thứ đi vào lời dặn là một câu khẳng định\n    mà model chỉ việc chép lại — mọi cách khác đều là mời nó tính lại.\n\n    Dòng đầu cũ tả GIÁ TRỊ TRẢ VỀ (\"Một dòng đã tính sẵn để nhét vào lời dặn\")\n    chứ không tả VIỆC. Đo 20/08: thẻ này rơi khỏi cả khay 96 thẻ vì không chung\n    chữ nào với việc \"đáp lại một câu hỏi trong đó có phép toán\". Dòng đầu\n    docstring là thứ duy nhất khay đọc để xếp hạng — nó phải nói hàm LÀM GÌ.\n    \"\"\"\n    text = _bo_dau(text or '')\n    bieu_thuc = _rut_bieu_thuc(text)\n    if bieu_thuc:\n        ket_qua = tinh_bieu_thuc(bieu_thuc)\n        if ket_qua is not None:\n            return f'{text} = {_goi_gon(ket_qua)}'\n    ngay = _doc_ngay(text, now or datetime.now())\n    if ngay:\n        return f'{tex"
+   },
+   {
+    "luot": 4,
+    "giay": 182.4,
+    "hong": "",
+    "va": "```python\ndef giai_phuong_trinh(text: str) -> str | None:\n    text = _bo_dau(text or '')\n    if not re.fullmatch('\\\\s*[+-]?\\\\d+\\\\s*x\\\\s*=\\\\s*[+-]?\\\\d+\\\\s*', text):\n        return None\n    a, b = map(int, re.findall('\\\\d+', text))\n    if a == 0:\n        return None\n    return f'x = {b / a:.2f}'\n\ndef tinh_bieu_thuc(bieu_thuc: str) -> float | None:\n    sach = (bieu_thuc or '').strip().replace('×', '*').replace('÷', '/')\n    sach = sach.replace('^', '**').replace(',', '.')\n    if not sach or not re.fullmatch('[0-9\\\\s+\\\\-*/%().]+', sach):\n        return None\n    if not any((ch.isdigit() for ch in sach)) or not any((ch in sach for ch in '+-*/%')):\n        return None\n    try:\n        return _tinh_cay(ast.parse(sach, mode='eval').body)\n    except (SyntaxError, ValueError, TypeError, ZeroDivisionError, OverflowError, RecursionError):\n        return None\n\ndef tinh_giup(text: str, *, now: datetime | None=None) -> str | None:\n    text = _bo_dau(text or '')\n    bieu_thuc = _rut_bieu_thuc(text)\n    if bieu_thuc:\n        ket_qua = tinh_bieu_thuc(bieu_thuc)\n        if ket_qua is not None:\n            return f'{text} = {_goi_gon(ket_qua)}'\n    ngay = _doc_ngay(text, now or datetime.now())\n    if ngay:\n        return f'{text} = {_goi_gon((ngay - now.date()).days)} ngày'\n    return None\n```"
+   }
+  ],
+  "trung_ban_goc": false,
+  "ham": [
+   "_doc_ngay",
+   "giai_phuong_trinh",
+   "tinh_giup"
+  ],
+  "tep": "core/may_tinh.py",
+  "so_loi": 3,
+  "giay": 1612.2
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 422.5,
+    "hong": "",
+    "va": "```python\ndef is_search_request(text: str) -> bool:\n    \"\"\"True khi câu hỏi cần dữ liệu ngoài đầu model.\n\n    Câu hỏi cần dữ liệu ngoài đầu model khi nó chứa từ khoá như 'tra mạng', 'tra cứu', 'tìm giúp', 'tìm hộ', 'search', 'google', 'tìm trên mạng', 'lên mạng', 'tra giúp', 'tìm thông tin'. Ngoài ra, câu hỏi cũng cần dữ liệu ngoài đầu model khi nó chứa từ khoá như 'mới nhất', 'hiện nay', 'bây giờ', 'hôm nay', 'gần đây', 'vừa ra', 'vừa phát hành', 'năm nay', 'tin tức', 'giá', 'phiên bản mới', 'cập nhật', 'đang hot', 'xu hướng', 'vừa công bố' nếu câu hỏi không phải đang nói về chính AURA, chào hỏi, hay hỏi về thời gian.\n\n    Args:\n        text (str): Câu hỏi cần kiểm tra.\n\n    Returns:\n        bool: True nếu câu hỏi cần dữ liệu ngoài đầu model, False nếu không.\n    \"\"\"\n    low = (text or '').lower()\n    if _khop(low, bo_dau(low), _ASK_WORDS):\n        return True\n    if _khop(low, bo_dau(low), _FRESH_WORDS):\n        return not any(_khop(low, bo_dau(low), _VE_CHINH_MINH) for _ in _CHAO_HOI + _HOI_NGAY_GIO)\n    return False\n```"
+   },
+   {
+    "luot": 2,
+    "giay": 95.1,
+    "hong": "",
+    "va": "```python\ndef search(query, limit, timeout_s) -> SearchResult:\n    \"\"\"Gửi một truy vấn tới dịch vụ tìm kiếm Exa, lấy về tối đa 8 nguồn.\n    -> Đo 20/08: khay thẻ chấm theo từ khoá, mà \"Tra mạng\" không chung một chữ nào với việc \"lấy kết quả từ dịch vụ t\n    \"\"\"\n    try:\n        # Simulate the search process\n        if \"Tra mạng\" in query:\n            return SearchResult(query=query, ok=False, fetched_at=datetime.now().isoformat(), error=\"Không tra được lúc này\")\n        \n        # Simulate fetching sources\n        sources = []\n        for _ in range(min(limit, 8)):\n            sources.append(Source(title=f\"Title {_}\", url=f\"URL {_}\", snippet=f\"Snippet {_}\"))\n        \n        return SearchResult(query=query, ok=True, fetched_at=datetime.now().isoformat(), sources=sources)\n    except Exception as e:\n        return SearchResult(query=query, ok=False, fetched_at=datetime.now().isoformat(), error=str(e))\n```"
+   },
+   {
+    "luot": 3,
+    "giay": 105.4,
+    "hong": "",
+    "va": "```python\ndef search(query, limit, timeout_s):\n    \"\"\"Gửi một truy vấn tới dịch vụ tìm kiếm Exa, lấy về tối đa 8 nguồn.\n    -> Đo 20/08: khay thẻ chấm theo từ khoá, mà \"Tra mạng\" không chung một chữ nào với việc \"lấy kết quả từ dịch vụ t\n    \"\"\"\n    try:\n        # Simulate the search process\n        if \"Tra mạng\" in query:\n            return SearchResult(query=query, ok=False, fetched_at=datetime.now().isoformat(), error=\"Không tra được lúc này\")\n        \n        # Simulate fetching sources\n        sources = []\n        for i in range(limit):\n            sources.append(Source(title=f\"Title {i}\", url=f\"URL {i}\", snippet=f\"Snippet {i}\"))\n        \n        return SearchResult(query=query, ok=True, fetched_at=datetime.now().isoformat(), sources=sources)\n    except Exception as e:\n        return SearchResult(query=query, ok=False, fetched_at=datetime.now().isoformat(), error=str(e))\n```"
+   },
+   {
+    "luot": 4,
+    "giay": 90.6,
+    "hong": "",
+    "va": "```python\ndef search(query, limit, timeout_s):\n    \"\"\"Gửi một truy vấn tới dịch vụ tìm kiếm Exa, lấy về tối đa 8 nguồn.\n    -> Đo 20/08: khay thẻ chấm theo từ khoá, mà \"Tra mạng\" không chung một chữ nào với việc \"lấy kết quả từ dịch vụ t\n    \"\"\"\n    try:\n        # Simulate the search process\n        if \"Tra mạng\" in query:\n            return SearchResult(query=query, ok=False, fetched_at=datetime.now().isoformat(), error=\"Không tra được lúc này\")\n        \n        # Simulate fetching sources\n        sources = []\n        for i in range(limit):\n            sources.append(Source(title=f\"Title {i}\", url=f\"URL {i}\", snippet=f\"Snippet {i}\"))\n        \n        return SearchResult(query=query, ok=True, fetched_at=datetime.now().isoformat(), sources=sources)\n    except Exception as e:\n        return SearchResult(query=query, ok=False, fetched_at=datetime.now().isoformat(), error=str(e))\n```"
+   }
+  ],
+  "trung_ban_goc": false,
+  "ham": [
+   "search"
+  ],
+  "tep": "core/web_search.py",
+  "so_loi": 1,
+  "giay": 718.5
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 231.4,
+    "hong": "",
+    "va": "```python\ndef is_search_request(text: str) -> bool:\n    \"\"\"True khi câu hỏi cần dữ liệu ngoài đầu model.\n\n    Câu hỏi cần dữ liệu ngoài đầu model nếu nó chứa từ khoá như 'tra mạng', 'tra cứu', 'tìm giúp', 'tìm hộ', 'search', 'google', 'tìm trên mạng', 'lên mạng', 'tra giúp', 'tìm thông tin', hoặc nếu nó chứa từ khoá như 'mới nhất', 'hiện nay', 'bây giờ', 'hôm nay', 'gần đây', 'vừa ra', 'vừa phát hành', 'năm nay', 'tin tức', 'giá', 'phiên bản mới', 'cập nhật', 'đang hot', 'xu hướng', 'vừa công bố', hoặc nếu nó chứa từ khoá như 'aura', 'em làm được gì', 'bạn làm được gì', 'bạn là ai', 'em là ai', 'mày là ai', 'giới thiệu về bản thân', 'bạn nhớ gì', 'em nhớ gì', hoặc nếu nó chứa từ khoá như 'chào', 'hello', 'hi ', 'xin chào', 'alo', hoặc nếu nó chứa từ khoá như 'thứ mấy', 'ngày bao nhiêu', 'mấy giờ', 'ngày mấy', 'hôm nay là ngày', 'hôm nay là thứ', 'bao nhiêu ngày nữa', hoặc nếu nó chứa từ khoá như 'của tôi', 'của mình', 'của tớ', 'của anh', 'của chị', 'tôi đã', 'tôi vừa', 'tôi có', 'tôi kể', 'tôi nói', 'tôi bảo', 'lúc nãy', 'ban nãy', 'hồi nãy', 'khi nãy', 'vừa nói', 'vừa kể', 'em nhớ', 'em còn nhớ', 'nhà tôi', 'nhà mình', hoặc nếu nó chứa từ khoá như 'viết hàm', 'viết code', 'viết đoạn mã', 'viết chương trình', 'viết giúp', 'viết cho tôi', 'viết một', 'sửa lỗi', 'sửa giúp', 'debug', 'refactor', 'dịch câu', 'dịch đoạn', 'đặt tên', 'gợi ý tên', 'tóm tắt lại'.\n    \"\"\"\n    low = (text or '').lower()\n    return any(_khop(low, bo_dau(low), tu_khoa) for tu_khoa in _ASK_WORDS + _FRESH"
+   },
+   {
+    "luot": 2,
+    "giay": 76.4,
+    "hong": "",
+    "va": "```python\ndef is_search_request(text: str) -> bool:\n    \"\"\"True khi câu hỏi cần dữ liệu ngoài đầu model.\"\"\"\n    low = (text or '').lower()\n    return _khop(low, bo_dau(low), _ASK_WORDS) or _khop(low, bo_dau(low), _FRESH_WORDS) or _khop(low, bo_dau(low), _VE_CHINH_MINH) or _khop(low, bo_dau(low), _CHAO_HOI) or _khop(low, bo_dau(low), _HOI_NGAY_GIO) or _khop(low, bo_dau(low), _CHUYEN_RIENG) or _khop(low, bo_dau(low), _VIEC_TU_LAM)\n```"
+   },
+   {
+    "luot": 3,
+    "giay": 127.1,
+    "hong": "",
+    "va": "```python\ndef is_search_request(text: str) -> bool:\n    \"\"\"True khi câu hỏi cần dữ liệu ngoài đầu model.\"\"\"\n    low = (text or '').lower()\n    return any(_khop(low, bo_dau(low), tu_khoa) for tu_khoa in _ASK_WORDS + _FRESH_WORDS + _VE_CHINH_MINH + _CHAO_HOI + _HOI_NGAY_GIO + _CHUYEN_RIENG + _VIEC_TU_LAM)\n```"
+   },
+   {
+    "luot": 4,
+    "giay": 61.8,
+    "hong": "",
+    "va": "```python\ndef is_search_request(text: str) -> bool:\n    \"\"\"True khi câu hỏi cần dữ liệu ngoài đầu model.\"\"\"\n    low = (text or '').lower()\n    return any(_khop(low, bo_dau(low), tu_khoa) for tu_khoa in _ASK_WORDS + _FRESH_WORDS + _VE_CHINH_MINH + _CHAO_HOI + _HOI_NGAY_GIO + _CHUYEN_RIENG + _VIEC_TU_LAM)\n```"
+   }
+  ],
+  "trung_ban_goc": false,
+  "ham": [
+   "search"
+  ],
+  "tep": "core/web_search.py",
+  "so_loi": 2,
+  "giay": 500.6
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 295.1,
+    "hong": "",
+    "va": "```python\ndef is_search_request(text: str) -> bool:\n    \"\"\"True khi câu hỏi cần dữ liệu ngoài đầu model.\n\n    Câu hỏi cần dữ liệu ngoài đầu model khi nó chứa từ khoá như 'tra mạng', 'tra cứu', 'tìm giúp', 'tìm hộ', 'search', 'google', 'tìm trên mạng', 'lên mạng', 'tra giúp', 'tìm thông tin'. Ngoài ra, câu hỏi cũng cần dữ liệu ngoài đầu model khi nó chứa từ khoá như 'mới nhất', 'hiện nay', 'bây giờ', 'hôm nay', 'gần đây', 'vừa ra', 'vừa phát hành', 'năm nay', 'tin tức', 'giá', 'phiên bản mới', 'cập nhật', 'đang hot', 'xu hướng', 'vừa công bố' nếu câu hỏi không phải đang nói về chính AURA, chào hỏi, hay hỏ.\n    \"\"\"\n    low = (text or '').lower()\n    return _khop(low, bo_dau(low), _ASK_WORDS) or \\\n           (_khop(low, bo_dau(low), _FRESH_WORDS) and not any(_khop(low, bo_dau(low), _VE_CHINH_MINH + _CHAO_HOI + _HOI_NGAY_GIO + _CHUYEN_RIENG)))\n```"
+   },
+   {
+    "luot": 2,
+    "giay": 60.6,
+    "hong": "",
+    "va": "```python\ndef is_search_request(text: str) -> bool:\n    \"\"\"True khi câu hỏi cần dữ liệu ngoài đầu model.\"\"\"\n    low = (text or '').lower()\n    return any(_khop(low, bo_dau(low), tu_khoa) for tu_khoa in _ASK_WORDS + _FRESH_WORDS + _VE_CHINH_MINH + _CHAO_HOI + _HOI_NGAY_GIO + _CHUYEN_RIENG + _VIEC_TU_LAM)\n```"
+   },
+   {
+    "luot": 3,
+    "giay": 143.5,
+    "hong": "",
+    "va": "```python\ndef is_search_request(text: str) -> bool:\n    \"\"\"True khi câu hỏi cần dữ liệu ngoài đầu model.\"\"\"\n    low = (text or '').lower()\n    return any(_khop(low, bo_dau(low), tu_khoa) for tu_khoa in _ASK_WORDS + _FRESH_WORDS + _VE_CHINH_MINH + _CHAO_HOI + _HOI_NGAY_GIO + _CHUYEN_RIENG + _VIEC_TU_LAM)\n```"
+   },
+   {
+    "luot": 4,
+    "giay": 67.9,
+    "hong": "",
+    "va": "```python\ndef is_search_request(text: str) -> bool:\n    \"\"\"True khi câu hỏi cần dữ liệu ngoài đầu model.\"\"\"\n    low = (text or '').lower()\n    return any(_khop(low, bo_dau(low), tu_khoa) for tu_khoa in _ASK_WORDS + _FRESH_WORDS + _VE_CHINH_MINH + _CHAO_HOI + _HOI_NGAY_GIO + _CHUYEN_RIENG + _VIEC_TU_LAM)\n```"
+   }
+  ],
+  "trung_ban_goc": false,
+  "ham": [
+   "search"
+  ],
+  "tep": "core/web_search.py",
+  "so_loi": 3,
+  "giay": 571.7
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 281.5,
+    "hong": "",
+    "va": "```python\ndef cau_gio(now: datetime | None=None) -> str:\n    \"\"\"Một dòng tiếng Việt nói rõ bây giờ là lúc nào, theo giờ máy của Sếp.\n\n    Nhận `now` để test đóng đinh được thời gian — một hàm đọc thẳng\n    `datetime.now()` bên trong thì không có cách nào kiểm.\n    \"\"\"\n    now = now or datetime.now()\n    ngay = now.strftime(\"%d\")\n    thang = now.strftime(\"%m\")\n    nam = now.strftime(\"%Y\")\n    thu = _THU[now.weekday()]\n    gio = now.strftime(\"%H:%M\")\n    return f\"Bây giờ là {thu} ngày {ngay} tháng {thang} năm {nam} {gio}\"\n```"
+   },
+   {
+    "luot": 2,
+    "giay": 130.0,
+    "hong": "",
+    "va": "```python\ndef cau_gio(now: datetime | None=None) -> str:\n    \"\"\"Một dòng tiếng Việt nói rõ bây giờ là lúc nào, theo giờ máy của Sếp.\n\n    Nhận `now` để test đóng đinh được thời gian — một hàm đọc thẳng\n    `datetime.now()` bên trong thì không có cách nào kiểm.\n    \"\"\"\n    now = now or datetime.now()\n    ngay = now.strftime('%d')\n    thang = now.strftime('%m')\n    nam = now.strftime('%Y')\n    thu = _THU[now.weekday()]\n    gio = now.strftime('%H:%M')\n    return f'Bây giờ là {thu} ngày {ngay} tháng {thang} năm {nam} {gio}'\n```"
+   },
+   {
+    "luot": 3,
+    "giay": 69.6,
+    "hong": "",
+    "va": "```python\ndef cau_gio(now: datetime | None=None) -> str:\n    \"\"\"Một dòng tiếng Việt nói rõ bây giờ là lúc nào, theo giờ máy của Sếp.\n\n    Nhận `now` để test đóng đinh được thời gian — một hàm đọc thẳng\n    `datetime.now()` bên trong thì không có cách nào kiểm.\n    \"\"\"\n    now = now or datetime.now()\n    ngay = now.strftime('%d')\n    thang = now.strftime('%m')\n    nam = now.strftime('%Y')\n    thu = _THU[now.weekday()]\n    gio = now.strftime('%H:%M')\n    return f'Bây giờ là {thu} ngày {ngay} tháng {thang} năm {nam} {gio}'\n```"
+   },
+   {
+    "luot": 4,
+    "giay": 67.7,
+    "hong": "",
+    "va": "```python\ndef cau_gio(now: datetime | None=None) -> str:\n    \"\"\"Một dòng tiếng Việt nói rõ bây giờ là lúc nào, theo giờ máy của Sếp.\n\n    Nhận `now` để test đóng đinh được thời gian — một hàm đọc thẳng\n    `datetime.now()` bên trong thì không có cách nào kiểm.\n    \"\"\"\n    now = now or datetime.now()\n    ngay = now.strftime('%d')\n    thang = now.strftime('%m')\n    nam = now.strftime('%Y')\n    thu = _THU[now.weekday()]\n    gio = now.strftime('%H:%M')\n    return f'Bây giờ là {thu} ngày {ngay} tháng {thang} năm {nam} {gio}'\n```"
+   }
+  ],
+  "trung_ban_goc": false,
+  "ham": [
+   "cau_gio"
+  ],
+  "tep": "core/dong_ho.py",
+  "so_loi": 1,
+  "giay": 555.1
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 458.3,
+    "hong": "",
+    "va": "```python\ndef loai(text: str) -> str:\n    \"\"\"Phân loại câu hỏi. Thứ tự xét CÓ Ý NGHĨA.\n\n    1. SÁNG TÁC thắng trước: \"viết một bài thơ về Hồ Chí Minh\" là làm thơ, không\n       phải tra tiểu sử. Xét sau thì tên riêng kéo nó sang TRA_CUU và AURA đi\n       tra 30 giây để rồi vẫn phải tự làm thơ.\n    2. TRA CỨU: hỏi về người, hoặc dữ kiện cụ thể, hoặc cần dữ liệu mới.\n    3. Còn lại TỰ NGHĨ — giữ nguyên hành vi cũ, không làm chậm những câu đang chạy tốt.\n    \"\"\"\n    text = _bo_dau(text)\n    if _SANG_TAC.search(text):\n        return SANG_TAC\n    if _HOI_NGUOI.search(text) or _HOI_GIO_MAY.search(text) or _HOI_DINH_NGHIA.search(text) or _TRO_VE_NGU_CANH.search(text) or _VI_TU_DU_KIEN.search(text):\n        return TRA_CUU\n    return TU_NGHI\n```"
+   },
+   {
+    "luot": 2,
+    "giay": 310.0,
+    "hong": "",
+    "va": "```python\ndef loai(text: str) -> str:\n    \"\"\"Phân loại câu hỏi. Thứ tự xét CÓ Ý NGHĨA.\n\n    1. SÁNG TÁC thắng trước: \"viết một bài thơ về Hồ Chí Minh\" là làm thơ, không\n       phải tra tiểu sử. Xét sau thì tên riêng kéo nó sang TRA_CUU và AURA đi\n       tra 30 giây để rồi vẫn phải tự làm thơ.\n    2. TRA CỨU: hỏi về người, hoặc dữ kiện cụ thể, hoặc cần dữ liệu mới.\n    3. Còn lại TỰ NGHĨ — giữ nguyên hành vi cũ, không làm chậm những câu đang chạy tốt.\n    \"\"\"\n    text = _bo_dau(text)\n    if _SANG_TAC.search(text):\n        return SANG_TAC\n    if _HOI_NGUOI.search(text) or _HOI_GIO_MAY.search(text) or _HOI_DINH_NGHIA.search(text) or _TRO_VE_NGU_CANH.search(text) or _VI_TU_DU_KIEN.search(text):\n        return TRA_CUU\n    return TU_NGHI\n```"
+   },
+   {
+    "luot": 3,
+    "giay": 134.8,
+    "hong": "",
+    "va": "```python\ndef loai(text: str) -> str:\n    \"\"\"Phân loại câu hỏi. Thứ tự xét CÓ Ý NGHĨA.\n\n    1. SÁNG TÁC thắng trước: \"viết một bài thơ về Hồ Chí Minh\" là làm thơ, không\n       phải tra tiểu sử. Xét sau thì tên riêng kéo nó sang TRA_CUU và AURA đi\n       tra 30 giây để rồi vẫn phải tự làm thơ.\n    2. TRA CỨU: hỏi về người, hoặc dữ kiện cụ thể, hoặc cần dữ liệu mới.\n    3. Còn lại TỰ NGHĨ — giữ nguyên hành vi cũ, không làm chậm những câu đang chạy tốt.\n    \"\"\"\n    text = _bo_dau(text)\n    if _SANG_TAC.search(text):\n        return SANG_TAC\n    if _HOI_NGUOI.search(text) or _HOI_GIO_MAY.search(text) or _HOI_DINH_NGHIA.search(text) or _TRO_VE_NGU_CANH.search(text) or _VI_TU_DU_KIEN.search(text):\n        return TRA_CUU\n    return TU_NGHI\n```"
+   },
+   {
+    "luot": 4,
+    "giay": 163.5,
+    "hong": "",
+    "va": "```python\ndef loai(text: str) -> str:\n    \"\"\"Phân loại câu hỏi. Thứ tự xét CÓ Ý NGHĨA.\n\n    1. SÁNG TÁC thắng trước: \"viết một bài thơ về Hồ Chí Minh\" là làm thơ, không\n       phải tra tiểu sử. Xét sau thì tên riêng kéo nó sang TRA_CUU và AURA đi\n       tra 30 giây để rồi vẫn phải tự làm thơ.\n    2. TRA CỨU: hỏi về người, hoặc dữ kiện cụ thể, hoặc cần dữ liệu mới.\n    3. Còn lại TỰ NGHĨ — giữ nguyên hành vi cũ, không làm chậm những câu đang chạy tốt.\n    \"\"\"\n    text = _bo_dau(text)\n    if _SANG_TAC.search(text):\n        return SANG_TAC\n    if _HOI_NGUOI.search(text) or _HOI_GIO_MAY.search(text) or _HOI_DINH_NGHIA.search(text) or _TRO_VE_NGU_CANH.search(text) or _VI_TU_DU_KIEN.search(text):\n        return TRA_CUU\n    return TU_NGHI\n```"
+   }
+  ],
+  "trung_ban_goc": false,
+  "ham": [
+   "loai"
+  ],
+  "tep": "core/loai_cau_hoi.py",
+  "so_loi": 1,
+  "giay": 1072.1
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 247.1,
+    "hong": "",
+    "va": "```python\ndef loai(text: str) -> str:\n    \"\"\"Phân loại câu hỏi. Thứ tự xét CÓ Ý NGHĨA.\n\n    1. SÁNG TÁC thắng trước: \"viết một bài thơ về Hồ Chí Minh\" là làm thơ, không\n       phải tra tiểu sử. Xét sau thì tên riêng kéo nó sang TRA_CUU và AURA đi\n       tra 30 giây để rồi vẫn phải tự làm thơ.\n    2. TRA CỨU: hỏi về người, hoặc dữ kiện cụ thể, hoặc cần dữ liệu mới.\n    3. Còn lại TỰ NGHĨ — giữ nguyên hành vi cũ, không làm chậm những câu đang chạy tốt.\n    \"\"\"\n    text = _bo_dau(text)\n    if _SANG_TAC.search(text):\n        return SANG_TAC\n    if _HOI_NGUOI.search(text) or _HOI_GIO_MAY.search(text) or _HOI_DINH_NGHIA.search(text) or _TRO_VE_NGU_CANH.search(text) or _VI_TU_DU_KIEN.search(text):\n        return TRA_CUU\n    return TU_NGHI\n```"
+   },
+   {
+    "luot": 2,
+    "giay": 244.8,
+    "hong": "",
+    "va": "```python\ndef loai(text: str) -> str:\n    \"\"\"Phân loại câu hỏi. Thứ tự xét CÓ Ý NGHĨA.\n\n    1. SÁNG TÁC thắng trước: \"viết một bài thơ về Hồ Chí Minh\" là làm thơ, không\n       phải tra tiểu sử. Xét sau thì tên riêng kéo nó sang TRA_CUU và AURA đi\n       tra 30 giây để rồi vẫn phải tự làm thơ.\n    2. TRA CỨU: hỏi về người, hoặc dữ kiện cụ thể, hoặc cần dữ liệu mới.\n    3. Còn lại TỰ NGHĨ — giữ nguyên hành vi cũ, không làm chậm những câu đang chạy tốt.\n    \"\"\"\n    text = _bo_dau(text)\n    if _SANG_TAC.search(text):\n        return SANG_TAC\n    if _HOI_NGUOI.search(text) or _HOI_GIO_MAY.search(text) or _HOI_DINH_NGHIA.search(text) or _TRO_VE_NGU_CANH.search(text) or _VI_TU_DU_KIEN.search(text):\n        return TRA_CUU\n    return TU_NGHI\n```"
+   },
+   {
+    "luot": 3,
+    "giay": 108.9,
+    "hong": "",
+    "va": "```python\ndef loai(text: str) -> str:\n    \"\"\"Phân loại câu hỏi. Thứ tự xét CÓ Ý NGHĨA.\n\n    1. SÁNG TÁC thắng trước: \"viết một bài thơ về Hồ Chí Minh\" là làm thơ, không\n       phải tra tiểu sử. Xét sau thì tên riêng kéo nó sang TRA_CUU và AURA đi\n       tra 30 giây để rồi vẫn phải tự làm thơ.\n    2. TRA CỨU: hỏi về người, hoặc dữ kiện cụ thể, hoặc cần dữ liệu mới.\n    3. Còn lại TỰ NGHĨ — giữ nguyên hành vi cũ, không làm chậm những câu đang chạy tốt.\n    \"\"\"\n    text = _bo_dau(text)\n    if _SANG_TAC.search(text):\n        return SANG_TAC\n    if _HOI_NGUOI.search(text) or _HOI_GIO_MAY.search(text) or _HOI_DINH_NGHIA.search(text) or _TRO_VE_NGU_CANH.search(text) or _VI_TU_DU_KIEN.search(text):\n        return TRA_CUU\n    return TU_NGHI\n```"
+   },
+   {
+    "luot": 4,
+    "giay": 112.6,
+    "hong": "",
+    "va": "```python\ndef loai(text: str) -> str:\n    \"\"\"Phân loại câu hỏi. Thứ tự xét CÓ Ý NGHĨA.\n\n    1. SÁNG TÁC thắng trước: \"viết một bài thơ về Hồ Chí Minh\" là làm thơ, không\n       phải tra tiểu sử. Xét sau thì tên riêng kéo nó sang TRA_CUU và AURA đi\n       tra 30 giây để rồi vẫn phải tự làm thơ.\n    2. TRA CỨU: hỏi về người, hoặc dữ kiện cụ thể, hoặc cần dữ liệu mới.\n    3. Còn lại TỰ NGHĨ — giữ nguyên hành vi cũ, không làm chậm những câu đang chạy tốt.\n    \"\"\"\n    text = _bo_dau(text)\n    if _SANG_TAC.search(text):\n        return SANG_TAC\n    if _HOI_NGUOI.search(text) or _HOI_GIO_MAY.search(text) or _HOI_DINH_NGHIA.search(text) or _TRO_VE_NGU_CANH.search(text) or _VI_TU_DU_KIEN.search(text):\n        return TRA_CUU\n    return TU_NGHI\n```"
+   }
+  ],
+  "trung_ban_goc": false,
+  "ham": [
+   "loai"
+  ],
+  "tep": "core/loai_cau_hoi.py",
+  "so_loi": 2,
+  "giay": 717.9
+ }
+]

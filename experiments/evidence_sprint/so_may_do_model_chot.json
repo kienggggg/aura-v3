@@ -1,0 +1,373 @@
+[
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 0.5,
+    "truoc_loc": 65,
+    "sau_loc": 15,
+    "model_tra": "1",
+    "chon": 1
+   },
+   {
+    "luot": 2,
+    "giay": 2.9,
+    "truoc_loc": 65,
+    "sau_loc": 15,
+    "model_tra": "1",
+    "chon": 1
+   },
+   {
+    "luot": 3,
+    "giay": 2.6,
+    "truoc_loc": 65,
+    "sau_loc": 15,
+    "model_tra": "1",
+    "chon": 1
+   },
+   {
+    "luot": 4,
+    "giay": 2.8,
+    "truoc_loc": 65,
+    "sau_loc": 15,
+    "model_tra": "1",
+    "chon": 1
+   }
+  ],
+  "dung_nghia": false,
+  "mo_ta_gieo": "chỗ 55: so sánh Lt",
+  "tep": "core/may_tinh.py",
+  "so_loi": 1,
+  "giay": 19.7
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 6.8,
+    "truoc_loc": 64,
+    "sau_loc": 9,
+    "model_tra": "5",
+    "chon": 5
+   },
+   {
+    "luot": 2,
+    "giay": 2.7,
+    "truoc_loc": 64,
+    "sau_loc": 9,
+    "model_tra": "5",
+    "chon": 5
+   },
+   {
+    "luot": 3,
+    "giay": 2.7,
+    "truoc_loc": 64,
+    "sau_loc": 9,
+    "model_tra": "5",
+    "chon": 5
+   },
+   {
+    "luot": 4,
+    "giay": 2.9,
+    "truoc_loc": 64,
+    "sau_loc": 9,
+    "model_tra": "5",
+    "chon": 5
+   }
+  ],
+  "dung_nghia": false,
+  "mo_ta_gieo": "chỗ 2: bỏ phủ định · chỗ 55: so sánh Lt",
+  "tep": "core/may_tinh.py",
+  "so_loi": 2,
+  "giay": 76.5
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 5.6,
+    "truoc_loc": 64,
+    "sau_loc": 3,
+    "model_tra": "1",
+    "chon": 1
+   },
+   {
+    "luot": 2,
+    "giay": 3.2,
+    "truoc_loc": 64,
+    "sau_loc": 3,
+    "model_tra": "2",
+    "chon": 2
+   },
+   {
+    "luot": 3,
+    "giay": 3.3,
+    "truoc_loc": 64,
+    "sau_loc": 3,
+    "model_tra": "1",
+    "chon": 1
+   },
+   {
+    "luot": 4,
+    "giay": 3.3,
+    "truoc_loc": 64,
+    "sau_loc": 3,
+    "model_tra": "1",
+    "chon": 1
+   }
+  ],
+  "dung_nghia": false,
+  "mo_ta_gieo": "chỗ 23: bỏ phủ định · chỗ 55: so sánh Lt · chỗ 63: logic Or",
+  "tep": "core/may_tinh.py",
+  "so_loi": 3,
+  "giay": 60.1
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 32.0,
+    "truoc_loc": 87,
+    "sau_loc": 28,
+    "model_tra": "17",
+    "chon": 17
+   },
+   {
+    "luot": 2,
+    "giay": 3.1,
+    "truoc_loc": 87,
+    "sau_loc": 28,
+    "model_tra": "17",
+    "chon": 17
+   },
+   {
+    "luot": 3,
+    "giay": 3.0,
+    "truoc_loc": 87,
+    "sau_loc": 28,
+    "model_tra": "17",
+    "chon": 17
+   },
+   {
+    "luot": 4,
+    "giay": 3.1,
+    "truoc_loc": 87,
+    "sau_loc": 28,
+    "model_tra": "17",
+    "chon": 17
+   }
+  ],
+  "dung_nghia": false,
+  "mo_ta_gieo": "chỗ 78: True/False -> True",
+  "tep": "core/web_search.py",
+  "so_loi": 1,
+  "giay": 109.6
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 6.1,
+    "truoc_loc": 86,
+    "sau_loc": 4,
+    "model_tra": "1",
+    "chon": 1
+   },
+   {
+    "luot": 2,
+    "giay": 2.9,
+    "truoc_loc": 86,
+    "sau_loc": 4,
+    "model_tra": "2",
+    "chon": 2
+   },
+   {
+    "luot": 3,
+    "giay": 2.8,
+    "truoc_loc": 86,
+    "sau_loc": 4,
+    "model_tra": "1",
+    "chon": 1
+   },
+   {
+    "luot": 4,
+    "giay": 2.8,
+    "truoc_loc": 86,
+    "sau_loc": 4,
+    "model_tra": "3",
+    "chon": 3
+   }
+  ],
+  "dung_nghia": false,
+  "mo_ta_gieo": "chỗ 55: bỏ phủ định · chỗ 58: True/False -> True",
+  "tep": "core/web_search.py",
+  "so_loi": 2,
+  "giay": 64.7
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 12.9,
+    "truoc_loc": 86,
+    "sau_loc": 14,
+    "model_tra": "1",
+    "chon": 1
+   },
+   {
+    "luot": 2,
+    "giay": 3.0,
+    "truoc_loc": 86,
+    "sau_loc": 14,
+    "model_tra": "1",
+    "chon": 1
+   },
+   {
+    "luot": 3,
+    "giay": 3.1,
+    "truoc_loc": 86,
+    "sau_loc": 14,
+    "model_tra": "1",
+    "chon": 1
+   },
+   {
+    "luot": 4,
+    "giay": 3.2,
+    "truoc_loc": 86,
+    "sau_loc": 14,
+    "model_tra": "1",
+    "chon": 1
+   }
+  ],
+  "dung_nghia": false,
+  "mo_ta_gieo": "chỗ 53: logic Or · chỗ 55: bỏ phủ định · chỗ 58: True/False -> True",
+  "tep": "core/web_search.py",
+  "so_loi": 3,
+  "giay": 93.2
+ },
+ {
+  "trang_thai": "dat",
+  "luot": 2,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 5.1,
+    "truoc_loc": 1,
+    "sau_loc": 1,
+    "model_tra": "23",
+    "chon": 23
+   },
+   {
+    "luot": 2,
+    "giay": 0.5,
+    "truoc_loc": 1,
+    "sau_loc": 1,
+    "model_tra": "1",
+    "chon": 1
+   }
+  ],
+  "dung_nghia": true,
+  "mo_ta_gieo": "chỗ 0: logic Or",
+  "tep": "core/dong_ho.py",
+  "so_loi": 1,
+  "giay": 32.0
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 5.1,
+    "truoc_loc": 10,
+    "sau_loc": 2,
+    "model_tra": "1",
+    "chon": 1
+   },
+   {
+    "luot": 2,
+    "giay": 3.2,
+    "truoc_loc": 10,
+    "sau_loc": 2,
+    "model_tra": "1",
+    "chon": 1
+   },
+   {
+    "luot": 3,
+    "giay": 3.0,
+    "truoc_loc": 10,
+    "sau_loc": 2,
+    "model_tra": "1",
+    "chon": 1
+   },
+   {
+    "luot": 4,
+    "giay": 3.1,
+    "truoc_loc": 10,
+    "sau_loc": 2,
+    "model_tra": "1",
+    "chon": 1
+   }
+  ],
+  "dung_nghia": false,
+  "mo_ta_gieo": "chỗ 3: bỏ phủ định",
+  "tep": "core/loai_cau_hoi.py",
+  "so_loi": 1,
+  "giay": 174.3
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 9.6,
+    "truoc_loc": 10,
+    "sau_loc": 9,
+    "model_tra": "3",
+    "chon": 3
+   },
+   {
+    "luot": 2,
+    "giay": 3.7,
+    "truoc_loc": 10,
+    "sau_loc": 9,
+    "model_tra": "3",
+    "chon": 3
+   },
+   {
+    "luot": 3,
+    "giay": 3.6,
+    "truoc_loc": 10,
+    "sau_loc": 9,
+    "model_tra": "3",
+    "chon": 3
+   },
+   {
+    "luot": 4,
+    "giay": 3.6,
+    "truoc_loc": 10,
+    "sau_loc": 9,
+    "model_tra": "3",
+    "chon": 3
+   }
+  ],
+  "dung_nghia": false,
+  "mo_ta_gieo": "chỗ 4: logic Or · chỗ 5: bỏ phủ định",
+  "tep": "core/loai_cau_hoi.py",
+  "so_loi": 2,
+  "giay": 41.4
+ }
+]

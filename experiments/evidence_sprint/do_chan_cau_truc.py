@@ -1,45 +1,33 @@
 # -*- coding: utf-8 -*-
-"""E2 — CHO SẴN CHỖ, chỉ hỏi ĐIỀN GÌ. Đo giả thuyết "sinh được, sửa không được".
+r"""E4 - CHO SAN CHO va CHAN BA NUOC DI SAI. Do 21/08/2026.
 
-VÌ SAO — 20/08/2026, Sếp nêu và số liệu cả ngày khớp.
+E2 ra 1/9 xanh, 0/9 dung nghia. Soi 57 lan dien (`soi_nuoc_di.py`):
 
-Sếp gọi tên bằng một ví dụ: hỏi *"mẹ Cristiano Ronaldo là ai"* thì model đáp
-ngay *Dolores Aveiro*; hỏi ngược *"Dolores Aveiro là mẹ của ai"* thì tịt. Cùng
-một quan hệ, đổi chiều thì hỏng. Model sinh ra để **viết mã**, nên chiều
-**sửa mã** với nó là chiều ngược.
+    chep dong co san        34  60%   (trung vi cach o trong 3 dong,
+                                       12 lan chep dung dong NGAY CANH)
+    sai kieu cau lenh       16  28%
+    dung kieu sai noi dung   6  11%
+    giu nguyen dot bien      1   2%
 
-Số cả ngày khớp một cách ĐƠN ĐIỆU, mà tôi không nhận ra:
+Ba loai dau la loi CAU TRUC. May tu kiem duoc ca ba, khong can model hop tac.
+Phep do nay chan chung roi bat lam lai, xem con so co nhuc nhich.
 
-    nền  viết lại TOÀN VĂN hàm   (gần với SINH)      2/9   <- CAO NHẤT
-    C    đổi một ô thẻ            (SỬA)               1/9
-    C2   đổi một ô + ép khuôn     (SỬA hẹp hơn)       0/9
-    C3   đổi một ô enum           (SỬA hẹp nhất)      0/9
+VI SAO chan kieu cau lenh la CONG BANG: trong app, o trong nam TRONG mot the
+con nguyen - the `neu` van la the `neu`, chi co o dieu kien trong. E2 khoet ca
+DONG nen xoa mat thong tin ay. Chan nay tra lai dung thu app co.
 
-Càng kéo về phía "sửa" thì càng tệ, không một ngoại lệ. Cả ngày tôi đẩy model
-RA XA thứ nó giỏi, rồi kết luận nó dở.
+NGUONG DAT TRUOC - viet 21/08 truoc khi chay:
+    >=4/9 dung nghia  -> chan cau truc la don bay that, dung vao app
+    2-3/9             -> co tac dung, chua du de doi thiet ke
+    <=1/9             -> ba loai kia chi la VO. Model chep dong ben canh vi BI,
+                         khong phai vi tuong phai chep; chan duong chep thi no
+                         doi sang bia. Buc tuong van nguyen.
 
-PHÉP ĐO NÀY tách hẳn hai chiều bằng cách CHO KHÔNG khâu định vị:
-
-    máy khoét đúng chỗ đột biến thành `____`
-    model chỉ phải trả lời: chỗ trống ấy điền gì
-
-Đây cũng đúng cảnh app thẻ tạo ra — Sếp nói: "vì đã trực quan hóa nên thẻ báo
-đỏ ngay nên model không cần tìm". Nếu model vẫn hỏng ở đây thì giả thuyết
-"sinh được, sửa không được" KHÔNG đứng, vì đã cho không phần tìm.
-
-CHẤM HAI CỘT, không gộp (bài học 20/08: xanh không phải đúng):
-
-    xanh        test đỏ -> xanh
-    đúng nghĩa  cây cú pháp trùng bản gốc
-
-NGƯỠNG ĐẶT TRƯỚC:
-    >= 6/9 đúng nghĩa   giả thuyết ĐỨNG -> app chia việc: MÁY định vị, MODEL sinh
-    3..5/9              đứng một phần
-    <= 2/9              không hơn nền 2/9 -> giả thuyết KHÔNG đứng, và chỗ hỏng
-                        không phải chiều sinh/sửa
-
-    venv\\Scripts\\python.exe -X utf8 experiments\\evidence_sprint\\do_dien_cho_trong.py [so_de]
+C2 (ep JSON Schema) va C3 (ep enum) da mot lan hua hen kieu nay roi ra 0/9.
+Khac biet: C2/C3 ep GIA TRI cua toan tu; o day chan THU GI duoc nam trong o.
+Khong cung mot chuyen, nen C2/C3 khong bac truoc duoc - cung khong hua ho duoc.
 """
+
 from __future__ import annotations
 
 import ast
@@ -62,8 +50,9 @@ sys.path.insert(0, str(NHA))
 from dung_de_loi import chay_test, dot_bien            # noqa: E402
 
 MODEL = "qwen2.5-coder:7b"     # ĐÚNG model của nền 2/9
-TRAN_LUOT = 4                  # ĐÚNG trần của nền 2/9
-SO = NHA / "so_dien_cho_trong.json"
+TRAN_LUOT = 4      # so lan CHAM TOI TEST — y het E2
+TRAN_GOI  = 10     # so lan goi model; luot bi CHAN khong tinh vao TRAN_LUOT                  # ĐÚNG trần của nền 2/9
+SO = NHA / "so_chan_cau_truc.json"
 OLLAMA = "http://127.0.0.1:11434/api/generate"
 CHO_TRONG = "____"
 
@@ -108,6 +97,37 @@ def _boc_rao(s: str) -> str:
     return t.strip()
 
 
+
+def _kieu(s: str) -> str:
+    """Kieu cau lenh theo AST. Dong mo khoi dung mot minh phai va than gia."""
+    try:
+        cay = ast.parse(s.strip())
+    except SyntaxError:
+        try:
+            cay = ast.parse(s.strip() + chr(10) + "    pass")
+        except SyntaxError:
+            return "?"
+    return type(cay.body[0]).__name__ if cay.body else "?"
+
+
+def chan(tra, dap, ma_khoet, dot_dong):
+    """Ba cua may tu gac. Tra ly do chan, hoac chuoi rong neu lot."""
+    co_san = {l.strip() for l in ma_khoet.splitlines()
+              if l.strip() and l.strip() != CHO_TRONG}
+    for i, t in enumerate(tra):
+        t2 = t.strip()
+        if t2 in dot_dong:
+            return "dong %d: do CHINH LA dong dang do. Khong duoc dien lai no." % (i + 1)
+        if t2 in co_san:
+            return ("dong %d: `%s` da co nguyen van o cho khac trong ma. O trong "
+                    "phai la mot dong KHAC, khong phai ban sao." % (i + 1, t2[:60]))
+        kd, kt = _kieu(dap[i]), _kieu(t)
+        if kd != kt:
+            return ("dong %d: o nay phai la cau lenh loai %s, ban viet loai %s."
+                    % (i + 1, kd, kt))
+    return ""
+
+
 def mot_de(tam: Path, d: dict) -> dict:
     tep, tep_test = d["tep"], d["tep_test"]
     f = tam / tep
@@ -117,6 +137,8 @@ def mot_de(tam: Path, d: dict) -> dict:
         return {"trang_thai": "khong_do_duoc"}
     chuan = ast.unparse(ast.parse(goc))
     da_khoet, dap = khoet(chuan, ma)
+    _dm = ma.splitlines()
+    dot_dong = {_dm[n - 1].strip() for n, _ in dap if n - 1 < len(_dm)}
     if not dap:
         return {"trang_thai": "khong_do_duoc", "vi_sao": "không khoét được chỗ nào"}
 
@@ -126,7 +148,10 @@ def mot_de(tam: Path, d: dict) -> dict:
     lich_su = ""
     ghi = []
     try:
-        for luot in range(1, TRAN_LUOT + 1):
+        da_thu = 0
+        for luot in range(1, TRAN_GOI + 1):
+            if da_thu >= TRAN_LUOT:
+                break
             p = ("Dưới đây là mã Python có %d chỗ bị xoá, đánh dấu `%s`.\n"
                  "Test đang ĐỎ vì những chỗ ấy còn trống.\n"
                  "Bạn KHÔNG phải tìm lỗi — chỗ cần điền đã được chỉ sẵn.\n"
@@ -145,6 +170,14 @@ def mot_de(tam: Path, d: dict) -> dict:
                 lich_su = ("\n=== LƯỢT %d BẠN TRẢ %d DÒNG, CẦN %d ===\n"
                            % (luot, len(dong_moi), len(dap)))
                 continue
+            # CHAN CAU TRUC - may gac, model khong phai hop tac
+            vi_sao = chan(dong_moi[:len(dap)], [x[1] for x in dap],
+                          da_khoet, dot_dong)
+            if vi_sao:
+                ghi[-1]["chan"] = vi_sao
+                lich_su = (chr(10) + "=== LUOT %d BI CHAN ===" + chr(10)
+                           + "%s" + chr(10)) % (luot, vi_sao)
+                continue
             # ghép lại: thay đúng những dòng đã khoét
             d_ra = da_khoet.splitlines()
             k = 0
@@ -158,6 +191,7 @@ def mot_de(tam: Path, d: dict) -> dict:
                     thut = l[:len(l) - len(l.lstrip())]
                     d_ra[i] = thut + dong_moi[k].lstrip()
                     k += 1
+            da_thu += 1     # chi dem khi THAT SU sap chay test
             sua = "\n".join(d_ra) + "\n"
             try:
                 ast.parse(sua)
@@ -217,7 +251,7 @@ def main() -> int:
     shutil.copytree(GOC, tam, ignore=shutil.ignore_patterns(
         "venv", ".venv-cst", ".venv-needle", ".git", "__pycache__", "data",
         "_rac", "*.pyc"))
-    print("  %d đề · %s · trần %d lượt · CHO SẴN CHỖ, chỉ hỏi điền gì\n"
+    print("  %d đề · %s · trần %d lượt · CHO SẴN CHỖ + CHẶN CẤU TRÚC\n"
           % (len(de), MODEL, TRAN_LUOT))
     try:
         for d in de:

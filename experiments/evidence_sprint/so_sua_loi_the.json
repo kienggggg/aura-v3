@@ -1,0 +1,396 @@
+[
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 68.0,
+    "hong": "JSON hỏng: Extra data: line 2 column 1 (char 46)",
+    "ra": "SUYLUAN:\nLỗi nằm ở thẻ `tra_ve_36` và `tra_ve_38`. Trong hai hàm `tinh_bieu_thuc` và `giai_phuong_trinh`, hàm trả về `None` khi biểu thức không hợp lệ hoặc không chứa số. Tuy nhiên, trong hàm `test_dem_ngay_nhieu_kieu_hoi`, chúng ta đang kiểm tra xem kết quả trả về có chứa chuỗi mong đợi hay không, "
+   },
+   {
+    "luot": 2,
+    "giay": 33.6,
+    "suy_luan": "Lỗi nằm ở thẻ `tra_ve_36`, vì sao — vì trong hàm `tinh_bieu_thuc`, khi biểu thức không hợp lệ, hàm trả về `None` thay vì một chuỗi.",
+    "id": "tra_ve_36",
+    "o": {
+     "gia_tri": "None"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 3,
+    "giay": 68.4,
+    "suy_luan": "Lỗi nằm ở thẻ `tra_ve_36` và `tra_ve_38`. Trong hai hàm `tinh_bieu_thuc` và `giai_phuong_trinh`, hàm trả về `None` khi biểu thức không hợp lệ. Tuy nhiên, trong hàm `test_dem_ngay_nhieu_kieu_hoi`, chúng ta đang kiểm tra xem câu trả về có chứa chuỗi mong đợi hay không, chứ không phải kiểm tra xem nó có phải là `None` hay không. Do đó, khi hàm trả về `None`, điều kiện `mong_doi in câu` sẽ luôn là `Fa",
+    "id": "tra_ve_36",
+    "o": {
+     "gia_tri": "None"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 4,
+    "giay": 59.0,
+    "suy_luan": "Lỗi nằm ở thẻ `tra_ve_36` và `tra_ve_38`. Trong hai hàm `tinh_bieu_thuc` và `giai_phuong_trinh`, hàm trả về `None` khi biểu thức không hợp lệ. Tuy nhiên, trong hàm `test_dem_ngay_nhieu_kieu_hoi`, chúng ta đang kiểm tra xem câu trả về có chứa chuỗi mong đợi hay không, chứ không phải kiểm tra xem câu trả về có phải là `None` hay không.",
+    "id": "tra_ve_36",
+    "o": {
+     "gia_tri": "None"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   }
+  ],
+  "chon_dung_the": false,
+  "tep": "core/may_tinh.py",
+  "so_loi": 1,
+  "giay": 230.2
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 259.1,
+    "suy_luan": "Lỗi nằm ở thẻ `tra_ve_36` và `tra_ve_38`. Trong hai hàm `tinh_bieu_thuc` và `giai_phuong_trinh`, hàm trả về `None` khi biểu thức không hợp lệ hoặc không chứa số. Tuy nhiên, trong hàm `test_dem_ngay_nhieu_kieu_hoi`, hàm `tinh_giup` được gọi với một câu hỏi không hợp lệ và trả về một chuỗi kết quả không chứa chuỗi mong đợi.",
+    "id": "tra_ve_36",
+    "o": {
+     "gia_tri": "None"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 2,
+    "giay": 67.1,
+    "hong": "JSON hỏng: Extra data: line 2 column 1 (char 46)",
+    "ra": "SUYLUAN:\nLỗi nằm ở thẻ `tra_ve_36` và `tra_ve_38`. Trong hai hàm `tinh_bieu_thuc` và `giai_phuong_trinh`, hàm trả về `None` khi biểu thức không hợp lệ hoặc không chứa số. Tuy nhiên, trong hàm `test_dem_ngay_nhieu_kieu_hoi`, chúng ta đang kiểm tra xem câu trả về có chứa chuỗi mong đợi hay không, chứ "
+   },
+   {
+    "luot": 3,
+    "giay": 32.7,
+    "suy_luan": "Lỗi nằm ở thẻ `tra_ve_36`, vì sao — vì trong hàm `tinh_bieu_thuc`, khi biểu thức không hợp lệ, hàm trả về `None` thay vì một chuỗi.",
+    "id": "tra_ve_36",
+    "o": {
+     "gia_tri": "None"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 4,
+    "giay": 66.8,
+    "hong": "JSON hỏng: Extra data: line 2 column 1 (char 46)",
+    "ra": "SUYLUAN:\nLỗi nằm ở thẻ `tra_ve_36` và `tra_ve_38`. Trong hai hàm `tinh_bieu_thuc` và `giai_phuong_trinh`, hàm trả về `None` khi biểu thức không hợp lệ hoặc không chứa số. Tuy nhiên, trong hàm `test_dem_ngay_nhieu_kieu_hoi`, chúng ta đang kiểm tra xem câu trả về có chứa chuỗi mong đợi hay không, chứ "
+   }
+  ],
+  "chon_dung_the": false,
+  "tep": "core/may_tinh.py",
+  "so_loi": 2,
+  "giay": 427.0
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 146.9,
+    "suy_luan": "Lỗi nằm ở thẻ `tra_ve_36` và `tra_ve_38`. Trong hai hàm `tinh_bieu_thuc` và `giai_phuong_trinh`, hàm trả về `None` khi biểu thức không hợp lệ. Tuy nhiên, trong hàm `test_dem_ngay_nhieu_kieu_hoi`, chúng ta đang kiểm tra xem kết quả trả về có phải là `None` hay không, và nếu không phải `None`, chúng ta kiểm tra xem kết quả có chứa chuỗi mong đợi hay không. Trong trường hợp này, kết quả trả về không ",
+    "id": "tra_ve_36",
+    "o": {
+     "gia_tri": "None"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 2,
+    "giay": 62.1,
+    "suy_luan": "Lỗi nằm ở thẻ `tra_ve_36` và `tra_ve_38`. Trong hai hàm `tinh_bieu_thuc` và `giai_phuong_trinh`, hàm trả về `None` khi biểu thức không hợp lệ hoặc không chứa số. Tuy nhiên, trong hàm `test_dem_ngay_nhieu_kieu_hoi`, chúng ta đang kiểm tra xem kết quả trả về có chứa chuỗi mong đợi hay không. Do đó, hàm `tinh_bieu_thuc` và `giai_phuong_trinh` nên trả về chuỗi thông báo lỗi thay vì `None`.",
+    "id": "tra_ve_36",
+    "o": {
+     "gia_tri": "f'Biểu thức không hợp lệ'"
+    },
+    "chon_dung_the": false,
+    "hong": ""
+   },
+   {
+    "luot": 3,
+    "giay": 168.2,
+    "suy_luan": "Lỗi nằm ở thẻ `tra_ve_75` vì giá trị trả về không đúng. Trong trường hợp này, câu trả lời không chứa chuỗi mong đợi \"0 ngày\".",
+    "id": "75",
+    "o": {
+     "gia_tri": "f'ĐÃ GIẢI SẴN. Trả lời đúng ý này: \"{an} = {_goi_gon(nghiem)}\". Ngày hiện tại là {HOM_NAY.strftime('%d/%m/%Y')}"
+    },
+    "chon_dung_the": false,
+    "hong": "không có thẻ id '75'"
+   },
+   {
+    "luot": 4,
+    "giay": 35.1,
+    "suy_luan": "Lỗi nằm ở thẻ `tra_ve_75`, vì giá trị trả về không đúng. Trong trường hợp này, câu trả lời không chứa chuỗi mong đợi \"0 ngày\".",
+    "id": "75",
+    "o": {
+     "gia_tri": "f'ĐÃ GIẢI SẴN. Trả lời đúng ý này: \"{an} = {_goi_gon(nghiem)} ngày'."
+    },
+    "chon_dung_the": false,
+    "hong": "không có thẻ id '75'"
+   }
+  ],
+  "chon_dung_the": false,
+  "tep": "core/may_tinh.py",
+  "so_loi": 3,
+  "giay": 414.3
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 262.1,
+    "hong": "không thấy JSON trong câu trả lời",
+    "ra": "SUYLUAN:\nLỗi nằm ở thẻ gan_81, vì giá trị mới được gán cho biến candidate không đúng. Trong hàm _public_http_url, giá trị mới được gán cho candidate là (value or '').strip(), nhưng trong hàm test_loai_host_so_mo_ho_port_sai_va_khoang_trang_tho, giá trị được truyền vào là \"http://2130706433/admin\", v"
+   },
+   {
+    "luot": 2,
+    "giay": 38.2,
+    "suy_luan": "Lỗi nằm ở thẻ `gan_72`, vì giá trị mới cho biến `low` không đúng. Trong hàm `is_search_request`, biến `low` được gán bằng kết quả của hàm `loi_sep_noi(text).lower()`, nhưng hàm `loi_sep_noi` không được định nghĩa trong đoạn mã được cung cấp.",
+    "id": "gan_72",
+    "o": {
+     "gia_tri": "text.lower()"
+    },
+    "chon_dung_the": false,
+    "hong": ""
+   },
+   {
+    "luot": 3,
+    "giay": 99.2,
+    "suy_luan": "Lỗi nằm ở thẻ `gan_72`, vì giá trị mới cho biến `low` không cần thiết. Biến `low` đã được gán trước đó ở dòng 163 với giá trị `text.lower()`, nên việc gán lại ở đây không cần thiết và có thể gây ra lỗi.",
+    "id": "gan_72",
+    "o": {
+     "gia_tri": "low = text.lower()"
+    },
+    "chon_dung_the": false,
+    "hong": "áp thẻ hỏng: ParserSyntaxError('parser error: error at 1:6: expected one of !=, %, "
+   },
+   {
+    "luot": 4,
+    "giay": 36.8,
+    "suy_luan": "Lỗi nằm ở thẻ gan_34, vì giá trị trả về không đúng. Trong hàm la_chuyen_rieng_cua_sep, hàm trả về kết quả của hàm _khop, nhưng không phải là giá trị đúng.",
+    "id": "gan_34",
+    "o": {
+     "gia_tri": "not _khop(low, bo_dau(low), _CHUYEN_RIENG)"
+    },
+    "chon_dung_the": false,
+    "hong": "không có thẻ id 'gan_34'"
+   }
+  ],
+  "chon_dung_the": false,
+  "tep": "core/web_search.py",
+  "so_loi": 1,
+  "giay": 438.5
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 83.3,
+    "hong": "JSON hỏng: Expecting ',' delimiter: line 1 column 101 (char 100)",
+    "ra": "SUYLUAN:\nLỗi nằm ở thẻ gan_24, vì giá trị của _ASK_WORDS không đầy đủ và thiếu dấu phẩy cuối cùng.\n\nJSON:\n{\"id\": \"gan_24\", \"o\": {\"gia_tri\": \"('tra mạng', 'tra cứu', 'tìm giúp', 'tìm hộ', 'search', 'goo',)\"}"
+   },
+   {
+    "luot": 2,
+    "giay": 29.9,
+    "hong": "JSON hỏng: Expecting ',' delimiter: line 1 column 99 (char 98)",
+    "ra": "SUYLUAN:\nLỗi nằm ở thẻ gan_24, vì giá trị của biến _ASK_WORDS bị thiếu dấu ngoặc đóng.\n\nJSON:\n{\"id\": \"gan_24\", \"o\": {\"gia_tri\": \"('tra mạng', 'tra cứu', 'tìm giúp', 'tìm hộ', 'search', 'goo'\"}"
+   },
+   {
+    "luot": 3,
+    "giay": 30.2,
+    "hong": "JSON hỏng: Expecting ',' delimiter: line 1 column 99 (char 98)",
+    "ra": "SUYLUAN:\nLỗi nằm ở thẻ `gan_24`, vì giá trị của `_ASK_WORDS` bị thiếu dấu đóng ngoặc đơn.\n\nJSON:\n{\"id\": \"gan_24\", \"o\": {\"gia_tri\": \"('tra mạng', 'tra cứu', 'tìm giúp', 'tìm hộ', 'search', 'goo'\"}"
+   },
+   {
+    "luot": 4,
+    "giay": 31.1,
+    "hong": "JSON hỏng: Expecting ',' delimiter: line 1 column 99 (char 98)",
+    "ra": "SUYLUAN:\nLỗi nằm ở thẻ gan_24, vì giá trị của biến _ASK_WORDS bị thiếu dấu ngoặc đóng.\n\nJSON:\n{\"id\": \"gan_24\", \"o\": {\"gia_tri\": \"('tra mạng', 'tra cứu', 'tìm giúp', 'tìm hộ', 'search', 'goo'\"}"
+   }
+  ],
+  "chon_dung_the": false,
+  "tep": "core/web_search.py",
+  "so_loi": 2,
+  "giay": 175.8
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 44.0,
+    "hong": "JSON hỏng: Expecting ',' delimiter: line 1 column 99 (char 98)",
+    "ra": "SUYLUAN:\nLỗi nằm ở thẻ gan_24, vì giá trị của _ASK_WORDS thiếu dấu ngoặc đóng.\n\nJSON:\n{\"id\": \"gan_24\", \"o\": {\"gia_tri\": \"('tra mạng', 'tra cứu', 'tìm giúp', 'tìm hộ', 'search', 'goo'\"}"
+   },
+   {
+    "luot": 2,
+    "giay": 31.5,
+    "hong": "JSON hỏng: Expecting ',' delimiter: line 1 column 99 (char 98)",
+    "ra": "SUYLUAN:\nLỗi nằm ở thẻ `gan_31`, vì giá trị của `_ASK_WORDS` bị thiếu dấu ngoặc đóng.\n\nJSON:\n{\"id\": \"gan_31\", \"o\": {\"gia_tri\": \"('tra mạng', 'tra cứu', 'tìm giúp', 'tìm hộ', 'search', 'goo'\"}"
+   },
+   {
+    "luot": 3,
+    "giay": 40.0,
+    "suy_luan": "Lỗi nằm ở thẻ `tra_ve_78`, vì sao `json.dumps(query, ensure_ascii=False)` không được tìm thấy trong `captured[\"args\"][-1]`. Nguyên nhân có thể là `query` không đúng định dạng hoặc không được chuyển đổi thành",
+    "id": "tra_ve_78",
+    "o": {
+     "gia_tri": "return _khop(low, moc, _FRESH_WORDS)"
+    },
+    "chon_dung_the": false,
+    "hong": "áp thẻ hỏng: ParserSyntaxError('parser error: error at 1:7: expected one of *, +, -"
+   },
+   {
+    "luot": 4,
+    "giay": 41.6,
+    "suy_luan": "Lỗi nằm ở thẻ gan_34, vì giá trị trả về không đúng định dạng",
+    "id": "gan_34",
+    "o": {
+     "tra_ve": "return _khop(low, bo_dau(low), _VIEC_TU_LAM).json()"
+    },
+    "chon_dung_the": false,
+    "hong": "không có thẻ id 'gan_34'"
+   }
+  ],
+  "chon_dung_the": false,
+  "tep": "core/web_search.py",
+  "so_loi": 3,
+  "giay": 161.0
+ },
+ {
+  "trang_thai": "dat",
+  "luot": 1,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 63.4,
+    "suy_luan": "Lỗi nằm ở thẻ `gan_7`, vì giá trị của biến `hien_tai` không được cập nhật đúng khi `now` là `None`. Điều này dẫn đến việc lấy thời gian hiện tại từ máy tính của người dùng thay vì từ tham số `now`.",
+    "id": "gan_7",
+    "o": {
+     "gia_tri": "now or datetime.now().astimezone()"
+    },
+    "chon_dung_the": true,
+    "hong": ""
+   }
+  ],
+  "chon_dung_the": true,
+  "ca_bo": " [ 75%]\n........................................................................ [ 87%]\n.....................................................................    [100%]\n572 passed, 1 skipped in 54.07s\n",
+  "tep": "core/dong_ho.py",
+  "so_loi": 1,
+  "giay": 121.1
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 278.2,
+    "hong": "không thấy JSON trong câu trả lời",
+    "ra": "SUYLUAN:\nLỗi nằm ở thẻ gan_9, vì giá trị của _THU_SANG_TAC không đầy đủ. Trong biểu thức chính quy, có dấu ngoặc kép cuối cùng bị thiếu.\n\nJSON:\n{\"id\": \"gan_9\", \"o\": {\"gia_tri\": \"'(?:bai tho|tho|truyen|truyen ngan|kich ban|loi bai hat|bai thuong|tho ngan|truyen ngan|truyen ngan|truyen ngan|truyen nga"
+   },
+   {
+    "luot": 2,
+    "giay": 48.6,
+    "suy_luan": "Lỗi nằm ở thẻ gan_11, vì giá trị của biến _HOI_NGUOI không đúng. Trong đoạn mã, _HOI_NGUOI được định nghĩa là một biểu thức chính quy để kiểm tra xem câu có bắt đầu bằng \"la ai\" không. Tuy nhiên, giá trị hiện tại của _HOI_NGUOI không đúng và gây ra lỗi khi kiểm tra.",
+    "id": "gan_11",
+    "o": {
+     "gia_tri": "re.compile('(?<!\\\\w)la\\\\s+ai(?!\\\\w)')"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 3,
+    "giay": 39.0,
+    "suy_luan": "Lỗi nằm ở thẻ gan_11, vì giá trị của biến _HOI_NGUOI không đúng. Trong đoạn mã, _HOI_NGUOI được định nghĩa để tìm kiếm câu hỏi về người, nhưng giá trị hiện tại không đầy đủ và không chính xác.",
+    "id": "gan_11",
+    "o": {
+     "gia_tri": "re.compile('(?<!\\\\w)ai\\\\s+la\\\\s+ai(?!\\\\w)')"
+    },
+    "chon_dung_the": false,
+    "hong": ""
+   },
+   {
+    "luot": 4,
+    "giay": 184.4,
+    "suy_luan": "Lỗi nằm ở thẻ gan_7, vì sao — tối đa 3 câu",
+    "id": "gan_7",
+    "o": {
+     "gia_tri": "'tra_cuu'"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   }
+  ],
+  "chon_dung_the": false,
+  "tep": "core/loai_cau_hoi.py",
+  "so_loi": 1,
+  "giay": 552.8
+ },
+ {
+  "trang_thai": "het_luot",
+  "luot": 4,
+  "ghi": [
+   {
+    "luot": 1,
+    "giay": 132.9,
+    "suy_luan": "Lỗi nằm ở thẻ gan_20, vì giá trị mới cho biến 'tach' không đúng. Giá trị mới nên là 'text' thay vì 'unicodedata.normalize('NFD', (text or '').lower())'.",
+    "id": "gan_20",
+    "o": {
+     "gia_tri": "text"
+    },
+    "chon_dung_the": false,
+    "hong": ""
+   },
+   {
+    "luot": 2,
+    "giay": 196.1,
+    "hong": "không thấy JSON trong câu trả lời",
+    "ra": "SUYLUAN:\nLỗi nằm ở thẻ gan_9, vì giá trị của _THU_SANG_TAC thiếu một phần cuối cùng.\n\nJSON:\n{\"id\": \"gan_9\", \"o\": {\"gia_tri\": \"'(?:bai tho|tho|truyen|truyen ngan|kich ban|loi bai hat|bai thuong|tho ngan|truyen ngan|truyen ngan|truyen ngan|truyen ngan|truyen ngan|truyen ngan|truyen ngan|truyen ngan|tr"
+   },
+   {
+    "luot": 3,
+    "giay": 38.3,
+    "suy_luan": "Lỗi nằm ở thẻ gan_11, vì giá trị của biến _HOI_NGUOI không đúng. Biến này được sử dụng để kiểm tra xem câu có dạng \"la ai\" hay không, nhưng giá trị hiện tại không đủ chính xác để thực hiện chức năng này.",
+    "id": "gan_11",
+    "o": {
+     "gia_tri": "re.compile('(?<!\\\\w)la\\\\s+ai(?!\\\\w)')"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   },
+   {
+    "luot": 4,
+    "giay": 48.1,
+    "suy_luan": "Lỗi nằm ở thẻ gan_11, vì giá trị của ô 'gia_tri' không đúng. Trong đoạn mã, giá trị của _HOI_NGUOI được định nghĩa là 're.compile('(?<!\\\\\\\\w)la\\\\\\\\s+ai(?!\\\\\\\\w)')', nhưng trong hàm test, nó được so sánh với 'TRA_CUU', tức 'tra_cuu'. Điều này dẫn đến lỗi so sánh.",
+    "id": "gan_11",
+    "o": {
+     "gia_tri": "re.compile('(?<!\\\\w)la\\\\s+ai(?!\\\\w)')"
+    },
+    "chon_dung_the": false,
+    "hong": "ô mới giống hệt ô cũ, không có gì để sửa"
+   }
+  ],
+  "chon_dung_the": false,
+  "tep": "core/loai_cau_hoi.py",
+  "so_loi": 2,
+  "giay": 417.1
+ }
+]

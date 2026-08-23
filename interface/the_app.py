@@ -91,7 +91,17 @@ def main():
     parser.add_argument("--host", default="127.0.0.1", help="Địa chỉ bind (chỉ loopback)")
     parser.add_argument("--port", type=int, default=8088, help="Cổng chạy máy chủ")
     parser.add_argument("--no-browser", action="store_true", help="Không tự động mở trình duyệt")
+    # 23/08: trước đây chỉ bật được bằng biến môi trường
+    # AURA_THE_ALLOW_CODE_EXECUTION=1. Nên bấm start_the_app.bat thì app mở
+    # được nhưng nút "TÌM LỖI" và "DÒ DÒNG DỮ LIỆU" đều khoá, và KHÔNG CÓ CÁCH
+    # NÀO bật từ dòng lệnh — hai tính năng chính thành không dùng được.
+    parser.add_argument(
+        "--allow-exec", action="store_true",
+        help="Bật chạy mã/test (/api/chay, /api/trace, /api/dinh_vi_loi). "
+             "Tắt mặc định vì tiến trình chưa được cách ly khỏi tệp/mạng/RAM")
     args = parser.parse_args()
+    if args.allow_exec:
+        os.environ["AURA_THE_ALLOW_CODE_EXECUTION"] = "1"
 
     # CỬA BẢO MẬT: Chỉ cho phép bind vào loopback / 127.0.0.1
     if args.host not in ("127.0.0.1", "localhost"):

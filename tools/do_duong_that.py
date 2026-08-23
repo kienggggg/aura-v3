@@ -121,10 +121,13 @@ try:
     dich["o"]["dieu_kien"] = "tong < -5"
     dich["da_sua"] = True
 
-    than = {"duong_dan": str(TAM), "tree": cay, "has_modifications": True}
-    for k in ("sha256", "sha", "version", "phien_ban"):
-        if k in ra:
-            than[k] = ra[k]
+    than = {
+        "duong_dan": str(TAM),
+        "tree": cay,
+        "kieu_luu": "py",
+        "has_modifications": True,
+        "expected_sha256": ra.get("sha256"),
+    }
     ma2, ra2 = goi("/api/luu_tep", than, tok)
     print("  3. lưu qua API         : mã %s" % ma2)
     if ma2 != 200:

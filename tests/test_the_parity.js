@@ -202,11 +202,78 @@ const TEST_CASES = [
     tree: [
       { id: "1", ma: "lap_moi", o: { bien: "i", day: "range(5)" }, than: [] }
     ]
+  },
+  // 23. Tham số hàm chữ ký thật từ kho (có chú thích kiểu, giá trị mặc định, *)
+  {
+    name: "23_tham_so_that_tu_kho",
+    tree: [
+      { id: "1", ma: "ham", o: { ten_ham: "_tinh_cay", tham_so: "nut: ast.AST, an: tuple[str, float] | None = None" }, than: [
+        { id: "2", ma: "tra_ve", o: { gia_tri: "nut if an is None else None" }, than: [] }
+      ]},
+      { id: "3", ma: "ham", o: { ten_ham: "tinh_giup", tham_so: "text: str, *, now: datetime | None = None" }, than: [
+        { id: "4", ma: "tra_ve", o: { gia_tri: "text if now is None else text" }, than: [] }
+      ]},
+      { id: "5", ma: "ham", o: { ten_ham: "sinh_khay", tham_so: 'goc: Path, thu_muc: tuple[str, ...] = ("core", "interface", "tools")' }, than: [
+        { id: "6", ma: "tra_ve", o: { gia_tri: "goc if len(thu_muc) > 0 else None" }, than: [] }
+      ]},
+      { id: "7", ma: "ham", o: { ten_ham: "remember", tham_so: "text: str, *, confirmed_by_user: bool = False" }, than: [
+        { id: "8", ma: "tra_ve", o: { gia_tri: "text if confirmed_by_user else None" }, than: [] }
+      ]},
+      { id: "9", ma: "ham", o: { ten_ham: "sinh_ma_python", tham_so: "nodes: List[TheNode], indent_level: int = 0" }, than: [
+        { id: "10", ma: "tra_ve", o: { gia_tri: "nodes if indent_level >= 0 else []" }, than: [] }
+      ]}
+    ]
+  },
+  // 24. Import thật từ kho trong thẻ ma_tho
+  {
+    name: "24_import_that_tu_kho",
+    tree: [
+      { id: "1", ma: "ma_tho", o: { nguyen_van: "from urllib.parse import urlsplit, urlunsplit\nimport hashlib, hmac, json, os, secrets, tempfile\nfrom pathlib import Path" }, than: [] },
+      { id: "2", ma: "gan", o: { ten_bien: "u", gia_tri: 'urlsplit("http://localhost:8088")' }, than: [] },
+      { id: "3", ma: "gan", o: { ten_bien: "h", gia_tri: 'hashlib.sha256(b"aura").hexdigest()' }, than: [] },
+      { id: "4", ma: "in_ra", o: { noi_dung: 'json.dumps({"path": str(Path("."))})' }, than: [] }
+    ]
+  },
+  // 25. Hàm tự định nghĩa thật được gọi trong cùng tệp
+  {
+    name: "25_ham_tu_dinh_nghia_that",
+    tree: [
+      { id: "1", ma: "ham", o: { ten_ham: "bo_dau", tham_so: "s: str" }, than: [
+        { id: "2", ma: "tra_ve", o: { gia_tri: "s.strip()" }, than: [] }
+      ]},
+      { id: "3", ma: "ham", o: { ten_ham: "_khop", tham_so: "s: str, pat: str" }, than: [
+        { id: "4", ma: "gan", o: { ten_bien: "clean_s", gia_tri: "bo_dau(s)" }, than: [] },
+        { id: "5", ma: "tra_ve", o: { gia_tri: "pat in clean_s" }, than: [] }
+      ]},
+      { id: "6", ma: "gan", o: { ten_bien: "kq", gia_tri: '_khop("xin chao", "chao")' }, than: [] },
+      { id: "7", ma: "in_ra", o: { noi_dung: "kq" }, than: [] }
+    ]
+  },
+  // 26. Biến comprehension và vòng lặp thật
+  {
+    name: "26_bien_comprehension_va_vong_lap_that",
+    tree: [
+      { id: "1", ma: "gan", o: { ten_bien: "raw_text", gia_tri: '"a, b, c"' }, than: [] },
+      { id: "2", ma: "gan", o: { ten_bien: "items", gia_tri: '[p.strip() for p in raw_text.split(",") if p.strip()]' }, than: [] },
+      { id: "3", ma: "lap_moi", o: { bien: "item", day: "items" }, than: [
+        { id: "4", ma: "in_ra", o: { noi_dung: "item" }, than: [] }
+      ]}
+    ]
+  },
+  // 27. Builtin mở rộng thật của Python
+  {
+    name: "27_builtin_mo_rong_that",
+    tree: [
+      { id: "1", ma: "gan", o: { ten_bien: "s", gia_tri: "frozenset([1, 2, 3])" }, than: [] },
+      { id: "2", ma: "gan", o: { ten_bien: "has_len", gia_tri: 'hasattr(s, "__len__")' }, than: [] },
+      { id: "3", ma: "gan", o: { ten_bien: "attr_val", gia_tri: 'getattr(s, "__doc__", "")' }, than: [] },
+      { id: "4", ma: "in_ra", o: { noi_dung: "isinstance(s, frozenset)" }, than: [] }
+    ]
   }
 ];
 
 function runParityTest() {
-  console.log("=== BẮT ĐẦU CHẠY KIỂM THỬ ĐỐI CHIẾU PARITY JS <-> PYTHON (22 TEST CASES) ===");
+  console.log(`=== BẮT ĐẦU CHẠY KIỂM THỬ ĐỐI CHIẾU PARITY JS <-> PYTHON (${TEST_CASES.length} TEST CASES) ===`);
   const pythonPath = path.resolve(__dirname, '..', 'venv', 'Scripts', 'python.exe');
   
   let passedCount = 0;

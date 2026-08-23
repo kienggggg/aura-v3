@@ -13,38 +13,43 @@
   <!-- Top Navigation / Toolbar -->
   <header class="app-header">
     <div class="brand">
+      <button class="icon-btn-header" id="btnToggleSidebarLeft" title="Thu gọn/Mở Khay Thẻ (Ctrl+B)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
       <div class="logo-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="9" rx="2"></rect>
-          <rect x="14" y="3" width="7" height="5" rx="2"></rect>
-          <rect x="14" y="12" width="7" height="9" rx="2"></rect>
-          <rect x="3" y="16" width="7" height="5" rx="2"></rect>
-        </svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
       </div>
-      <div class="brand-text">
-        <span class="brand-title">AURA THẺ</span>
-        <span class="brand-version">v1.0</span>
-      </div>
+      <span class="brand-title">AURA THẺ</span>
+      <span class="brand-version">v1.0 IDE</span>
     </div>
 
-    <!-- Active File Badge -->
+    <!-- Active File Info -->
     <div class="file-status-bar" id="fileStatusBar">
       <span class="file-icon">📄</span>
-      <span class="file-name" id="currentFileName">Chương trình mới (Chưa lưu)</span>
-      <span class="file-badge" id="fileModifiedBadge" style="display: none;">Đã sửa</span>
+      <span class="file-name" id="currentFileName">1. Hàm cộng hai số</span>
+      <span class="file-badge" id="fileModifiedBadge" style="display: none;">ĐÃ SỬA</span>
     </div>
 
-    <!-- Actions -->
+    <!-- Toolbar Action Buttons -->
     <div class="header-actions">
-      <button class="btn btn-secondary" id="btnNew" title="Tạo chương trình mới (Xoá canvas)">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      <!-- Font Zoom Controls -->
+      <div class="zoom-controls">
+        <button class="zoom-btn" id="btnZoomOut" title="Giảm cỡ chữ (Ctrl -)">A−</button>
+        <button class="zoom-btn zoom-val" id="btnZoomReset" title="Khôi phục 14px (Ctrl 0)"><span id="zoomPercent">14px</span></button>
+        <button class="zoom-btn" id="btnZoomIn" title="Tăng cỡ chữ (Ctrl +)">A+</button>
+      </div>
+
+      <div class="divider-v"></div>
+
+      <button class="btn btn-secondary" id="btnNew" title="Tạo chương trình mới (Ctrl+N)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Mới
       </button>
-      <button class="btn btn-secondary" id="btnSamples" title="Mở danh sách bài mẫu">
+      <button class="btn btn-secondary" id="btnSamples" title="Chọn bài mẫu">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-        Mẫu Bài
+        Bài Mẫu
       </button>
-      <button class="btn btn-secondary" id="btnOpenFile" title="Mở tệp .py hoặc .json">
+      <button class="btn btn-secondary" id="btnOpenFile" title="Mở tệp .py từ máy">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
         Mở Tệp
       </button>
@@ -59,15 +64,22 @@
         <svg class="run-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         <span id="runBtnText">CHẠY THỬ</span>
       </button>
+
+      <button class="icon-btn-header" id="btnToggleSidebarRight" title="Thu gọn/Mở Bảng Phụ & Terminal (Ctrl+J)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+      </button>
     </div>
   </header>
 
   <!-- Main App Layout (3 Columns) -->
-  <main class="app-main">
+  <main class="app-main" id="appMain">
     <!-- Left Column: KHAY THẺ (Toolbox) -->
-    <aside class="sidebar-left">
+    <aside class="sidebar-left" id="sidebarLeft">
       <div class="sidebar-header">
-        <h2 class="sidebar-title">Khay Thẻ Lệnh</h2>
+        <div class="sidebar-header-row">
+          <h2 class="sidebar-title">Khay Thẻ Lệnh</h2>
+          <button class="icon-btn-sm" id="btnCloseSidebarLeft" title="Thu gọn khay thẻ">✕</button>
+        </div>
         <div class="search-box">
           <input type="text" id="toolSearch" placeholder="Tìm thẻ..." autocomplete="off">
           <span class="search-icon">🔍</span>
@@ -75,13 +87,13 @@
       </div>
 
       <div class="toolbox-content" id="toolboxContainer">
-        <!-- Rendered dynamically by app.js with 5 category groups -->
+        <!-- Rendered dynamically by app.js with 5 category groups in 2 columns -->
       </div>
 
       <div class="toolbox-footer">
         <div class="tip-box">
           <span class="tip-icon">💡</span>
-          <span class="tip-text">Kéo thẻ vào vùng soạn thảo hoặc click thẻ để chèn nhanh.</span>
+          <span class="tip-text">Kéo thẻ vào soạn thảo hoặc click để chèn nhanh.</span>
         </div>
       </div>
     </aside>
@@ -101,6 +113,17 @@
         </div>
       </div>
 
+      <!-- Dải Nhịp Thực Thi (Execution Rhythms Ribbon) -->
+      <div class="rhythm-ribbon-bar" id="rhythmRibbonBar">
+        <div class="rhythm-label">
+          <span class="rhythm-icon">⚡</span>
+          <span class="rhythm-title">DẢI NHỊP THỰC THI:</span>
+        </div>
+        <div class="rhythm-tracks" id="rhythmPillsContainer">
+          <span class="rhythm-empty-hint">Chưa có hàm hoặc thẻ phân tầng...</span>
+        </div>
+      </div>
+
       <!-- Card Workspace Drop Zone -->
       <div class="canvas-workspace" id="canvasWorkspace">
         <div class="card-chain-container" id="cardChainRoot">
@@ -116,16 +139,22 @@
       </div>
     </section>
 
-    <!-- Right Column: MÃ PYTHON, CHẨN ĐOÁN & TERMINAL -->
-    <aside class="sidebar-right">
+    <!-- Right Column: MÃ PYTHON, MẠCH NƯỚC NGẦM, CHẨN ĐOÁN, KỊCH BẢN & TERMINAL -->
+    <aside class="sidebar-right" id="sidebarRight">
       <!-- Top Half: Code Preview & Diagnostics Tabs -->
       <div class="right-top-pane">
         <div class="pane-tabs">
-          <button class="tab-btn active" data-tab="tabCode">
+          <button class="tab-btn active" data-tab="tabCode" title="Xem mã Python sinh từ thẻ">
             <span class="tab-icon">🐍</span> Mã Python
           </button>
-          <button class="tab-btn" data-tab="tabDiag">
+          <button class="tab-btn" data-tab="tabTrace" title="Truy vết dòng chảy dữ liệu">
+            <span class="tab-icon">🌊</span> Mạch Nước Ngầm
+          </button>
+          <button class="tab-btn" data-tab="tabDiag" title="Chẩn đoán lỗi và cảnh báo">
             <span class="tab-icon">🔍</span> Chẩn đoán (<span id="diagBadge">0</span>)
+          </button>
+          <button class="tab-btn" data-tab="tabNarrative" title="Kịch bản logic diễn giải">
+            <span class="tab-icon">📖</span> Kịch Bản
           </button>
         </div>
 
@@ -139,7 +168,53 @@
             <pre class="code-preview-body"><code id="pythonCodeOutput"># Mã Python sinh từ chuỗi thẻ sẽ hiển thị ở đây...</code></pre>
           </div>
 
-          <!-- Tab 2: Diagnostics Panel -->
+          <!-- Tab 2: Mạch Nước Ngầm Biến Số (Runtime Data Flow Trace) & E1 Định Vị Lỗi -->
+          <div class="tab-pane" id="tabTrace">
+            <div class="trace-header">
+              <div class="trace-control-bar">
+                <button class="btn btn-primary btn-sm" id="btnRunTrace" title="Chạy truy vết dòng chảy dữ liệu trên test đỏ">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  <span>DÒ DÒNG DỮ LIỆU</span>
+                </button>
+                <div class="trace-meta-info" id="traceMetaInfo">
+                  <span class="trace-status-pill ready" id="traceStatusPill">Sẵn sàng dò vết</span>
+                </div>
+              </div>
+              <div class="trace-sub-info" id="traceSubInfo" style="display: none;">
+                <span id="traceTestName" class="trace-test-name"></span>
+                <span id="traceNotice" class="trace-notice"></span>
+              </div>
+            </div>
+
+            <!-- E1 Controls -->
+            <div class="e1-header">
+              <div class="e1-control-bar">
+                <div class="e1-test-picker">
+                  <label for="e1TestSelect" class="e1-label">Tệp test:</label>
+                  <select id="e1TestSelect" class="form-select-sm"></select>
+                </div>
+                <button class="btn btn-primary btn-sm" id="btnRunE1" title="Định vị lỗi bằng E1 (phân tích trên bản sao tạm)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span>ĐỊNH VỊ BẰNG TEST</span>
+                </button>
+              </div>
+              <div class="e1-status-bar">
+                <span class="trace-status-pill ready" id="e1StatusPill">Sẵn sàng E1</span>
+              </div>
+            </div>
+
+            <div class="trace-timeline-body" id="traceTimelineBody">
+              <div class="trace-empty-hint">
+                <span>Bấm nút "DÒ DÒNG DỮ LIỆU" để quan sát vết thực thi, hoặc chọn tệp test và bấm "ĐỊNH VỊ BẰNG TEST" để tìm lỗi E1.</span>
+              </div>
+            </div>
+
+            <!-- E1 Evidence Container -->
+            <div class="e1-results-body" id="e1ResultsBody" style="display: none;">
+            </div>
+          </div>
+
+          <!-- Tab 3: Diagnostics Panel -->
           <div class="tab-pane" id="tabDiag">
             <div class="diag-header">
               <div class="diag-counters">
@@ -151,8 +226,22 @@
               <!-- Diagnostics items rendered here -->
             </div>
           </div>
+
+          <!-- Tab 4: Kịch Bản Logic (Narrative) -->
+          <div class="tab-pane" id="tabNarrative">
+            <div class="narrative-header">
+              <div class="narrative-notice">
+                <span class="info-icon">ℹ️</span>
+                <span>Kịch bản giải thích cấu trúc logic tĩnh. Để bắt lỗi trong một lần chạy cụ thể, hãy chuyển sang tab <strong>Mạch Nước Ngầm</strong>.</span>
+              </div>
+            </div>
+            <div class="narrative-body" id="narrativeContent">
+              <!-- Narrative generated dynamically -->
+            </div>
+          </div>
         </div>
       </div>
+
 
       <!-- Bottom Half: Terminal Output -->
       <div class="right-bottom-pane">
@@ -211,12 +300,21 @@
         </div>
 
         <div class="recent-files-box">
-          <h4>Gợi ý tệp trong kho AURA:</h4>
-          <div class="file-chips" id="repoFileChips">
-            <span class="chip" data-path="core/may_tinh.py">core/may_tinh.py</span>
-            <span class="chip" data-path="core/dong_ho.py">core/dong_ho.py</span>
-            <span class="chip" data-path="core/secret_guard.py">core/secret_guard.py</span>
-            <span class="chip" data-path="interface/chat_app.py">interface/chat_app.py</span>
+          <div class="file-browser-header">
+            <h4>Danh sách tệp trong kho AURA:</h4>
+            <div class="file-browser-filter">
+              <button class="filter-tag active" data-dir="core">core/</button>
+              <button class="filter-tag" data-dir="interface">interface/</button>
+              <button class="filter-tag" data-dir="tests">tests/</button>
+            </div>
+          </div>
+          <div class="file-list-scrollable" id="repoFileListContainer">
+            <div class="file-chips" id="repoFileChips">
+              <span class="chip" data-path="core/web_search.py">core/web_search.py</span>
+              <span class="chip" data-path="core/dong_ho.py">core/dong_ho.py</span>
+              <span class="chip" data-path="core/kiem_tien.py">core/kiem_tien.py</span>
+              <span class="chip" data-path="core/the_v1.py">core/the_v1.py</span>
+            </div>
           </div>
         </div>
       </div>

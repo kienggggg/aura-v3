@@ -1,13 +1,11 @@
-# AURA v3 — toàn bộ phụ thuộc ngoài. Đúng ba dòng.
+# AURA v3 — phụ thuộc chạy sản phẩm công khai.
 #
 # Con số này là điểm khác lớn nhất so với AURA v2: v2 có 20 dòng, trong đó
 # PyQt5 VÀ PyQt6 cùng lúc, chromadb, playwright, easyocr, torch kéo theo.
-# Đo bằng cách đọc `import` của đúng 17 tệp v3 và 28 test, không chép lại
-# requirements.txt cũ rồi cắt bớt cho nhanh.
+# Phụ thuộc kiểm thử nằm riêng trong requirements-dev.txt.
 #
 # Máy: Windows 11, i5, 11,7 GB RAM, không GPU rời.
 
 aiohttp        # interface/chat_api.py + chat_app.py — máy chủ web
 httpx          # core/chat_runtime.py + local_first_gateway.py — gọi model
-
-pytest         # 28 test
+libcst==1.9.0  # core/the_cst.py — mở/sửa/lưu Python mà giữ nguyên định dạng

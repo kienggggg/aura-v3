@@ -21,13 +21,24 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-# Whitelist các tên hàm / hằng số dựng sẵn phổ biến của Python (tránh báo lỗi biến chưa gán)
+# Whitelist các tên hàm / hằng số / từ khóa dựng sẵn của Python (tránh báo lỗi biến chưa gán)
 BUILTIN_SYMBOLS: Set[str] = {
     "True", "False", "None", "range", "len", "int", "str", "float", "list",
     "dict", "set", "tuple", "sum", "min", "max", "abs", "round", "bool",
     "print", "input", "enumerate", "zip", "sorted", "reversed", "map", "filter",
     "open", "type", "isinstance", "issubclass", "iter", "next", "all", "any",
     "chr", "ord", "hex", "bin", "oct", "pow", "divmod", "format", "repr",
+    "getattr", "hasattr", "setattr", "delattr", "frozenset", "callable", "id",
+    "hash", "staticmethod", "classmethod", "property", "super", "vars", "dir",
+    "bytes", "bytearray", "slice", "complex", "memoryview", "ascii", "help",
+    "globals", "locals", "Exception", "ValueError", "TypeError", "KeyError",
+    "IndexError", "AttributeError", "RuntimeError", "StopIteration",
+    "FileNotFoundError", "AssertionError", "ImportError", "IOError", "OSError",
+    # Từ khóa Python
+    "if", "else", "elif", "for", "while", "in", "is", "not", "and", "or",
+    "as", "with", "try", "except", "finally", "def", "class", "return", "yield",
+    "pass", "break", "continue", "import", "from", "lambda", "global", "nonlocal",
+    "assert", "del", "raise", "async", "await",
 }
 
 # 5 Nhóm thẻ với màu sắc chuẩn (Tuyệt đối không dùng Đỏ #EF4444 và Vàng #EAB308)
@@ -390,15 +401,23 @@ def _phan_tich_ast_statement(
             duoi_dong=duoi_dong,
         )
 
-    # 6. Định nghĩa hàm: def fn(a, b):
-    if isinstance(node, ast.FunctionDef) and not node.decorator_list:
+    # 6. Định nghĩa hàm: def fn(a, b) -> ret:
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
         fn_name = node.name
         params = [arg.arg for arg in node.args.args]
+        ret_str = ast.unparse(node.returns) if getattr(node, "returns", None) is not None else ""
         body_nodes = _chuyen_danh_sach_ast_sang_the(node.body, lines, full_source, counter)
+        o_dict = {"ten_ham": fn_name, "tham_so": ", ".join(params)}
+        if ret_str:
+            o_dict["kieu_tra_ve"] = ret_str
+        if isinstance(node, ast.AsyncFunctionDef):
+            o_dict["async"] = "1"
+        if getattr(node, "decorator_list", None):
+            o_dict["trang_tri"] = "\n".join(ast.unparse(d) for d in node.decorator_list)
         return TheNode(
             id=node_id,
             ma="ham",
-            o={"ten_ham": fn_name, "tham_so": ", ".join(params)},
+            o=o_dict,
             than=body_nodes,
             line_start=l_start,
             line_end=l_end,
@@ -655,7 +674,10 @@ def sinh_dong_the_don(node: TheNode, indent_level: int = 0) -> str:
         base = f"{spaces}print({noi_dung})"
     elif ma == "neu":
         dieu_kien = node.o.get("dieu_kien", "True")
-        base = f"{spaces}if {dieu_kien}:"
+        if node.o.get("noi_tiep") == "1":
+            base = f"{spaces}elif {dieu_kien}:"
+        else:
+            base = f"{spaces}if {dieu_kien}:"
     elif ma == "nguoc_lai":
         base = f"{spaces}else:"
     elif ma == "lap_moi":
@@ -667,11 +689,30 @@ def sinh_dong_the_don(node: TheNode, indent_level: int = 0) -> str:
         base = f"{spaces}while {dieu_kien}:"
     elif ma == "tra_ve":
         gia_tri = node.o.get("gia_tri", "")
-        base = f"{spaces}return {gia_tri}".rstrip()
+        if gia_tri:
+            base = f"{spaces}return {gia_tri}".rstrip()
+        else:
+            base = f"{spaces}return"
     elif ma == "ham":
         ten_ham = node.o.get("ten_ham", "ham")
         tham_so = node.o.get("tham_so", "")
-        base = f"{spaces}def {ten_ham}({tham_so}):"
+        kieu_tra_ve = node.o.get("kieu_tra_ve", "").strip()
+        prefix = "async def" if node.o.get("async") == "1" else "def"
+        
+        lines = []
+        if node.o.get("trang_tri"):
+            for dec in node.o["trang_tri"].split("\n"):
+                if dec.strip():
+                    lines.append(f"{spaces}{dec.strip()}")
+                    
+        if kieu_tra_ve:
+            if not kieu_tra_ve.startswith("->"):
+                kieu_tra_ve = f"-> {kieu_tra_ve}"
+            sig = f"{spaces}{prefix} {ten_ham}({tham_so}) {kieu_tra_ve}:"
+        else:
+            sig = f"{spaces}{prefix} {ten_ham}({tham_so}):"
+        lines.append(sig)
+        base = "\n".join(lines)
     elif ma == "goi_ham":
         ten_ham = node.o.get("ten_ham", "ham")
         doi_so = node.o.get("doi_so", "")
@@ -703,18 +744,27 @@ def sinh_ma_python(nodes: List[TheNode], indent_level: int = 0) -> str:
         if node.ma == "ma_tho":
             raw = node.o.get("nguyen_van", node.raw_text or "")
             if raw:
-                res_lines.append(raw)
+                spaces = " " * (indent_level * 4)
+                for rl in raw.split("\n"):
+                    if rl.strip():
+                        res_lines.append(f"{spaces}{rl}")
+                    else:
+                        res_lines.append("")
             continue
 
-        head_line = sinh_dong_the_don(node, indent_level)
+        is_else_or_elif = (node.ma == "nguoc_lai") or (node.ma == "neu" and node.o.get("noi_tiep") == "1")
+        cur_indent = max(0, indent_level - 1) if is_else_or_elif else indent_level
+
+        head_line = sinh_dong_the_don(node, cur_indent)
         res_lines.append(head_line)
 
         if BO_THE_V1.get(node.ma, TheDefinition("", "", "", [], False, "")).co_than:
             if node.than:
-                child_code = sinh_ma_python(node.than, indent_level + 1)
+                child_indent = cur_indent + 1
+                child_code = sinh_ma_python(node.than, child_indent)
                 res_lines.append(child_code)
             else:
-                spaces = " " * ((indent_level + 1) * 4)
+                spaces = " " * ((cur_indent + 1) * 4)
                 res_lines.append(f"{spaces}pass")
 
     return "\n".join(res_lines)
@@ -779,20 +829,132 @@ class DiagnosticResult:
 
 
 def _trich_xuat_bien_trong_bieu_thuc(bieu_thuc: str) -> Set[str]:
-    """Phân tích AST biểu thức để lấy danh sách tên biến được đọc."""
+    """Phân tích AST biểu thức để lấy danh sách tên biến được đọc từ phạm vi ngoài."""
     if not bieu_thuc or not bieu_thuc.strip():
         return set()
     try:
         parsed = ast.parse(bieu_thuc, mode="eval")
+        # Thu thập các biến cục bộ sinh từ comprehension hoặc walrus operator
+        local_comp_vars: Set[str] = set()
+        for node in ast.walk(parsed):
+            if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+                for gen in node.generators:
+                    for t_node in ast.walk(gen.target):
+                        if isinstance(t_node, ast.Name):
+                            local_comp_vars.add(t_node.id)
+            elif isinstance(node, ast.NamedExpr):
+                if isinstance(node.target, ast.Name):
+                    local_comp_vars.add(node.target.id)
+
         names: Set[str] = set()
         for node in ast.walk(parsed):
             if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
-                if node.id not in BUILTIN_SYMBOLS:
+                if node.id not in BUILTIN_SYMBOLS and node.id not in local_comp_vars:
                     names.add(node.id)
         return names
     except Exception:
-        tokens = set(re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]*\b", bieu_thuc))
+        clean = re.sub(r'"(?:[^"\\]|\\.)*"', ' ', bieu_thuc)
+        clean = re.sub(r"'(?:[^'\\]|\\.)*'", ' ', clean)
+        clean = re.sub(r'\.[a-zA-Z_][a-zA-Z0-9_]*', ' ', clean)
+        tokens = set(re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]*\b", clean))
         return {t for t in tokens if t not in BUILTIN_SYMBOLS}
+
+
+def _trich_xuat_bieu_tuong_import(code: str) -> Set[str]:
+    """Trích xuất tất cả các tên được import từ khối mã thô."""
+    symbols: Set[str] = set()
+    if not code:
+        return symbols
+    try:
+        tree = ast.parse(code)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    symbols.add(alias.asname or alias.name.split(".")[0])
+            elif isinstance(node, ast.ImportFrom):
+                for alias in node.names:
+                    if alias.name != "*":
+                        symbols.add(alias.asname or alias.name)
+    except Exception:
+        for line in code.splitlines():
+            line = line.strip()
+            if line.startswith("import "):
+                parts = line[7:].split(",")
+                for p in parts:
+                    p = p.strip().split(" as ")[-1].strip().split(".")[0]
+                    if p:
+                        symbols.add(p)
+            elif line.startswith("from ") and " import " in line:
+                _, imp = line.split(" import ", 1)
+                for p in imp.split(","):
+                    p = p.strip().replace("(", "").replace(")", "").split(" as ")[-1].strip()
+                    if p and p != "*":
+                        symbols.add(p)
+    return symbols
+
+
+def _trich_xuat_bien_gan_trong_ma_tho(code: str) -> Set[str]:
+    """Trích xuất các biến/hàm/lớp được định nghĩa trong khối mã thô."""
+    names: Set[str] = set()
+    if not code:
+        return names
+    try:
+        tree = ast.parse(code)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+                names.add(node.id)
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                names.add(node.name)
+    except Exception:
+        for m in re.finditer(r"^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*=", code, re.MULTILINE):
+            names.add(m.group(1))
+        for m in re.finditer(r"^\s*(?:def|class)\s+([a-zA-Z_][a-zA-Z0-9_]*)", code, re.MULTILINE):
+            names.add(m.group(1))
+    return names
+
+
+def _trich_xuat_ten_tham_so(tham_so_str: str) -> List[str]:
+    """Trích xuất danh sách tên tham số từ chuỗi định nghĩa hàm."""
+    if not tham_so_str or not tham_so_str.strip():
+        return []
+    try:
+        mod = ast.parse(f"def _({tham_so_str}): pass")
+        fn = mod.body[0]
+        assert isinstance(fn, ast.FunctionDef)
+        params = []
+        for arg in fn.args.posonlyargs + fn.args.args + fn.args.kwonlyargs:
+            params.append(arg.arg)
+        if fn.args.vararg:
+            params.append(fn.args.vararg.arg)
+        if fn.args.kwarg:
+            params.append(fn.args.kwarg.arg)
+        return params
+    except Exception:
+        clean = re.sub(r'"(?:[^"\\]|\\.)*"', '""', tham_so_str)
+        clean = re.sub(r"'(?:[^'\\]|\\.)*'", "''", clean)
+        depth = 0
+        cur = []
+        chunks = []
+        for ch in clean:
+            if ch in "([{":
+                depth += 1
+            elif ch in ")]}":
+                depth -= 1
+            elif ch == "," and depth == 0:
+                chunks.append("".join(cur).strip())
+                cur = []
+                continue
+            cur.append(ch)
+        if cur:
+            chunks.append("".join(cur).strip())
+        res = []
+        for chunk in chunks:
+            if chunk == "*":
+                continue
+            part = re.split(r"[:=]", chunk)[0].strip().lstrip("*")
+            if part and re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", part):
+                res.append(part)
+        return res
 
 
 def _dem_so_lan_dung_the(nodes: List[TheNode], counter: Dict[str, int]) -> None:
@@ -803,21 +965,42 @@ def _dem_so_lan_dung_the(nodes: List[TheNode], counter: Dict[str, int]) -> None:
             _dem_so_lan_dung_the(n.than, counter)
 
 
+def _thu_thap_bieu_tuong_toan_cuc(nodes: List[TheNode], global_symbols: Set[str]) -> None:
+    """Pha 1: Thu thập biểu tượng toàn cục (hàm, import, gán trong mã thô)."""
+    for node in nodes:
+        if node.ma == "ham":
+            ten_h = node.o.get("ten_ham", "").strip()
+            if ten_h:
+                global_symbols.add(ten_h)
+        elif node.ma == "ma_tho":
+            code = node.o.get("nguyen_van", node.raw_text or "")
+            global_symbols.update(_trich_xuat_bieu_tuong_import(code))
+            global_symbols.update(_trich_xuat_bien_gan_trong_ma_tho(code))
+        if node.than:
+            _thu_thap_bieu_tuong_toan_cuc(node.than, global_symbols)
+
+
 def kiem_tra_cay_the(nodes: List[TheNode]) -> DiagnosticResult:
-    """Chạy toàn bộ 5 quy tắc ĐỎ và 4 quy tắc VÀNG trên cây thẻ."""
+    """Chạy toàn bộ 5 quy tắc ĐỎ và 4 quy tắc VÀNG trên cây thẻ với Scope 2 pha."""
     diagnostics: List[DiagnosticItem] = []
     
     so_lan_dung: Dict[str, int] = {k: 0 for k in BO_THE_V1.keys()}
     _dem_so_lan_dung_the(nodes, so_lan_dung)
 
+    # PHA 1: Thu thập biểu tượng toàn cục
+    global_symbols: Set[str] = set(BUILTIN_SYMBOLS)
+    _thu_thap_bieu_tuong_toan_cuc(nodes, global_symbols)
+
     cac_bien_da_gan: Set[str] = set()
     cac_bien_da_doc: Set[str] = set()
 
+    # PHA 2: Duyệt kiểm tra phạm vi và cú pháp
     def _kiem_tra_danh_sach(
         node_list: List[TheNode],
         depth: int,
         inside_function: bool,
         scope_vars: Set[str],
+        parent_ma: Optional[str] = None,
     ):
         prev_node: Optional[TheNode] = None
         da_gap_tra_ve = False
@@ -868,9 +1051,10 @@ def kiem_tra_cay_the(nodes: List[TheNode]) -> DiagnosticResult:
                                 )
                             )
 
-            # LỖI ĐỎ 2: nguoc_lai không đứng ngay sau neu
+            # LỖI ĐỎ 2: nguoc_lai không đứng sau neu (kể cả dạng con trong CST hay anh em)
             if ma == "nguoc_lai":
-                if prev_node is None or prev_node.ma != "neu":
+                hop_le_else = (parent_ma == "neu") or (prev_node is not None and prev_node.ma == "neu")
+                if not hop_le_else:
                     diagnostics.append(
                         DiagnosticItem(
                             muc_do="do",
@@ -1049,12 +1233,13 @@ def kiem_tra_cay_the(nodes: List[TheNode]) -> DiagnosticResult:
                     if ten_h:
                         scope_vars.add(ten_h)
                         cac_bien_da_gan.add(ten_h)
-                    params = [p.strip() for p in node.o.get("tham_so", "").split(",") if p.strip()]
+                    params = _trich_xuat_ten_tham_so(node.o.get("tham_so", ""))
                     child_scope.update(params)
                     cac_bien_da_gan.update(params)
                 elif ma == "lap_moi":
-                    b = node.o.get("bien", "").strip()
-                    if b:
+                    b_str = node.o.get("bien", "").strip()
+                    loop_vars = re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]*\b", b_str)
+                    for b in loop_vars:
                         child_scope.add(b)
                         cac_bien_da_gan.add(b)
 
@@ -1063,23 +1248,25 @@ def kiem_tra_cay_the(nodes: List[TheNode]) -> DiagnosticResult:
                     depth=depth + 1,
                     inside_function=is_fn,
                     scope_vars=child_scope,
+                    parent_ma=ma,
                 )
 
             prev_node = node
 
-    _kiem_tra_danh_sach(nodes, depth=1, inside_function=False, scope_vars=set())
+    _kiem_tra_danh_sach(nodes, depth=1, inside_function=False, scope_vars=set(global_symbols))
 
     # CẢNH BÁO VÀNG 1: Biến gán rồi không dùng lần nào
-    chua_dung = cac_bien_da_gan - cac_bien_da_doc
+    chua_dung = cac_bien_da_gan - cac_bien_da_doc - global_symbols
     for var in sorted(chua_dung):
-        diagnostics.append(
-            DiagnosticItem(
-                muc_do="vang",
-                ma_loi="unused_variable",
-                thong_diep=f"Biến '{var}' đã được khai báo nhưng chưa được sử dụng lần nào",
-                node_id="global",
+        if not var.startswith("_"):
+            diagnostics.append(
+                DiagnosticItem(
+                    muc_do="vang",
+                    ma_loi="unused_variable",
+                    thong_diep=f"Biến '{var}' đã được khai báo nhưng chưa được sử dụng lần nào",
+                    node_id="global",
+                )
             )
-        )
 
     so_do = sum(1 for d in diagnostics if d.muc_do == "do")
     so_vang = sum(1 for d in diagnostics if d.muc_do == "vang")

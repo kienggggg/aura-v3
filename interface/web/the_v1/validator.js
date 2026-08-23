@@ -14,7 +14,18 @@
     "dict", "set", "tuple", "sum", "min", "max", "abs", "round", "bool",
     "print", "input", "enumerate", "zip", "sorted", "reversed", "map", "filter",
     "open", "type", "isinstance", "issubclass", "iter", "next", "all", "any",
-    "chr", "ord", "hex", "bin", "oct", "pow", "divmod", "format", "repr"
+    "chr", "ord", "hex", "bin", "oct", "pow", "divmod", "format", "repr",
+    "getattr", "hasattr", "setattr", "delattr", "frozenset", "callable", "id",
+    "hash", "staticmethod", "classmethod", "property", "super", "vars", "dir",
+    "bytes", "bytearray", "slice", "complex", "memoryview", "ascii", "help",
+    "globals", "locals", "Exception", "ValueError", "TypeError", "KeyError",
+    "IndexError", "AttributeError", "RuntimeError", "StopIteration",
+    "FileNotFoundError", "AssertionError", "ImportError", "IOError", "OSError",
+    // Từ khóa Python
+    "if", "else", "elif", "for", "while", "in", "is", "not", "and", "or",
+    "as", "with", "try", "except", "finally", "def", "class", "return", "yield",
+    "pass", "break", "continue", "import", "from", "lambda", "global", "nonlocal",
+    "assert", "del", "raise", "async", "await"
   ]);
 
   const NHOM_THE = {
@@ -147,18 +158,114 @@
     let str = bieuThuc.trim();
     if (!str) return new Set();
 
-    // Xóa chuỗi ký tự "..." và '...' để không nhận nhầm nội dung trong chuỗi là tên biến
-    str = str.replace(/"(?:[^"\\]|\\.)*"/g, " ");
-    str = str.replace(/'(?:[^'\\]|\\.)*'/g, " ");
+    // Xóa chuỗi ký tự và bytes literal (kèm tiền tố b, r, f, u, rb, fr...)
+    str = str.replace(/\b[rRuUbBfF]+(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, " ");
+
+    // Thu thập biến cục bộ sinh từ comprehension: for <var> in ...
+    const compVars = new Set();
+    const compMatches = str.matchAll(/\bfor\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\s*,\s*[a-zA-Z_][a-zA-Z0-9_]*)*)\s+in\b/g);
+    for (const m of compMatches) {
+      const vars = m[1].split(",");
+      for (const v of vars) {
+        const vClean = v.trim();
+        if (vClean) compVars.add(vClean);
+      }
+    }
+
+    // Xóa các thuộc tính / phương thức .attr để không bắt nhầm attr là biến
+    str = str.replace(/\.[a-zA-Z_][a-zA-Z0-9_]*/g, " ");
 
     const tokens = str.match(/\b[a-zA-Z_][a-zA-Z0-9_]*\b/g) || [];
     const res = new Set();
     for (const t of tokens) {
-      if (!BUILTIN_SYMBOLS.has(t)) {
+      if (!BUILTIN_SYMBOLS.has(t) && !compVars.has(t)) {
         res.add(t);
       }
     }
     return res;
+  }
+
+  function trichXuatImport(code) {
+    const symbols = new Set();
+    if (!code || typeof code !== "string") return symbols;
+    const lines = code.split("\n");
+    for (let line of lines) {
+      line = line.trim();
+      if (line.startsWith("import ")) {
+        const parts = line.slice(7).split(",");
+        for (let p of parts) {
+          let name = p.trim();
+          if (name.includes(" as ")) {
+            name = name.split(" as ")[1].trim();
+          } else {
+            name = name.split(".")[0].trim();
+          }
+          if (name) symbols.add(name);
+        }
+      } else if (line.startsWith("from ") && line.includes(" import ")) {
+        const impPart = line.split(" import ")[1];
+        if (impPart) {
+          const parts = impPart.split(",");
+          for (let p of parts) {
+            let name = p.trim();
+            if (name.includes(" as ")) {
+              name = name.split(" as ")[1].trim();
+            }
+            name = name.replace(/[()]/g, "").trim();
+            if (name && name !== "*") symbols.add(name);
+          }
+        }
+      }
+    }
+    return symbols;
+  }
+
+  function trichXuatBienGanTrongMaTho(code) {
+    const names = new Set();
+    if (!code || typeof code !== "string") return names;
+    const lines = code.split("\n");
+    for (let line of lines) {
+      const m = line.match(/^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*=/);
+      if (m) names.add(m[1]);
+      const defM = line.match(/^\s*(?:def|class)\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
+      if (defM) names.add(defM[1]);
+    }
+    return names;
+  }
+
+  function trichXuatTenThamSo(thamSoStr) {
+    if (!thamSoStr || typeof thamSoStr !== "string") return [];
+    let str = thamSoStr.trim();
+    if (!str) return [];
+
+    let clean = str.replace(/"(?:[^"\\]|\\.)*"/g, '""').replace(/'(?:[^'\\]|\\.)*'/g, "''");
+    let depth = 0;
+    let cur = "";
+    const chunks = [];
+    for (let i = 0; i < clean.length; i++) {
+      const ch = clean[i];
+      if (ch === '(' || ch === '[' || ch === '{') depth++;
+      else if (ch === ')' || ch === ']' || ch === '}') depth--;
+      else if (ch === ',' && depth === 0) {
+        if (cur.trim()) chunks.push(cur.trim());
+        cur = "";
+        continue;
+      }
+      cur += ch;
+    }
+    if (cur.trim()) chunks.push(cur.trim());
+
+    const result = [];
+    for (let p of chunks) {
+      p = p.trim();
+      if (p === "*") continue;
+      let namePart = p.split(/[:=]/)[0].trim();
+      namePart = namePart.replace(/^\*+/, "").trim();
+      if (namePart && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(namePart)) {
+        result.push(namePart);
+      }
+    }
+    return result;
   }
 
   function demSoLanDungThe(nodes, counter) {
@@ -171,6 +278,23 @@
     }
   }
 
+  function thuThapBieuTuongToanCuc(nodes, globalSymbols) {
+    if (!nodes) return;
+    for (const node of nodes) {
+      if (node.ma === "ham") {
+        const tenH = (node.o && node.o.ten_ham) ? String(node.o.ten_ham).trim() : "";
+        if (tenH) globalSymbols.add(tenH);
+      } else if (node.ma === "ma_tho") {
+        const code = (node.o && node.o.nguyen_van) ? String(node.o.nguyen_van) : (node.raw_text || "");
+        trichXuatImport(code).forEach(s => globalSymbols.add(s));
+        trichXuatBienGanTrongMaTho(code).forEach(s => globalSymbols.add(s));
+      }
+      if (node.than && node.than.length > 0) {
+        thuThapBieuTuongToanCuc(node.than, globalSymbols);
+      }
+    }
+  }
+
   function kiemTraCayThe(nodes) {
     const diagnostics = [];
     const soLanDung = {};
@@ -179,10 +303,15 @@
     }
     demSoLanDungThe(nodes, soLanDung);
 
+    // PHA 1: Thu thập biểu tượng toàn cục
+    const globalSymbols = new Set(BUILTIN_SYMBOLS);
+    thuThapBieuTuongToanCuc(nodes, globalSymbols);
+
     const cacBienDaGan = new Set();
     const cacBienDaDoc = new Set();
 
-    function kiemTraDanhSach(nodeList, depth, insideFunction, scopeVars) {
+    // PHA 2: Duyệt kiểm tra phạm vi và cú pháp
+    function kiemTraDanhSach(nodeList, depth, insideFunction, scopeVars, parentMa = null) {
       if (!nodeList) return;
       let prevNode = null;
       let daGapTraVe = false;
@@ -235,9 +364,10 @@
           }
         }
 
-        // LỖI ĐỎ 2: nguoc_lai không đứng ngay sau neu
+        // LỖI ĐỎ 2: nguoc_lai không đứng ngay sau neu (hoặc thuộc neu)
         if (ma === "nguoc_lai") {
-          if (!prevNode || prevNode.ma !== "neu") {
+          const hopLeElse = (parentMa === "neu") || (prevNode && prevNode.ma === "neu");
+          if (!hopLeElse) {
             diagnostics.push({
               muc_do: "do",
               ma_loi: "orphan_else",
@@ -417,34 +547,33 @@
               cacBienDaGan.add(tenH);
             }
             const rawParams = (node.o && node.o.tham_so) ? String(node.o.tham_so) : "";
-            rawParams.split(",").forEach(p => {
-              const trimmed = p.trim();
-              if (trimmed) {
-                childScope.add(trimmed);
-                cacBienDaGan.add(trimmed);
-              }
+            const params = trichXuatTenThamSo(rawParams);
+            params.forEach(p => {
+              childScope.add(p);
+              cacBienDaGan.add(p);
             });
           } else if (ma === "lap_moi") {
             const b = (node.o && node.o.bien) ? String(node.o.bien).trim() : "";
-            if (b) {
-              childScope.add(b);
-              cacBienDaGan.add(b);
-            }
+            const loopVars = b.match(/\b[a-zA-Z_][a-zA-Z0-9_]*\b/g) || [];
+            loopVars.forEach(v => {
+              childScope.add(v);
+              cacBienDaGan.add(v);
+            });
           }
 
-          kiemTraDanhSach(node.than, depth + 1, isFn, childScope);
+          kiemTraDanhSach(node.than, depth + 1, isFn, childScope, ma);
         }
 
         prevNode = node;
       }
     }
 
-    kiemTraDanhSach(nodes, 1, false, new Set());
+    kiemTraDanhSach(nodes, 1, false, new Set(globalSymbols), null);
 
     // CẢNH BÁO VÀNG 1: Biến gán rồi không dùng
     const chuaDung = [];
     cacBienDaGan.forEach(v => {
-      if (!cacBienDaDoc.has(v)) {
+      if (!cacBienDaDoc.has(v) && !globalSymbols.has(v) && !v.startsWith("_")) {
         chuaDung.push(v);
       }
     });
@@ -474,15 +603,27 @@
   function sinhMaPython(nodes, indentLevel = 0) {
     if (!nodes) return "";
     const resLines = [];
-    const spaces = " ".repeat(indentLevel * 4);
 
     for (const node of nodes) {
       const ma = node.ma;
       if (ma === "ma_tho") {
         const raw = (node.o && node.o.nguyen_van) || node.raw_text || "";
-        if (raw) resLines.push(raw);
+        if (raw) {
+          const spaces = " ".repeat(indentLevel * 4);
+          for (const rl of raw.split("\n")) {
+            if (rl.trim()) {
+              resLines.push(`${spaces}${rl}`);
+            } else {
+              resLines.push("");
+            }
+          }
+        }
         continue;
       }
+
+      const isElseOrElif = (ma === "nguoc_lai") || (ma === "neu" && node.o && node.o.noi_tiep === "1");
+      const curIndent = isElseOrElif ? Math.max(0, indentLevel - 1) : indentLevel;
+      const spaces = " ".repeat(curIndent * 4);
 
       let base = "";
       if (ma === "gan") {
@@ -494,7 +635,11 @@
         base = `${spaces}print(${nd})`;
       } else if (ma === "neu") {
         const dk = (node.o && node.o.dieu_kien) || "True";
-        base = `${spaces}if ${dk}:`;
+        if (node.o && node.o.noi_tiep === "1") {
+          base = `${spaces}elif ${dk}:`;
+        } else {
+          base = `${spaces}if ${dk}:`;
+        }
       } else if (ma === "nguoc_lai") {
         base = `${spaces}else:`;
       } else if (ma === "lap_moi") {
@@ -506,11 +651,33 @@
         base = `${spaces}while ${dk}:`;
       } else if (ma === "tra_ve") {
         const gt = (node.o && node.o.gia_tri) || "";
-        base = `${spaces}return ${gt}`.trimEnd();
+        if (gt) {
+          base = `${spaces}return ${gt}`.trimEnd();
+        } else {
+          base = `${spaces}return`;
+        }
       } else if (ma === "ham") {
         const th = (node.o && node.o.ten_ham) || "ham";
         const ts = (node.o && node.o.tham_so) || "";
-        base = `${spaces}def ${th}(${ts}):`;
+        let ktv = (node.o && node.o.kieu_tra_ve ? String(node.o.kieu_tra_ve).trim() : "");
+        const prefix = (node.o && node.o.async === "1") ? "async def" : "def";
+
+        const lines = [];
+        if (node.o && node.o.trang_tri) {
+          for (const dec of String(node.o.trang_tri).split("\n")) {
+            if (dec.trim()) lines.push(`${spaces}${dec.trim()}`);
+          }
+        }
+
+        let sig = "";
+        if (ktv) {
+          if (!ktv.startsWith("->")) ktv = `-> ${ktv}`;
+          sig = `${spaces}${prefix} ${th}(${ts}) ${ktv}:`;
+        } else {
+          sig = `${spaces}${prefix} ${th}(${ts}):`;
+        }
+        lines.push(sig);
+        base = lines.join("\n");
       } else if (ma === "goi_ham") {
         const th = (node.o && node.o.ten_ham) || "ham";
         const ds = (node.o && node.o.doi_so) || "";
@@ -537,9 +704,10 @@
       const defn = BO_THE_V1[ma];
       if (defn && defn.co_than) {
         if (node.than && node.than.length > 0) {
-          resLines.push(sinhMaPython(node.than, indentLevel + 1));
+          const childIndent = curIndent + 1;
+          resLines.push(sinhMaPython(node.than, childIndent));
         } else {
-          const childSpaces = " ".repeat((indentLevel + 1) * 4);
+          const childSpaces = " ".repeat((curIndent + 1) * 4);
           resLines.push(`${childSpaces}pass`);
         }
       }

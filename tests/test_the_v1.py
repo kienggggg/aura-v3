@@ -12,6 +12,7 @@ Bao gồm:
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 import pytest
 
@@ -19,12 +20,14 @@ from core.the_v1 import (
     BO_THE_V1,
     TheNode,
     chay_ma_python_sandbox,
-    doc_chuoi_py_sang_cay_the,
-    doc_tep_py_sang_cay_the,
     kiem_tra_cay_the,
-    luu_cay_the_ra_tep_py,
     sinh_dong_the_don,
     sinh_ma_python,
+)
+from core.the_cst import (
+    doc_chuoi_py_sang_cay_the,
+    doc_tep_py_sang_cay_the,
+    luu_cay_the_ra_tep_py,
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -64,19 +67,18 @@ def test_cua_cung_1_mo_luu_lossless_toan_bo_kho_ma():
         record = doc_tep_py_sang_cay_the(p)
         ds = _phang(record.tree)
 
-        # Ép đi qua bộ sinh mã: từng thẻ gõ lại y giá trị cũ
-        for n in ds:
-            for m in ds:
-                m.da_sua = False
-            n.da_sua = True
-            record.has_modifications = True
-            output_bytes = luu_cay_the_ra_tep_py(record)
-            sha_output = hashlib.sha256(output_bytes).hexdigest()
+        # Ép TẤT CẢ thẻ đi qua bộ ghi trong một lượt. Bản cũ ghi từng thẻ rồi
+        # dựng lại cả module hơn 5.000 lần, khiến cùng một phép chứng minh mất >6 phút.
+        for node in ds:
+            node.da_sua = True
+        record.has_modifications = True
+        output_bytes = luu_cay_the_ra_tep_py(record)
+        sha_output = hashlib.sha256(output_bytes).hexdigest()
 
-            assert sha_output == sha_original, (
-                f"Thất bại cửa cứng 1 tại file {p.relative_to(PROJECT_ROOT)} (thẻ {n.ma} dòng {n.line_start}): "
-                f"SHA ban đầu={sha_original}, SHA sau lưu={sha_output}"
-            )
+        assert sha_output == sha_original, (
+            f"Thất bại cửa cứng 1 tại file {p.relative_to(PROJECT_ROOT)}: "
+            f"SHA ban đầu={sha_original}, SHA sau lưu={sha_output}"
+        )
         so_tep_pass += 1
 
     assert so_tep_pass == len(py_files)
@@ -98,7 +100,7 @@ def test_cua_cung_2_sua_o_giu_nguyen_chu_thich_cuoi_dong():
         'print("Xong")\n'
     )
     raw_bytes = sample_code.encode("utf-8")
-    record = doc_chuoi_py_sang_cay_the(raw_bytes)
+    record = doc_chuoi_py_sang_cay_the(sample_code)
 
     # Tìm thẻ gán CHAT_STAGE_INPUT
     target_node = None
@@ -132,7 +134,7 @@ def test_trich_duoi_dong_khong_bi_lua_boi_hash_trong_chuoi():
     Dùng end_col_offset đảm bảo không bao giờ cắt nhầm chuỗi có chứa #.
     """
     sample_code = 'd = ["# Omega — báo cáo " + gio, ""]\n'
-    record = doc_chuoi_py_sang_cay_the(sample_code.encode("utf-8"))
+    record = doc_chuoi_py_sang_cay_the(sample_code)
     
     node = record.tree[0]
     assert node.ma == "gan"
@@ -146,7 +148,7 @@ def test_trich_duoi_dong_khong_bi_lua_boi_hash_trong_chuoi():
 # ==============================================================================
 
 def test_the_ma_tho_chua_cau_truc_phuc_tap():
-    """Các cấu trúc phức tạp (import, class, async with, @decorator) thành thẻ ma_tho."""
+    """Cấu trúc chưa hỗ trợ thành mã thô; async def vẫn là thẻ hàm giữ nguyên async."""
     code = (
         'import os\n'
         'from dataclasses import dataclass\n'
@@ -159,11 +161,14 @@ def test_the_ma_tho_chua_cau_truc_phuc_tap():
         '    async with lock:\n'
         '        pass\n'
     )
-    record = doc_chuoi_py_sang_cay_the(code.encode("utf-8"))
+    record = doc_chuoi_py_sang_cay_the(code)
     assert len(record.tree) >= 1
+    assert sum(node.ma == "ma_tho" for node in record.tree) >= 3
+    async_function = next(node for node in record.tree if node.ma == "ham")
+    assert any(child.ma == "ma_tho" for child in async_function.than)
     for node in record.tree:
-        assert node.ma == "ma_tho"
-        assert node.o.get("nguyen_van") is not None
+        node.da_sua = True
+    assert luu_cay_the_ra_tep_py(record) == code.encode("utf-8")
 
 
 def test_sinh_ma_python_10_the_chuan():
@@ -349,7 +354,7 @@ def test_api_bao_mat_4_lop():
         await client.start_server()
 
         try:
-            valid_token = the_api.AUTH_TOKEN
+            valid_token = app["auth_token"]
 
             # 1. Gọi thiếu Auth token -> Phải trả về 403
             resp_no_token = await client.post("/api/kiem", json={"tree": []})
@@ -438,11 +443,18 @@ def test_api_e2e_mo_sua_luu_tep_http(tmp_path):
     from interface import the_api
     from interface.the_app import tao_app
 
+    import copy
+
     test_file = tmp_path / "sample_e2e.py"
     sample_code = (
-        '# Header comment\n'
-        'x = 10      # giá trị khởi tạo\n'
-        'print("Xong")\n'
+        '# Header comment\r\n'
+        'def chon(x: int = 1) -> bool:\r\n'
+        '    if x == 1:  # nhánh đầu\r\n'
+        '        return True\r\n'
+        '    elif x == 2:  # nhánh cần sửa\r\n'
+        '        return False\r\n'
+        '    else:\r\n'
+        '        return True\r\n'
     )
     raw_sample = sample_code.encode("utf-8")
     test_file.write_bytes(raw_sample)
@@ -455,7 +467,7 @@ def test_api_e2e_mo_sua_luu_tep_http(tmp_path):
         await client.start_server()
 
         try:
-            token = the_api.AUTH_TOKEN
+            token = app["auth_token"]
             headers = {
                 "X-Auth-Token": token,
                 "Origin": "http://127.0.0.1:8099",
@@ -474,16 +486,63 @@ def test_api_e2e_mo_sua_luu_tep_http(tmp_path):
             original_sha = data_open["sha256"]
             assert original_sha == hashlib.sha256(sample_code.encode("utf-8")).hexdigest()
 
+            assert data_open["newline"] == "CRLF"
             tree = data_open["tree"]
-            # 2. Tìm thẻ gán 'x = 10' và sửa giá trị thành '99' qua JSON thuần túy
-            found = False
-            for node in tree:
-                if node.get("ma") == "gan" and node.get("o", {}).get("ten_bien") == "x":
-                    node["o"]["gia_tri"] = "99"
-                    node["da_sua"] = True
-                    found = True
-                    break
-            assert found, "Phải tìm thấy thẻ gán x trong cây JSON"
+
+            def walk(nodes):
+                for node in nodes:
+                    yield node
+                    yield from walk(node.get("than", []))
+
+            # 2. Tìm đúng thẻ elif và sửa điều kiện qua JSON thuần túy.
+            target = next(
+                node for node in walk(tree)
+                if node.get("ma") == "neu" and node.get("o", {}).get("noi_tiep") == "1"
+            )
+            target["o"]["dieu_kien"] = "x == 3"
+            # Cố tình không gửi da_sua=True: server phải tự suy ra thay đổi.
+            target["da_sua"] = False
+
+            # Tệp đã có mà thiếu version token phải bị chặn trước khi ghi.
+            resp_missing_sha = await client.post(
+                "/api/luu_tep",
+                json={"duong_dan": str(test_file), "tree": tree, "kieu_luu": "py"},
+                headers=headers,
+            )
+            assert resp_missing_sha.status == 428
+            assert test_file.read_bytes() == raw_sample
+
+            # Thêm thẻ là thao tác cấu trúc chưa hỗ trợ: phải 422, không được bỏ qua âm thầm.
+            structural_tree = copy.deepcopy(tree)
+            structural_tree.append({
+                "id": "the_moi", "ma": "in_ra", "o": {"noi_dung": '"mới"'},
+                "than": [], "da_sua": True,
+            })
+            resp_structural = await client.post(
+                "/api/luu_tep",
+                json={
+                    "duong_dan": str(test_file), "tree": structural_tree,
+                    "kieu_luu": "py", "expected_sha256": original_sha,
+                },
+                headers=headers,
+            )
+            assert resp_structural.status == 422
+            assert test_file.read_bytes() == raw_sample
+
+            # Save As sang tệp mới phải giữ toàn bộ cú pháp ẩn nhờ byte+SHA nguồn,
+            # không được dựng lại từ các ô thẻ rồi làm mất annotation/comment/elif.
+            save_as_file = tmp_path / "sample_e2e_copy.py"
+            resp_save_as = await client.post(
+                "/api/luu_tep",
+                json={
+                    "duong_dan": str(save_as_file), "tree": tree, "kieu_luu": "py",
+                    "source_path": str(test_file), "source_sha256": original_sha,
+                },
+                headers=headers,
+            )
+            assert resp_save_as.status == 200
+            assert save_as_file.read_bytes() == raw_sample.replace(b"x == 2", b"x == 3")
+            assert test_file.read_bytes() == raw_sample
 
             # 3. Lưu tệp qua API với expected_sha256
             resp_save = await client.post(
@@ -491,6 +550,7 @@ def test_api_e2e_mo_sua_luu_tep_http(tmp_path):
                 json={
                     "duong_dan": str(test_file),
                     "tree": tree,
+                    "kieu_luu": "py",
                     "expected_sha256": original_sha,
                     "has_modifications": True
                 },
@@ -502,27 +562,167 @@ def test_api_e2e_mo_sua_luu_tep_http(tmp_path):
             new_sha = data_save.get("sha256")
 
             # 4. Đọc lại từ đĩa để xác thực
-            saved_disk = test_file.read_text(encoding="utf-8")
-            assert hashlib.sha256(saved_disk.encode("utf-8")).hexdigest() == new_sha
-            assert 'x = 99      # giá trị khởi tạo' in saved_disk
-            assert '# Header comment' in saved_disk
-            assert 'print("Xong")' in saved_disk
+            saved_bytes = test_file.read_bytes()
+            assert hashlib.sha256(saved_bytes).hexdigest() == new_sha
+            expected_bytes = raw_sample.replace(b"x == 2", b"x == 3")
+            assert saved_bytes == expected_bytes
+            assert b"def chon(x: int = 1) -> bool:\r\n" in saved_bytes
+            assert b"elif x == 3:  # nh" in saved_bytes
 
-            # 5. Kiểm tra 409 Conflict: Sửa file ngoài luồng rồi gửi yêu cầu lưu với expected_sha cũ
-            test_file.write_bytes((sample_code + "\n# Sửa bên ngoài\n").encode("utf-8"))
+            # Lưu lần hai bằng SHA mới phải thành công.
+            target["o"]["dieu_kien"] = "x == 4"
+            resp_save_2 = await client.post(
+                "/api/luu_tep",
+                json={
+                    "duong_dan": str(test_file), "tree": tree, "kieu_luu": "py",
+                    "expected_sha256": new_sha,
+                },
+                headers=headers,
+            )
+            assert resp_save_2.status == 200
+            data_save_2 = await resp_save_2.json()
+            new_sha_2 = data_save_2["sha256"]
+            assert test_file.read_bytes() == raw_sample.replace(b"x == 2", b"x == 4")
+
+            # 5. Sửa ngoài luồng rồi gửi đúng SHA của lần lưu gần nhất: phải 409.
+            external_bytes = test_file.read_bytes() + b"# Sua ben ngoai\r\n"
+            test_file.write_bytes(external_bytes)
             resp_conflict = await client.post(
                 "/api/luu_tep",
                 json={
                     "duong_dan": str(test_file),
                     "tree": tree,
-                    "expected_sha256": original_sha,
+                    "kieu_luu": "py",
+                    "expected_sha256": new_sha_2,
                 },
                 headers=headers
             )
             assert resp_conflict.status == 409
             data_conflict = await resp_conflict.json()
             assert "409 Conflict" in data_conflict.get("error", "")
+            assert test_file.read_bytes() == external_bytes
 
+        finally:
+            await client.close()
+
+    asyncio.run(_run())
+
+
+def test_api_json_version_token_bat_buoc_va_mo_lai_duoc(tmp_path):
+    """JSON dùng cùng optimistic-lock như Python và thật sự mở lại được trên app."""
+    import asyncio
+    from aiohttp.test_utils import TestClient, TestServer
+    from interface import the_api
+    from interface.the_app import tao_app
+
+    target = tmp_path / "cards.json"
+    the_api.ALLOWED_ROOTS.append(tmp_path.resolve())
+    tree = [{
+        "id": "n1", "ma": "gan", "o": {"ten_bien": "x", "gia_tri": "1"},
+        "than": [], "da_sua": True,
+    }]
+
+    async def _run():
+        app = tao_app()
+        client = TestClient(TestServer(app))
+        await client.start_server()
+        headers = {
+            "X-Auth-Token": app["auth_token"],
+            "Origin": "http://127.0.0.1:8099",
+        }
+        try:
+            create = await client.post(
+                "/api/luu_tep",
+                json={"duong_dan": str(target), "tree": tree, "kieu_luu": "json"},
+                headers=headers,
+            )
+            assert create.status == 200
+            created = await create.json()
+            first_sha = created["sha256"]
+            first_bytes = target.read_bytes()
+
+            opened = await client.post(
+                "/api/mo_tep", json={"duong_dan": str(target)}, headers=headers
+            )
+            assert opened.status == 200
+            opened_data = await opened.json()
+            assert opened_data["sha256"] == first_sha
+            assert opened_data["tree"][0]["o"]["gia_tri"] == "1"
+            opened_data["tree"][0]["o"]["gia_tri"] = "2"
+
+            missing = await client.post(
+                "/api/luu_tep",
+                json={
+                    "duong_dan": str(target), "tree": opened_data["tree"],
+                    "kieu_luu": "json",
+                },
+                headers=headers,
+            )
+            assert missing.status == 428
+            assert target.read_bytes() == first_bytes
+
+            conflict = await client.post(
+                "/api/luu_tep",
+                json={
+                    "duong_dan": str(target), "tree": opened_data["tree"],
+                    "kieu_luu": "json", "expected_sha256": "0" * 64,
+                },
+                headers=headers,
+            )
+            assert conflict.status == 409
+            assert target.read_bytes() == first_bytes
+
+            saved = await client.post(
+                "/api/luu_tep",
+                json={
+                    "duong_dan": str(target), "tree": opened_data["tree"],
+                    "kieu_luu": "json", "expected_sha256": first_sha,
+                },
+                headers=headers,
+            )
+            assert saved.status == 200
+            assert json.loads(target.read_text(encoding="utf-8"))[0]["o"]["gia_tri"] == "2"
+        finally:
+            await client.close()
+
+    asyncio.run(_run())
+
+
+def test_ui_giu_sha_va_khong_danh_dau_ban_khi_vua_mo():
+    """Khóa tĩnh tối thiểu cho contract JS; HTTP byte-level được đo ở hai test trên."""
+    js = (PROJECT_ROOT / "interface" / "web" / "the_v1" / "app.js").read_text(encoding="utf-8")
+    assert "activeFileSha256: null" in js
+    assert "state.activeFileSha256 = data.sha256" in js
+    assert "payload.expected_sha256 = state.activeFileSha256" in js
+    assert "payload.source_path = state.activeFilePath" in js
+    assert "payload.source_sha256 = state.activeFileSha256" in js
+    assert "onTreeChanged(false, false)" in js
+    assert "resp.status === 409" in js
+
+
+def test_api_chay_ma_tat_mac_dinh(monkeypatch):
+    """Bản public không được gọi tiến trình Python nếu chưa bật rõ opt-in."""
+    import asyncio
+    from aiohttp.test_utils import TestClient, TestServer
+    from interface import the_api
+    from interface.the_app import tao_app
+
+    monkeypatch.setattr(the_api, "ALLOW_CODE_EXECUTION", False)
+
+    async def _run():
+        app = tao_app()
+        client = TestClient(TestServer(app))
+        await client.start_server()
+        headers = {
+            "X-Auth-Token": app["auth_token"],
+            "Origin": "http://127.0.0.1:8099",
+        }
+        try:
+            status = await client.get("/api/status", headers=headers)
+            assert status.status == 200
+            assert (await status.json())["code_execution_enabled"] is False
+            run = await client.post("/api/chay", json={"code": "print(1)"}, headers=headers)
+            assert run.status == 403
         finally:
             await client.close()
 

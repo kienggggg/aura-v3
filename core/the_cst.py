@@ -162,7 +162,10 @@ def _ma_cua(nut) -> tuple[str, Dict[str, str], Dict[str, Any]]:
     phép lúc lưu chỉ thay đúng một ô — chỗ khác không đụng tới.
     """
     if isinstance(nut, cst.FunctionDef):
-        return "ham", {}, {"ten_ham": nut.name, "tham_so": nut.params}
+        ban_do = {"ten_ham": nut.name, "tham_so": nut.params}
+        if nut.returns is not None:
+            ban_do["kieu_tra_ve"] = nut.returns.annotation
+        return "ham", {}, ban_do
     if isinstance(nut, cst.If):
         return "neu", {}, {"dieu_kien": nut.test}
     if isinstance(nut, cst.Else):
@@ -229,7 +232,17 @@ def doc_chuoi_py_sang_cay_the(nguon: str,
                         line_end=r.end.line, indent=muc * 4)
             ban_do[mid] = nut
             return t
-        t = TheNode(id=mid, ma=ma, o=_o_thanh_chu(ma, cac_o, mod),
+        
+        o_dict = _o_thanh_chu(ma, cac_o, mod)
+        if isinstance(nut, cst.FunctionDef):
+            if nut.returns is not None:
+                o_dict["kieu_tra_ve"] = mod.code_for_node(nut.returns.annotation).strip()
+            if nut.asynchronous is not None:
+                o_dict["async"] = "1"
+            if nut.decorators:
+                o_dict["trang_tri"] = "\n".join(mod.code_for_node(d).strip() for d in nut.decorators)
+
+        t = TheNode(id=mid, ma=ma, o=o_dict,
                     line_start=r.start.line, line_end=r.end.line,
                     indent=muc * 4,
                     duoi_dong=_chu_thich_cuoi_dong(nut, mod))
@@ -383,6 +396,14 @@ def _ap_dung(nut, o_moi: Dict[str, str], o_cu: Dict[str, str]):
             t["name"] = cst.Name(o_moi["ten_ham"])
         if khac("tham_so"):
             t["params"] = _doi_tham_so(o_moi["tham_so"])
+        if khac("kieu_tra_ve"):
+            ktv = o_moi["kieu_tra_ve"].strip()
+            if ktv.startswith("->"):
+                ktv = ktv[2:].strip()
+            if ktv:
+                t["returns"] = cst.Annotation(annotation=_doi_bieu_thuc(ktv))
+            else:
+                t["returns"] = None
         return nut.with_changes(**t) if t else nut
     if isinstance(nut, cst.If):
         return (nut.with_changes(test=_doi_bieu_thuc(o_moi["dieu_kien"]))

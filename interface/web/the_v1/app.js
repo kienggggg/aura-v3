@@ -10,9 +10,14 @@
     historyIndex: -1,
     authToken: '',
     activeFilePath: '',
+    activeFileSha256: null,
     hasModifications: false,
+    codeExecutionEnabled: false,
     diagnostics: { hop_le: true, so_loi_do: 0, so_canh_bao_vang: 0, danh_sach: [], so_lan_dung_the: {} },
-    nodeIdCounter: 100
+    nodeIdCounter: 100,
+    sidebarLeftCollapsed: false,
+    sidebarRightCollapsed: false,
+    codeFontSize: 14
   };
 
   // ==========================================================================
@@ -32,6 +37,16 @@
     }
   }
 
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   // Gọi fetch kèm header bảo mật X-Auth-Token
   async function authFetch(url, options = {}) {
     const headers = {
@@ -42,15 +57,120 @@
     return fetch(url, { ...options, headers });
   }
 
+  async function configureRuntimeCapabilities() {
+    const btnRun = document.getElementById('btnRun');
+    const runText = document.getElementById('runBtnText');
+    const btnTrace = document.getElementById('btnRunTrace');
+    const btnE1 = document.getElementById('btnRunE1');
+    const termBody = document.getElementById('terminalBody');
+    const traceStatusPill = document.getElementById('traceStatusPill');
+    const e1StatusPill = document.getElementById('e1StatusPill');
+
+    try {
+      const resp = await authFetch('/api/status');
+      const data = await resp.json();
+      state.codeExecutionEnabled = Boolean(data.code_execution_enabled);
+      state.e1Limitation = data.e1_limitation || '';
+      if (btnRun) btnRun.disabled = !state.codeExecutionEnabled;
+      if (btnTrace) btnTrace.disabled = !state.codeExecutionEnabled;
+      if (btnE1) btnE1.disabled = !state.codeExecutionEnabled;
+
+      if (!state.codeExecutionEnabled) {
+        if (runText) runText.textContent = 'CHẠY ĐANG TẮT';
+        if (btnRun) btnRun.title = 'Tắt mặc định vì tiến trình Python chưa được cách ly khỏi tệp và mạng';
+        if (btnTrace) btnTrace.title = 'Chạy mã/test đang tắt mặc định';
+        if (btnE1) btnE1.title = 'Chạy mã/test đang tắt mặc định';
+        if (traceStatusPill) {
+          traceStatusPill.className = 'trace-status-pill cut';
+          traceStatusPill.textContent = 'TẮT';
+        }
+        if (e1StatusPill) {
+          e1StatusPill.className = 'trace-status-pill cut';
+          e1StatusPill.textContent = 'TẮT';
+        }
+        if (termBody) {
+          termBody.innerHTML = '<div class="term-line term-dim">&gt; Chạy mã đang tắt mặc định. App vẫn mở, sửa, kiểm tra và lưu mã bình thường.</div>';
+        }
+      }
+    } catch (_) {
+      state.codeExecutionEnabled = false;
+      if (btnRun) btnRun.disabled = true;
+      if (btnTrace) btnTrace.disabled = true;
+      if (btnE1) btnE1.disabled = true;
+      if (runText) runText.textContent = 'CHẠY ĐANG TẮT';
+      if (traceStatusPill) {
+        traceStatusPill.className = 'trace-status-pill cut';
+        traceStatusPill.textContent = 'TẮT';
+      }
+      if (e1StatusPill) {
+        e1StatusPill.className = 'trace-status-pill cut';
+        e1StatusPill.textContent = 'TẮT';
+      }
+    }
+  }
+
+  // Quản lý Bố Cục IDE & Phông Chữ (Zoom)
+  function applySidebarLayout() {
+    const mainEl = document.getElementById('appMain');
+    if (!mainEl) return;
+    if (state.sidebarLeftCollapsed) mainEl.classList.add('left-collapsed');
+    else mainEl.classList.remove('left-collapsed');
+
+    if (state.sidebarRightCollapsed) mainEl.classList.add('right-collapsed');
+    else mainEl.classList.remove('right-collapsed');
+  }
+
+  function toggleSidebarLeft() {
+    state.sidebarLeftCollapsed = !state.sidebarLeftCollapsed;
+    localStorage.setItem('aura_sidebar_left_collapsed', String(state.sidebarLeftCollapsed));
+    applySidebarLayout();
+  }
+
+  function toggleSidebarRight() {
+    state.sidebarRightCollapsed = !state.sidebarRightCollapsed;
+    localStorage.setItem('aura_sidebar_right_collapsed', String(state.sidebarRightCollapsed));
+    applySidebarLayout();
+  }
+
+  function setCodeFontSize(size) {
+    const clamped = Math.max(10, Math.min(18, size));
+    state.codeFontSize = clamped;
+    document.documentElement.style.setProperty('--code-font-size', `${clamped}px`);
+    const zoomEl = document.getElementById('zoomPercent');
+    if (zoomEl) zoomEl.textContent = `${clamped}px`;
+    localStorage.setItem('aura_code_font_size', String(clamped));
+  }
+
+  function initLayoutPreferences() {
+    // 1. Phông chữ mặc định 14px đọc được
+    const savedFontSize = localStorage.getItem('aura_code_font_size');
+    const initialFontSize = savedFontSize ? parseInt(savedFontSize, 10) : 14;
+    setCodeFontSize(initialFontSize);
+
+    // 2. Thu gọn cột bên
+    const savedLeft = localStorage.getItem('aura_sidebar_left_collapsed');
+    state.sidebarLeftCollapsed = (savedLeft === 'true');
+
+    const savedRight = localStorage.getItem('aura_sidebar_right_collapsed');
+    if (savedRight !== null) {
+      state.sidebarRightCollapsed = (savedRight === 'true');
+    } else {
+      // Màn hình < 1400px thì cột phải (Agent / Terminal) mặc định thu gọn
+      state.sidebarRightCollapsed = (window.innerWidth < 1400);
+    }
+    applySidebarLayout();
+  }
+
   // ==========================================================================
-  // 2. KHỞI TẠO KHAY THẺ (5 NHÓM MÀU & BỘ ĐẾM ×N)
+  // 2. KHỞI TẠO KHAY THẺ (5 NHÓM MÀU, 2 CỘT & BỘ ĐẾM ×N)
   // ==========================================================================
   function renderToolbox() {
     const container = document.getElementById('toolboxContainer');
+    if (!container) return;
     container.innerHTML = '';
 
     const groups = [
-      { id: 'dieu_khien', title: 'Điều khiển (Xanh dương)', cards: ['neu', 'nguoc_lai', 'lap_moi', 'lap_khi'] },
+      { id: 'dieu_khien', title: 'Điều khiển (Xanh)', cards: ['neu', 'nguoc_lai', 'lap_moi', 'lap_khi'] },
       { id: 'du_lieu', title: 'Dữ liệu (Xanh lá)', cards: ['gan', 'pheptinh'] },
       { id: 'vao_ra', title: 'Vào / Ra (Tím)', cards: ['in_ra'] },
       { id: 'ham', title: 'Hàm (Cam)', cards: ['ham', 'goi_ham', 'tra_ve'] },
@@ -65,8 +185,11 @@
       const titleEl = document.createElement('div');
       titleEl.className = 'group-title';
       titleEl.textContent = g.title;
-      titleEl.style.color = TheValidator.NHOM_THE[g.id].mau;
+      titleEl.style.color = TheValidator.NHOM_THE[g.id]?.mau || '#94A3B8';
       groupEl.appendChild(titleEl);
+
+      const cardsGrid = document.createElement('div');
+      cardsGrid.className = 'tool-group-cards';
 
       g.cards.forEach(cardMa => {
         const cardDef = TheValidator.BO_THE_V1[cardMa];
@@ -77,6 +200,7 @@
         itemEl.dataset.ma = cardMa;
         itemEl.style.borderLeftColor = cardDef.mau;
         itemEl.draggable = true;
+        itemEl.title = `Thẻ ${cardDef.ten}: Click để chèn nhanh hoặc kéo vào canvas`;
 
         const infoEl = document.createElement('div');
         infoEl.className = 'tool-info';
@@ -119,9 +243,10 @@
           addNewCardToRoot(cardMa);
         });
 
-        groupEl.appendChild(itemEl);
+        cardsGrid.appendChild(itemEl);
       });
 
+      groupEl.appendChild(cardsGrid);
       container.appendChild(groupEl);
     });
   }
@@ -169,6 +294,185 @@
     onTreeChanged();
   }
 
+  function createCodeInput(node, fieldName, placeholder = '', className = '') {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = `code-inline-input ${className}`.trim();
+    input.value = (node.o && node.o[fieldName] !== undefined) ? node.o[fieldName] : '';
+    input.placeholder = placeholder || fieldName;
+    input.spellcheck = false;
+    input.autocomplete = 'off';
+
+    function updateWidth() {
+      const len = (input.value || input.placeholder || '').length;
+      input.style.width = Math.max(len + 1, 2) + 'ch';
+    }
+    updateWidth();
+
+    input.addEventListener('input', (e) => {
+      if (!node.o) node.o = {};
+      node.o[fieldName] = e.target.value;
+      updateWidth();
+      node.da_sua = true;
+      onTreeChanged(false);
+    });
+
+    return input;
+  }
+
+  function renderCodeLineContent(node, cardDef) {
+    const wrap = document.createElement('div');
+    wrap.className = 'code-line-content';
+
+    if (node.ma === 'gan') {
+      wrap.appendChild(createCodeInput(node, 'ten_bien', 'x', 'code-var'));
+      const op = document.createElement('span');
+      op.className = 'code-op';
+      op.textContent = ' = ';
+      wrap.appendChild(op);
+      wrap.appendChild(createCodeInput(node, 'gia_tri', 'giá_trị', 'code-val'));
+    } else if (node.ma === 'in_ra') {
+      const kw = document.createElement('span');
+      kw.className = 'code-kw';
+      kw.textContent = 'print';
+      wrap.appendChild(kw);
+      const p1 = document.createElement('span');
+      p1.className = 'code-punc';
+      p1.textContent = '(';
+      wrap.appendChild(p1);
+      wrap.appendChild(createCodeInput(node, 'noi_dung', 'nội_dung', 'code-val'));
+      const p2 = document.createElement('span');
+      p2.className = 'code-punc';
+      p2.textContent = ')';
+      wrap.appendChild(p2);
+    } else if (node.ma === 'ham') {
+      const kw = document.createElement('span');
+      kw.className = 'code-kw';
+      kw.textContent = (node.o && node.o.async === '1') ? 'async def ' : 'def ';
+      wrap.appendChild(kw);
+      wrap.appendChild(createCodeInput(node, 'ten_ham', 'tên_hàm', 'code-fn'));
+      const p1 = document.createElement('span');
+      p1.className = 'code-punc';
+      p1.textContent = '(';
+      wrap.appendChild(p1);
+      wrap.appendChild(createCodeInput(node, 'tham_so', 'tham_số', 'code-params'));
+      const p2 = document.createElement('span');
+      p2.className = 'code-punc';
+      p2.textContent = ')';
+      wrap.appendChild(p2);
+
+      if (node.o && (node.o.kieu_tra_ve || node.o.kieu_tra_ve === '')) {
+        const arrow = document.createElement('span');
+        arrow.className = 'code-op';
+        arrow.textContent = ' -> ';
+        wrap.appendChild(arrow);
+        wrap.appendChild(createCodeInput(node, 'kieu_tra_ve', 'kiểu', 'code-val'));
+      }
+
+      const pColon = document.createElement('span');
+      pColon.className = 'code-punc';
+      pColon.textContent = ':';
+      wrap.appendChild(pColon);
+    } else if (node.ma === 'neu') {
+      const kw = document.createElement('span');
+      kw.className = 'code-kw';
+      kw.textContent = (node.o && node.o.noi_tiep === '1') ? 'elif ' : 'if ';
+      wrap.appendChild(kw);
+      wrap.appendChild(createCodeInput(node, 'dieu_kien', 'điều_kiện', 'code-cond'));
+      const p = document.createElement('span');
+      p.className = 'code-punc';
+      p.textContent = ':';
+      wrap.appendChild(p);
+    } else if (node.ma === 'nguoc_lai') {
+      const kw = document.createElement('span');
+      kw.className = 'code-kw';
+      kw.textContent = 'else:';
+      wrap.appendChild(kw);
+    } else if (node.ma === 'lap_moi') {
+      const kw1 = document.createElement('span');
+      kw1.className = 'code-kw';
+      kw1.textContent = 'for ';
+      wrap.appendChild(kw1);
+      wrap.appendChild(createCodeInput(node, 'bien', 'item', 'code-var'));
+      const kw2 = document.createElement('span');
+      kw2.className = 'code-kw';
+      kw2.textContent = ' in ';
+      wrap.appendChild(kw2);
+      wrap.appendChild(createCodeInput(node, 'day', 'seq', 'code-val'));
+      const p = document.createElement('span');
+      p.className = 'code-punc';
+      p.textContent = ':';
+      wrap.appendChild(p);
+    } else if (node.ma === 'lap_khi') {
+      const kw = document.createElement('span');
+      kw.className = 'code-kw';
+      kw.textContent = 'while ';
+      wrap.appendChild(kw);
+      wrap.appendChild(createCodeInput(node, 'dieu_kien', 'điều_kiện', 'code-cond'));
+      const p = document.createElement('span');
+      p.className = 'code-punc';
+      p.textContent = ':';
+      wrap.appendChild(p);
+    } else if (node.ma === 'tra_ve') {
+      const kw = document.createElement('span');
+      kw.className = 'code-kw';
+      kw.textContent = 'return ';
+      wrap.appendChild(kw);
+      wrap.appendChild(createCodeInput(node, 'gia_tri', 'giá_trị', 'code-val'));
+    } else if (node.ma === 'goi_ham') {
+      wrap.appendChild(createCodeInput(node, 'ten_ham', 'tên_hàm', 'code-fn'));
+      const p1 = document.createElement('span');
+      p1.className = 'code-punc';
+      p1.textContent = '(';
+      wrap.appendChild(p1);
+      wrap.appendChild(createCodeInput(node, 'doi_so', 'đối_số', 'code-args'));
+      const p2 = document.createElement('span');
+      p2.className = 'code-punc';
+      p2.textContent = ')';
+      wrap.appendChild(p2);
+    } else if (node.ma === 'pheptinh') {
+      wrap.appendChild(createCodeInput(node, 'trai', 'vế_trái', 'code-val'));
+      wrap.appendChild(createCodeInput(node, 'phep', '+', 'code-op'));
+      wrap.appendChild(createCodeInput(node, 'phai', 'vế_phải', 'code-val'));
+    } else if (node.ma === 'ma_tho') {
+      const rawVal = (node.o && node.o.nguyen_van !== undefined) ? node.o.nguyen_van : (node.raw_text || '');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'code-inline-input code-raw';
+      input.value = rawVal;
+      input.placeholder = '# Mã Python thô...';
+      input.spellcheck = false;
+      input.autocomplete = 'off';
+
+      function updateRawWidth() {
+        const len = (input.value || input.placeholder || '').length;
+        input.style.width = Math.max(len + 1, 6) + 'ch';
+      }
+      updateRawWidth();
+
+      input.addEventListener('input', (e) => {
+        if (!node.o) node.o = {};
+        node.o.nguyen_van = e.target.value;
+        updateRawWidth();
+        node.da_sua = true;
+        onTreeChanged(false);
+      });
+      wrap.appendChild(input);
+    } else if (cardDef.o && cardDef.o.length > 0) {
+      cardDef.o.forEach((oDef, idx) => {
+        if (idx > 0) {
+          const sep = document.createElement('span');
+          sep.className = 'code-punc';
+          sep.textContent = ' ';
+          wrap.appendChild(sep);
+        }
+        wrap.appendChild(createCodeInput(node, oDef.ten, oDef.goi_y || oDef.ten, 'code-val'));
+      });
+    }
+
+    return wrap;
+  }
+
   function renderCard(node, parentList, index, depth = 1) {
     const cardDef = TheValidator.BO_THE_V1[node.ma] || { ten: node.ma, mau: '#6B7280', co_than: false, o: [] };
     
@@ -177,37 +481,59 @@
     const hasDo = nodeDiags.some(d => d.muc_do === 'do');
     const hasVang = nodeDiags.some(d => d.muc_do === 'vang');
 
+    // Thụt lề: 16px cho cấp 0-4, +8px cho cấp >= 5
+    const indentPx = (depth <= 5) ? (depth - 1) * 16 : 64 + (depth - 5) * 8;
+
+    const nodeWrap = document.createElement('div');
+    nodeWrap.className = 'card-node-item';
+    nodeWrap.style.marginLeft = `${indentPx}px`;
+
+    // Thẻ một dòng (Card Block - 1 Hàng Duy Nhất, chiều cao 28px)
     const cardEl = document.createElement('div');
     cardEl.className = `card-block ${hasDo ? 'status-do' : (hasVang ? 'status-vang' : '')}`;
     cardEl.id = `node_${node.id}`;
     cardEl.style.borderLeftColor = cardDef.mau;
     cardEl.dataset.nodeId = node.id;
 
-    // Header bar
-    const headerEl = document.createElement('div');
-    headerEl.className = 'card-header-bar';
+    // Tooltip tóm tắt câu lệnh khi hover
+    let previewText = cardDef.ten;
+    if (node.ma === 'gan') previewText = `${node.o?.ten_bien || 'x'} = ${node.o?.gia_tri || ''}`;
+    else if (node.ma === 'in_ra') previewText = `print(${node.o?.noi_dung || ''})`;
+    else if (node.ma === 'ham') previewText = `def ${node.o?.ten_ham || 'ham'}(${node.o?.tham_so || ''}):`;
+    else if (node.ma === 'neu') previewText = `if ${node.o?.dieu_kien || ''}:`;
+    else if (node.ma === 'nguoc_lai') previewText = `else:`;
+    else if (node.ma === 'lap_moi') previewText = `for ${node.o?.bien || 'item'} in ${node.o?.day || 'seq'}:`;
+    else if (node.ma === 'lap_khi') previewText = `while ${node.o?.dieu_kien || ''}:`;
+    else if (node.ma === 'tra_ve') previewText = `return ${node.o?.gia_tri || ''}`;
+    else if (node.ma === 'pheptinh') previewText = `${node.o?.trai || ''} ${node.o?.phep || '+'} ${node.o?.phai || ''}`;
+    else if (node.ma === 'goi_ham') previewText = `${node.o?.ten_ham || 'fn'}(${node.o?.doi_so || ''})`;
+    else if (node.ma === 'ma_tho') previewText = (node.o?.nguyen_van || node.raw_text || '').slice(0, 100);
+    cardEl.title = `[Cấp ${depth}] [${cardDef.ten}] ${previewText}`;
 
-    const titleEl = document.createElement('div');
-    titleEl.className = 'card-title-tag';
-    titleEl.style.color = cardDef.mau;
-    titleEl.textContent = cardDef.ten;
+    // Line container
+    const lineEl = document.createElement('div');
+    lineEl.className = 'card-line';
 
-    // Icon cảnh báo nhỏ nếu có
+    // Chấm báo lỗi / cảnh báo
     if (hasDo) {
-      const doBadge = document.createElement('span');
-      doBadge.textContent = '❌ Lỗi';
-      doBadge.style.cssText = 'font-size: 10px; background: #EF4444; color: #fff; padding: 1px 5px; border-radius: 4px;';
-      titleEl.appendChild(doBadge);
+      const badge = document.createElement('span');
+      badge.className = 'card-diag-icon do';
+      badge.textContent = '🔴';
+      badge.title = nodeDiags.filter(d => d.muc_do === 'do').map(d => d.thong_diep).join('\n');
+      lineEl.appendChild(badge);
     } else if (hasVang) {
-      const vangBadge = document.createElement('span');
-      vangBadge.textContent = '⚠️ Cảnh báo';
-      vangBadge.style.cssText = 'font-size: 10px; background: #EAB308; color: #000; padding: 1px 5px; border-radius: 4px;';
-      titleEl.appendChild(vangBadge);
+      const badge = document.createElement('span');
+      badge.className = 'card-diag-icon vang';
+      badge.textContent = '🟡';
+      badge.title = nodeDiags.filter(d => d.muc_do === 'vang').map(d => d.thong_diep).join('\n');
+      lineEl.appendChild(badge);
     }
 
-    headerEl.appendChild(titleEl);
+    // Nội dung dòng mã
+    const codeContent = renderCodeLineContent(node, cardDef);
+    lineEl.appendChild(codeContent);
 
-    // Nút điều khiển
+    // Nút điều khiển hover
     const controlsEl = document.createElement('div');
     controlsEl.className = 'card-controls';
 
@@ -267,74 +593,9 @@
     });
     controlsEl.appendChild(btnDel);
 
-    headerEl.appendChild(controlsEl);
-    cardEl.appendChild(headerEl);
-
-    // Body content (Ô nhập liệu)
-    const bodyEl = document.createElement('div');
-    bodyEl.className = 'card-body-content';
-
-    if (node.ma === 'ma_tho') {
-      const ta = document.createElement('textarea');
-      ta.className = 'field-textarea';
-      ta.value = (node.o && node.o.nguyen_van) || node.raw_text || '';
-      ta.placeholder = '# Nhập mã Python thô tại đây...';
-      ta.addEventListener('input', (e) => {
-        if (!node.o) node.o = {};
-        node.o.nguyen_van = e.target.value;
-        node.da_sua = true;
-        onTreeChanged(false);
-      });
-      bodyEl.appendChild(ta);
-    } else if (cardDef.o && cardDef.o.length > 0) {
-      cardDef.o.forEach(oDef => {
-        const fieldWrap = document.createElement('div');
-        fieldWrap.className = 'leaf-field';
-
-        const label = document.createElement('span');
-        label.className = 'field-label';
-        if (oDef.ten === 'ten_bien') label.textContent = 'Biến:';
-        else if (oDef.ten === 'gia_tri') label.textContent = '=';
-        else if (oDef.ten === 'noi_dung') label.textContent = 'In:';
-        else if (oDef.ten === 'dieu_kien') label.textContent = 'Nếu:';
-        else if (oDef.ten === 'bien') label.textContent = 'Lặp biến:';
-        else if (oDef.ten === 'day') label.textContent = 'trong:';
-        else if (oDef.ten === 'ten_ham') label.textContent = 'Hàm:';
-        else if (oDef.ten === 'tham_so') label.textContent = 'Tham số:';
-        else if (oDef.ten === 'doi_so') label.textContent = 'Đối số:';
-        else if (oDef.ten === 'trai') label.textContent = 'Vế trái:';
-        else if (oDef.ten === 'phep') label.textContent = 'Toán tử:';
-        else if (oDef.ten === 'phai') label.textContent = 'Vế phải:';
-        else label.textContent = `${oDef.ten}:`;
-        fieldWrap.appendChild(label);
-
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'field-input';
-        input.value = (node.o && node.o[oDef.ten]) || '';
-        input.placeholder = oDef.goi_y || '';
-        input.size = Math.max(input.value.length || input.placeholder.length || 6, 6);
-
-        input.addEventListener('input', (e) => {
-          if (!node.o) node.o = {};
-          node.o[oDef.ten] = e.target.value;
-          input.size = Math.max(e.target.value.length || 6, 6);
-          node.da_sua = true;
-          onTreeChanged(false);
-        });
-
-        fieldWrap.appendChild(input);
-        bodyEl.appendChild(fieldWrap);
-      });
-    } else if (node.ma === 'nguoc_lai') {
-      const infoSpan = document.createElement('span');
-      infoSpan.style.fontSize = '12px';
-      infoSpan.style.color = 'var(--text-muted)';
-      infoSpan.textContent = 'Khối thực thi khi điều kiện Nếu sai:';
-      bodyEl.appendChild(infoSpan);
-    }
-
-    cardEl.appendChild(bodyEl);
+    lineEl.appendChild(controlsEl);
+    cardEl.appendChild(lineEl);
+    nodeWrap.appendChild(cardEl);
 
     // Thân con lồng nhau (Nested slot)
     if (cardDef.co_than) {
@@ -378,41 +639,17 @@
         } catch (err) {}
       });
 
-      cardEl.appendChild(slotEl);
+      nodeWrap.appendChild(slotEl);
     }
 
-    return cardEl;
+    return nodeWrap;
   }
 
   function renderCardList(nodeList, parentContainer, depth = 1) {
     for (let i = 0; i < nodeList.length; i++) {
       const node = nodeList[i];
-      const cardEl = renderCard(node, nodeList, i, depth);
-
-      // Nếu không phải thẻ đầu tiên -> Kiểm tra điều kiện hiện XÍCH NỐI (Mục 3.3)
-      if (i > 0) {
-        const prevNode = nodeList[i - 1];
-        const prevHasDo = (state.diagnostics.danh_sach || []).some(d => d.node_id === prevNode.id && d.muc_do === 'do');
-        const currHasDo = (state.diagnostics.danh_sach || []).some(d => d.node_id === node.id && d.muc_do === 'do');
-
-        // Hai thẻ liền nhau, cả hai đều không đỏ -> Hiện mắt xích ở giữa
-        if (!prevHasDo && !currHasDo) {
-          const chainEl = document.createElement('div');
-          chainEl.className = 'chain-link-wrapper';
-          chainEl.innerHTML = `
-            <div class="chain-icon-badge">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-              </svg>
-              <span>Nối</span>
-            </div>
-          `;
-          parentContainer.appendChild(chainEl);
-        }
-      }
-
-      parentContainer.appendChild(cardEl);
+      const nodeEl = renderCard(node, nodeList, i, depth);
+      parentContainer.appendChild(nodeEl);
     }
   }
 
@@ -434,9 +671,10 @@
   // ==========================================================================
   let syncTimeout = null;
 
-  function onTreeChanged(pushHistory = true) {
-    state.hasModifications = true;
-    document.getElementById('fileModifiedBadge').style.display = state.activeFilePath ? 'inline-block' : 'none';
+  function onTreeChanged(pushHistory = true, markDirty = true) {
+    if (markDirty) state.hasModifications = true;
+    document.getElementById('fileModifiedBadge').style.display =
+      state.activeFilePath && state.hasModifications ? 'inline-block' : 'none';
 
     // 1. Chạy Client-side validator tức thì (0ms latency)
     state.diagnostics = TheValidator.kiemTraCayThe(state.tree);
@@ -447,11 +685,14 @@
     updateCodePreview();
     updateDiagnosticsPanel();
     updateStatusBar();
+    capNhatDaiNhip();
+    capNhatKichBan();
 
     // 3. Đồng bộ với Backend API /api/kiem (Python làm trọng tài)
     clearTimeout(syncTimeout);
     syncTimeout = setTimeout(syncWithBackendValidator, 300);
   }
+
 
   async function syncWithBackendValidator() {
     try {
@@ -545,14 +786,718 @@
   }
 
   // ==========================================================================
-  // 5. THỰC THI SANDBOX CHẠY THỬ (CHẠY TRONG TIẾN TRÌNH RIÊNG 5S)
+  // DẢI NHỊP THỰC THI (EXECUTION RHYTHMS — CẮT THEO DEF & NHỊP CHƯA ĐÓNG)
   // ==========================================================================
+  const TANG_THE_MAP = {
+    gan: 'K',
+    pheptinh: 'B', neu: 'B', nguoc_lai: 'B', lap_moi: 'B', lap_khi: 'B',
+    in_ra: 'X', tra_ve: 'X'
+  };
+
+  function capNhatDaiNhip() {
+    const container = document.getElementById('rhythmPillsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!state.tree || state.tree.length === 0) {
+      container.innerHTML = '<span class="rhythm-empty-hint">Chưa có hàm hoặc thẻ phân tầng...</span>';
+      return;
+    }
+
+    // Tách các track theo từng hàm def hoặc module top-level
+    const tracks = [];
+    const moduleNodes = [];
+
+    state.tree.forEach(node => {
+      if (node.ma === 'ham') {
+        const fnName = (node.o && node.o.ten_ham) ? String(node.o.ten_ham).trim() : 'hàm';
+        tracks.push({
+          tenTrack: `def ${fnName}()`,
+          nodes: node.than || []
+        });
+      } else {
+        moduleNodes.push(node);
+      }
+    });
+
+    if (moduleNodes.length > 0) {
+      tracks.unshift({
+        tenTrack: 'Module',
+        nodes: moduleNodes
+      });
+    }
+
+    let tongSoNhip = 0;
+
+    tracks.forEach(track => {
+      const flatNodes = [];
+      function di(ns) {
+        ns.forEach(n => {
+          flatNodes.push(n);
+          if (n.than && n.than.length) di(n.than);
+        });
+      }
+      di(track.nodes);
+
+      const thePhanTang = flatNodes.filter(n => TANG_THE_MAP[n.ma]);
+      if (thePhanTang.length === 0) return;
+
+      const nhipList = [];
+      let curNodes = [];
+      let curStr = [];
+      let soThuTu = 1;
+
+      thePhanTang.forEach(the => {
+        const k = TANG_THE_MAP[the.ma];
+        curNodes.push(the);
+        curStr.push(k);
+        if (k === 'X') {
+          const matCat = curStr.join('');
+          const coKhuyetB = !matCat.includes('B') && matCat.includes('K');
+          const coRong = !matCat.includes('B') && !matCat.includes('K');
+          nhipList.push({
+            soThuTu: soThuTu++,
+            nodes: [...curNodes],
+            matCat,
+            coKhuyetB,
+            coRong,
+            chuaDong: false
+          });
+          curNodes = [];
+          curStr = [];
+        }
+      });
+
+      if (curNodes.length > 0) {
+        const matCat = curStr.join('');
+        nhipList.push({
+          soThuTu: soThuTu++,
+          nodes: [...curNodes],
+          matCat,
+          coKhuyetB: false,
+          coRong: false,
+          chuaDong: true
+        });
+      }
+
+      if (nhipList.length > 0) {
+        tongSoNhip += nhipList.length;
+
+        const trackRow = document.createElement('div');
+        trackRow.className = 'rhythm-track-row';
+
+        const trackTitle = document.createElement('span');
+        trackTitle.className = 'rhythm-track-title';
+        trackTitle.textContent = track.tenTrack;
+        trackRow.appendChild(trackTitle);
+
+        const pillsContainer = document.createElement('div');
+        pillsContainer.className = 'rhythm-pills';
+
+        nhipList.forEach(nhip => {
+          const pill = document.createElement('div');
+          pill.className = `rhythm-pill ${nhip.chuaDong ? 'unclosed' : ''}`;
+          pill.title = `${track.tenTrack} — Nhịp ${nhip.soThuTu} (Mặt cắt: ${nhip.matCat}${nhip.chuaDong ? ' · Chưa đóng' : ''}) — Click để chọn`;
+
+          let badgeHtml = '';
+          if (nhip.chuaDong) {
+            badgeHtml = `<span class="rhythm-tag-badge unclosed">${nhip.matCat || 'K'} (Chưa đóng)</span>`;
+          } else if (nhip.coRong) {
+            badgeHtml = '<span class="rhythm-tag-badge empty">X (Rỗng)</span>';
+          } else if (nhip.coKhuyetB) {
+            badgeHtml = `<span class="rhythm-tag-badge khuyet">${nhip.matCat} (Khuyết B)</span>`;
+          } else {
+            badgeHtml = `<span class="rhythm-tag-badge ${nhip.matCat.toLowerCase().includes('k') ? 'k' : 'b'}">${nhip.matCat}</span>`;
+          }
+
+          pill.innerHTML = `<span>#${nhip.soThuTu}</span> ${badgeHtml}`;
+
+          pill.addEventListener('click', () => {
+            document.querySelectorAll('.rhythm-pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+
+            document.querySelectorAll('.card-block').forEach(c => c.style.outline = 'none');
+            nhip.nodes.forEach(n => {
+              const card = document.getElementById(`node_${n.id}`);
+              if (card) {
+                card.style.outline = '2px solid var(--color-bien-so)';
+                card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }
+            });
+          });
+
+          pillsContainer.appendChild(pill);
+        });
+
+        trackRow.appendChild(pillsContainer);
+        container.appendChild(trackRow);
+      }
+    });
+
+    if (tongSoNhip === 0) {
+      container.innerHTML = '<span class="rhythm-empty-hint">Chưa có thẻ phân tầng (Gán/Biến đổi/Kết xuất)...</span>';
+    }
+  }
+
+  // ==========================================================================
+  // MẠCH NƯỚC NGẦM BIẾN SỐ (RUNTIME TRACE)
+  // ==========================================================================
+  async function chayMachNuocNgam() {
+    const btnTrace = document.getElementById('btnRunTrace');
+    const statusPill = document.getElementById('traceStatusPill');
+    const subInfo = document.getElementById('traceSubInfo');
+    const testNameEl = document.getElementById('traceTestName');
+    const noticeEl = document.getElementById('traceNotice');
+    const timelineBody = document.getElementById('traceTimelineBody');
+    const e1ResultsBody = document.getElementById('e1ResultsBody');
+
+    if (!btnTrace || !statusPill || !timelineBody) return;
+
+    if (!state.codeExecutionEnabled) {
+      statusPill.className = 'trace-status-pill cut';
+      statusPill.textContent = 'Chạy mã/test đang tắt';
+      return;
+    }
+
+    btnTrace.disabled = true;
+    statusPill.className = 'trace-status-pill ready';
+    statusPill.textContent = 'Đang dò vết...';
+    timelineBody.style.display = 'block';
+    if (e1ResultsBody) e1ResultsBody.style.display = 'none';
+    timelineBody.innerHTML = '<div class="trace-empty-hint">Đang thu thập chuỗi biến đổi dữ liệu thực thi (Trần 5000 bước)...</div>';
+
+    try {
+      const payload = {
+        tep_nguon: state.activeFilePath || 'core/dong_ho.py',
+        tep_test: state.activeFilePath ? state.activeFilePath.replace('core/', 'tests/test_') : 'tests/test_dong_ho.py',
+        max_steps: 5000
+      };
+
+      const resp = await authFetch('/api/trace', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        statusPill.className = 'trace-status-pill error';
+        statusPill.textContent = errData.error || (resp.status === 403 ? 'Chạy mã/test đang tắt' : 'Không đo được');
+        timelineBody.innerHTML = `<div class="trace-empty-hint" style="color: var(--color-error-do);">${escapeHtml(errData.error || 'Lỗi ' + resp.status)}</div>`;
+        return;
+      }
+
+      const res = await resp.json();
+
+      if (res.trang_thai === 'trace_du') {
+        statusPill.className = 'trace-status-pill success';
+        statusPill.textContent = `✓ ${res.thong_diep} (${res.thoi_gian_giay}s)`;
+      } else if (res.trang_thai === 'trace_cut') {
+        statusPill.className = 'trace-status-pill cut';
+        statusPill.textContent = `⚠️ ${res.thong_diep}`;
+      } else if (res.trang_thai === 'trace_khong_qua_loi') {
+        statusPill.className = 'trace-status-pill cut';
+        statusPill.textContent = `⚠️ ${res.thong_diep}`;
+      } else {
+        statusPill.className = 'trace-status-pill error';
+        statusPill.textContent = `❌ ${res.thong_diep || 'Không đo được'}`;
+      }
+
+      if (res.ten_test) {
+        subInfo.style.display = 'flex';
+        testNameEl.textContent = `Test: ${res.ten_test}`;
+        if (res.trang_thai === 'trace_khong_qua_loi') {
+          noticeEl.textContent = 'CẢNH BÁO: Vết thực thi của test này không đi qua dòng lỗi!';
+        } else if (res.so_test_do_khac > 0) {
+          noticeEl.textContent = `(Đang hiển thị test ít bước nhất; còn ${res.so_test_do_khac} test đỏ khác)`;
+        } else {
+          noticeEl.textContent = '';
+        }
+      } else {
+        subInfo.style.display = 'none';
+      }
+
+      const events = res.cac_su_kien || [];
+      if (events.length === 0) {
+        timelineBody.innerHTML = '<div class="trace-empty-hint">Không có sự kiện biến đổi biến nào được ghi nhận.</div>';
+        return;
+      }
+
+      timelineBody.innerHTML = '';
+      events.forEach(ev => {
+        const card = document.createElement('div');
+        card.className = `trace-event-card ${ev.su_kien === 'tra_ve' ? 'return-event' : ''}`;
+        card.innerHTML = `
+          <div class="trace-event-header">
+            <span class="trace-step-badge">Bước #${ev.buoc}</span>
+            <span class="trace-line-badge">Dòng ${ev.dong}</span>
+          </div>
+          <div class="trace-event-body">
+            <span class="trace-var-name">${escapeHtml(ev.ten_bien)}</span>
+            <span class="trace-arrow">➔</span>
+            ${ev.gia_tri_cu ? `<span class="trace-old-val">${escapeHtml(ev.gia_tri_cu)}</span>` : ''}
+            <span class="trace-new-val">${escapeHtml(ev.gia_tri_moi)}</span>
+          </div>
+          ${ev.dong_ma ? `<div class="trace-code-snippet">${escapeHtml(ev.dong_ma)}</div>` : ''}
+        `;
+        timelineBody.appendChild(card);
+      });
+
+    } catch (err) {
+      statusPill.className = 'trace-status-pill error';
+      statusPill.textContent = 'Lỗi kết nối /api/trace';
+      timelineBody.innerHTML = `<div class="trace-empty-hint" style="color: var(--color-error-do);">Lỗi: ${escapeHtml(err.message)}</div>`;
+    } finally {
+      btnTrace.disabled = !state.codeExecutionEnabled;
+    }
+  }
+
+  // ==========================================================================
+  // E1 — ĐỊNH VỊ LỖI BẰNG TEST TRÊN BẢN SAO TẠM
+  // ==========================================================================
+  async function loadAvailableTests(defaultTestPath = '') {
+    const select = document.getElementById('e1TestSelect');
+    if (!select) return;
+    try {
+      const resp = await authFetch('/api/tep_tin?thu_muc=tests');
+      if (resp.ok) {
+        const data = await resp.json();
+        const tests = data.danh_sach || [];
+        if (!state.testFilesInventory) state.testFilesInventory = {};
+        select.innerHTML = '';
+        tests.forEach(t => {
+          state.testFilesInventory[t.duong_dan] = t;
+          const opt = document.createElement('option');
+          opt.value = t.duong_dan;
+          opt.textContent = t.duong_dan;
+          if (defaultTestPath && t.duong_dan === defaultTestPath) {
+            opt.selected = true;
+          }
+          select.appendChild(opt);
+        });
+        if (defaultTestPath && !tests.some(t => t.duong_dan === defaultTestPath)) {
+          const opt = document.createElement('option');
+          opt.value = defaultTestPath;
+          opt.textContent = defaultTestPath;
+          opt.selected = true;
+          select.appendChild(opt);
+        }
+      }
+    } catch (_) {}
+  }
+
+  function updateButtonsState() {
+    const btnRun = document.getElementById('btnRun');
+    const btnTrace = document.getElementById('btnRunTrace');
+    const btnE1 = document.getElementById('btnRunE1');
+
+    if (!state.codeExecutionEnabled) {
+      if (btnRun) btnRun.disabled = true;
+      if (btnTrace) btnTrace.disabled = true;
+      if (btnE1) btnE1.disabled = true;
+      return;
+    }
+
+    if (btnRun) btnRun.disabled = false;
+    if (btnTrace) btnTrace.disabled = false;
+
+    if (btnE1) {
+      if (state.hasModifications) {
+        btnE1.disabled = true;
+        btnE1.title = 'Vui lòng lưu hoặc hoàn tác trước khi định vị lỗi';
+      } else {
+        btnE1.disabled = false;
+        btnE1.title = 'Định vị lỗi E1 trên bản sao tạm';
+      }
+    }
+  }
+
+  async function chayDinhViLoiE1() {
+    const btnE1 = document.getElementById('btnRunE1');
+    const statusPill = document.getElementById('e1StatusPill');
+    const e1ResultsBody = document.getElementById('e1ResultsBody');
+    const traceTimelineBody = document.getElementById('traceTimelineBody');
+    const testSelect = document.getElementById('e1TestSelect');
+
+    if (!btnE1 || !statusPill || !e1ResultsBody) return;
+
+    if (!state.codeExecutionEnabled) {
+      statusPill.className = 'trace-status-pill cut';
+      statusPill.textContent = 'Chạy mã/test đang tắt';
+      return;
+    }
+
+    if (state.hasModifications) {
+      statusPill.className = 'trace-status-pill error';
+      statusPill.textContent = 'Hãy lưu hoặc hoàn tác trước khi định vị';
+      return;
+    }
+
+    if (!state.activeFilePath || !state.activeFileSha256) {
+      statusPill.className = 'trace-status-pill cut';
+      statusPill.textContent = 'Vui lòng mở một tệp .py';
+      return;
+    }
+
+    const selectedTestFile = testSelect && testSelect.value ? testSelect.value : (
+      state.activeFilePath.replace('core/', 'tests/test_')
+    );
+
+    let testSha = '';
+    if (state.testFilesInventory && state.testFilesInventory[selectedTestFile]) {
+      testSha = state.testFilesInventory[selectedTestFile].sha256 || '';
+    }
+    if (!testSha) {
+      try {
+        const respTep = await authFetch('/api/tep_tin?thu_muc=tests');
+        const dataTep = await respTep.json();
+        const match = (dataTep.danh_sach || []).find(t => t.duong_dan === selectedTestFile);
+        if (match && match.sha256) {
+          testSha = match.sha256;
+          if (!state.testFilesInventory) state.testFilesInventory = {};
+          state.testFilesInventory[selectedTestFile] = match;
+        }
+      } catch (_) {}
+    }
+
+    btnE1.disabled = true;
+    statusPill.className = 'trace-status-pill ready';
+    statusPill.textContent = 'Đang phân tích E1...';
+    if (traceTimelineBody) traceTimelineBody.style.display = 'none';
+    e1ResultsBody.style.display = 'block';
+
+    const t0Client = performance.now();
+    let stageInterval = null;
+
+    const renderProgress = () => {
+      const elapsedSec = (performance.now() - t0Client) / 1000;
+      let stageText = 'Đang khởi tạo bản sao tạm...';
+      if (elapsedSec >= 2.0 && elapsedSec < 8.0) {
+        stageText = 'Đang tìm test đỏ và truy vết dòng chạy...';
+      } else if (elapsedSec >= 8.0) {
+        stageText = 'Đang lọc ứng viên AST và kiểm thử toàn bộ suite...';
+      }
+      e1ResultsBody.innerHTML = `
+        <div class="trace-empty-hint" style="text-align: left; padding: 16px;">
+          <div style="font-weight: 600; margin-bottom: 8px; color: var(--color-brand);">⏳ Tiến trình định vị lỗi E1 (${elapsedSec.toFixed(1)}s):</div>
+          <div style="margin-left: 12px; line-height: 1.6;">
+            <div>${elapsedSec >= 0 ? '✓' : '○'} 1. Kiểm tra ràng buộc và chuẩn bị phiên</div>
+            <div>${elapsedSec >= 2.0 ? '✓' : '○'} 2. Nhân bản cô lập & Thu vết dòng trên test đỏ</div>
+            <div>${elapsedSec >= 8.0 ? '⏳' : '○'} 3. Lọc 5 họ phép AST & Chạy kiểm thử hồi quy toàn bộ suite</div>
+          </div>
+          <div style="margin-top: 10px; font-style: italic; color: var(--text-muted);">${stageText}</div>
+        </div>
+      `;
+    };
+
+    renderProgress();
+    stageInterval = setInterval(renderProgress, 500);
+
+    try {
+      const payload = {
+        tep_nguon: state.activeFilePath,
+        tep_test: selectedTestFile,
+        source_sha256: state.activeFileSha256,
+        test_sha256: testSha
+      };
+
+      const resp = await authFetch('/api/dinh_vi_loi', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      if (stageInterval) {
+        clearInterval(stageInterval);
+        stageInterval = null;
+      }
+
+      const elapsedTotalSec = Math.round((performance.now() - t0Client) / 100) / 10;
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        statusPill.className = 'trace-status-pill error';
+        if (resp.status === 409) {
+          statusPill.textContent = errData.trang_thai === 'busy' ? 'BUSY' : 'SHA trôi (409)';
+        } else if (resp.status === 403) {
+          statusPill.textContent = 'Chạy mã/test đang tắt';
+        } else if (resp.status === 504) {
+          statusPill.textContent = 'TIMEOUT/KHÔNG ĐO ĐƯỢC';
+        } else {
+          statusPill.textContent = `Lỗi ${resp.status}`;
+        }
+        renderE1Error(errData.error || `HTTP ${resp.status}`);
+        return;
+      }
+
+      const res = await resp.json();
+      renderE1Results(res, null, elapsedTotalSec);
+
+    } catch (err) {
+      if (stageInterval) {
+        clearInterval(stageInterval);
+        stageInterval = null;
+      }
+      statusPill.className = 'trace-status-pill error';
+      statusPill.textContent = 'Lỗi kết nối /api/dinh_vi_loi';
+      renderE1Error(err.message);
+    } finally {
+      if (stageInterval) {
+        clearInterval(stageInterval);
+      }
+      btnE1.disabled = !state.codeExecutionEnabled;
+    }
+  }
+
+  function renderE1Results(res, targetEl, elapsedTotalSec) {
+    const statusPill = document.getElementById('e1StatusPill');
+    const e1ResultsBody = targetEl || document.getElementById('e1ResultsBody');
+    if (!e1ResultsBody) return;
+
+    if (statusPill) {
+      if (res.trang_thai === 'tim_thay') {
+        statusPill.className = 'trace-status-pill success';
+        statusPill.textContent = 'TÌM THẤY';
+      } else if (res.trang_thai === 'ung_vien_khong_qua_suite') {
+        statusPill.className = 'trace-status-pill cut';
+        statusPill.textContent = 'ỨNG VIÊN KHÔNG QUA TOÀN BỘ TEST';
+      } else if (res.trang_thai === 'khong_tim_thay') {
+        statusPill.className = 'trace-status-pill cut';
+        statusPill.textContent = 'KHÔNG TÌM THẤY';
+      } else {
+        statusPill.className = 'trace-status-pill error';
+        statusPill.textContent = 'TIMEOUT/KHÔNG ĐO ĐƯỢC';
+      }
+    }
+
+    e1ResultsBody.innerHTML = '';
+
+    // 1. Notice: Phân tích trên bản sao
+    const noticeTemp = document.createElement('div');
+    noticeTemp.className = 'e1-notice-box e1-notice-temp';
+    noticeTemp.textContent = '🛡️ Phân tích trên bản sao; tệp thật chưa đổi.';
+    e1ResultsBody.appendChild(noticeTemp);
+
+    // 2. Summary Card
+    const summaryCard = document.createElement('div');
+    summaryCard.className = 'e1-summary-card';
+
+    const titleRow = document.createElement('div');
+    titleRow.className = 'e1-summary-title';
+    titleRow.innerHTML = `<span>Bằng Chứng Định Vị E1</span>`;
+    const badgeState = document.createElement('span');
+    badgeState.className = `e1-badge ${res.trang_thai === 'tim_thay' ? 'badge-green' : 'badge-red'}`;
+    badgeState.textContent = (res.trang_thai || '').toUpperCase();
+    titleRow.appendChild(badgeState);
+    summaryCard.appendChild(titleRow);
+
+    const metaList = document.createElement('div');
+    metaList.className = 'e1-meta-row';
+
+    function addMetaItem(label, val) {
+      const item = document.createElement('div');
+      item.className = 'e1-meta-item';
+      const l = document.createElement('span');
+      l.className = 'e1-meta-label';
+      l.textContent = label + ':';
+      const v = document.createElement('span');
+      v.textContent = val;
+      item.appendChild(l);
+      item.appendChild(v);
+      metaList.appendChild(item);
+    }
+
+    const thoiGianTinhToan = Math.round(((res.elapsed_filter_mutate_s || 0) + (res.elapsed_full_suite_s || 0)) * 10) / 10;
+
+    addMetaItem('Tệp nguồn', `${res.source_path || ''} (${(res.source_sha256 || '').slice(0, 16)}...)`);
+    addMetaItem('Tệp test', `${res.test_file || ''} (${(res.test_sha256 || '').slice(0, 16)}...)`);
+    if (res.selected_test) {
+      addMetaItem('Test đỏ chọn', `${res.selected_test}${res.other_red_test_count > 0 ? ` (còn ${res.other_red_test_count} test đỏ khác)` : ''}`);
+    }
+    addMetaItem('Ứng viên', `${res.candidate_count_before || 0} trước lọc ➔ ${res.candidate_count_after || 0} sau lọc`);
+    addMetaItem(
+      'Thời gian',
+      `${thoiGianTinhToan}s tính toán (Lọc+Lật: ${res.elapsed_filter_mutate_s || 0}s | Suite: ${res.elapsed_full_suite_s || 0}s)` +
+      (elapsedTotalSec != null ? ` — Tổng gọi: ${elapsedTotalSec}s (gồm chuẩn bị)` : '')
+    );
+    if (res.reason) {
+      addMetaItem('Nhận định', res.reason);
+    }
+
+    if (res.trang_thai === 'ung_vien_khong_qua_suite') {
+      const noticeRejected = document.createElement('div');
+      noticeRejected.className = 'e1-notice-box e1-notice-rejected';
+      noticeRejected.style.borderLeft = '4px solid var(--color-error-do, #ef4444)';
+      noticeRejected.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
+      noticeRejected.style.padding = '10px 14px';
+      noticeRejected.style.marginTop = '12px';
+      noticeRejected.style.borderRadius = '4px';
+      noticeRejected.innerHTML = `
+        <div style="font-weight: 600; color: var(--color-error-do, #ef4444); margin-bottom: 4px;">⚠️ Sửa một chỗ mà hỏng chỗ khác thì không phải sửa.</div>
+        <div style="color: var(--text-color, #1e293b); font-size: 13px; line-height: 1.5;">
+          Những chỗ dưới đây làm test bạn đang xem <strong>XANH</strong>, nhưng làm <strong>ĐỎ</strong> chỗ khác.
+          Hệ thống <strong>KHÔNG đề nghị áp dụng</strong> các bản vá này.
+        </div>
+      `;
+      summaryCard.appendChild(noticeRejected);
+    }
+
+    summaryCard.appendChild(metaList);
+    e1ResultsBody.appendChild(summaryCard);
+
+    // 3. Candidates List
+    const candidates = res.candidates || [];
+    if (candidates.length > 0) {
+      const isRejectedMode = (res.trang_thai === 'ung_vien_khong_qua_suite');
+      const candTitle = document.createElement('div');
+      candTitle.className = 'e1-summary-title';
+      candTitle.textContent = isRejectedMode
+        ? `Danh Sách Ứng Viên Bị Loại (${candidates.length}):`
+        : `Danh Sách Bản Vá (${candidates.length}):`;
+      e1ResultsBody.appendChild(candTitle);
+
+      candidates.forEach((cand, idx) => {
+        const card = document.createElement('div');
+        card.className = 'e1-candidate-card';
+
+        const h = document.createElement('div');
+        h.className = 'e1-candidate-header';
+        
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = `#${idx + 1} — Dòng ${cand.line}: ${cand.operation}`;
+        h.appendChild(titleSpan);
+
+        const statusGroup = document.createElement('div');
+        statusGroup.style.display = 'flex';
+        statusGroup.style.gap = '6px';
+
+        const testBadge = document.createElement('span');
+        testBadge.className = `e1-badge ${cand.selected_test_status === 'XANH' ? 'badge-green' : 'badge-red'}`;
+        testBadge.textContent = `Test chọn: ${cand.selected_test_status}`;
+        statusGroup.appendChild(testBadge);
+
+        const suiteBadge = document.createElement('span');
+        suiteBadge.className = `e1-badge ${cand.full_suite_status === 'XANH' ? 'badge-green' : 'badge-red'}`;
+        if (cand.full_suite_status === 'XANH') {
+          suiteBadge.textContent = 'Suite: XANH';
+        } else {
+          const soTest = cand.so_test_hong || (res.other_red_test_count ? res.other_red_test_count + 1 : 1);
+          suiteBadge.textContent = `Suite: ĐỎ (${soTest} test khác hỏng)`;
+        }
+        statusGroup.appendChild(suiteBadge);
+
+        h.appendChild(statusGroup);
+        card.appendChild(h);
+
+        if (cand.unified_diff) {
+          const diffPre = document.createElement('pre');
+          diffPre.className = 'e1-diff-container';
+          const diffLines = cand.unified_diff.split('\n');
+          diffLines.forEach(line => {
+            const lineSpan = document.createElement('div');
+            if (line.startsWith('+') && !line.startsWith('+++')) {
+              lineSpan.className = 'e1-diff-add';
+            } else if (line.startsWith('-') && !line.startsWith('---')) {
+              lineSpan.className = 'e1-diff-del';
+            }
+            lineSpan.textContent = line;
+            diffPre.appendChild(lineSpan);
+          });
+          card.appendChild(diffPre);
+        }
+
+        e1ResultsBody.appendChild(card);
+      });
+    }
+
+    // 4. Limitation notice
+    const noticeLimit = document.createElement('div');
+    noticeLimit.className = 'e1-notice-box e1-notice-limit';
+    noticeLimit.textContent = res.limitation || state.e1Limitation || 'Chỉ dò năm họ phép E1 hiện có; không tìm thấy không có nghĩa là mã không có lỗi.';
+    e1ResultsBody.appendChild(noticeLimit);
+  }
+
+  function renderE1Error(msg, targetEl) {
+    const e1ResultsBody = targetEl || document.getElementById('e1ResultsBody');
+    if (!e1ResultsBody) return;
+    e1ResultsBody.innerHTML = `
+      <div class="trace-empty-hint" style="color: var(--color-error-do);">
+        Lỗi định vị E1: ${escapeHtml(msg)}
+      </div>
+    `;
+  }
+
+  // ==========================================================================
+  // TAB KỊCH BẢN LOGIC (NARRATIVE)
+  // ==========================================================================
+  function capNhatKichBan() {
+    const narrativeBody = document.getElementById('narrativeContent');
+    if (!narrativeBody) return;
+
+    if (state.tree.length === 0) {
+      narrativeBody.innerHTML = '<div style="color: var(--text-muted); font-style: italic;">Chưa có khối lệnh nào để tạo kịch bản logic.</div>';
+      return;
+    }
+
+    narrativeBody.innerHTML = '';
+    let stepNum = 1;
+
+    function duyetNarrative(nodes, indent = '') {
+      nodes.forEach(node => {
+        const step = document.createElement('div');
+        step.className = 'narrative-step';
+        let desc = '';
+
+        if (node.ma === 'ham') {
+          desc = `Định nghĩa hàm <code>${escapeHtml(node.o.ten_ham || 'chưa đặt tên')}</code> nhận tham số (<code>${escapeHtml(node.o.tham_so || 'không có')}</code>).`;
+        } else if (node.ma === 'gan') {
+          desc = `Gán giá trị <code>${escapeHtml(node.o.gia_tri || '')}</code> cho biến <strong>${escapeHtml(node.o.ten_bien || '')}</strong>.`;
+        } else if (node.ma === 'pheptinh') {
+          desc = `Thực hiện phép tính <code>${escapeHtml(node.o.bieu_thuc || '')}</code> và lưu vào <strong>${escapeHtml(node.o.ten_bien || '')}</strong>.`;
+        } else if (node.ma === 'neu') {
+          desc = `Kiểm tra điều kiện: Nếu <code>${escapeHtml(node.o.dieu_kien || '')}</code> thoả mãn thì thực hiện khối lệnh con.`;
+        } else if (node.ma === 'nguoc_lai') {
+          desc = `Trường hợp ngược lại: Thực hiện các lệnh khi điều kiện "Nếu" phía trước sai.`;
+        } else if (node.ma === 'lap_moi') {
+          desc = `Lặp qua từng phần tử <strong>${escapeHtml(node.o.bien || '')}</strong> trong dãy <code>${escapeHtml(node.o.day || '')}</code>.`;
+        } else if (node.ma === 'lap_khi') {
+          desc = `Lặp liên tục chừng nào điều kiện <code>${escapeHtml(node.o.dieu_kien || '')}</code> còn đúng.`;
+        } else if (node.ma === 'in_ra') {
+          desc = `Xuất nội dung <code>${escapeHtml(node.o.noi_dung || '')}</code> ra màn hình terminal.`;
+        } else if (node.ma === 'tra_ve') {
+          desc = `Trả về kết quả <code>${escapeHtml(node.o.gia_tri || '')}</code> cho nơi gọi hàm.`;
+        } else {
+          desc = `Thực thi khối lệnh <code>${escapeHtml(node.ma)}</code>.`;
+        }
+
+        step.innerHTML = `
+          <div class="narrative-step-title">${indent}Bước ${stepNum++}: ${escapeHtml(TheValidator.BO_THE_V1[node.ma]?.ten || node.ma)}</div>
+          <div>${desc}</div>
+        `;
+        narrativeBody.appendChild(step);
+
+        if (node.than && node.than.length) {
+          duyetNarrative(node.than, indent + '↳ ');
+        }
+      });
+    }
+
+    duyetNarrative(state.tree);
+  }
+
+  // ==========================================================================
+  // 5. CHẠY THỬ CÓ CHỦ ĐÍCH (TẮT MẶC ĐỊNH VÌ CHƯA PHẢI SANDBOX THẬT)
+  // ==========================================================================
+
   async function runProgram() {
     const btnRun = document.getElementById('btnRun');
     const runText = document.getElementById('runBtnText');
     const termBody = document.getElementById('terminalBody');
     const metaStatus = document.getElementById('metaStatus');
     const metaTime = document.getElementById('metaTime');
+
+    if (!state.codeExecutionEnabled) {
+      termBody.innerHTML = '<div class="term-line term-stderr">Chạy mã đang tắt để bảo vệ máy. Mở/sửa/kiểm tra/lưu mã vẫn hoạt động.</div>';
+      return;
+    }
 
     if (state.diagnostics.so_loi_do > 0) {
       termBody.innerHTML = `<div class="term-line term-stderr">❌ KHÔNG THỂ CHẠY: Chương trình đang có ${state.diagnostics.so_loi_do} Lỗi ĐỎ cứng. Vui lòng sửa các lỗi đỏ trước khi chạy.</div>`;
@@ -612,18 +1557,34 @@
       termBody.innerHTML = `<div class="term-line term-stderr">Lỗi kết nối máy chủ: ${escapeHtml(err.message)}</div>`;
     } finally {
       runText.textContent = 'CHẠY THỬ';
-      btnRun.disabled = false;
+      btnRun.disabled = !state.codeExecutionEnabled;
     }
-  }
-
-  function escapeHtml(text) {
-    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-    return String(text).replace(/[&<>"']/g, m => map[m]);
   }
 
   // ==========================================================================
   // 6. MẪU BÀI, MỞ TỆP & LƯU TỆP (CỬA CỨNG MỞ-LƯU LOSSLESS)
   // ==========================================================================
+  function clearNodeDirtyFlags(nodes) {
+    (nodes || []).forEach(node => {
+      node.da_sua = false;
+      clearNodeDirtyFlags(node.than || []);
+    });
+  }
+
+  function normalizedPath(path) {
+    return String(path || '').replaceAll('\\', '/').toLowerCase();
+  }
+
+  async function readJsonSafely(resp) {
+    const text = await resp.text();
+    if (!text) return {};
+    try {
+      return JSON.parse(text);
+    } catch (_) {
+      return { error: text };
+    }
+  }
+
   async function loadSamples() {
     try {
       const resp = await authFetch('/api/mau');
@@ -641,6 +1602,7 @@
           card.addEventListener('click', () => {
             state.tree = JSON.parse(JSON.stringify(m.tree));
             state.activeFilePath = '';
+            state.activeFileSha256 = null;
             document.getElementById('currentFileName').textContent = m.ten;
             document.getElementById('samplesModal').style.display = 'none';
             onTreeChanged();
@@ -661,16 +1623,26 @@
         body: JSON.stringify({ duong_dan: filePath.trim() })
       });
       if (resp.ok) {
-        const data = await resp.json();
-        state.tree = data.tree || [];
+        const data = await readJsonSafely(resp);
+        if (!Array.isArray(data.tree) || typeof data.duong_dan !== 'string' ||
+            !/^[0-9a-f]{64}$/.test(data.sha256 || '')) {
+          throw new Error('Phản hồi mở tệp không hợp lệ');
+        }
+        state.tree = data.tree;
         state.activeFilePath = data.duong_dan;
+        state.activeFileSha256 = data.sha256;
         state.hasModifications = false;
         document.getElementById('currentFileName').textContent = data.ten_tep;
         document.getElementById('fileModifiedBadge').style.display = 'none';
         document.getElementById('openFileModal').style.display = 'none';
-        onTreeChanged();
+        onTreeChanged(false, false);
+
+        const testPath = data.duong_dan.startsWith('core/')
+          ? data.duong_dan.replace('core/', 'tests/test_')
+          : (data.duong_dan.startsWith('tests/') ? data.duong_dan : 'tests/test_' + data.ten_tep);
+        loadAvailableTests(testPath);
       } else {
-        const err = await resp.json();
+        const err = await readJsonSafely(resp);
         alert(`Lỗi mở tệp: ${err.error}`);
       }
     } catch (err) {
@@ -680,26 +1652,55 @@
 
   async function saveFile(filePath, saveType) {
     if (!filePath || !filePath.trim()) return;
+    const target = filePath.trim();
+    const sameTarget = Boolean(
+      state.activeFilePath && normalizedPath(target) === normalizedPath(state.activeFilePath)
+    );
+    const payload = {
+      duong_dan: target,
+      tree: state.tree,
+      kieu_luu: saveType,
+      has_modifications: state.hasModifications
+    };
+    if (sameTarget && state.activeFileSha256) {
+      payload.expected_sha256 = state.activeFileSha256;
+    }
+    if (state.activeFilePath && state.activeFileSha256) {
+      payload.source_path = state.activeFilePath;
+      payload.source_sha256 = state.activeFileSha256;
+    }
     try {
       const resp = await authFetch('/api/luu_tep', {
         method: 'POST',
-        body: JSON.stringify({
-          duong_dan: filePath.trim(),
-          tree: state.tree,
-          kieu_luu: saveType,
-          has_modifications: state.hasModifications
-        })
+        body: JSON.stringify(payload)
       });
+      if (resp.status === 409) {
+        const err = await readJsonSafely(resp);
+        state.hasModifications = true;
+        document.getElementById('fileModifiedBadge').style.display = 'inline-block';
+        const reload = confirm(
+          'Tệp trên đĩa đã thay đổi bên ngoài. Tải lại sẽ bỏ các thay đổi chưa lưu trong app. ' +
+          'Bạn có muốn tải lại ngay không?'
+        );
+        if (reload) await openPyFile(target);
+        else if (err.error) console.warn(err.error);
+        return;
+      }
       if (resp.ok) {
-        const data = await resp.json();
-        state.activeFilePath = filePath.trim();
+        const data = await readJsonSafely(resp);
+        if (typeof data.duong_dan !== 'string' || !/^[0-9a-f]{64}$/.test(data.sha256 || '')) {
+          throw new Error('Máy chủ không trả SHA-256 hợp lệ sau khi lưu');
+        }
+        state.activeFilePath = data.duong_dan;
+        state.activeFileSha256 = data.sha256;
         state.hasModifications = false;
-        document.getElementById('currentFileName').textContent = filePath.split('/').pop().split('\\').pop();
+        clearNodeDirtyFlags(state.tree);
+        document.getElementById('currentFileName').textContent = data.duong_dan.split('/').pop().split('\\').pop();
         document.getElementById('fileModifiedBadge').style.display = 'none';
         document.getElementById('saveFileModal').style.display = 'none';
         alert('Lưu tệp thành công!');
       } else {
-        const err = await resp.json();
+        const err = await readJsonSafely(resp);
         alert(`Lỗi lưu tệp: ${err.error}`);
       }
     } catch (err) {
@@ -708,16 +1709,81 @@
   }
 
   // ==========================================================================
+  // 6. MẪU BÀI, DUYỆT TỆP, MỞ TỆP & LƯU TỆP
+  // ==========================================================================
+  async function loadRepoFiles(dir = 'core') {
+    const listContainer = document.getElementById('repoFileListContainer');
+    if (!listContainer) return;
+    listContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 11px; padding: 6px;">Đang tải danh sách tệp...</div>';
+
+    try {
+      const resp = await authFetch(`/api/tep_tin?dir=${encodeURIComponent(dir)}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        const files = data.tep_tin || [];
+        listContainer.innerHTML = '';
+        if (files.length === 0) {
+          listContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 11px; padding: 6px;">Không có tệp .py nào trong thư mục này.</div>';
+          return;
+        }
+
+        const chipsWrap = document.createElement('div');
+        chipsWrap.className = 'file-chips';
+
+        files.forEach(f => {
+          const chip = document.createElement('span');
+          chip.className = 'chip';
+          chip.dataset.path = f.duong_dan;
+          chip.textContent = f.duong_dan;
+          chip.title = `Mở tệp ${f.duong_dan} (${f.dung_luong_bytes} bytes)`;
+          chip.addEventListener('click', () => {
+            document.getElementById('openFilePath').value = f.duong_dan;
+            openPyFile(f.duong_dan);
+          });
+          chipsWrap.appendChild(chip);
+        });
+
+        listContainer.appendChild(chipsWrap);
+      } else {
+        listContainer.innerHTML = '<div style="color: var(--color-error-do); font-size: 11px; padding: 6px;">Lỗi khi tải tệp từ kho.</div>';
+      }
+    } catch (err) {
+      listContainer.innerHTML = `<div style="color: var(--color-error-do); font-size: 11px; padding: 6px;">Lỗi kết nối: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  // ==========================================================================
   // 7. SỰ KIỆN & LẮNG NGHE NGƯỜI DÙNG
   // ==========================================================================
   function setupEventListeners() {
-    // Toolbar buttons
+    // 1. Sidebar Toggles
+    const btnToggleLeft = document.getElementById('btnToggleSidebarLeft');
+    if (btnToggleLeft) btnToggleLeft.addEventListener('click', toggleSidebarLeft);
+
+    const btnCloseLeft = document.getElementById('btnCloseSidebarLeft');
+    if (btnCloseLeft) btnCloseLeft.addEventListener('click', toggleSidebarLeft);
+
+    const btnToggleRight = document.getElementById('btnToggleSidebarRight');
+    if (btnToggleRight) btnToggleRight.addEventListener('click', toggleSidebarRight);
+
+    // 2. Font Zoom Controls
+    const btnZoomIn = document.getElementById('btnZoomIn');
+    if (btnZoomIn) btnZoomIn.addEventListener('click', () => setCodeFontSize(state.codeFontSize + 1));
+
+    const btnZoomOut = document.getElementById('btnZoomOut');
+    if (btnZoomOut) btnZoomOut.addEventListener('click', () => setCodeFontSize(state.codeFontSize - 1));
+
+    const btnZoomReset = document.getElementById('btnZoomReset');
+    if (btnZoomReset) btnZoomReset.addEventListener('click', () => setCodeFontSize(14));
+
+    // 3. Toolbar buttons
     document.getElementById('btnRun').addEventListener('click', runProgram);
     
     document.getElementById('btnNew').addEventListener('click', () => {
       if (confirm('Tạo chương trình mới? Thao tác này sẽ dọn sạch vùng soạn thảo.')) {
         state.tree = [];
         state.activeFilePath = '';
+        state.activeFileSha256 = null;
         document.getElementById('currentFileName').textContent = 'Chương trình mới (Chưa lưu)';
         document.getElementById('fileModifiedBadge').style.display = 'none';
         onTreeChanged();
@@ -746,12 +1812,15 @@
         ]},
         { id: "m1_3", ma: "in_ra", o: { noi_dung: "cong(5, 7)" }, than: [] }
       ];
+      state.activeFilePath = '';
+      state.activeFileSha256 = null;
       document.getElementById('currentFileName').textContent = '1. Hàm cộng hai số';
       onTreeChanged();
     });
 
-    // Mở tệp Modal
+    // Mở tệp Modal & Bộ duyệt tệp động
     document.getElementById('btnOpenFile').addEventListener('click', () => {
+      loadRepoFiles('core');
       document.getElementById('openFileModal').style.display = 'flex';
     });
     document.getElementById('btnCloseOpenFile').addEventListener('click', () => {
@@ -765,11 +1834,11 @@
       openPyFile(p);
     });
 
-    document.querySelectorAll('#repoFileChips .chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        const p = chip.dataset.path;
-        document.getElementById('openFilePath').value = p;
-        openPyFile(p);
+    document.querySelectorAll('.filter-tag').forEach(tag => {
+      tag.addEventListener('click', () => {
+        document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
+        tag.classList.add('active');
+        loadRepoFiles(tag.dataset.dir || 'core');
       });
     });
 
@@ -811,6 +1880,22 @@
       });
     });
 
+    // Nút Dò Dòng Dữ Liệu (Mạch Nước Ngầm)
+    const btnRunTrace = document.getElementById('btnRunTrace');
+    if (btnRunTrace) {
+      btnRunTrace.addEventListener('click', () => {
+        chayMachNuocNgam();
+      });
+    }
+
+    // Nút Định Vị Lỗi E1
+    const btnRunE1 = document.getElementById('btnRunE1');
+    if (btnRunE1) {
+      btnRunE1.addEventListener('click', () => {
+        chayDinhViLoiE1();
+      });
+    }
+
     // Tìm kiếm thẻ trên khay
     document.getElementById('toolSearch').addEventListener('input', (e) => {
       const query = e.target.value.toLowerCase().trim();
@@ -839,11 +1924,26 @@
       } catch (err) {}
     });
 
-    // Phím tắt bàn phím
+    // Phím tắt bàn phím IDE chuẩn
     window.addEventListener('keydown', (e) => {
       if (e.ctrlKey && e.key === 'Enter') {
         e.preventDefault();
         runProgram();
+      } else if (e.ctrlKey && (e.key === 'b' || e.key === 'B')) {
+        e.preventDefault();
+        toggleSidebarLeft();
+      } else if (e.ctrlKey && (e.key === 'j' || e.key === 'J')) {
+        e.preventDefault();
+        toggleSidebarRight();
+      } else if (e.ctrlKey && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        setCodeFontSize(state.codeFontSize + 1);
+      } else if (e.ctrlKey && (e.key === '-' || e.key === '_')) {
+        e.preventDefault();
+        setCodeFontSize(state.codeFontSize - 1);
+      } else if (e.ctrlKey && e.key === '0') {
+        e.preventDefault();
+        setCodeFontSize(14);
       }
     });
   }
@@ -853,8 +1953,10 @@
   // ==========================================================================
   window.addEventListener('DOMContentLoaded', () => {
     initAuthToken();
+    initLayoutPreferences();
     renderToolbox();
     setupEventListeners();
+    configureRuntimeCapabilities();
 
     // Nạp mặc định bài mẫu "Hàm cộng hai số" để người dùng mở ra có thể trải nghiệm ngay
     state.tree = [
@@ -865,6 +1967,34 @@
     ];
     document.getElementById('currentFileName').textContent = '1. Hàm cộng hai số';
     onTreeChanged();
+    loadAvailableTests();
   });
+
+  if (typeof window !== 'undefined') {
+    window.state = state;
+    window.updateButtonsState = updateButtonsState;
+    window.renderE1Results = renderE1Results;
+    window.renderE1Error = renderE1Error;
+    window.escapeHtml = escapeHtml;
+    window.openPyFile = openPyFile;
+    window.saveFile = saveFile;
+    window.chayDinhViLoiE1 = chayDinhViLoiE1;
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+      state,
+      escapeHtml,
+      configureRuntimeCapabilities,
+      updateButtonsState,
+      chayMachNuocNgam,
+      chayDinhViLoiE1,
+      renderE1Results,
+      renderE1Error,
+      loadAvailableTests,
+      openPyFile,
+      saveFile,
+    };
+  }
 
 })();

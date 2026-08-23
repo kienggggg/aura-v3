@@ -17,12 +17,11 @@ LibCST giữ nguyên từng byte theo thiết kế. Tài liệu nói vậy — n
 giá vì tin tài liệu một lần rồi (OpenClaw "context tối thiểu 16K", mã chặn ở 4K),
 nên tệp này ĐO trên đúng 66 tệp của kho.
 
-    .venv-cst\\Scripts\\python.exe -X utf8 tools\\do_libcst.py
+    venv\Scripts\python.exe -X utf8 tools\do_libcst.py
 
-Cài riêng, không đụng venv chính (luật gói giả của kho):
-
-    venv\\Scripts\\python.exe -m venv .venv-cst
-    .venv-cst\\Scripts\\python.exe -m pip install libcst
+22/08/2026: truoc day chay bang venv rieng `.venv-cst` (luat goi gia cua kho:
+cai thu moi thi cai rieng, do xong moi nhap). LibCST da do dat va duoc nhap
+vao venv CHINH (ban 1.9.0), nen `.venv-cst` da xoa - 29 MB. Dung dung lai no.
 """
 from __future__ import annotations
 

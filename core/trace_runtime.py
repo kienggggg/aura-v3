@@ -1,0 +1,453 @@
+# -*- coding: utf-8 -*-
+"""trace_runtime.py — Thu thập vết thực thi dòng chảy dữ liệu (Runtime Data Flow).
+
+Phục vụ Mạch Nước Ngầm Biến Số (Ưu tiên #1 của AURA v3):
+1. Chọn test tất định 3 tầng khi có nhiều test đỏ:
+   - Tầng 1: Trong tập test ĐỎ, chọn test có số bước nhỏ nhất đi qua dòng đột biến.
+   - Tầng 2: Phân xử hoà theo thứ tự thu thập (collection order) của pytest.
+   - Tầng 3: Báo rõ số test đỏ khác trên giao diện.
+2. Đo bước lọc theo mô-đun:
+   - Chỉ đếm dòng lệnh thuộc file nguồn đang xét (loại bỏ stdlib, pytest, harness).
+   - Trần số bước: max_steps = 5000.
+3. Ba trạng thái Fail-Closed chuẩn (Luật §5):
+   - 'trace_du': Trích xuất đầy đủ chuỗi giá trị biến đổi.
+   - 'trace_cut': 'KHÔNG ĐO ĐƯỢC: Chạm trần ở bước 5000' (tuyệt đối không trả chuỗi cụt).
+   - 'khong_chay': 'KHÔNG ĐO ĐƯỢC: <lý do>'.
+"""
+from __future__ import annotations
+
+import ast
+import json
+import os
+import subprocess
+import sys
+import time
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PY = sys.executable or str(PROJECT_ROOT / "venv" / "Scripts" / "python.exe")
+
+
+@dataclass
+class TraceEvent:
+    buoc: int
+    dong: int
+    ten_bien: str
+    gia_tri_cu: str
+    gia_tri_moi: str
+    su_kien: str  # 'gan', 'thay_doi', 'tra_ve', 'dong_chay'
+    dong_ma: str = ""
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass
+class TraceResult:
+    trang_thai: str  # 'trace_du', 'trace_cut', 'khong_chay'
+    thong_diep: str
+    tong_buoc: int
+    ten_test: str
+    so_test_do_khac: int
+    cac_su_kien: list[dict] = field(default_factory=list)
+    tep_nguon: str = ""
+    thoi_gian_giay: float = 0.0
+    dong_da_chay: list[int] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+def _chay_pytest_lay_danh_sach_test(tep_test: str, cwd: Optional[Path] = None) -> list[str]:
+    """Thu thập danh sách tất cả các test case theo thứ tự pytest collection."""
+    root = cwd or PROJECT_ROOT
+    cmd = [PY, "-X", "utf8", "-m", "pytest", tep_test, "--collect-only", "-q"]
+    try:
+        res = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            cwd=str(root),
+            timeout=30,
+        )
+        tests = []
+        for line in res.stdout.splitlines():
+            line = line.strip()
+            if line and "::" in line and not line.startswith("="):
+                # VD: tests/test_may_tinh.py::test_dem_ngay
+                tests.append(line)
+        return tests
+    except Exception:
+        return []
+
+
+def _chay_pytest_tim_test_do(tep_test: str, cwd: Optional[Path] = None) -> list[str]:
+    """Chạy toàn bộ tệp test và trả về danh sách các test case bị FAILED/ERROR theo thứ tự."""
+    root = cwd or PROJECT_ROOT
+    cmd = [
+        PY, "-X", "utf8", "-m", "pytest", tep_test,
+        "-q", "--no-header", "--tb=line", "-p", "no:cacheprovider",
+    ]
+    try:
+        res = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            cwd=str(root),
+            timeout=60,
+        )
+        failing_tests = []
+        for line in res.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("FAILED "):
+                # Format: FAILED tests/test_x.py::test_func[...] - AssertionError...
+                part = line[len("FAILED "):].split(" - ")[0].split(" : ")[0].strip()
+                failing_tests.append(part)
+        return failing_tests
+    except Exception:
+        return []
+
+
+def tao_script_tracer(
+    tep_nguon_abs: str,
+    node_id_test: str,
+    dong_kiem_tra: Optional[int] = None,
+    max_steps: int = 5000,
+) -> str:
+    """Tạo mã Python thực thi 1 test đơn lẻ với sys.settrace lọc chính xác mô-đun đích."""
+    tep_json = json.dumps(str(tep_nguon_abs))
+    node_json = json.dumps(str(node_id_test))
+    max_steps_int = int(max_steps)
+    dong_kiem_tra_int = int(dong_kiem_tra) if dong_kiem_tra is not None and not isinstance(dong_kiem_tra, bool) and dong_kiem_tra > 0 else -1
+
+    script = f'''# -*- coding: utf-8 -*-
+import sys
+import os
+import json
+import traceback
+
+TEP_NGUON_ABS = os.path.abspath({tep_json})
+MAX_STEPS = {max_steps_int}
+DONG_KIEM_TRA = {dong_kiem_tra_int}
+
+events = []
+dong_da_chay = set()
+step_count = 0
+hit_ceiling = False
+qua_dong_kiem_tra = False
+last_locals = {{}}
+
+# Đọc các dòng mã nguồn
+source_lines = []
+try:
+    with open(TEP_NGUON_ABS, "r", encoding="utf-8", errors="replace") as f:
+        source_lines = f.readlines()
+except Exception:
+    pass
+
+def safe_repr(val, max_len=150):
+    try:
+        s = repr(val)
+        if len(s) > max_len:
+            return s[:max_len] + "..."
+        return s
+    except Exception:
+        return "<unprintable>"
+
+def tracer(frame, event, arg):
+    global step_count, hit_ceiling, qua_dong_kiem_tra, last_locals, dong_da_chay
+    filename = frame.f_code.co_filename
+    if not filename:
+        return tracer
+    try:
+        abs_fn = os.path.abspath(filename)
+    except Exception:
+        return tracer
+    
+    # Chỉ đếm và thu thập vết thuộc mô-đun đang xét
+    if abs_fn.lower() != TEP_NGUON_ABS.lower():
+        return tracer
+
+    line_no = frame.f_lineno
+    if event == "line":
+        dong_da_chay.add(int(line_no))
+
+    if DONG_KIEM_TRA > 0 and line_no == DONG_KIEM_TRA:
+        qua_dong_kiem_tra = True
+
+    if step_count >= MAX_STEPS:
+        hit_ceiling = True
+        return None  # Dừng trace
+
+    step_count += 1
+    code_text = ""
+    if 1 <= line_no <= len(source_lines):
+        code_text = source_lines[line_no - 1].strip()
+
+    curr_locals = dict(frame.f_locals)
+    if event == "line":
+        # So sánh biến thay đổi so với bước trước trong cùng scope
+        for k, v in curr_locals.items():
+            if k.startswith("__"):
+                continue
+            if k not in last_locals:
+                events.append({{
+                    "buoc": step_count,
+                    "dong": line_no,
+                    "ten_bien": k,
+                    "gia_tri_cu": "<chưa gán>",
+                    "gia_tri_moi": safe_repr(v),
+                    "su_kien": "gan",
+                    "dong_ma": code_text
+                }})
+            elif last_locals[k] != safe_repr(v):
+                events.append({{
+                    "buoc": step_count,
+                    "dong": line_no,
+                    "ten_bien": k,
+                    "gia_tri_cu": last_locals[k],
+                    "gia_tri_moi": safe_repr(v),
+                    "su_kien": "thay_doi",
+                    "dong_ma": code_text
+                }})
+        last_locals = {{k: safe_repr(v) for k, v in curr_locals.items() if not k.startswith("__")}}
+
+    elif event == "return":
+        events.append({{
+            "buoc": step_count,
+            "dong": line_no,
+            "ten_bien": "<tra_ve>",
+            "gia_tri_cu": "",
+            "gia_tri_moi": safe_repr(arg),
+            "su_kien": "tra_ve",
+            "dong_ma": code_text
+        }})
+
+    return tracer
+
+# Chạy pytest với Plugin Hookwrapper: sys.settrace chỉ kích hoạt ĐÚNG trong lúc thực thi test call
+import pytest
+
+class TracePlugin:
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_runtest_call(self, item):
+        sys.settrace(tracer)
+        try:
+            yield
+        finally:
+            sys.settrace(None)
+
+plugin = TracePlugin()
+exit_code = pytest.main(
+    ["-q", "--no-header", "--tb=short", "-p", "no:cacheprovider", {node_json}],
+    plugins=[plugin]
+)
+
+result = {{
+    "step_count": step_count,
+    "hit_ceiling": hit_ceiling,
+    "qua_dong_kiem_tra": qua_dong_kiem_tra,
+    "exit_code": exit_code,
+    "dong_da_chay": sorted(dong_da_chay),
+    "events": events
+}}
+
+print("===JSON_START===")
+print(json.dumps(result, ensure_ascii=False))
+print("===JSON_END===")
+'''
+    return script
+
+
+def chay_trace_mot_test(
+    tep_nguon: str,
+    node_id_test: str,
+    dong_kiem_tra: Optional[int] = None,
+    max_steps: int = 5000,
+    cwd: Optional[Path] = None,
+    so_test_do_khac: int = 0,
+) -> TraceResult:
+    """Thực thi trace trên đúng 1 test case và trả về TraceResult 3 trạng thái chuẩn."""
+    start_time = time.perf_counter()
+    root = cwd or PROJECT_ROOT
+    tep_nguon_path = (root / tep_nguon).resolve() if not Path(tep_nguon).is_absolute() else Path(tep_nguon)
+
+    if not tep_nguon_path.is_file():
+        return TraceResult(
+            trang_thai="khong_chay",
+            thong_diep=f"KHÔNG ĐO ĐƯỢC: Tệp nguồn không tồn tại: {tep_nguon}",
+            tong_buoc=0,
+            ten_test=node_id_test,
+            so_test_do_khac=so_test_do_khac,
+            cac_su_kien=[],
+            tep_nguon=str(tep_nguon_path),
+            thoi_gian_giay=round(time.perf_counter() - start_time, 3),
+        )
+
+    runner_code = tao_script_tracer(
+        tep_nguon_abs=str(tep_nguon_path),
+        node_id_test=node_id_test,
+        dong_kiem_tra=dong_kiem_tra,
+        max_steps=max_steps,
+    )
+
+    try:
+        res = subprocess.run(
+            [PY, "-X", "utf8", "-c", runner_code],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            cwd=str(root),
+            timeout=15,
+        )
+    except subprocess.TimeoutExpired:
+        return TraceResult(
+            trang_thai="khong_chay",
+            thong_diep="KHÔNG ĐO ĐƯỢC: Timeout thực thi quá 15 giây",
+            tong_buoc=0,
+            ten_test=node_id_test,
+            so_test_do_khac=so_test_do_khac,
+            cac_su_kien=[],
+            tep_nguon=str(tep_nguon_path),
+            thoi_gian_giay=round(time.perf_counter() - start_time, 3),
+        )
+    except Exception as e:
+        return TraceResult(
+            trang_thai="khong_chay",
+            thong_diep=f"KHÔNG ĐO ĐƯỢC: Lỗi tiến trình con: {e}",
+            tong_buoc=0,
+            ten_test=node_id_test,
+            so_test_do_khac=so_test_do_khac,
+            cac_su_kien=[],
+            tep_nguon=str(tep_nguon_path),
+            thoi_gian_giay=round(time.perf_counter() - start_time, 3),
+        )
+
+    elapsed = round(time.perf_counter() - start_time, 3)
+
+    if "===JSON_START===" not in res.stdout:
+        return TraceResult(
+            trang_thai="khong_chay",
+            thong_diep=f"KHÔNG ĐO ĐƯỢC: Không thu được output JSON. Stderr: {res.stderr[:200]}",
+            tong_buoc=0,
+            ten_test=node_id_test,
+            so_test_do_khac=so_test_do_khac,
+            cac_su_kien=[],
+            tep_nguon=str(tep_nguon_path),
+            thoi_gian_giay=elapsed,
+        )
+
+    try:
+        raw_json = res.stdout.split("===JSON_START===")[1].split("===JSON_END===")[0].strip()
+        data = json.loads(raw_json)
+    except Exception as e:
+        return TraceResult(
+            trang_thai="khong_chay",
+            thong_diep=f"KHÔNG ĐO ĐƯỢC: Lỗi giải mã JSON vết: {e}",
+            tong_buoc=0,
+            ten_test=node_id_test,
+            so_test_do_khac=so_test_do_khac,
+            cac_su_kien=[],
+            tep_nguon=str(tep_nguon_path),
+            thoi_gian_giay=elapsed,
+        )
+
+    hit_ceiling = data.get("hit_ceiling", False)
+    step_count = data.get("step_count", 0)
+    events = data.get("events", [])
+    dong_da_chay = data.get("dong_da_chay", [])
+
+    if hit_ceiling or step_count >= max_steps:
+        return TraceResult(
+            trang_thai="trace_cut",
+            thong_diep=f"KHÔNG ĐO ĐƯỢC: Chạm trần ở bước {max_steps}",
+            tong_buoc=step_count,
+            ten_test=node_id_test,
+            so_test_do_khac=so_test_do_khac,
+            cac_su_kien=events,
+            tep_nguon=str(tep_nguon_path),
+            thoi_gian_giay=elapsed,
+            dong_da_chay=dong_da_chay,
+        )
+
+    return TraceResult(
+        trang_thai="trace_du",
+        thong_diep=f"Trace thành công ({step_count} bước)",
+        tong_buoc=step_count,
+        ten_test=node_id_test,
+        so_test_do_khac=so_test_do_khac,
+        cac_su_kien=events,
+        tep_nguon=str(tep_nguon_path),
+        thoi_gian_giay=elapsed,
+        dong_da_chay=dong_da_chay,
+    )
+
+
+def chot_test_can_trace(
+    tep_nguon: str,
+    tep_test: str,
+    dong_kiem_tra: Optional[int] = None,
+    cwd: Optional[Path] = None,
+    max_steps: int = 5000,
+) -> Tuple[Optional[str], int, List[TraceResult]]:
+    """Thực hiện Luật Chọn Test Tất Định 3 Tầng:
+    1. Tìm tất cả các test ĐỎ.
+    2. Trace từng test đỏ để tìm test có SỐ BƯỚC NHỎ NHẤT mà VẪN ĐI QUA DÒNG ĐỘT BIẾN.
+    3. Phân xử hoà theo thứ tự thu thập của pytest.
+    
+    Trả về: (ten_test_chot, so_test_do_khac, danh_sach_ket_qua_trace_ung_vien)
+    """
+    root = cwd or PROJECT_ROOT
+    ds_test_do = _chay_pytest_tim_test_do(tep_test, cwd=root)
+    if not ds_test_do:
+        return None, 0, []
+
+    tong_so_do = len(ds_test_do)
+    ung_vien: list[Tuple[int, bool, int, str, TraceResult]] = []
+    # (so_buoc, qua_dong, thu_tu_pytest, ten_test, trace_result)
+
+    for idx, test_id in enumerate(ds_test_do):
+        res = chay_trace_mot_test(
+            tep_nguon=tep_nguon,
+            node_id_test=test_id,
+            dong_kiem_tra=dong_kiem_tra,
+            max_steps=max_steps,
+            cwd=root,
+            so_test_do_khac=tong_so_do - 1,
+        )
+        qua_dong = False
+        if dong_kiem_tra is not None and dong_kiem_tra > 0:
+            qua_dong = any(ev.get("dong") == dong_kiem_tra for ev in res.cac_su_kien)
+        else:
+            qua_dong = True  # Không yêu cầu dòng cụ thể
+
+        ung_vien.append((res.tong_buoc, qua_dong, idx, test_id, res))
+
+    # Lọc các test đi qua dòng đột biến (nếu có yêu cầu)
+    nhom_qua_dong = [u for u in ung_vien if u[1]]
+    if nhom_qua_dong:
+        tap_xet = nhom_qua_dong
+    else:
+        # Nhánh dự phòng: không test đỏ nào đi qua dòng đột biến -> đánh dấu rõ trạng thái
+        tap_xet = ung_vien
+        for u in tap_xet:
+            u[4].trang_thai = "trace_khong_qua_loi"
+            u[4].thong_diep = "KHÔNG ĐO ĐƯỢC: Vết thực thi không đi qua dòng đột biến"
+
+    # Sắp xếp: ít bước nhất -> thứ tự pytest trước
+    tap_xet.sort(key=lambda x: (x[0] if x[0] > 0 else 999999, x[2]))
+
+    chot = tap_xet[0]
+    ten_test_chot = chot[3]
+    ket_qua_chot = chot[4]
+    ket_qua_chot.so_test_do_khac = tong_so_do - 1
+
+    return ten_test_chot, tong_so_do - 1, [u[4] for u in tap_xet]
+

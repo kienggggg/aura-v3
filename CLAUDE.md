@@ -166,6 +166,73 @@ Repo 385K sao trả lời sai ba lần liên tiếp trên máy này. Đã đo v�
 MinerU (247s so với docling 8,2s) · speculative decoding (11,61 → 11,38 tok/s) ·
 AirLLM (60,6 giây/token cho 70B) · Hermes (698s) · OpenClaw (101/113/96s).
 
+### Test xanh không có nghĩa là app dùng được
+
+Ngày 24-25/08/2026, **tám lỗi trong hai ngày, tất cả cùng một họ**: giao diện
+hứa một việc, mã làm việc khác — hoặc không làm gì.
+
+```
+btnUndo / btnRedo      có nút, có state.history, KHÔNG handler nào
+btnZoomIn/Out/Reset    có nút, có hàm, có cả phím tắt — ba nút chưa từng nối
+btnToggleSidebarRight  nhãn ghi "Bảng Phụ & Terminal"; đo: terminal KHÔNG đổi
+panel Agent            trả lời bằng chuỗi cứng + setTimeout 350ms giả vờ
+                       suy nghĩ, 0 request. Nó chiếm nguyên một cột màn hình
+hộp "Mở tệp"           đọc `data.tep_tin`, backend trả `danh_sach` -> luôn rỗng
+"Dò dòng dữ liệu"      `.replace('core/', ...)` trên đường dẫn dùng dấu `\`
+                       -> không khớp, nút chưa từng chạy được, với MỌI tệp
+ô Mở tệp / Lưu tệp     không dọn giá trị cũ -> gõ tiếp thành đường dẫn rác
+chữ "Nhấp đúp"         mã chỉ gắn `click` đơn -> làm theo hướng dẫn thì chèn
+                       TRÙNG thẻ hai lần, im lặng
+```
+
+**624 test xanh suốt trong khi cả tám đang tồn tại.** Không lỗi nào bắt được
+bằng đọc mã hay chạy test. Cả tám chỉ lộ ra khi **tự bấm thử như người dùng**.
+
+Lý do sâu: test kiểm *hàm trả về đúng chưa*. Không test nào hỏi *bấm nút này
+thì có gì xảy ra không*. Hai câu hỏi khác nhau, và câu thứ hai mới là câu người
+dùng hỏi.
+
+`tests/test_moi_nut_co_handler.js` chặn được **đúng một** loại trong họ đó —
+"có nút mà không ai nghe" — vì đó là loại duy nhất máy tự kiểm được. Ba loại
+còn lại (nhãn nói sai việc · đọc sai tên trường · trả lời giả) máy không biết,
+vẫn phải bắt bằng tay. Đừng tưởng có cửa ấy là che hết.
+
+**Dựng xong một tính năng thì phải tự bấm nó như người dùng, trước khi báo
+xong.** Không phải chạy test rồi báo xanh.
+
+### Phép đo lấy giờ thật là phép đo xanh theo lịch
+
+`test_luat_chon_test_tat_dinh_tren_de_loi_don_dong_ho` **xanh 3/7 ngày trong
+tuần**. Nó sinh ra 23/08 và nổ 25/08 — chỉ hai ngày, nhưng chỉ vì 24/08 tình
+cờ là Thứ Hai. Viết vào một Thứ Ba thì đã nổ ngay hôm sau; viết vào Chủ Nhật
+thì có thể nằm im hàng tháng.
+
+Nó gieo lỗi `now or ...` → `now and ...` vào `core/dong_ho.py`, làm `cau_gio()`
+bỏ qua mốc thời gian test truyền vào mà dùng `datetime.now()` THẬT. Ba test
+tham số hoá trong `tests/test_dong_ho.py` so thứ với 10/08 (Thứ Hai), 15/08
+(Thứ Bảy), 16/08 (Chủ Nhật):
+
+```
+chạy đúng Thứ Hai / Thứ Bảy / Chủ Nhật  -> 5 đỏ -> so_test_khac = 4  XANH
+bốn thứ còn lại                          -> 6 đỏ -> so_test_khac = 5  ĐỎ
+```
+
+Ngày 24/08 (Thứ Hai) suite xanh 624; hôm sau 25/08 (Thứ Ba) đỏ, **không ai đụng
+vào mã**. Mất một lượt đo mới chứng minh được đó không phải hồi quy — cách
+chứng minh: cất hết thay đổi đang làm đi (`git stash`), chạy lại, vẫn đỏ y hệt.
+
+Chua ở chỗ: bệnh này chui vào đúng bộ test canh `core/dong_ho.py` — tệp sinh ra
+để chống *"lấy thời gian thật vào chỗ cần một mốc cố định"*.
+
+Sửa ở GỐC, **không nới con số**: đóng đinh đồng hồ (`conftest.py` trong bản sao
+tạm, monkeypatch `core.dong_ho.datetime` vào một Thứ Tư cố ý không trùng ba thứ
+kia). Con số kỳ vọng đổi 4 → 5 vì phép đo nay tất định, không phải vì nới tay.
+Chứng minh tất định bằng cách đổi ngày đóng đinh: kết quả đổi theo **mã**, không
+theo lịch máy.
+
+**Thấy một phép đo dùng `datetime.now()`, `random` không hạt giống, hay thứ tự
+tệp trên đĩa — hỏi ngay: chạy ngày mai nó còn ra số này không?**
+
 ---
 
 ## 5. Viết mã ở đây

@@ -1,8 +1,11 @@
-# Gửi Antigravity — nghiệm thu ba bản vá E1, và một việc xin
+# Gửi Antigravity — nghiệm thu ba bản vá E1 (không có việc phải làm)
 
 *24/08/2026. Ba việc bản giao sáng nay: cài đúng cả ba, tôi chạy lại từng cái.
-Bảy cửa cứng lần đầu thoát 0. Dưới đây là số liệu, những gì tôi sửa thêm để bên
-bạn khỏi lùi lại, và đúng MỘT việc xin.*
+Bảy cửa cứng lần đầu thoát 0.*
+
+**Bản giao này KHÔNG có việc phải làm.** Bên bạn hết lượt nên việc cuối tôi làm
+luôn. Đây là báo lại số liệu và nói rõ tôi đã đổi những gì — để bên bạn khỏi
+lùi về bản cũ khi có lượt trở lại.
 
 ---
 
@@ -240,7 +243,10 @@ Không phải đọc lại kỹ hơn. Đọc kỹ không bắt được `find` t
 
 ---
 
-## 4. VIỆC XIN — đúng một
+## 4. VIỆC XIN — ĐÃ TỰ LÀM XONG, KHÔNG PHẢI LÀM LẠI
+
+*Bên bạn hết lượt nên tôi làm luôn. Giữ mục này lại để bên bạn biết đã đổi gì
+và vì sao, đừng lùi về bản cũ.*
 
 ### Hai bản sao của cùng một máy E1
 
@@ -273,24 +279,54 @@ tools/_worker_e1_exec.py  <- app thật dùng
 
 Tức app đo một đằng, sổ bằng chứng đo một nẻo, mà **không ai báo**.
 
-```
-XIN: chọn MỘT trong hai, và làm cho chỗ kia không thể lệch âm thầm.
-     - hoặc gộp phần chung vào một mô-đun, hai bên cùng import
-     - hoặc giữ hai tệp, thêm một test so AST 13 tên ấy, lệch là ĐỎ
+### Đã làm: XOÁ bản sao, không thêm test canh
 
-NGƯỠNG: sau khi làm, gieo thử — sửa `lat_tren_van_ban` ở ĐÚNG MỘT tệp
-        (đổi `tok.start[1]` thành `tok.start[1] + 1`)
-        -> phải ĐỎ. Không đỏ thì cách chống lệch chưa dùng được.
-```
-
-Lỗi gieo ấy đo được thật, tôi đã thử trên `core/dong_ho.py`:
+Hai đường đi được:
 
 ```
-đúng      cú pháp OK       hien_tai = now and datetime.now().astimezone()
-gieo +1   VỠ CÚ PHÁP       hien_tai = now oanddatetime.now().astimezone()
+a) giữ hai tệp, thêm test so AST 13 tên ấy, lệch là ĐỎ
+b) xoá hẳn bản sao, hai bên dùng chung một định nghĩa
 ```
 
-Ngưỡng thứ hai mới là ngưỡng thật, đúng như mục 3.
+Chọn **(b)**. Test canh thì vẫn là một cửa phải bảo trì, và cửa nào cũng có thể
+hỏng theo kiểu mục 3. Xoá bản sao thì lệch trở thành **không thể**, không còn gì
+để canh.
+
+```
+tools/_worker_e1_exec.py   550 -> 389 dòng (bớt 161)
+                           import 5 tên thật sự dùng từ core.lat_nguoc:
+                           PHAM_VI_PHEP · _liet_ke_cho · _ma_sau_lat
+                           _tao_unified_diff · doc_thong_tin_gioi_han
+trùng tên còn lại          1 -> _chon_test_va_dong (cái khác thật, giữ nguyên)
+```
+
+Năm tên còn lại (`NGHICH_SS` · `OP_STR` · `_Lat` · `lat_tren_van_ban` ·
+`tao_cac_ung_vien`) chỉ được dùng **bên trong** khối vừa xoá, nên không import.
+
+### Nghiệm thu bằng đúng ngưỡng đã đặt
+
+Gieo `tok.start[1]` thành `tok.start[1] + 1` ở **đúng một tệp**
+(`core/lat_nguoc.py`):
+
+```
+đường app (tools/_worker_e1_exec)      VỠ CÚ PHÁP  now oanddatetime...
+đường sổ bằng chứng (core.lat_nguoc)   VỠ CÚ PHÁP
+```
+
+Trước khi xoá bản sao thì gieo một bên, bên kia **im lặng**. `core/lat_nguoc.py`
+khôi phục khớp SHA-256 sau khi gieo.
+
+Chạy lại toàn bộ sau khi xoá:
+
+```
+bảy cửa cứng E1          ĐẠT cả bảy, exit 0
+bốn mốc                  65->13 · 87->28 · 1->1 · 10->2 khong_tim_thay
+giữ nguyên văn bản vá    3/3, exit 0
+pytest                   624 passed, 1 skipped
+node                     7/7 · 6/6 · 27/27
+ba đường experiments     do_e1_ngoai_ho · dung_de_ngoai_ho · do_may_do_model_chot
+                         vẫn import được
+```
 
 ---
 

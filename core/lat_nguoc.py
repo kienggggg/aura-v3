@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import ast
 import difflib
+import io
 import json
 import os
 import re
@@ -22,6 +23,7 @@ import sys
 import tempfile
 import textwrap
 import time
+import tokenize
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -29,6 +31,15 @@ from core.trace_runtime import chot_test_can_trace, chay_trace_mot_test, TraceRe
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PY = sys.executable or str(PROJECT_ROOT / "venv" / "Scripts" / "python.exe")
+
+OP_STR = {
+    ast.Lt: "<",
+    ast.LtE: "<=",
+    ast.Gt: ">",
+    ast.GtE: ">=",
+    ast.Eq: "==",
+    ast.NotEq: "!=",
+}
 
 
 def doc_thong_tin_gioi_han(project_root: Path) -> str:
@@ -66,6 +77,21 @@ PHAM_VI_PHEP = [
 ]
 
 
+def lat_tren_van_ban(nguon: str, node: ast.AST, tu: str, sang: str) -> str:
+    """Đổi ĐÚNG một token toán tử trong vùng của node, giữ nguyên mọi byte khác."""
+    dong = nguon.splitlines(keepends=True)
+    bat_dau = sum(len(d) for d in dong[:node.lineno - 1]) + node.col_offset
+    ket = sum(len(d) for d in dong[:node.end_lineno - 1]) + node.end_col_offset
+    if isinstance(node, ast.Constant):
+        return nguon[:bat_dau] + sang + nguon[ket:]
+    vung = nguon[bat_dau:ket]
+    for tok in tokenize.generate_tokens(io.StringIO(vung).readline):
+        if tok.string == tu and tok.type in (tokenize.NAME, tokenize.OP, tokenize.NUMBER):
+            r0 = sum(len(l) for l in vung.splitlines(keepends=True)[:tok.start[0] - 1]) + tok.start[1]
+            return nguon[:bat_dau + r0] + sang + nguon[bat_dau + r0 + len(tu):]
+    raise ValueError(f"khong thay token '{tu}' trong vung node")
+
+
 class _Lat(ast.NodeTransformer):
     """Lật ĐÚNG MỘT chỗ, chỉ số `muc`. Đếm theo cùng thứ tự với phép duyệt AST."""
 
@@ -74,41 +100,56 @@ class _Lat(ast.NodeTransformer):
         self.dem = 0
         self.da = ""
         self.danh_sach: list[tuple[int, int, str]] = []
+        self.target_node: Optional[ast.AST] = None
+        self.tu: str = ""
+        self.sang: str = ""
 
-    def _lay(self, ten: str, nut: ast.AST) -> bool:
+    def _lay(self, ten: str, nut: ast.AST, tu: str = "", sang: str = "") -> bool:
         d = self.dem
         self.danh_sach.append((d, int(getattr(nut, "lineno", 0) or 0), ten))
         self.dem += 1
         if d == self.muc:
             self.da = ten
+            self.target_node = nut
+            self.tu = tu
+            self.sang = sang
             return True
         return False
 
     def visit_Compare(self, n):
         self.generic_visit(n)
         if len(n.ops) == 1 and type(n.ops[0]) in NGHICH_SS:
-            if self._lay("so sánh %s" % type(n.ops[0]).__name__, n):
-                n.ops = [NGHICH_SS[type(n.ops[0])]()]
+            op_cls = type(n.ops[0])
+            target_cls = NGHICH_SS[op_cls]
+            tu = OP_STR[op_cls]
+            sang = OP_STR[target_cls]
+            if self._lay(f"so sánh {op_cls.__name__} -> {target_cls.__name__}", n, tu=tu, sang=sang):
+                n.ops = [target_cls()]
         return n
 
     def visit_BoolOp(self, n):
         self.generic_visit(n)
-        if self._lay("logic %s" % type(n.op).__name__, n):
-            n.op = ast.Or() if isinstance(n.op, ast.And) else ast.And()
+        if isinstance(n.op, ast.And):
+            if self._lay("logic And -> Or", n, tu="and", sang="or"):
+                n.op = ast.Or()
+        elif isinstance(n.op, ast.Or):
+            if self._lay("logic Or -> And", n, tu="or", sang="and"):
+                n.op = ast.And()
         return n
 
     def visit_UnaryOp(self, n):
         self.generic_visit(n)
-        if isinstance(n.op, ast.Not) and self._lay("bỏ phủ định", n):
+        if isinstance(n.op, ast.Not) and self._lay("bỏ phủ định", n, tu="not", sang=""):
             return n.operand
         return n
 
     def visit_Constant(self, n):
         if isinstance(n.value, bool):
-            if self._lay("bool %s" % n.value, n):
-                return ast.Constant(value=not n.value)
+            target_val = not n.value
+            if self._lay(f"bool {n.value} -> {target_val}", n, tu=str(n.value), sang=str(target_val)):
+                return ast.Constant(value=target_val)
         elif isinstance(n.value, int) and not isinstance(n.value, bool):
-            if self._lay("số %d" % n.value, n):
+            if self._lay(f"số {n.value} -> {n.value - 1}", n, tu=str(n.value), sang=str(n.value - 1)):
                 return ast.Constant(value=n.value - 1)
         return n
 
@@ -123,8 +164,11 @@ def _liet_ke_cho(ma: str) -> list[tuple[int, int, str]]:
 def _ma_sau_lat(nguon: str, chi_so: int) -> tuple[str, str]:
     """Lật đúng chỉ số trên một cây AST mới."""
     bd = _Lat(chi_so)
-    moi = ast.unparse(ast.fix_missing_locations(bd.visit(ast.parse(nguon))))
-    return moi, bd.da
+    bd.visit(ast.parse(nguon))
+    if bd.target_node is not None:
+        moi = lat_tren_van_ban(nguon, bd.target_node, bd.tu, bd.sang)
+        return moi, bd.da
+    return nguon, ""
 
 
 def tao_cac_ung_vien(ma: str, dong_da_chay: Optional[Set[int]] = None) -> list[tuple[int, str, str]]:
@@ -139,10 +183,10 @@ def tao_cac_ung_vien(ma: str, dong_da_chay: Optional[Set[int]] = None) -> list[t
     return res
 
 
-def _tao_unified_diff(goc_ast_str: str, moi_ast_str: str, filename: str) -> str:
-    """Tạo unified diff giữa hai bản AST chuẩn hóa."""
-    lines_goc = goc_ast_str.splitlines(keepends=True)
-    lines_moi = moi_ast_str.splitlines(keepends=True)
+def _tao_unified_diff(goc_str: str, moi_str: str, filename: str) -> str:
+    """Tạo unified diff giữa hai bản văn bản."""
+    lines_goc = goc_str.splitlines(keepends=True)
+    lines_moi = moi_str.splitlines(keepends=True)
     diff = difflib.unified_diff(
         lines_goc,
         lines_moi,
@@ -258,7 +302,6 @@ def chay_e1_dinh_vi(
             }
 
         nguon_text = target_file.read_text(encoding="utf-8")
-        chuan_ast = ast.unparse(ast.parse(nguon_text))
         cac_cho = _liet_ke_cho(nguon_text)
         so_cho_truoc_loc = len(cac_cho)
 
@@ -336,7 +379,7 @@ def chay_e1_dinh_vi(
                     timeout=max(0.1, min(15.0, con_lai)),
                 )
                 if r_test.returncode == 0:
-                    diff = _tao_unified_diff(chuan_ast, ast.unparse(ast.parse(moi_text)), tep_nguon_rel)
+                    diff = _tao_unified_diff(nguon_text, moi_text, tep_nguon_rel)
                     xanh_selected.append({
                         "index": chi_so,
                         "line": dong,
@@ -382,14 +425,16 @@ def chay_e1_dinh_vi(
 
         for cand in xanh_selected:
             target_file.write_text(cand["ma"], encoding="utf-8")
-            suite_pass = False
+            full_suite_status = "ĐỎ"
             so_test_hong = 0
+            ly_do_khong_do = ""
             con_lai_tong = deadline_tong - time.monotonic()
             if con_lai_tong > 0:
                 try:
                     r_suite = subprocess.run(
                         [
                             PY, "-X", "utf8", "-m", "pytest", "tests",
+                            "-m", "not e1_control",
                             "-q", "--no-header", "-p", "no:cacheprovider",
                         ],
                         capture_output=True,
@@ -399,34 +444,64 @@ def chay_e1_dinh_vi(
                         cwd=str(tam),
                         timeout=max(1.0, min(120.0, con_lai_tong)),
                     )
+                    out_text = (r_suite.stdout or "") + "\n" + (r_suite.stderr or "")
                     if r_suite.returncode == 0:
-                        suite_pass = True
+                        full_suite_status = "XANH"
                         co_ban_va_xanh_suite = True
+                        so_test_hong = 0
                     else:
-                        out_text = (r_suite.stdout or "") + "\n" + (r_suite.stderr or "")
-                        for line in out_text.splitlines():
-                            if "failed" in line:
-                                m = re.search(r"(\d+)\s+failed", line)
-                                if m:
-                                    so_test_hong = int(m.group(1))
-                                    break
-                        if so_test_hong == 0:
-                            so_test_hong = max(1, out_text.count("FAILED"))
-                except Exception:
-                    suite_pass = False
-                    so_test_hong = 1
+                        if "ERROR collecting" in out_text or "errors during collection" in out_text or r_suite.returncode not in (0, 1):
+                            full_suite_status = "suite_khong_do_duoc"
+                            ly_do_khong_do = "Lỗi thu thập test suite"
+                            so_test_hong = 0
+                        else:
+                            found_failed = False
+                            for line in out_text.splitlines():
+                                if "failed" in line:
+                                    m = re.search(r"(\d+)\s+failed", line)
+                                    if m:
+                                        so_test_hong = int(m.group(1))
+                                        found_failed = True
+                                        break
+                            if not found_failed:
+                                count_f = out_text.count("FAILED")
+                                if count_f > 0:
+                                    so_test_hong = count_f
+                                    found_failed = True
+                            if found_failed and so_test_hong > 0:
+                                full_suite_status = "ĐỎ"
+                            else:
+                                full_suite_status = "suite_khong_do_duoc"
+                                ly_do_khong_do = "Không đo được kết quả suite"
+                                so_test_hong = 0
+                except subprocess.TimeoutExpired:
+                    full_suite_status = "suite_khong_do_duoc"
+                    ly_do_khong_do = "Quá giờ suite"
+                    so_test_hong = 0
+                except Exception as exc:
+                    full_suite_status = "suite_khong_do_duoc"
+                    ly_do_khong_do = f"Ngoại lệ: {exc}"
+                    so_test_hong = 0
+            else:
+                full_suite_status = "suite_khong_do_duoc"
+                ly_do_khong_do = "Hết thời gian tổng"
+                so_test_hong = 0
 
-            candidates_out.append({
+            cand_entry = {
                 "index": cand["index"],
                 "line": cand["line"],
                 "operation": cand["operation"],
                 "unified_diff": cand["unified_diff"],
-                "diff_basis": "ast_normalized_temp_copy",
+                # 24/08: xem ghi chu cung ten o tools/_worker_e1_exec.py
+                "diff_basis": "van_ban_goc_temp_copy",
                 "selected_test_status": "XANH",
-                "full_suite_status": "XANH" if suite_pass else "ĐỎ",
-                "so_test_hong": so_test_hong if not suite_pass else 0,
+                "full_suite_status": full_suite_status,
+                "so_test_hong": so_test_hong if full_suite_status == "ĐỎ" else 0,
                 "ma": cand["ma"],
-            })
+            }
+            if ly_do_khong_do:
+                cand_entry["ly_do_suite"] = ly_do_khong_do
+            candidates_out.append(cand_entry)
 
         giay_suite = round(time.monotonic() - t0_suite, 1)
 
@@ -434,12 +509,17 @@ def chay_e1_dinh_vi(
         if co_ban_va_xanh_suite:
             trang_thai = "tim_thay"
             reason = f"Đã tìm thấy {sum(1 for c in candidates_out if c['full_suite_status'] == 'XANH')} bản vá xanh toàn bộ suite."
+        elif any(c["full_suite_status"] == "suite_khong_do_duoc" for c in candidates_out) and not any(c["full_suite_status"] == "XANH" for c in candidates_out):
+            trang_thai = "suite_khong_do_duoc"
+            reasons_list = [c["ly_do_suite"] for c in candidates_out if c.get("ly_do_suite")]
+            reasons_str = f" ({', '.join(reasons_list)})" if reasons_list else ""
+            reason = f"Ứng viên làm xanh test chọn nhưng suite không đo được{reasons_str}."
         elif candidates_out:
             trang_thai = "ung_vien_khong_qua_suite"
             reason = f"Có {len(candidates_out)} ứng viên làm xanh test chọn nhưng không vượt qua toàn bộ test suite."
         else:
             trang_thai = "khong_tim_thay"
-            reason = "Không tìm thấy phép lật nào làm xanh test chọn trong phạm vi 5 họ phép E1."
+            reason = "Không có ứng viên nào trong phạm vi 5 phép làm xanh test chọn."
 
         return {
             "trang_thai": trang_thai,

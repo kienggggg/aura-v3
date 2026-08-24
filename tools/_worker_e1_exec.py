@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import ast
 import difflib
+import io
 import json
 import os
 import re
@@ -20,12 +21,31 @@ import subprocess
 import sys
 import textwrap
 import time
+import tokenize
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from core.trace_runtime import chot_test_can_trace
 
 PY = sys.executable
+
+OP_STR = {
+    ast.Lt: "<",
+    ast.LtE: "<=",
+    ast.Gt: ">",
+    ast.GtE: ">=",
+    ast.Eq: "==",
+    ast.NotEq: "!=",
+}
 
 
 def doc_thong_tin_gioi_han(project_root: Path) -> str:
@@ -63,6 +83,21 @@ PHAM_VI_PHEP = [
 ]
 
 
+def lat_tren_van_ban(nguon: str, node: ast.AST, tu: str, sang: str) -> str:
+    """Đổi ĐÚNG một token toán tử trong vùng của node, giữ nguyên mọi byte khác."""
+    dong = nguon.splitlines(keepends=True)
+    bat_dau = sum(len(d) for d in dong[:node.lineno - 1]) + node.col_offset
+    ket = sum(len(d) for d in dong[:node.end_lineno - 1]) + node.end_col_offset
+    if isinstance(node, ast.Constant):
+        return nguon[:bat_dau] + sang + nguon[ket:]
+    vung = nguon[bat_dau:ket]
+    for tok in tokenize.generate_tokens(io.StringIO(vung).readline):
+        if tok.string == tu and tok.type in (tokenize.NAME, tokenize.OP, tokenize.NUMBER):
+            r0 = sum(len(l) for l in vung.splitlines(keepends=True)[:tok.start[0] - 1]) + tok.start[1]
+            return nguon[:bat_dau + r0] + sang + nguon[bat_dau + r0 + len(tu):]
+    raise ValueError(f"khong thay token '{tu}' trong vung node")
+
+
 class _Lat(ast.NodeTransformer):
     """Lật ĐÚNG MỘT chỗ theo chỉ số `muc`. Đếm theo thứ tự duyệt AST."""
 
@@ -71,13 +106,19 @@ class _Lat(ast.NodeTransformer):
         self.dem = 0
         self.da = ""
         self.danh_sach: list[tuple[int, int, str]] = []
+        self.target_node: Optional[ast.AST] = None
+        self.tu: str = ""
+        self.sang: str = ""
 
-    def _lay(self, ten: str, nut: ast.AST) -> bool:
+    def _lay(self, ten: str, nut: ast.AST, tu: str = "", sang: str = "") -> bool:
         d = self.dem
         self.danh_sach.append((d, int(getattr(nut, "lineno", 0) or 0), ten))
         self.dem += 1
         if d == self.muc:
             self.da = ten
+            self.target_node = nut
+            self.tu = tu
+            self.sang = sang
             return True
         return False
 
@@ -86,34 +127,36 @@ class _Lat(ast.NodeTransformer):
         if len(n.ops) == 1 and type(n.ops[0]) in NGHICH_SS:
             op_cls = type(n.ops[0])
             target_cls = NGHICH_SS[op_cls]
-            if self._lay(f"so sánh {op_cls.__name__} -> {target_cls.__name__}", n):
+            tu = OP_STR[op_cls]
+            sang = OP_STR[target_cls]
+            if self._lay(f"so sánh {op_cls.__name__} -> {target_cls.__name__}", n, tu=tu, sang=sang):
                 n.ops = [target_cls()]
         return n
 
     def visit_BoolOp(self, n):
         self.generic_visit(n)
         if isinstance(n.op, ast.And):
-            if self._lay("logic And -> Or", n):
+            if self._lay("logic And -> Or", n, tu="and", sang="or"):
                 n.op = ast.Or()
         elif isinstance(n.op, ast.Or):
-            if self._lay("logic Or -> And", n):
+            if self._lay("logic Or -> And", n, tu="or", sang="and"):
                 n.op = ast.And()
         return n
 
     def visit_UnaryOp(self, n):
         self.generic_visit(n)
-        if isinstance(n.op, ast.Not) and self._lay("bỏ phủ định", n):
+        if isinstance(n.op, ast.Not) and self._lay("bỏ phủ định", n, tu="not", sang=""):
             return n.operand
         return n
 
     def visit_Constant(self, n):
         if isinstance(n.value, bool):
             target_val = not n.value
-            if self._lay(f"bool {n.value} -> {target_val}", n):
+            if self._lay(f"bool {n.value} -> {target_val}", n, tu=str(n.value), sang=str(target_val)):
                 return ast.Constant(value=target_val)
         elif isinstance(n.value, int) and not isinstance(n.value, bool):
             # Parity AST legacy: n -> n - 1 (với literal âm -5 là USub(Constant(5)) -> USub(Constant(4)) tức -4)
-            if self._lay(f"số {n.value} -> {n.value - 1}", n):
+            if self._lay(f"số {n.value} -> {n.value - 1}", n, tu=str(n.value), sang=str(n.value - 1)):
                 return ast.Constant(value=n.value - 1)
         return n
 
@@ -126,8 +169,11 @@ def _liet_ke_cho(ma: str) -> list[tuple[int, int, str]]:
 
 def _ma_sau_lat(nguon: str, chi_so: int) -> tuple[str, str]:
     bd = _Lat(chi_so)
-    moi = ast.unparse(ast.fix_missing_locations(bd.visit(ast.parse(nguon))))
-    return moi, bd.da
+    bd.visit(ast.parse(nguon))
+    if bd.target_node is not None:
+        moi = lat_tren_van_ban(nguon, bd.target_node, bd.tu, bd.sang)
+        return moi, bd.da
+    return nguon, ""
 
 
 def tao_cac_ung_vien(ma: str, dong_da_chay: Optional[Set[int]] = None) -> list[tuple[int, str, str]]:
@@ -141,9 +187,9 @@ def tao_cac_ung_vien(ma: str, dong_da_chay: Optional[Set[int]] = None) -> list[t
     return res
 
 
-def _tao_unified_diff(goc_ast_str: str, moi_ast_str: str, filename: str) -> str:
-    lines_goc = goc_ast_str.splitlines(keepends=True)
-    lines_moi = moi_ast_str.splitlines(keepends=True)
+def _tao_unified_diff(goc_str: str, moi_str: str, filename: str) -> str:
+    lines_goc = goc_str.splitlines(keepends=True)
+    lines_moi = moi_str.splitlines(keepends=True)
     diff = difflib.unified_diff(
         lines_goc,
         lines_moi,
@@ -155,8 +201,8 @@ def _tao_unified_diff(goc_ast_str: str, moi_ast_str: str, filename: str) -> str:
 
 def _chon_test_va_dong(
     tam: Path,
-    tep_nguon: str,
-    tep_test: str,
+    tep_nguon_rel: str,
+    tep_test_rel: str,
     deadline: float,
 ) -> dict:
     con_lai = deadline - time.monotonic()
@@ -164,8 +210,8 @@ def _chon_test_va_dong(
         return {"trang_thai": "khong_chay", "vi_sao": "Hết trần thời gian trước khi trace", "test": "", "so_test_do_khac": 0, "dong_da_chay": []}
 
     ten_chot, so_khac, danh_sach = chot_test_can_trace(
-        tep_nguon=tep_nguon,
-        tep_test=tep_test,
+        tep_nguon=tep_nguon_rel,
+        tep_test=tep_test_rel,
         cwd=tam,
     )
     if not ten_chot or not danh_sach:
@@ -207,7 +253,7 @@ def chay_worker(
 
     raw_goc = target_file.read_text(encoding="utf-8")
     try:
-        chuan_ast_goc = ast.unparse(ast.parse(raw_goc))
+        ast.parse(raw_goc)
     except Exception as exc:
         return {
             "trang_thai": "khong_do_duoc",
@@ -270,7 +316,7 @@ def chay_worker(
                 timeout=10.0,
             )
             if r.returncode == 0:
-                diff_text = _tao_unified_diff(chuan_ast_goc, ma_moi, tep_nguon_rel)
+                diff_text = _tao_unified_diff(raw_goc, ma_moi, tep_nguon_rel)
                 xanh_selected.append({
                     "index": chi_so,
                     "line": dong,
@@ -316,14 +362,15 @@ def chay_worker(
 
     for cand in xanh_selected:
         target_file.write_text(cand["ma"], encoding="utf-8")
-        suite_pass = False
+        full_suite_status = "ĐỎ"
         so_test_hong = 0
+        ly_do_khong_do = ""
         try:
             r_suite = subprocess.run(
                 [
-                    PY, "-B", "-X", "utf8", "-m", "pytest", tep_test_rel, "tests",
+                    PY, "-B", "-X", "utf8", "-m", "pytest", "tests",
                     "-m", "not e1_control",
-                    "-q", "--no-header", "--tb=no", "-x", "-p", "no:cacheprovider",
+                    "-q", "--no-header", "-p", "no:cacheprovider",
                 ],
                 capture_output=True,
                 text=True,
@@ -332,34 +379,61 @@ def chay_worker(
                 cwd=str(tam_clone),
                 timeout=full_suite_timeout_s,
             )
+            out_text = (r_suite.stdout or "") + "\n" + (r_suite.stderr or "")
             if r_suite.returncode == 0:
-                suite_pass = True
+                full_suite_status = "XANH"
                 co_ban_va_xanh_suite = True
+                so_test_hong = 0
             else:
-                out_text = (r_suite.stdout or "") + "\n" + (r_suite.stderr or "")
-                for line in out_text.splitlines():
-                    if "failed" in line:
-                        m = re.search(r"(\d+)\s+failed", line)
-                        if m:
-                            so_test_hong = int(m.group(1))
-                            break
-                if so_test_hong == 0:
-                    so_test_hong = max(1, out_text.count("FAILED") or 1)
-        except Exception:
-            suite_pass = False
-            so_test_hong = 1
+                if "ERROR collecting" in out_text or "errors during collection" in out_text or r_suite.returncode not in (0, 1):
+                    full_suite_status = "suite_khong_do_duoc"
+                    ly_do_khong_do = "Lỗi thu thập test suite"
+                    so_test_hong = 0
+                else:
+                    found_failed = False
+                    for line in out_text.splitlines():
+                        if "failed" in line:
+                            m = re.search(r"(\d+)\s+failed", line)
+                            if m:
+                                so_test_hong = int(m.group(1))
+                                found_failed = True
+                                break
+                    if not found_failed:
+                        count_f = out_text.count("FAILED")
+                        if count_f > 0:
+                            so_test_hong = count_f
+                            found_failed = True
+                    if found_failed and so_test_hong > 0:
+                        full_suite_status = "ĐỎ"
+                    else:
+                        full_suite_status = "suite_khong_do_duoc"
+                        ly_do_khong_do = "Không đo được kết quả suite"
+                        so_test_hong = 0
+        except subprocess.TimeoutExpired:
+            full_suite_status = "suite_khong_do_duoc"
+            ly_do_khong_do = f"Quá giờ ({full_suite_timeout_s}s)"
+            so_test_hong = 0
+        except Exception as exc:
+            full_suite_status = "suite_khong_do_duoc"
+            ly_do_khong_do = f"Ngoại lệ: {exc}"
+            so_test_hong = 0
 
-        candidates_out.append({
+        cand_entry = {
             "index": cand["index"],
             "line": cand["line"],
             "operation": cand["operation"],
             "unified_diff": cand["unified_diff"],
-            "diff_basis": "ast_normalized_temp_copy",
+            # 24/08: diff nay sinh tu _tao_unified_diff(raw_goc, ma_moi) — van ban
+            # goc, KHONG con di qua ast.unparse. Nhan cu doc nguoc voi thuc te.
+            "diff_basis": "van_ban_goc_temp_copy",
             "selected_test_status": "XANH",
-            "full_suite_status": "XANH" if suite_pass else "ĐỎ",
-            "so_test_hong": so_test_hong if not suite_pass else 0,
+            "full_suite_status": full_suite_status,
+            "so_test_hong": so_test_hong if full_suite_status == "ĐỎ" else 0,
             "ma": cand["ma"],
-        })
+        }
+        if ly_do_khong_do:
+            cand_entry["ly_do_suite"] = ly_do_khong_do
+        candidates_out.append(cand_entry)
 
     # Khôi phục lại file gốc
     target_file.write_text(raw_goc, encoding="utf-8")
@@ -368,6 +442,11 @@ def chay_worker(
     if co_ban_va_xanh_suite:
         trang_thai = "tim_thay"
         reason = f"Đã tìm thấy {sum(1 for c in candidates_out if c['full_suite_status'] == 'XANH')} bản vá xanh toàn bộ suite."
+    elif any(c["full_suite_status"] == "suite_khong_do_duoc" for c in candidates_out) and not any(c["full_suite_status"] == "XANH" for c in candidates_out):
+        trang_thai = "suite_khong_do_duoc"
+        reasons_list = [c["ly_do_suite"] for c in candidates_out if c.get("ly_do_suite")]
+        reasons_str = f" ({', '.join(reasons_list)})" if reasons_list else ""
+        reason = f"Ứng viên làm xanh test chọn nhưng suite không đo được{reasons_str}."
     elif candidates_out:
         trang_thai = "ung_vien_khong_qua_suite"
         reason = f"Có {len(candidates_out)} ứng viên làm xanh test chọn nhưng không vượt qua toàn bộ test suite."
@@ -410,6 +489,29 @@ def main():
     test_sha = sys.argv[4] if len(sys.argv) > 4 else ""
 
     tam_clone = Path(".").resolve()
+
+    # Worker GHI ĐÈ tệp nguồn để thử từng phép lật (dòng 245 + vòng lặp bên dưới),
+    # và chỉ ghi trả lại ở cuối. Chạy nhầm ở kho thật thì mỗi lần nó chết giữa
+    # chừng là để lại tệp ĐANG MANG LỖI GIEO trên đĩa.
+    #
+    # Đã xảy ra 24/08/2026: `core/dong_ho.py` trên đĩa lệch HEAD 1762/1722 byte.
+    # Lần ấy chỉ là 40 dòng CRLF vì lượt ghi trả lại có chạy — nhưng nó chứng minh
+    # worker đã đụng vào kho thật, và lần sau chết sớm hơn thì mất nội dung.
+    #
+    # Bản sao do e1_supervisor_bootstrap.py dựng KHÔNG chép `.git` (dòng 192).
+    # Kho thật thì có. Đó là dấu hiệu rẻ nhất và không đoán được nhầm.
+    if (tam_clone / ".git").exists():
+        print(json.dumps({
+            "trang_thai": "khong_do_duoc",
+            "reason": (
+                "Từ chối chạy: thư mục hiện tại có .git nên đây là kho thật, "
+                "không phải bản sao tạm. Worker ghi đè tệp nguồn khi thử phép lật. "
+                "Hãy gọi qua tools/e1_supervisor_bootstrap.py, hoặc cd sang bản sao."
+            ),
+            "cwd": str(tam_clone),
+        }, ensure_ascii=False, indent=2))
+        sys.exit(2)
+
     res = chay_worker(
         tam_clone=tam_clone,
         tep_nguon_rel=tep_nguon,

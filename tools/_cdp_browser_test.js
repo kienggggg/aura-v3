@@ -100,6 +100,16 @@ async function main() {
     const callbacks = new Map();
     const networkRequests = [];
 
+    // Hộp thoại của trang (alert/confirm) CHẶN renderer. Không ai đóng thì mọi
+    // Runtime.evaluate sau đó treo vĩnh viễn — và vì sendCDP không có trần, cả
+    // tệp này treo, không in ra một chữ nào.
+    //
+    // Đo 24/08/2026: `updateCodePreview()` ghi vào #pythonCodeOutput đã bị gỡ
+    // cùng tab "Mã Python", nên openPyFile ném TypeError rồi alert. Chạy thử
+    // 317 giây vẫn không xong, mã thoát 124. Lỗi app đã sửa, nhưng cửa vẫn phải
+    // tự chống được: hộp thoại sau này lại mở thì phải BÁO, không được treo.
+    const hopThoai = [];
+
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
@@ -109,6 +119,14 @@ async function main() {
           cb(msg);
         } else if (msg.method === 'Network.requestWillBeSent') {
           networkRequests.push(msg.params.request);
+        } else if (msg.method === 'Page.javascriptDialogOpening') {
+          hopThoai.push({ type: msg.params.type, message: msg.params.message });
+          console.error(`[CDP] Trang mở hộp thoại ${msg.params.type}: ${msg.params.message}`);
+          ws.send(JSON.stringify({
+            id: msgId++,
+            method: 'Page.handleJavaScriptDialog',
+            params: { accept: true },
+          }));
         }
       } catch (err) {
         console.error('Lỗi phân tích tin nhắn CDP:', err);
@@ -118,12 +136,20 @@ async function main() {
     await new Promise((resolve, reject) => {
       ws.onopen = resolve;
       ws.onerror = reject;
+      setTimeout(() => reject(new Error('WebSocket CDP không mở được sau 15s')), 15000);
     });
 
-    function sendCDP(method, params = {}) {
+    // Trần 30s mỗi lượt: đủ rộng cho Runtime.evaluate chờ E1, đủ chặt để không
+    // bao giờ treo im lặng. Trần bên Python là 120s cho cả tệp này.
+    function sendCDP(method, params = {}, tran = 30000) {
       return new Promise((resolve, reject) => {
         const id = msgId++;
+        const gio = setTimeout(() => {
+          callbacks.delete(id);
+          reject(new Error(`CDP KHÔNG TRẢ LỜI sau ${tran / 1000}s: ${method}`));
+        }, tran);
         callbacks.set(id, (resp) => {
+          clearTimeout(gio);
           if (resp.error) reject(new Error(`CDP Error (${method}): ${JSON.stringify(resp.error)}`));
           else resolve(resp.result);
         });
@@ -146,6 +172,7 @@ async function main() {
       const res = await sendCDP('Runtime.evaluate', {
         expression,
         returnByValue: true,
+        awaitPromise: true,
       });
       return res.result ? res.result.value : undefined;
     }
@@ -187,17 +214,28 @@ async function main() {
       
       // 1. Mở tệp qua UI (chọn tệp core/dong_ho.py)
       await evaluate(`
-        if (window.openPyFile) {
-          window.openPyFile('core/dong_ho.py');
-        }
+        (async () => {
+          if (window.openPyFile) {
+            await window.openPyFile('core/dong_ho.py');
+          }
+        })()
       `);
       
-      // Chờ tệp được mở và activeFilePath được gán
-      for (let i = 0; i < 30; i++) {
-        await sleep(200);
+      // Chờ tệp được mở và testSelect được nạp
+      for (let i = 0; i < 40; i++) {
+        await sleep(250);
         const active = await evaluate(`window.state?.activeFilePath`);
-        if (active === 'core/dong_ho.py') break;
+        const selVal = await evaluate(`document.getElementById('testSelect')?.value`);
+        if (active === 'core/dong_ho.py' && selVal) break;
       }
+
+      // Đảm bảo testSelect có giá trị
+      await evaluate(`
+        const sel = document.getElementById('testSelect');
+        if (sel && !sel.value && sel.options?.length > 0) {
+          sel.value = sel.options[0].value;
+        }
+      `);
 
       // 2. Kiểm tra Dirty State: sửa nội dung editor -> nút E1 bị disabled -> click không gửi request
       await evaluate(`
@@ -230,9 +268,9 @@ async function main() {
       let apiDone = false;
       for (let i = 0; i < 120; i++) {
         await sleep(500);
-        const statusText = await evaluate(`document.getElementById('e1StatusPill')?.textContent`);
-        const resultsHtml = await evaluate(`document.getElementById('e1ResultsBody')?.innerHTML || ''`);
-        if (statusText && (statusText.includes('TÌM THẤY') || statusText.includes('ĐÃ HOÀN TẤT') || resultsHtml.includes('e1-summary-card'))) {
+        const statusText = (await evaluate(`document.getElementById('e1StatusPill')?.textContent`)) || '';
+        const resultsHtml = (await evaluate(`document.getElementById('e1ResultsBody')?.innerHTML`)) || '';
+        if (statusText.includes('TÌM THẤY') || statusText.includes('KHÔNG TÌM THẤY') || statusText.includes('ĐÃ HOÀN TẤT') || statusText.includes('ỨNG VIÊN') || statusText.includes('SUITE') || resultsHtml.includes('e1-summary-card') || resultsHtml.includes('e1-candidate-card')) {
           apiDone = true;
           break;
         }
@@ -286,6 +324,14 @@ async function main() {
     const screenshotRes = await sendCDP('Page.captureScreenshot', { format: 'png' });
     const screenshotPath = path.join(outDir, 'e1_ui_screenshot.png');
     fs.writeFileSync(screenshotPath, Buffer.from(screenshotRes.data, 'base64'));
+
+    // Một trang chạy đúng thì KHÔNG bung hộp thoại nào. Trước 24/08 nó bung một
+    // cái alert và không ai biết, vì cửa treo trước khi kịp báo gì.
+    testResults.subgates.khong_hop_thoai = {
+      pass: hopThoai.length === 0,
+      soHopThoai: hopThoai.length,
+      hopThoai,
+    };
 
     // 7. Lưu DOM Receipt
     const fullDomHtml = await evaluate(`document.documentElement.outerHTML`);

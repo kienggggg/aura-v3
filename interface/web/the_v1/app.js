@@ -778,8 +778,17 @@
   }
 
   function updateCodePreview() {
-    const code = TheValidator.sinhMaPython(state.tree);
+    // Tab "Mã Python" đã bỏ ở vòng ba cột 23/08 (cột giữa đã là mã rồi, không cần
+    // hiện hai lần), nhưng hàm này vẫn ghi vào #pythonCodeOutput. Phần tử không
+    // còn nên `codeEl` là null -> TypeError -> openPyFile nuốt vào catch rồi
+    // alert("Lỗi kết nối khi mở tệp: Cannot set properties of null").
+    //
+    // Đo 24/08: trang mới tinh, mở tệp ĐẦU TIÊN là hộp lỗi hiện lên, dù tệp
+    // MỞ ĐƯỢC (state.activeFilePath đã gán đúng). Và trong Chrome headless thì
+    // `alert` chặn renderer, không ai đóng, nên cửa CDP treo quá 317 giây.
     const codeEl = document.getElementById('pythonCodeOutput');
+    if (!codeEl) return;
+    const code = TheValidator.sinhMaPython(state.tree);
     codeEl.textContent = code || '# (Chưa có lệnh nào trong chương trình)';
   }
 
@@ -1320,6 +1329,9 @@
       if (res.trang_thai === 'tim_thay') {
         statusPill.className = 'trace-status-pill success';
         statusPill.textContent = 'TÌM THẤY';
+      } else if (res.trang_thai === 'suite_khong_do_duoc') {
+        statusPill.className = 'trace-status-pill error';
+        statusPill.textContent = 'SUITE KHÔNG ĐO ĐƯỢC';
       } else if (res.trang_thai === 'ung_vien_khong_qua_suite') {
         statusPill.className = 'trace-status-pill cut';
         statusPill.textContent = 'ỨNG VIÊN KHÔNG QUA TOÀN BỘ TEST';
@@ -1348,8 +1360,19 @@
     titleRow.className = 'e1-summary-title';
     titleRow.innerHTML = `<span>Bằng Chứng Định Vị E1</span>`;
     const badgeState = document.createElement('span');
-    badgeState.className = `e1-badge ${res.trang_thai === 'tim_thay' ? 'badge-green' : 'badge-red'}`;
-    badgeState.textContent = (res.trang_thai || '').toUpperCase();
+    if (res.trang_thai === 'tim_thay') {
+      badgeState.className = 'e1-badge badge-green';
+      badgeState.textContent = 'TÌM THẤY';
+    } else if (res.trang_thai === 'suite_khong_do_duoc') {
+      badgeState.className = 'e1-badge badge-red';
+      badgeState.textContent = 'SUITE KHÔNG ĐO ĐƯỢC';
+    } else if (res.trang_thai === 'ung_vien_khong_qua_suite') {
+      badgeState.className = 'e1-badge badge-red';
+      badgeState.textContent = 'ỨNG VIÊN KHÔNG QUA SUITE';
+    } else {
+      badgeState.className = 'e1-badge badge-red';
+      badgeState.textContent = (res.trang_thai || '').toUpperCase();
+    }
     titleRow.appendChild(badgeState);
     summaryCard.appendChild(titleRow);
 
@@ -1369,53 +1392,63 @@
       metaList.appendChild(item);
     }
 
-    const thoiGianTinhToan = Math.round(((res.elapsed_filter_mutate_s || 0) + (res.elapsed_full_suite_s || 0)) * 10) / 10;
-
-    addMetaItem('Tệp nguồn', `${res.source_path || ''} (${(res.source_sha256 || '').slice(0, 16)}...)`);
-    addMetaItem('Tệp test', `${res.test_file || ''} (${(res.test_sha256 || '').slice(0, 16)}...)`);
+    addMetaItem('Tệp nguồn', res.source_path || 'Chưa chọn');
+    addMetaItem('Tệp test', res.test_file || 'Chưa chọn');
     if (res.selected_test) {
-      addMetaItem('Test đỏ chọn', `${res.selected_test}${res.other_red_test_count > 0 ? ` (còn ${res.other_red_test_count} test đỏ khác)` : ''}`);
+      addMetaItem('Test chọn', res.selected_test);
     }
-    addMetaItem('Ứng viên', `${res.candidate_count_before || 0} trước lọc ➔ ${res.candidate_count_after || 0} sau lọc`);
-    addMetaItem(
-      'Thời gian',
-      `${thoiGianTinhToan}s tính toán (Lọc+Lật: ${res.elapsed_filter_mutate_s || 0}s | Suite: ${res.elapsed_full_suite_s || 0}s)` +
-      (elapsedTotalSec != null ? ` — Tổng gọi: ${elapsedTotalSec}s (gồm chuẩn bị)` : '')
-    );
-    if (res.reason) {
-      addMetaItem('Nhận định', res.reason);
+    if (res.other_red_test_count !== undefined) {
+      addMetaItem('Test đỏ khác', String(res.other_red_test_count));
+    }
+    if (res.candidate_count_before !== undefined && res.candidate_count_after !== undefined) {
+      addMetaItem('Ứng viên lọc', `${res.candidate_count_before} → ${res.candidate_count_after}`);
+    }
+    if (res.elapsed_filter_mutate_s !== undefined) {
+      addMetaItem('Thời gian lọc+lật', `${res.elapsed_filter_mutate_s}s`);
+    }
+    if (res.elapsed_full_suite_s !== undefined) {
+      addMetaItem('Thời gian full suite', `${res.elapsed_full_suite_s}s`);
+    }
+    if (elapsedTotalSec !== undefined) {
+      addMetaItem('Tổng thời gian E1', `${elapsedTotalSec.toFixed(2)}s`);
     }
 
+    summaryCard.appendChild(metaList);
+
+    // Giải thích cho ca ung_vien_khong_qua_suite
     if (res.trang_thai === 'ung_vien_khong_qua_suite') {
       const noticeRejected = document.createElement('div');
       noticeRejected.className = 'e1-notice-box e1-notice-rejected';
-      noticeRejected.style.borderLeft = '4px solid var(--color-error-do, #ef4444)';
-      noticeRejected.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
-      noticeRejected.style.padding = '10px 14px';
-      noticeRejected.style.marginTop = '12px';
-      noticeRejected.style.borderRadius = '4px';
+      noticeRejected.style.marginTop = '10px';
       noticeRejected.innerHTML = `
-        <div style="font-weight: 600; color: var(--color-error-do, #ef4444); margin-bottom: 4px;">⚠️ Sửa một chỗ mà hỏng chỗ khác thì không phải sửa.</div>
-        <div style="color: var(--text-color, #1e293b); font-size: 13px; line-height: 1.5;">
-          Những chỗ dưới đây làm test bạn đang xem <strong>XANH</strong>, nhưng làm <strong>ĐỎ</strong> chỗ khác.
-          Hệ thống <strong>KHÔNG đề nghị áp dụng</strong> các bản vá này.
-        </div>
+        <strong>Giải thích:</strong> Các ứng viên dưới đây sửa được đúng bài test chọn nhưng làm gãy các bài test khác trong hệ thống.
+        <em>"Sửa một chỗ mà hỏng chỗ khác thì không phải sửa."</em> Hệ thống <strong>KHÔNG đề nghị áp dụng</strong> các bản vá này.
       `;
       summaryCard.appendChild(noticeRejected);
     }
 
-    summaryCard.appendChild(metaList);
+    if (res.reason) {
+      const reasonDiv = document.createElement('div');
+      reasonDiv.style.marginTop = '8px';
+      reasonDiv.style.fontSize = '12px';
+      reasonDiv.style.color = 'var(--text-secondary)';
+      reasonDiv.textContent = 'Lý do: ' + res.reason;
+      summaryCard.appendChild(reasonDiv);
+    }
+
     e1ResultsBody.appendChild(summaryCard);
 
-    // 3. Candidates List
+    // 3. Danh sách ứng viên
     const candidates = res.candidates || [];
     if (candidates.length > 0) {
-      const isRejectedMode = (res.trang_thai === 'ung_vien_khong_qua_suite');
       const candTitle = document.createElement('div');
       candTitle.className = 'e1-summary-title';
-      candTitle.textContent = isRejectedMode
-        ? `Danh Sách Ứng Viên Bị Loại (${candidates.length}):`
-        : `Danh Sách Bản Vá (${candidates.length}):`;
+      candTitle.style.marginTop = '16px';
+      if (res.trang_thai === 'ung_vien_khong_qua_suite') {
+        candTitle.textContent = `Danh Sách Ứng Viên Bị Loại (${candidates.length})`;
+      } else {
+        candTitle.textContent = `Danh Sách Ứng Viên (${candidates.length})`;
+      }
       e1ResultsBody.appendChild(candTitle);
 
       candidates.forEach((cand, idx) => {
@@ -1424,9 +1457,9 @@
 
         const h = document.createElement('div');
         h.className = 'e1-candidate-header';
-        
+
         const titleSpan = document.createElement('span');
-        titleSpan.textContent = `#${idx + 1} — Dòng ${cand.line}: ${cand.operation}`;
+        titleSpan.textContent = `Ứng viên #${cand.index !== undefined ? cand.index : idx + 1} (Dòng ${cand.line}): ${cand.operation}`;
         h.appendChild(titleSpan);
 
         const statusGroup = document.createElement('div');
@@ -1439,11 +1472,16 @@
         statusGroup.appendChild(testBadge);
 
         const suiteBadge = document.createElement('span');
-        suiteBadge.className = `e1-badge ${cand.full_suite_status === 'XANH' ? 'badge-green' : 'badge-red'}`;
         if (cand.full_suite_status === 'XANH') {
+          suiteBadge.className = 'e1-badge badge-green';
           suiteBadge.textContent = 'Suite: XANH';
+        } else if (cand.full_suite_status === 'suite_khong_do_duoc') {
+          suiteBadge.className = 'e1-badge badge-red';
+          const lyDo = cand.ly_do_suite ? ` (${cand.ly_do_suite})` : '';
+          suiteBadge.textContent = `Suite: không đo được${lyDo}`;
         } else {
           const soTest = cand.so_test_hong || (res.other_red_test_count ? res.other_red_test_count + 1 : 1);
+          suiteBadge.className = 'e1-badge badge-red';
           suiteBadge.textContent = `Suite: ĐỎ (${soTest} test khác hỏng)`;
         }
         statusGroup.appendChild(suiteBadge);

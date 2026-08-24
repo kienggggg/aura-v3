@@ -105,6 +105,11 @@ global.TheValidator = {
 // Nạp module app.js
 const app = require('../interface/web/the_v1/app.js');
 
+// 24/08/2026: bay phep khang dinh o day tung viet `assert.ok(x !== null)` trong khi
+// `x` den tu `Array.prototype.find`, ma `find` tra ve `undefined` chu khong phai
+// `null` — nen `undefined !== null` la true va cua LUON XANH. Do that: doi chuoi
+// badge trong app.js thanh 'Suite: XYZ HONG' roi chay lai -> van pass 7/7.
+// Doi sang kiem truthy thi gieo dung loi ay -> DO ngay.
 describe('E1 UI & Renderer Tests', () => {
 
   beforeEach(() => {
@@ -210,7 +215,7 @@ describe('E1 UI & Renderer Tests', () => {
 
     // 4. Diff content inside candidate card
     const diffContainer = container.children[3].children.find(c => c.className === 'e1-diff-container');
-    assert.ok(diffContainer !== null, 'Phải có e1-diff-container');
+    assert.ok(diffContainer, 'Phải có e1-diff-container');
     assert.strictEqual(diffContainer.children.length, 6);
   });
 
@@ -258,19 +263,19 @@ describe('E1 UI & Renderer Tests', () => {
     // Kiểm tra Summary card chứa câu giải thích sư phạm
     const summaryCard = container.children[1];
     const noticeRejected = summaryCard.children.find(c => c.className && c.className.includes('e1-notice-rejected'));
-    assert.ok(noticeRejected !== null, 'Phải có notice e1-notice-rejected');
+    assert.ok(noticeRejected, 'Phải có notice e1-notice-rejected');
     assert.ok(noticeRejected.innerHTML.includes('Sửa một chỗ mà hỏng chỗ khác thì không phải sửa'));
     assert.ok(noticeRejected.innerHTML.includes('KHÔNG đề nghị áp dụng'));
 
     // Kiểm tra danh sách ứng viên có tiêu đề "Danh Sách Ứng Viên Bị Loại"
     const candTitle = container.children.find(c => c.className === 'e1-summary-title' && c.textContent.includes('Danh Sách Ứng Viên Bị Loại'));
-    assert.ok(candTitle !== null, 'Tiêu đề phải là Danh Sách Ứng Viên Bị Loại');
+    assert.ok(candTitle, 'Tiêu đề phải là Danh Sách Ứng Viên Bị Loại');
 
     // Kiểm tra candidate card chứa badge báo số test khác hỏng
     const candCard = container.children.find(c => c.className === 'e1-candidate-card');
-    assert.ok(candCard !== null);
+    assert.ok(candCard);
     const suiteBadge = candCard.children[0].children[1].children.find(b => b.textContent.includes('Suite: ĐỎ (4 test khác hỏng)'));
-    assert.ok(suiteBadge !== null, 'Phải có badge ghi rõ số test hỏng');
+    assert.ok(suiteBadge, 'Phải có badge ghi rõ số test hỏng');
 
     // Khẳng định KHÔNG có nút 'Áp dụng'
     const allButtons = container.querySelectorAll('button');
@@ -279,6 +284,47 @@ describe('E1 UI & Renderer Tests', () => {
     // Kiểm tra limitation notice đọc động
     const limitNotice = container.children[container.children.length - 1];
     assert.ok(limitNotice.textContent.includes('Đã thử 64 lỗi NGOÀI 5 họ đó — không dò ra ca nào'));
+  });
+
+  test('renderE1Results() cho ca suite_khong_do_duoc hiển thị đúng chữ không đo được và lý do', () => {
+    const container = new FakeElement('div');
+    const statusPill = global.document.getElementById('e1StatusPill');
+
+    const fakeTimeoutResponse = {
+      trang_thai: 'suite_khong_do_duoc',
+      source_path: 'core/dong_ho.py',
+      source_sha256: 'a'.repeat(64),
+      test_file: 'tests/test_dong_ho.py',
+      test_sha256: 'b'.repeat(64),
+      selected_test: 'tests/test_dong_ho.py::test_dong_ho_chay_dung',
+      other_red_test_count: 0,
+      candidate_count_before: 1,
+      candidate_count_after: 1,
+      elapsed_filter_mutate_s: 0.5,
+      elapsed_full_suite_s: 1.0,
+      reason: 'Ứng viên làm xanh test chọn nhưng suite không đo được (Quá giờ (1.0s)).',
+      candidates: [
+        {
+          index: 0,
+          line: 23,
+          operation: 'logic And -> Or',
+          selected_test_status: 'XANH',
+          full_suite_status: 'suite_khong_do_duoc',
+          ly_do_suite: 'Quá giờ (1.0s)',
+          so_test_hong: 0,
+          unified_diff: '--- a/core/dong_ho.py\n+++ b/core/dong_ho.py\n@@ -23,1 +23,1 @@\n-    now and ...\n+    now or ...\n'
+        }
+      ]
+    };
+
+    app.renderE1Results(fakeTimeoutResponse, container);
+
+    assert.strictEqual(statusPill.textContent, 'SUITE KHÔNG ĐO ĐƯỢC');
+    const candCard = container.children.find(c => c.className === 'e1-candidate-card');
+    assert.ok(candCard);
+    const suiteBadge = candCard.children[0].children[1].children.find(b => b.textContent.includes('Suite: không đo được (Quá giờ (1.0s))'));
+    assert.ok(suiteBadge, 'Phải có badge ghi rõ không đo được kèm lý do');
+    assert.ok(!container.textContent.includes('1 test khác hỏng'), 'Không được bịa số 1 test khác hỏng');
   });
 
 });

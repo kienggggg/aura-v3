@@ -15,6 +15,7 @@ import datetime
 import difflib
 import hashlib
 import hmac
+import io
 import json
 import os
 import random
@@ -25,8 +26,15 @@ import subprocess
 import sys
 import tempfile
 import time
+import tokenize
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
+
+# Cấu hình stdout/stderr UTF-8 an toàn cho Windows
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 import aiohttp
 from aiohttp import web
@@ -40,25 +48,39 @@ from interface import the_api, the_app
 
 SEED = 19082026
 
+# `target_line` ở đây ĐÃ ĐỔI ngày 24/08/2026 — ghi rõ vì sao, đừng để người sau
+# đọc lịch sử thấy một ngưỡng bị sửa sau khi đo mà không có lời giải thích:
+#
+#   dong_ho     23 -> 30     web_search  298 -> 455     may_tinh  150 -> 242
+#
+# Số cũ là dòng trên bản `ast.unparse` đã rụng hết chú thích, không phải dòng
+# trong tệp thật. Kiểm được: `_liet_ke_cho(raw)` cho #0 của dong_ho ở dòng 30,
+# `_liet_ke_cho(ast.unparse(...))` cho đúng #0 ấy ở dòng 23. Cùng một chỗ.
+#
+# Riêng may_tinh đổi CẢ CHỖ, không chỉ số dòng: #56 "so sánh Lt->LtE" thành
+# #55 "số 6->5". Chỉ số gieo trong DAU_VET_MOC là 55, nên bản mới trả lời đúng
+# chỗ đã gieo còn bản cũ trả lời chỗ khác. `candidate_after` theo đó 15 -> 13.
+#
+# Cửa thật nằm ở phép so `index in cho_gieo` phía dưới, không nằm ở bảng này.
 MOC_E1 = {
     "core/may_tinh.py": {
         "candidate_before": 65,
-        "candidate_after": 15,
-        "target_line": 150,
+        "candidate_after": 13,
+        "target_line": 242,
         "expect_verdict": "XANH",
         "expect_suite_pass": True,
     },
     "core/web_search.py": {
         "candidate_before": 87,
         "candidate_after": 28,
-        "target_line": 298,
+        "target_line": 455,
         "expect_verdict": "XANH",
         "expect_suite_pass": True,
     },
     "core/dong_ho.py": {
         "candidate_before": 1,
         "candidate_after": 1,
-        "target_line": 23,
+        "target_line": 30,
         "expect_verdict": "XANH",
         "expect_suite_pass": True,
     },
@@ -73,13 +95,13 @@ MOC_E1 = {
 
 DAU_VET_MOC = {
     "core/may_tinh.py": ("tests/test_may_tinh.py", [55],
-                          "5af334da017929928c4883e83c0e3a0fb94e64f66abd1949d7a7a1be21ac4db5"),
+                          "8a65bf646f482900806e065d619c614dde608cf2027497a69981520c95425e7a"),
     "core/web_search.py": ("tests/test_web_search.py", [78],
-                           "cbf424d3acdf418e89aeb12037dd034468af1eadc77bb787a0cbdc0b3ebe528e"),
+                           "03b80c0ac6d8186b7e2b665583b925cfffb15c659b47c7eae7b41ccac06d8094"),
     "core/dong_ho.py": ("tests/test_dong_ho.py", [0],
-                         "c104b5c2cda397caf7bb53db0f1486e53037bc4bf24e5d24c5f8cd75a2a76857"),
+                         "125b2bc49af96351ec2f36c1e6dbf233001595c970afcc5f3d00a505a75803ce"),
     "core/loai_cau_hoi.py": ("tests/test_loai_cau_hoi.py", [3],
-                              "07166b72ee344d1f381c163534358e56d057f7aaafbf1d500ea7cc32c9b7c5f7"),
+                              "42ad79b8459bb10fb4c2b0c60c031056c4927fcf79e3aca40e2a762188139294"),
 }
 
 NGHICH_SS = {
@@ -90,6 +112,29 @@ NGHICH_SS = {
     ast.Eq: ast.NotEq,
     ast.NotEq: ast.Eq,
 }
+
+OP_STR = {
+    ast.Lt: "<",
+    ast.LtE: "<=",
+    ast.Gt: ">",
+    ast.GtE: ">=",
+    ast.Eq: "==",
+    ast.NotEq: "!=",
+}
+
+
+def oracle_lat_van_ban(nguon: str, node: ast.AST, tu: str, sang: str) -> str:
+    dong = nguon.splitlines(keepends=True)
+    bat_dau = sum(len(d) for d in dong[:node.lineno - 1]) + node.col_offset
+    ket = sum(len(d) for d in dong[:node.end_lineno - 1]) + node.end_col_offset
+    if isinstance(node, ast.Constant):
+        return nguon[:bat_dau] + sang + nguon[ket:]
+    vung = nguon[bat_dau:ket]
+    for tok in tokenize.generate_tokens(io.StringIO(vung).readline):
+        if tok.string == tu and tok.type in (tokenize.NAME, tokenize.OP, tokenize.NUMBER):
+            r0 = sum(len(l) for l in vung.splitlines(keepends=True)[:tok.start[0] - 1]) + tok.start[1]
+            return nguon[:bat_dau + r0] + sang + nguon[bat_dau + r0 + len(tu):]
+    raise ValueError(f"khong thay token '{tu}' trong vung node")
 
 
 # ==============================================================================
@@ -154,69 +199,84 @@ class _Gieo(ast.NodeTransformer):
     def __init__(self, muc_can_gieo: set[int]):
         self.muc = set(muc_can_gieo)
         self.dem = 0
-        self.da_gieo = []
+        self.cac_cho: list[tuple[int, ast.AST, str, str, str]] = []
 
-    def _lay(self, ten: str, nut: ast.AST) -> bool:
+    def _lay(self, ten: str, nut: ast.AST, tu: str = "", sang: str = "") -> bool:
         d = self.dem
         self.dem += 1
         if d in self.muc:
-            self.da_gieo.append((d, getattr(nut, "lineno", 0), ten))
+            self.cac_cho.append((d, nut, tu, sang, ten))
             return True
         return False
 
     def visit_Compare(self, n):
         self.generic_visit(n)
         if len(n.ops) == 1 and type(n.ops[0]) in NGHICH_SS:
-            if self._lay(f"so sánh {type(n.ops[0]).__name__}", n):
-                n.ops = [NGHICH_SS[type(n.ops[0])]()]
+            op_cls = type(n.ops[0])
+            tgt_cls = NGHICH_SS[op_cls]
+            self._lay("so_sanh", n, tu=OP_STR[op_cls], sang=OP_STR[tgt_cls])
         return n
 
     def visit_BoolOp(self, n):
         self.generic_visit(n)
-        if self._lay(f"logic {type(n.op).__name__}", n):
-            n.op = ast.Or() if isinstance(n.op, ast.And) else ast.And()
+        if isinstance(n.op, ast.And):
+            self._lay("logic", n, tu="and", sang="or")
+        elif isinstance(n.op, ast.Or):
+            self._lay("logic", n, tu="or", sang="and")
         return n
 
     def visit_UnaryOp(self, n):
         self.generic_visit(n)
-        if isinstance(n.op, ast.Not) and self._lay("bỏ phủ định", n):
-            return n.operand
+        if isinstance(n.op, ast.Not):
+            self._lay("bo_phu_dinh", n, tu="not", sang="")
         return n
 
     def visit_Constant(self, n):
         if isinstance(n.value, bool):
-            if self._lay(f"bool {n.value}", n):
-                return ast.Constant(value=not n.value)
-        elif isinstance(n.value, int) and 0 <= n.value < 10000:
-            if self._lay(f"số {n.value}", n):
-                return ast.Constant(value=n.value + 1)
+            tgt = not n.value
+            self._lay("bool", n, tu=str(n.value), sang=str(tgt))
+        elif isinstance(n.value, int) and not isinstance(n.value, bool):
+            self._lay("so", n, tu=str(n.value), sang=str(n.value + 1))
         return n
 
 
 def gieo_ma(nguon: str, muc_can_gieo: set[int]) -> str:
     g = _Gieo(muc_can_gieo)
-    cay = ast.parse(nguon)
-    moi = g.visit(cay)
-    ast.fix_missing_locations(moi)
-    return ast.unparse(moi)
+    g.visit(ast.parse(nguon))
+    res = nguon
+    for d, nut, tu, sang, ten in sorted(
+        g.cac_cho,
+        key=lambda x: (getattr(x[1], "lineno", 0), getattr(x[1], "col_offset", 0)),
+        reverse=True,
+    ):
+        res = oracle_lat_van_ban(res, nut, tu, sang)
+    return res
 
 
 # ==============================================================================
 # ORACLE VERIFIER ĐỘC LẬP: TỰ ÁP AST LÊN CLONE THỨ HAI VÀ KIỂM CHỨNG
 # ==============================================================================
+
+
 class _OracleLat(ast.NodeTransformer):
     def __init__(self, muc: int):
         self.muc = muc
         self.dem = 0
         self.da = ""
         self.danh_sach: list[tuple[int, int, str]] = []
+        self.target_node: Optional[ast.AST] = None
+        self.tu: str = ""
+        self.sang: str = ""
 
-    def _lay(self, ten: str, nut: ast.AST) -> bool:
+    def _lay(self, ten: str, nut: ast.AST, tu: str = "", sang: str = "") -> bool:
         d = self.dem
         self.danh_sach.append((d, int(getattr(nut, "lineno", 0) or 0), ten))
         self.dem += 1
         if d == self.muc:
             self.da = ten
+            self.target_node = nut
+            self.tu = tu
+            self.sang = sang
             return True
         return False
 
@@ -225,33 +285,35 @@ class _OracleLat(ast.NodeTransformer):
         if len(n.ops) == 1 and type(n.ops[0]) in NGHICH_SS:
             op_cls = type(n.ops[0])
             target_cls = NGHICH_SS[op_cls]
-            if self._lay(f"so sánh {op_cls.__name__} -> {target_cls.__name__}", n):
+            tu = OP_STR[op_cls]
+            sang = OP_STR[target_cls]
+            if self._lay(f"so sánh {op_cls.__name__} -> {target_cls.__name__}", n, tu=tu, sang=sang):
                 n.ops = [target_cls()]
         return n
 
     def visit_BoolOp(self, n):
         self.generic_visit(n)
         if isinstance(n.op, ast.And):
-            if self._lay("logic And -> Or", n):
+            if self._lay("logic And -> Or", n, tu="and", sang="or"):
                 n.op = ast.Or()
         elif isinstance(n.op, ast.Or):
-            if self._lay("logic Or -> And", n):
+            if self._lay("logic Or -> And", n, tu="or", sang="and"):
                 n.op = ast.And()
         return n
 
     def visit_UnaryOp(self, n):
         self.generic_visit(n)
-        if isinstance(n.op, ast.Not) and self._lay("bỏ phủ định", n):
+        if isinstance(n.op, ast.Not) and self._lay("bỏ phủ định", n, tu="not", sang=""):
             return n.operand
         return n
 
     def visit_Constant(self, n):
         if isinstance(n.value, bool):
             target_val = not n.value
-            if self._lay(f"bool {n.value} -> {target_val}", n):
+            if self._lay(f"bool {n.value} -> {target_val}", n, tu=str(n.value), sang=str(target_val)):
                 return ast.Constant(value=target_val)
         elif isinstance(n.value, int) and not isinstance(n.value, bool):
-            if self._lay(f"số {n.value} -> {n.value - 1}", n):
+            if self._lay(f"số {n.value} -> {n.value - 1}", n, tu=str(n.value), sang=str(n.value - 1)):
                 return ast.Constant(value=n.value - 1)
         return n
 
@@ -272,15 +334,15 @@ def oracle_verify_candidate(
     cand_operation: str,
     api_unified_diff: str,
 ) -> bool:
-    """Oracle độc lập áp AST lên clone thứ hai và chạy pytest độc lập."""
+    """Oracle độc lập áp text mutation lên clone thứ hai và chạy pytest độc lập."""
     target_f = clean_clone_dir / tep_nguon_rel
     clean_original_text = (REPO_ROOT / tep_nguon_rel).read_text(encoding="utf-8")
     try:
-        goc_ast_chuan = ast.unparse(ast.parse(mutated_source_text))
         bd = _OracleLat(cand_index)
-        cay_moi = bd.visit(ast.parse(mutated_source_text))
-        ast.fix_missing_locations(cay_moi)
-        moi_ast_chuan = ast.unparse(cay_moi)
+        bd.visit(ast.parse(mutated_source_text))
+        if bd.target_node is None:
+            return False
+        moi_van_ban = oracle_lat_van_ban(mutated_source_text, bd.target_node, bd.tu, bd.sang)
 
         # Kiểm tra operation và line
         cands_all = oracle_calculate_candidates(mutated_source_text)
@@ -291,8 +353,8 @@ def oracle_verify_candidate(
             return False
 
         # Tạo unified diff độc lập
-        lines_goc = goc_ast_chuan.splitlines(keepends=True)
-        lines_moi = moi_ast_chuan.splitlines(keepends=True)
+        lines_goc = mutated_source_text.splitlines(keepends=True)
+        lines_moi = moi_van_ban.splitlines(keepends=True)
         expected_diff = "".join(difflib.unified_diff(
             lines_goc,
             lines_moi,
@@ -305,7 +367,7 @@ def oracle_verify_candidate(
             return False
 
         # Ghi mã vá vào clone thứ hai và chạy full suite
-        target_f.write_text(moi_ast_chuan, encoding="utf-8")
+        target_f.write_text(moi_van_ban, encoding="utf-8")
         r = subprocess.run(
             [
                 sys.executable, "-B", "-X", "utf8", "-m", "pytest", "tests",
@@ -678,7 +740,23 @@ async def main_async() -> int:
                 if not match_target:
                     print(f"  [✗] {tep}: Không tìm thấy bản vá XANH tại dòng {cfg['target_line']}")
                     cua_d_pass = False
-                else:
+
+                # Chấm bằng CHỖ ĐÃ GIEO, không chỉ bằng số dòng.
+                #
+                # 24/08/2026: sau khi E1 bỏ ast.unparse, `target_line` phải sửa cả ba
+                # (23->30 · 298->455 · 150->242) vì số cũ là dòng trên bản CHUẨN HOÁ
+                # đã rụng chú thích, không phải dòng thật. Một ngưỡng phải sửa mỗi lần
+                # đổi cách đánh số thì không canh được gì — sửa xong nhìn y như nới tay.
+                #
+                # `cho_gieo` thì không đổi: đó là chỗ chính tay công cụ gieo lỗi vào.
+                # Bắt được ngay chuyện E1 trả lời chỗ KHÁC mà vẫn xanh: cùng ngày, may_tinh
+                # đổi từ #56 "so sánh Lt->LtE" sang #55 "số 6->5" — và 55 mới là chỗ gieo.
+                if match_target and match_target.get("index") not in cho_gieo:
+                    print(f"  [✗] {tep}: Bản vá ở chỉ số #{match_target.get('index')}, "
+                          f"KHÔNG phải chỗ đã gieo {cho_gieo}")
+                    cua_d_pass = False
+
+                if match_target:
                     diff_str = match_target.get("unified_diff", "")
                     oracle_ok = oracle_verify_candidate(
                         clean_clone_dir=temp_clone_2,
@@ -758,20 +836,37 @@ async def main_async() -> int:
         # ----------------------------------------------------------------------
         t0_cdp = time.time()
         cdp_script = REPO_ROOT / "tools" / "_cdp_browser_test.js"
-        r_cdp = await asyncio.to_thread(
-            subprocess.run,
-            [
-                "node", str(cdp_script),
-                str(server.port),
-                test_auth_token,
-                str(raw_dir),
-                "true",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=120.0,
-        )
-        log_cmd("chrome_cdp_browser_test", r_cdp.returncode, time.time() - t0_cdp)
+
+        # Cửa này cần một Chrome thật. Máy không mở được Chrome thì nó treo tới
+        # 120s rồi ném TimeoutExpired — và vì không ai bắt, cả chương trình chết,
+        # MẤT LUÔN sáu cửa vừa ĐẠT ở trên. Đo được 24/08/2026: A B C D E F đều
+        # ĐẠT, in ra hết rồi, mà mã thoát vẫn là 1 và không có dòng tổng kết nào.
+        #
+        # Không đo được KHÁC với không đạt (CLAUDE.md §4). Ghi đúng trạng thái
+        # thứ ba rồi đi tiếp, để sáu kết quả kia còn dùng được.
+        r_cdp = None
+        cdp_khong_do_duoc = ""
+        try:
+            r_cdp = await asyncio.to_thread(
+                subprocess.run,
+                [
+                    "node", str(cdp_script),
+                    str(server.port),
+                    test_auth_token,
+                    str(raw_dir),
+                    "true",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=120.0,
+            )
+            log_cmd("chrome_cdp_browser_test", r_cdp.returncode, time.time() - t0_cdp)
+        except subprocess.TimeoutExpired:
+            cdp_khong_do_duoc = "quá 120s — nhiều khả năng máy không mở được Chrome"
+            log_cmd("chrome_cdp_browser_test", -1, time.time() - t0_cdp)
+        except FileNotFoundError:
+            cdp_khong_do_duoc = "không có `node` trên PATH"
+            log_cmd("chrome_cdp_browser_test", -1, time.time() - t0_cdp)
 
         screenshot_path = raw_dir / "e1_ui_screenshot.png"
         dom_receipt_path = raw_dir / "ui_dom_receipt.json"
@@ -785,7 +880,10 @@ async def main_async() -> int:
             except Exception:
                 cdp_receipt_valid = False
 
-        if r_cdp.returncode == 0 and screenshot_path.is_file() and cdp_receipt_valid:
+        if cdp_khong_do_duoc:
+            gate_results["G"] = "KHONG_DO_DUOC"
+            print(f"  [?] CỬA G — Browser E2E KHÔNG ĐO ĐƯỢC: {cdp_khong_do_duoc}")
+        elif r_cdp is not None and r_cdp.returncode == 0 and screenshot_path.is_file() and cdp_receipt_valid:
             gate_results["G"] = "PASS"
             print("  [✓] CỬA G — Chrome CDP Browser E2E, XSS Canary & Screenshot: ĐẠT")
         else:
@@ -812,6 +910,11 @@ async def main_async() -> int:
 
     # 6. Ghi Evidence Sprint Manifest, Metrics, Artifacts
     time_end_utc = datetime.datetime.now(datetime.timezone.utc)
+    # Ba trạng thái, không gộp (CLAUDE.md §4): đạt · đo được mà không đạt ·
+    # KHÔNG đo được. Trước 24/08 chỉ có hai, nên một cửa treo vì thiếu Chrome
+    # đọc y hệt một cửa thất bại.
+    co_hong = any(status == "FAIL" for status in gate_results.values())
+    co_khong_do = any(status == "KHONG_DO_DUOC" for status in gate_results.values())
     all_passed = all(status == "PASS" for status in gate_results.values())
 
     manifest = {
@@ -820,7 +923,7 @@ async def main_async() -> int:
         "timestamp_end_utc": time_end_utc.isoformat(),
         "seed": SEED,
         "verifier": "tools/do_cua_cung_e1_app.py",
-        "status": "PASS" if all_passed else "FAIL",
+        "status": "PASS" if all_passed else ("FAIL" if co_hong else "BLOCKED"),
         "gates": gate_results,
         "python_version": sys.version,
     }
@@ -849,10 +952,20 @@ async def main_async() -> int:
     for gate, status in gate_results.items():
         print(f"  - Cửa {gate}: {status}")
     print(f"\nBằng chứng Sprint đã lưu tại: {run_dir}")
-    print(f"TRẠNG THÁI CUỐI CÙNG: {'PASS (EXIT 0)' if all_passed else 'FAIL (EXIT 1)'}")
+    if all_passed:
+        ket = "PASS (EXIT 0)"
+    elif co_hong:
+        ket = "FAIL (EXIT 1)"
+    else:
+        ket = "BLOCKED — có cửa KHÔNG ĐO ĐƯỢC (EXIT 2)"
+    print(f"TRẠNG THÁI CUỐI CÙNG: {ket}")
     print("=" * 70)
 
-    return 0 if all_passed else 1
+    if all_passed:
+        return 0
+    if co_hong:
+        return 1
+    return 2
 
 
 def main() -> int:

@@ -1,0 +1,165 @@
+<meta charset="utf-8">
+<title>Thẻ ôm sát — vẽ lại theo hình Sếp</title>
+<style>
+  :root{
+    --bg:#0B1120; --surface:#0F172A; --line:#1F2937; --txt:#E5E7EB; --dim:#94A3B8;
+    --mono:"Cascadia Code",Consolas,"Courier New",monospace;
+    --kw:#C084FC; --fn:#FBBF24; --st:#86EFAC; --nu:#7DD3FC; --cm:#5EEAD4;
+    --net:#93C5FD;          /* mau net khung — giong but chi xanh trong hinh */
+    --kinh:#3B82F61F;       /* nen kinh mo */
+    --ham:#F97316; --dk:#3B82F6; --dl:#22C55E; --vr:#A855F7;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+       font:14px/1.5 "Segoe UI",system-ui,sans-serif;padding:22px}
+  h1{font-size:19px;margin:0 0 4px}
+  .sub{color:var(--dim);font-size:13px;margin-bottom:20px;max-width:820px;line-height:1.7}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:18px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .hd{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;gap:10px;
+      align-items:center;flex-wrap:wrap}
+  .tag{font-size:11px;font-weight:700;letter-spacing:.4px;padding:2px 8px;border-radius:99px}
+  .t1{background:#164E63;color:#67E8F9} .t2{background:#3730A3;color:#C7D2FE}
+  .t3{background:#134E4A;color:#5EEAD4} .t0{background:#78350F;color:#FDE68A}
+  .hd b{font-size:14px} .hd span{color:var(--dim);font-size:12px}
+  .body{padding:16px 14px;font-family:var(--mono);font-size:13px;overflow-x:auto}
+  .note{padding:10px 14px;border-top:1px solid var(--line);color:var(--dim);
+        font-size:12px;line-height:1.65}
+  .note b{color:var(--txt)}
+  .kw{color:var(--kw)} .fn{color:var(--fn)} .s{color:var(--st)}
+  .n{color:var(--nu)} .c{color:var(--cm)}
+
+  /* ============ THE OM SAT ============ */
+  .the{display:inline-flex;align-items:center;border:1px solid var(--net);
+       padding:1px 7px;line-height:20px;background:transparent;white-space:pre}
+  .hang{display:flex;align-items:center;margin:0;position:relative}
+  /* moc noi: dau + nam giua hai canh cham nhau */
+  .moc{position:relative;height:0;margin-left:14px}
+  .moc::before{content:"+";position:absolute;top:-10px;left:0;color:var(--net);
+               font-family:var(--mono);font-size:14px;line-height:1}
+  /* song noi doc giua hai the */
+  .noi{width:2px;background:var(--net);margin-left:20px;opacity:.85}
+
+  /* nen kinh phu ca khoi */
+  .kinh{background:var(--kinh);border-radius:3px;padding:3px 4px 3px 0}
+
+  .in1{margin-left:24px} .in2{margin-left:48px}
+  .lbl{font-size:10px;padding:0 5px;border-radius:99px;line-height:15px;margin-left:8px}
+</style>
+
+<h1>Thẻ ôm sát — vẽ lại theo hình Sếp</h1>
+<div class="sub">
+  Bản trước em vẽ sai hướng: em <b>bỏ khung đi</b>. Nhìn hình Sếp thì rõ là
+  <b>vẫn có khung</b> — chỉ khác ở chỗ khung <b>ôm sát chữ</b>, vẽ bằng
+  <b>nét mảnh</b> như bút chì trên vở, và <b>dấu +</b> đánh vào chỗ hai thẻ móc
+  vào nhau. Ba ô dưới là ba mức của cùng ý ấy.
+</div>
+
+<div class="grid">
+
+  <!-- =============== O 0: dung nhu hinh Sep =============== -->
+  <div class="card">
+    <div class="hd"><span class="tag t0">ĐÚNG HÌNH SẾP</span><b>Nét mảnh, ôm sát, có dấu +</b></div>
+    <div class="body">
+      <div class="kinh" style="display:inline-block">
+        <div class="hang"><span class="the"><span class="fn">print</span>(<span class="s">""</span>)</span></div>
+        <div class="noi" style="height:26px"></div>
+        <div class="hang"><span class="the"><span class="kw">else</span></span></div>
+        <div class="moc"></div>
+        <div class="hang" style="margin-top:6px"><span class="the"><span class="fn">print</span>(<span class="s">""</span>)</span></div>
+      </div>
+    </div>
+    <div class="note">
+      Chép đúng hình Sếp vẽ: khung <b>ôm sát</b> chữ, nét mảnh một đường, dấu
+      <b>+</b> ở chỗ hai thẻ chạm nhau, và một <b>sóng dọc</b> nối thẻ trên
+      xuống thẻ dưới. Nền xanh mờ là "tấm kính".
+    </div>
+  </div>
+
+  <!-- =============== O 1: ap vao ma that =============== -->
+  <div class="card">
+    <div class="hd"><span class="tag t1">MỨC 1</span><b>Áp vào mã thật</b>
+      <span>— chỉ khung + dấu nối</span></div>
+    <div class="body">
+      <div class="kinh" style="display:inline-block">
+        <div class="hang"><span class="the"><span class="kw">def</span> <span class="fn">tinh_diem</span>(bai, muc):</span></div>
+        <div class="moc"></div>
+        <div class="hang in1" style="margin-top:5px"><span class="the c"># cong diem, bo bai chua nop</span></div>
+        <div class="hang in1" style="margin-top:4px"><span class="the">tong = <span class="n">0</span></span></div>
+        <div class="hang in1" style="margin-top:4px"><span class="the"><span class="kw">for</span> b <span class="kw">in</span> bai:</span></div>
+        <div class="moc" style="margin-left:38px"></div>
+        <div class="hang in2" style="margin-top:5px"><span class="the"><span class="kw">if</span> b.da_nop:</span></div>
+        <div class="moc" style="margin-left:62px"></div>
+        <div class="hang" style="margin-left:72px;margin-top:5px"><span class="the">tong += b.diem</span></div>
+        <div class="hang in1" style="margin-top:6px"><span class="the"><span class="kw">return</span> tong / muc</span></div>
+      </div>
+    </div>
+    <div class="note">
+      Mỗi lệnh một khung ôm sát. Dấu <b>+</b> chỉ xuất hiện ở chỗ thẻ mẹ mở ra
+      thẻ con — tức chỗ <b>móc nối</b>, không rải khắp nơi.
+    </div>
+  </div>
+
+  <!-- =============== O 2: them mau theo loai =============== -->
+  <div class="card">
+    <div class="hd"><span class="tag t2">MỨC 2</span><b>Thêm màu nét theo loại thẻ</b></div>
+    <div class="body">
+      <div class="kinh" style="display:inline-block">
+        <div class="hang"><span class="the" style="border-color:var(--ham)"><span class="kw">def</span> <span class="fn">tinh_diem</span>(bai, muc):</span></div>
+        <div class="moc"></div>
+        <div class="hang in1" style="margin-top:5px"><span class="the c" style="border-color:var(--cm)"># cong diem, bo bai chua nop</span></div>
+        <div class="hang in1" style="margin-top:4px"><span class="the" style="border-color:var(--dl)">tong = <span class="n">0</span></span></div>
+        <div class="hang in1" style="margin-top:4px"><span class="the" style="border-color:var(--dk)"><span class="kw">for</span> b <span class="kw">in</span> bai:</span></div>
+        <div class="moc" style="margin-left:38px"></div>
+        <div class="hang in2" style="margin-top:5px"><span class="the" style="border-color:var(--dk)"><span class="kw">if</span> b.da_nop:</span></div>
+        <div class="moc" style="margin-left:62px"></div>
+        <div class="hang" style="margin-left:72px;margin-top:5px"><span class="the" style="border-color:var(--dl)">tong += b.diem</span></div>
+        <div class="hang in1" style="margin-top:6px"><span class="the" style="border-color:var(--ham)"><span class="kw">return</span> tong / muc</span></div>
+      </div>
+    </div>
+    <div class="note">
+      Như mức 1, nhưng <b>nét khung đổi màu theo loại</b>: cam là hàm/trả về,
+      xanh dương là điều khiển, xanh lá là dữ liệu, xanh ngọc là chú thích.
+      Khay thẻ bên trái đang dùng đúng bộ màu này.
+    </div>
+  </div>
+
+  <!-- =============== O 3: them nhan =============== -->
+  <div class="card">
+    <div class="hd"><span class="tag t3">MỨC 3</span><b>Thêm nhãn nhỏ ngoài khung</b>
+      <span>— dày nhất</span></div>
+    <div class="body">
+      <div class="kinh" style="display:inline-block">
+        <div class="hang"><span class="the" style="border-color:var(--ham)"><span class="kw">def</span> <span class="fn">tinh_diem</span>(bai, muc):</span>
+          <span class="lbl" style="color:var(--ham);border:1px solid var(--ham)">hàm</span></div>
+        <div class="moc"></div>
+        <div class="hang in1" style="margin-top:5px"><span class="the c" style="border-color:var(--cm)"># cong diem, bo bai chua nop</span>
+          <span class="lbl" style="color:var(--cm);border:1px solid var(--cm)">chú thích</span></div>
+        <div class="hang in1" style="margin-top:4px"><span class="the" style="border-color:var(--dl)">tong = <span class="n">0</span></span>
+          <span class="lbl" style="color:var(--dl);border:1px solid var(--dl)">gán</span></div>
+        <div class="hang in1" style="margin-top:4px"><span class="the" style="border-color:var(--dk)"><span class="kw">for</span> b <span class="kw">in</span> bai:</span>
+          <span class="lbl" style="color:var(--dk);border:1px solid var(--dk)">lặp</span></div>
+        <div class="moc" style="margin-left:38px"></div>
+        <div class="hang in2" style="margin-top:5px"><span class="the" style="border-color:var(--dk)"><span class="kw">if</span> b.da_nop:</span>
+          <span class="lbl" style="color:var(--dk);border:1px solid var(--dk)">nếu</span></div>
+        <div class="moc" style="margin-left:62px"></div>
+        <div class="hang" style="margin-left:72px;margin-top:5px"><span class="the" style="border-color:var(--dl)">tong += b.diem</span></div>
+        <div class="hang in1" style="margin-top:6px"><span class="the" style="border-color:var(--ham)"><span class="kw">return</span> tong / muc</span></div>
+      </div>
+    </div>
+    <div class="note">
+      Như mức 2, thêm <b>nhãn nhỏ nằm NGOÀI khung</b> — không chiếm chỗ trong
+      khung, không đẩy khung dài ra. Nhiều dấu nhất nên cũng ồn nhất.
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:24px;padding:14px 16px;background:#0F172A;border:1px solid var(--line);
+            border-left:3px solid var(--fn);border-radius:8px;font-size:13px;line-height:1.75">
+  <b style="color:#FBBF24">Xin Sếp chỉ ba điều:</b><br>
+  1. Mức nào đúng — 1, 2 hay 3?<br>
+  2. Dấu <b>+</b> nên xuất hiện ở đâu: chỉ chỗ mẹ mở ra con (như em vẽ), hay
+     giữa <b>mọi</b> hai thẻ liền nhau?<br>
+  3. Nét khung nên <b>một màu</b> (như hình Sếp vẽ) hay <b>đổi màu theo loại thẻ</b>?
+</div>

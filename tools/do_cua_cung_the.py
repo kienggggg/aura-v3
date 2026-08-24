@@ -385,7 +385,7 @@ O_DOI = O_BIEU_THUC + O_DOI_SO
 
 def _dot_bien(o: str, kieu: str, cu: str) -> str:
     """Đổi ô sao cho VẪN HỢP CÚ PHÁP với mọi hình dạng đối số."""
-    if kieu == "ten":
+    if kieu in ("ten", "chu_thich"):
         return cu + "_zz"
     thu = (["0, " + cu, "(" + cu + ")"] if o in O_DOI_SO
            else ["(" + cu + ")"])
@@ -395,7 +395,7 @@ def _dot_bien(o: str, kieu: str, cu: str) -> str:
             return x
         except SyntaxError:
             continue
-    return cu + " "                    # không đổi được thì để bộ đo tự bắt
+    return cu + "_zz"
 
 
 def cua_4_doi_that(doc, luu):
@@ -409,14 +409,6 @@ def cua_4_doi_that(doc, luu):
     theo_the = {}
     vi_du = []
     tong_dong_vat_ly = 0
-    # ĐẾM THEO TỪNG TỆP, gom bằng TẬP rồi mới cộng số phần tử.
-    #
-    # Hai lỗi phải tránh cùng lúc, đã dính cả hai trong ngày 20/08:
-    #   cộng dồn `line_end - line_start + 1` -> thẻ khối tính cả thân nó rồi
-    #     từng thẻ con tính lại chính những dòng ấy: ra 113,7%, mà một tỉ lệ
-    #     vượt 100% là dấu hiệu công thức sai chứ không phải kết quả tốt;
-    #   dùng MỘT tập chung cho cả kho -> dòng 5 của tệp A đè dòng 5 của tệp B,
-    #     lần này lại đếm THIẾU.
     dong_the_that = 0
     _dong_tep: set = set()
 
@@ -434,11 +426,15 @@ def cua_4_doi_that(doc, luu):
             if n.ma == "ma_tho":
                 tho += 1
                 continue
-            o = next((k for k in O_DOI if k in n.o and n.o[k].strip()), None)
-            kieu = "bieu_thuc"
-            if o is None:
-                o = next((k for k in O_TEN if k in n.o and n.o[k].strip()), None)
-                kieu = "ten"
+            if n.ma == "chu_thich":
+                o = "noi_dung"
+                kieu = "chu_thich"
+            else:
+                o = next((k for k in O_DOI if k in n.o and n.o[k].strip()), None)
+                kieu = "bieu_thuc"
+                if o is None:
+                    o = next((k for k in O_TEN if k in n.o and n.o[k].strip()), None)
+                    kieu = "ten"
             if o is None:
                 continue                       # thẻ không có ô nào sửa được
             tong += 1
@@ -490,12 +486,12 @@ def cua_4_doi_that(doc, luu):
     }
 
 
-def chay(dung_cst: bool = False):
+def chay(dung_cst: bool = True):
     """Chạy cả bốn cửa nghiệm thu app thẻ, ghi MỘT tệp JSON khoá đã sắp.
 
-    `dung_cst` chọn bộ đọc: mặc định đo bản `ast` của `the_v1`, bật thì đo
-    bản LibCST của `the_cst`. Hai sổ ghi ra hai tệp khác nhau để không đè
-    lên nhau.
+    Mặc định chấm bản LibCST của `the_cst`. Truyền `--v1` để chuyển sang
+    chấm bản `ast` cũ của `the_v1`. Hai sổ ghi ra hai tệp khác nhau để không
+    đè lên nhau.
     """
     try:
         sys.path.insert(0, str(GOC))
@@ -513,14 +509,24 @@ def chay(dung_cst: bool = False):
     if not _tep_py():
         return None, "khong tim thay tep .py nao trong %s" % (THU_MUC,)
 
-    cua = [
-        cua_1_go_lai_y_cu(doc_tep_py_sang_cay_the, luu_cay_the_ra_tep_py),
-        cua_2_chu_thich(doc_tep_py_sang_cay_the, luu_cay_the_ra_tep_py),
-        cua_3_origin(kiem_tra_origin_hop_le),
-        (cua_4_doi_that(doc_tep_py_sang_cay_the, luu_cay_the_ra_tep_py)
-         if dung_cst else
-         cua_4_tu_kiem(doc_tep_py_sang_cay_the, sinh_dong_the_don)),
-    ]
+    print(f"[*] Bộ đọc: {'the_cst (LibCST)' if dung_cst else 'the_v1 (ast)'} — Quét {len(_tep_py())} tệp .py...", flush=True)
+    
+    print("[1/4] Đang đo Cửa 1 (gõ lại y giá trị cũ, bảo toàn byte)...", flush=True)
+    c1 = cua_1_go_lai_y_cu(doc_tep_py_sang_cay_the, luu_cay_the_ra_tep_py)
+    
+    print("[2/4] Đang đo Cửa 2 (bảo toàn chú thích cuối dòng)...", flush=True)
+    c2 = cua_2_chu_thich(doc_tep_py_sang_cay_the, luu_cay_the_ra_tep_py)
+    
+    print("[3/4] Đang đo Cửa 3 (bảo mật Origin / Referer)...", flush=True)
+    c3 = cua_3_origin(kiem_tra_origin_hop_le)
+    
+    print("[4/4] Đang đo Cửa 4 (tỷ lệ phủ thẻ & độ chính xác miêu tả)...", flush=True)
+    c4 = (cua_4_doi_that(doc_tep_py_sang_cay_the, luu_cay_the_ra_tep_py)
+          if dung_cst else
+          cua_4_tu_kiem(doc_tep_py_sang_cay_the, sinh_dong_the_don))
+
+    cua = [c1, c2, c3, c4]
+
     # Tên hiển thị lấy TỪ `BO_THE_V1`, không chép tay sang đây. Mã `gan` là
     # khoá trong máy (khoá JSON, tên biến JS/Python) nên buộc không dấu; chữ
     # người đọc thấy là `ten` = "Gán", và app đã làm đúng chỗ đó từ đầu — chỉ
@@ -542,35 +548,37 @@ def chay(dung_cst: bool = False):
         "cua": cua,
     }
     RA.mkdir(parents=True, exist_ok=True)
-    (RA / ("cua_cung_cst.json" if dung_cst else "cua_cung.json")).write_text(
+    ten_so = "cua_cung.json" if "--v1" in sys.argv else "cua_cung_cst.json"
+    (RA / ten_so).write_text(
         json.dumps(so, ensure_ascii=False, sort_keys=True, indent=1),
         encoding="utf-8")
     return so, ""
 
 
 def main() -> int:
-    """Chạy bốn cửa rồi in bảng. Cờ `--cst` đổi sang bộ đọc LibCST.
+    """Chạy bốn cửa rồi in bảng. Mặc định dùng bộ đọc `the_cst` (LibCST). Cờ `--v1` đổi sang bộ đọc AST cũ.
 
     Mã thoát theo luật ba trạng thái: 0 đạt · 1 đo được mà không đạt ·
     2 không đo được. Gộp ba cái này làm hai là mở đường cho "0/4" đọc thành
     "thua sạch" trong khi thật ra phép đo chưa hề chạy.
     """
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-    so, loi = chay(dung_cst="--cst" in sys.argv)
+    dung_cst = "--v1" not in sys.argv
+    so, loi = chay(dung_cst=dung_cst)
     if so is None:
         print("KHONG DO DUOC: " + loi)
         return 2                       # khong do duoc, KHAC voi truot
     from bao_cao_cua_cung import in_bang, dung_trang, TRANG
     # doc LAI tu dia, khong dung `so` trong RAM: bang nguoi doc phai dung tu
     # dung so JSON da ghi (luat CLAUDE.md muc 5)
-    ten_so = "cua_cung_cst.json" if "--cst" in sys.argv else "cua_cung.json"
+    ten_so = "cua_cung.json" if "--v1" in sys.argv else "cua_cung_cst.json"
     tu_so = json.loads((RA / ten_so).read_text(encoding="utf-8"))
     in_bang(tu_so)
     from pathlib import Path as _P
-    trang = (TRANG.with_name("bao_cao_cst.html") if "--cst" in sys.argv
-             else TRANG)
+    trang = (TRANG if "--v1" in sys.argv
+             else TRANG.with_name("bao_cao_cst.html"))
     trang.write_text(dung_trang(tu_so), encoding="utf-8")
-    print("\nso   : " + str(RA / "cua_cung.json"))
+    print("\nso   : " + str(RA / ten_so))
     print("trang: " + str(trang))
     return 0 if tu_so["dat_het"] else 1
 

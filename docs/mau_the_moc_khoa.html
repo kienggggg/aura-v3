@@ -1,0 +1,168 @@
+<meta charset="utf-8">
+<title>Thẻ móc khoá — bo tròn, có nền, có lỗ xỏ</title>
+<style>
+  :root{
+    --bg:#0B1120; --surface:#0F172A; --line:#1F2937; --txt:#E5E7EB; --dim:#94A3B8;
+    --mono:"Cascadia Code",Consolas,"Courier New",monospace;
+    --ham:#F97316; --dk:#3B82F6; --dl:#22C55E; --vr:#A855F7; --ct:#14B8A6; --xam:#64748B;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+       font:14px/1.5 "Segoe UI",system-ui,sans-serif;padding:22px}
+  h1{font-size:19px;margin:0 0 4px}
+  .sub{color:var(--dim);font-size:13px;margin-bottom:20px;max-width:840px;line-height:1.7}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:18px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .hd{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;gap:10px;
+      align-items:center;flex-wrap:wrap}
+  .tag{font-size:11px;font-weight:700;letter-spacing:.4px;padding:2px 8px;border-radius:99px}
+  .t1{background:#78350F;color:#FDE68A} .t2{background:#164E63;color:#67E8F9}
+  .t3{background:#3730A3;color:#C7D2FE} .t4{background:#134E4A;color:#5EEAD4}
+  .hd b{font-size:14px} .hd span{color:var(--dim);font-size:12px}
+  .body{padding:18px 14px;overflow-x:auto}
+  .note{padding:10px 14px;border-top:1px solid var(--line);color:var(--dim);
+        font-size:12px;line-height:1.65}
+  .note b{color:var(--txt)}
+
+  /* ================= THE MOC KHOA ================= */
+  .moc{display:inline-flex;align-items:center;gap:0;
+       border-radius:999px;padding:3px 12px 3px 4px;
+       font-family:var(--mono);font-size:13px;line-height:20px;white-space:pre;
+       position:relative}
+  /* lo xo — cho moc noi */
+  .lo{width:13px;height:13px;border-radius:50%;flex:0 0 13px;margin-right:7px;
+      background:var(--surface);box-shadow:inset 0 0 0 1.5px #0006}
+  /* o nhan trang giua the — giong mieng giay trong moc khoa */
+  .nhan{background:#F8FAFC;color:#0F172A;border-radius:5px;padding:1px 9px;
+        box-shadow:inset 0 0 0 1px #0002}
+  .nhan .kw{color:#7C3AED;font-weight:600} .nhan .fn{color:#B45309}
+  .nhan .s{color:#047857} .nhan .n{color:#0369A1} .nhan .c{color:#0F766E;font-style:italic}
+
+  /* ban TOI: khong dung o trang, dung o dam hon nen */
+  .nhan-toi{background:#0B1120E6;color:#E5E7EB;border-radius:5px;padding:1px 9px;
+            box-shadow:inset 0 0 0 1px #FFFFFF14}
+  .nhan-toi .kw{color:#C084FC} .nhan-toi .fn{color:#FBBF24}
+  .nhan-toi .s{color:#86EFAC} .nhan-toi .n{color:#7DD3FC} .nhan-toi .c{color:#5EEAD4;font-style:italic}
+
+  .hang{display:flex;align-items:center;margin:6px 0}
+  /* xich noi hai lo */
+  .xich{width:2px;background:#94A3B8;opacity:.5;margin-left:10px}
+
+  .in1{margin-left:26px} .in2{margin-left:52px} .in3{margin-left:78px}
+
+  /* ban GON cho tep 199 the */
+  .gon{padding:1px 9px 1px 3px;font-size:12px;line-height:17px}
+  .gon .lo{width:9px;height:9px;flex:0 0 9px;margin-right:5px}
+  .gon .nhan-toi{padding:0 7px;border-radius:4px}
+</style>
+
+<h1>Thẻ móc khoá — bo tròn, có nền, có lỗ xỏ</h1>
+<div class="sub">
+  Ghép hai thứ Sếp đưa: <b>hình vẽ tay</b> (khung ôm sát, dấu <b>+</b> ở mối
+  nối) và <b>ảnh móc khoá</b> (bo tròn, thân có màu, miếng nhãn ở giữa).
+  Em đọc <b>lỗ xỏ chính là chỗ móc nối</b> — nó thay cho dấu <b>+</b>, và sợi
+  xích chạy qua các lỗ là đường nối giữa các thẻ.
+</div>
+
+<div class="grid">
+
+  <!-- ============ A: sat anh nhat, nhan TRANG ============ -->
+  <div class="card">
+    <div class="hd"><span class="tag t1">BẢN A</span><b>Sát ảnh nhất — nhãn trắng</b>
+      <span>thân có màu, chữ trên nền trắng</span></div>
+    <div class="body">
+      <div class="hang"><span class="moc" style="background:var(--ham)"><span class="lo"></span><span class="nhan"><span class="kw">def</span> <span class="fn">tinh_diem</span>(bai, muc):</span></span></div>
+      <div class="xich" style="height:14px;margin-left:36px"></div>
+      <div class="hang in1"><span class="moc" style="background:var(--ct)"><span class="lo"></span><span class="nhan"><span class="c"># cong diem, bo bai chua nop</span></span></span></div>
+      <div class="hang in1"><span class="moc" style="background:var(--dl)"><span class="lo"></span><span class="nhan">tong = <span class="n">0</span></span></span></div>
+      <div class="hang in1"><span class="moc" style="background:var(--dk)"><span class="lo"></span><span class="nhan"><span class="kw">for</span> b <span class="kw">in</span> bai:</span></span></div>
+      <div class="xich" style="height:12px;margin-left:62px"></div>
+      <div class="hang in2"><span class="moc" style="background:var(--dk)"><span class="lo"></span><span class="nhan"><span class="kw">if</span> b.da_nop:</span></span></div>
+      <div class="xich" style="height:12px;margin-left:88px"></div>
+      <div class="hang in3"><span class="moc" style="background:var(--dl)"><span class="lo"></span><span class="nhan">tong += b.diem</span></span></div>
+      <div class="hang in1"><span class="moc" style="background:var(--ham)"><span class="lo"></span><span class="nhan"><span class="kw">return</span> tong / muc</span></span></div>
+    </div>
+    <div class="note">
+      Giống ảnh móc khoá nhất: thân màu đặc, <b>miếng nhãn trắng</b> ở giữa,
+      lỗ xỏ bên trái. Nhưng nền trắng giữa màn hình tối thì <b>chói</b> khi có
+      nhiều thẻ.
+    </div>
+  </div>
+
+  <!-- ============ B: nhan toi, hop voi giao dien toi ============ -->
+  <div class="card">
+    <div class="hd"><span class="tag t2">BẢN B</span><b>Nhãn tối — hợp nền tối</b>
+      <span>thân màu nhạt, chữ giữ màu cú pháp</span></div>
+    <div class="body">
+      <div class="hang"><span class="moc" style="background:#F9731633;box-shadow:inset 0 0 0 1px #F9731688"><span class="lo"></span><span class="nhan-toi"><span class="kw">def</span> <span class="fn">tinh_diem</span>(bai, muc):</span></span></div>
+      <div class="xich" style="height:14px;margin-left:36px"></div>
+      <div class="hang in1"><span class="moc" style="background:#14B8A62E;box-shadow:inset 0 0 0 1px #14B8A688"><span class="lo"></span><span class="nhan-toi"><span class="c"># cong diem, bo bai chua nop</span></span></span></div>
+      <div class="hang in1"><span class="moc" style="background:#22C55E2E;box-shadow:inset 0 0 0 1px #22C55E88"><span class="lo"></span><span class="nhan-toi">tong = <span class="n">0</span></span></span></div>
+      <div class="hang in1"><span class="moc" style="background:#3B82F62E;box-shadow:inset 0 0 0 1px #3B82F688"><span class="lo"></span><span class="nhan-toi"><span class="kw">for</span> b <span class="kw">in</span> bai:</span></span></div>
+      <div class="xich" style="height:12px;margin-left:62px"></div>
+      <div class="hang in2"><span class="moc" style="background:#3B82F62E;box-shadow:inset 0 0 0 1px #3B82F688"><span class="lo"></span><span class="nhan-toi"><span class="kw">if</span> b.da_nop:</span></span></div>
+      <div class="xich" style="height:12px;margin-left:88px"></div>
+      <div class="hang in3"><span class="moc" style="background:#22C55E2E;box-shadow:inset 0 0 0 1px #22C55E88"><span class="lo"></span><span class="nhan-toi">tong += b.diem</span></span></div>
+      <div class="hang in1"><span class="moc" style="background:#F9731633;box-shadow:inset 0 0 0 1px #F9731688"><span class="lo"></span><span class="nhan-toi"><span class="kw">return</span> tong / muc</span></span></div>
+    </div>
+    <div class="note">
+      Cùng hình dáng móc khoá, nhưng <b>thân màu nhạt</b> và <b>nhãn tối</b> —
+      chữ vẫn giữ màu cú pháp quen thuộc. Đỡ chói, đọc lâu không mỏi.
+    </div>
+  </div>
+
+  <!-- ============ C: khong nhan, chi than mau ============ -->
+  <div class="card">
+    <div class="hd"><span class="tag t3">BẢN C</span><b>Bỏ miếng nhãn</b>
+      <span>chỉ còn thân bo tròn + lỗ xỏ</span></div>
+    <div class="body">
+      <div class="hang"><span class="moc" style="background:#F9731626;box-shadow:inset 0 0 0 1px #F9731699"><span class="lo"></span><span style="font-family:var(--mono);font-size:13px"><span style="color:#C084FC">def</span> <span style="color:#FBBF24">tinh_diem</span>(bai, muc):</span></span></div>
+      <div class="xich" style="height:14px;margin-left:36px"></div>
+      <div class="hang in1"><span class="moc" style="background:#14B8A622;box-shadow:inset 0 0 0 1px #14B8A699"><span class="lo"></span><span style="font-family:var(--mono);font-size:13px;color:#5EEAD4;font-style:italic"># cong diem, bo bai chua nop</span></span></div>
+      <div class="hang in1"><span class="moc" style="background:#22C55E22;box-shadow:inset 0 0 0 1px #22C55E99"><span class="lo"></span><span style="font-family:var(--mono);font-size:13px">tong = <span style="color:#7DD3FC">0</span></span></span></div>
+      <div class="hang in1"><span class="moc" style="background:#3B82F622;box-shadow:inset 0 0 0 1px #3B82F699"><span class="lo"></span><span style="font-family:var(--mono);font-size:13px"><span style="color:#C084FC">for</span> b <span style="color:#C084FC">in</span> bai:</span></span></div>
+      <div class="xich" style="height:12px;margin-left:62px"></div>
+      <div class="hang in2"><span class="moc" style="background:#3B82F622;box-shadow:inset 0 0 0 1px #3B82F699"><span class="lo"></span><span style="font-family:var(--mono);font-size:13px"><span style="color:#C084FC">if</span> b.da_nop:</span></span></div>
+      <div class="xich" style="height:12px;margin-left:88px"></div>
+      <div class="hang in3"><span class="moc" style="background:#22C55E22;box-shadow:inset 0 0 0 1px #22C55E99"><span class="lo"></span><span style="font-family:var(--mono);font-size:13px">tong += b.diem</span></span></div>
+      <div class="hang in1"><span class="moc" style="background:#F9731626;box-shadow:inset 0 0 0 1px #F9731699"><span class="lo"></span><span style="font-family:var(--mono);font-size:13px"><span style="color:#C084FC">return</span> tong / muc</span></span></div>
+    </div>
+    <div class="note">
+      Bỏ hẳn miếng nhãn, chữ nằm thẳng trên thân. <b>Ít lớp nhất</b>, gọn nhất,
+      nhưng cũng <b>xa ảnh móc khoá nhất</b>.
+    </div>
+  </div>
+
+  <!-- ============ D: ban GON, thu voi tep dai ============ -->
+  <div class="card">
+    <div class="hd"><span class="tag t4">BẢN D</span><b>Bản gọn — thử với tệp 199 thẻ</b>
+      <span>cùng bản B, thu nhỏ</span></div>
+    <div class="body">
+      <div class="hang" style="margin:3px 0"><span class="moc gon" style="background:#F9731633;box-shadow:inset 0 0 0 1px #F9731688"><span class="lo"></span><span class="nhan-toi"><span class="kw">def</span> <span class="fn">_public_http_url</span>(value):</span></span></div>
+      <div class="hang in1" style="margin:3px 0"><span class="moc gon" style="background:#3B82F62E;box-shadow:inset 0 0 0 1px #3B82F688"><span class="lo"></span><span class="nhan-toi"><span class="kw">if not</span> value:</span></span></div>
+      <div class="hang in2" style="margin:3px 0"><span class="moc gon" style="background:#F9731633;box-shadow:inset 0 0 0 1px #F9731688"><span class="lo"></span><span class="nhan-toi"><span class="kw">return</span> <span class="n">None</span></span></span></div>
+      <div class="hang in1" style="margin:3px 0"><span class="moc gon" style="background:#22C55E2E;box-shadow:inset 0 0 0 1px #22C55E88"><span class="lo"></span><span class="nhan-toi">parsed = urlsplit(value)</span></span></div>
+      <div class="hang in1" style="margin:3px 0"><span class="moc gon" style="background:#3B82F62E;box-shadow:inset 0 0 0 1px #3B82F688"><span class="lo"></span><span class="nhan-toi"><span class="kw">if</span> parsed.scheme <span class="kw">not in</span> (<span class="s">"http"</span>, <span class="s">"https"</span>):</span></span></div>
+      <div class="hang in2" style="margin:3px 0"><span class="moc gon" style="background:#F9731633;box-shadow:inset 0 0 0 1px #F9731688"><span class="lo"></span><span class="nhan-toi"><span class="kw">return</span> <span class="n">None</span></span></span></div>
+      <div class="hang in1" style="margin:3px 0"><span class="moc gon" style="background:#22C55E2E;box-shadow:inset 0 0 0 1px #22C55E88"><span class="lo"></span><span class="nhan-toi">address = parsed.hostname</span></span></div>
+      <div class="hang in1" style="margin:3px 0"><span class="moc gon" style="background:#F9731633;box-shadow:inset 0 0 0 1px #F9731688"><span class="lo"></span><span class="nhan-toi"><span class="kw">return</span> urlunsplit(parsed)</span></span></div>
+    </div>
+    <div class="note">
+      Cùng bản B nhưng <b>thu nhỏ</b>: lỗ 9px, đệm mỏng, giãn dòng 3px.
+      Đây là mật độ thật khi mở <code>core/web_search.py</code> — <b>199 thẻ</b>.
+      Bản A/B/C ở kích thước lớn sẽ cuộn rất dài.
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:24px;padding:14px 16px;background:#0F172A;border:1px solid var(--line);
+            border-left:3px solid #FBBF24;border-radius:8px;font-size:13px;line-height:1.75">
+  <b style="color:#FBBF24">Xin Sếp chỉ ba điều:</b><br>
+  1. Bản nào — <b>A</b> (nhãn trắng, sát ảnh nhất) · <b>B</b> (nhãn tối, đỡ chói)
+     · <b>C</b> (bỏ nhãn, gọn nhất)?<br>
+  2. <b>Lỗ xỏ</b> giữ hay bỏ? Em đang dùng nó thay cho dấu <b>+</b> — lỗ là chỗ
+     sợi xích chạy qua để nối hai thẻ.<br>
+  3. Cỡ nào — <b>lớn</b> như A/B/C, hay <b>gọn</b> như D? Tệp thật có tới 199 thẻ,
+     cỡ lớn sẽ cuộn rất dài.
+</div>

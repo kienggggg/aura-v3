@@ -36,17 +36,16 @@ BUILTIN_SYMBOLS: Set[str] = {
     "FileNotFoundError", "AssertionError", "ImportError", "IOError", "OSError",
     # Từ khóa Python
     "if", "else", "elif", "for", "while", "in", "is", "not", "and", "or",
-    "as", "with", "try", "except", "finally", "def", "class", "return", "yield",
-    "pass", "break", "continue", "import", "from", "lambda", "global", "nonlocal",
-    "assert", "del", "raise", "async", "await",
+    "as", "with", "try", "except", "finally", "def", "class"
 }
 
-# 5 Nhóm thẻ với màu sắc chuẩn (Tuyệt đối không dùng Đỏ #EF4444 và Vàng #EAB308)
+# 6 Nhóm thẻ với màu sắc chuẩn (Tuyệt đối không dùng Đỏ #EF4444 và Vàng #EAB308)
 NHOM_THE: Dict[str, Dict[str, str]] = {
     "dieu_khien": {"ten": "Điều khiển", "mau": "#3B82F6"},  # Xanh dương
     "du_lieu": {"ten": "Dữ liệu", "mau": "#10B981"},        # Xanh lá
     "vao_ra": {"ten": "Vào / Ra", "mau": "#8B5CF6"},        # Tím
     "ham": {"ten": "Hàm", "mau": "#F59E0B"},               # Cam / Amber
+    "chu_thich": {"ten": "Chú thích", "mau": "#14B8A6"},   # Xanh ngọc
     "ma_tho": {"ten": "Mã thô", "mau": "#6B7280"},          # Xám
 }
 
@@ -69,7 +68,7 @@ class TheDefinition:
     mau: str
 
 
-# 11 Thẻ chuẩn của v1
+# 12 Thẻ chuẩn của v1
 BO_THE_V1: Dict[str, TheDefinition] = {
     "gan": TheDefinition(
         ma="gan",
@@ -175,6 +174,16 @@ BO_THE_V1: Dict[str, TheDefinition] = {
         co_than=False,
         mau=NHOM_THE["du_lieu"]["mau"],
     ),
+    "chu_thich": TheDefinition(
+        ma="chu_thich",
+        ten="Chú thích",
+        nhom="chu_thich",
+        o=[
+            ODefinition(ten="noi_dung", kieu="chu", bat_buoc=True, goi_y="# Chú thích"),
+        ],
+        co_than=False,
+        mau=NHOM_THE["chu_thich"]["mau"],
+    ),
     "ma_tho": TheDefinition(
         ma="ma_tho",
         ten="Mã thô",
@@ -194,13 +203,12 @@ class TheNode:
     ma: str
     o: Dict[str, str] = field(default_factory=dict)
     than: List[TheNode] = field(default_factory=list)
-    # Metadata vị trí trong file nguồn (cho lossless round-trip & span splicing)
-    line_start: Optional[int] = None  # 1-indexed
-    line_end: Optional[int] = None    # 1-indexed, inclusive
+    line_start: Optional[int] = None
+    line_end: Optional[int] = None
     indent: int = 0
-    duoi_dong: str = ""               # Đoạn text từ sau câu lệnh đến hết dòng (kể cả comment)
-    raw_text: Optional[str] = None    # Lưu nguyên văn text nếu là ma_tho hoặc file gốc
-    da_sua: bool = False              # Đánh dấu thẻ này có bị người dùng sửa hay không
+    duoi_dong: str = ""
+    raw_text: Optional[str] = None
+    da_sua: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         res: Dict[str, Any] = {
@@ -208,34 +216,29 @@ class TheNode:
             "ma": self.ma,
             "o": dict(self.o),
             "than": [child.to_dict() for child in self.than],
+            "line_start": self.line_start,
+            "line_end": self.line_end,
+            "indent": self.indent,
+            "duoi_dong": self.duoi_dong,
+            "raw_text": self.raw_text,
             "da_sua": self.da_sua,
         }
-        if self.line_start is not None:
-            res["vi_tri"] = {
-                "line_start": self.line_start,
-                "line_end": self.line_end,
-                "indent": self.indent,
-                "duoi_dong": self.duoi_dong,
-            }
-        if self.raw_text is not None and self.ma == "ma_tho":
-            res["raw_text"] = self.raw_text
         return res
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> TheNode:
-        vi_tri = data.get("vi_tri", {})
-        da_sua = bool(data.get("da_sua", False) or vi_tri.get("da_sua", False))
+        than_list = [cls.from_dict(child) for child in data.get("than", [])]
         return cls(
-            id=str(data.get("id", "")),
-            ma=str(data.get("ma", "")),
-            o={k: str(v) for k, v in data.get("o", {}).items()},
-            than=[cls.from_dict(item) for item in data.get("than", [])],
-            line_start=vi_tri.get("line_start"),
-            line_end=vi_tri.get("line_end"),
-            indent=vi_tri.get("indent", 0),
-            duoi_dong=vi_tri.get("duoi_dong", ""),
+            id=data.get("id", ""),
+            ma=data.get("ma", "ma_tho"),
+            o=dict(data.get("o", {})),
+            than=than_list,
+            line_start=data.get("line_start"),
+            line_end=data.get("line_end"),
+            indent=data.get("indent", 0),
+            duoi_dong=data.get("duoi_dong", ""),
             raw_text=data.get("raw_text"),
-            da_sua=da_sua,
+            da_sua=data.get("da_sua", False),
         )
 
 
@@ -276,6 +279,17 @@ def _trich_duoi_dong(line: str, end_col: Optional[int]) -> str:
         return ""
     duoi_bytes = line_bytes[end_col:]
     return duoi_bytes.decode("utf-8", errors="replace")
+
+
+def _la_dong_ma_thuat(line: str, line_no: int) -> bool:
+    """Dòng 1-2 mà khớp coding[:=] hoặc bắt đầu bằng #! thì là dòng ma thuật."""
+    if line_no in (1, 2):
+        s = line.strip()
+        if s.startswith("#!"):
+            return True
+        if "coding" in s and re.search(r"coding[=:]\s*([-\w.]+)", s):
+            return True
+    return False
 
 
 def _tao_id(prefix: str, idx: int) -> str:
@@ -507,14 +521,77 @@ def _chuyen_danh_sach_ast_sang_the(
     full_source: str,
     counter: List[int],
 ) -> List[TheNode]:
-    """Chuyển danh sách statement AST sang danh sách TheNode."""
+    """Chuyển danh sách statement AST sang danh sách TheNode kèm các dòng chú thích giữa các câu lệnh."""
     res: List[TheNode] = []
+    if not statements:
+        return res
+    current_line = getattr(statements[0], "lineno", 1)
     for stmt in statements:
+        st_l = getattr(stmt, "lineno", current_line)
+        en_l = getattr(stmt, "end_lineno", st_l)
+        if st_l > current_line:
+            gap_lines = lines[current_line - 1 : st_l - 1]
+            idx = 0
+            while idx < len(gap_lines):
+                line_no = current_line + idx
+                g_line = gap_lines[idx]
+                s_g_line = g_line.strip()
+                if s_g_line.startswith("#"):
+                    counter[0] += 1
+                    if _la_dong_ma_thuat(g_line, line_no):
+                        res.append(
+                            TheNode(
+                                id=_tao_id("matho", counter[0]),
+                                ma="ma_tho",
+                                o={"nguyen_van": g_line},
+                                than=[],
+                                line_start=line_no,
+                                line_end=line_no,
+                                indent=0,
+                                duoi_dong="",
+                                raw_text=g_line,
+                            )
+                        )
+                    else:
+                        res.append(
+                            TheNode(
+                                id=_tao_id("chuthich", counter[0]),
+                                ma="chu_thich",
+                                o={"noi_dung": s_g_line},
+                                than=[],
+                                line_start=line_no,
+                                line_end=line_no,
+                                indent=len(g_line) - len(g_line.lstrip()),
+                                duoi_dong="",
+                                raw_text=g_line,
+                            )
+                        )
+                    idx += 1
+                else:
+                    empty_start = line_no
+                    empty_lines = []
+                    while idx < len(gap_lines) and not gap_lines[idx].strip().startswith("#"):
+                        empty_lines.append(gap_lines[idx])
+                        idx += 1
+                    empty_text = "\n".join(empty_lines)
+                    if empty_text.strip():
+                        counter[0] += 1
+                        res.append(
+                            TheNode(
+                                id=_tao_id("matho", counter[0]),
+                                ma="ma_tho",
+                                o={"nguyen_van": empty_text},
+                                than=[],
+                                line_start=empty_start,
+                                line_end=empty_start + len(empty_lines) - 1,
+                                indent=0,
+                                duoi_dong="",
+                                raw_text=empty_text,
+                            )
+                        )
         matched = _phan_tich_ast_statement(stmt, lines, full_source, counter)
         if matched is None:
             counter[0] += 1
-            st_l = getattr(stmt, "lineno", 1)
-            en_l = getattr(stmt, "end_lineno", st_l)
             stmt_lines = lines[st_l - 1 : en_l]
             text = "\n".join(stmt_lines)
             res.append(
@@ -534,6 +611,7 @@ def _chuyen_danh_sach_ast_sang_the(
             res.extend(matched)
         else:
             res.append(matched)
+        current_line = en_l + 1
     return res
 
 
@@ -567,22 +645,64 @@ def doc_chuoi_py_sang_cay_the(
             # Khoảng trống / chú thích trước stmt
             if st_l > current_line:
                 gap_lines = lines[current_line - 1 : st_l - 1]
-                gap_text = "\n".join(gap_lines)
-                if gap_text.strip() or any(l.strip().startswith("#") for l in gap_lines):
-                    counter[0] += 1
-                    tree_nodes.append(
-                        TheNode(
-                            id=_tao_id("matho", counter[0]),
-                            ma="ma_tho",
-                            o={"nguyen_van": gap_text},
-                            than=[],
-                            line_start=current_line,
-                            line_end=st_l - 1,
-                            indent=0,
-                            duoi_dong="",
-                            raw_text=gap_text,
-                        )
-                    )
+                idx = 0
+                while idx < len(gap_lines):
+                    line_no = current_line + idx
+                    g_line = gap_lines[idx]
+                    s_g_line = g_line.strip()
+                    if s_g_line.startswith("#"):
+                        counter[0] += 1
+                        if _la_dong_ma_thuat(g_line, line_no):
+                            tree_nodes.append(
+                                TheNode(
+                                    id=_tao_id("matho", counter[0]),
+                                    ma="ma_tho",
+                                    o={"nguyen_van": g_line},
+                                    than=[],
+                                    line_start=line_no,
+                                    line_end=line_no,
+                                    indent=0,
+                                    duoi_dong="",
+                                    raw_text=g_line,
+                                )
+                            )
+                        else:
+                            tree_nodes.append(
+                                TheNode(
+                                    id=_tao_id("chuthich", counter[0]),
+                                    ma="chu_thich",
+                                    o={"noi_dung": s_g_line},
+                                    than=[],
+                                    line_start=line_no,
+                                    line_end=line_no,
+                                    indent=len(g_line) - len(g_line.lstrip()),
+                                    duoi_dong="",
+                                    raw_text=g_line,
+                                )
+                            )
+                        idx += 1
+                    else:
+                        empty_start = line_no
+                        empty_lines = []
+                        while idx < len(gap_lines) and not gap_lines[idx].strip().startswith("#"):
+                            empty_lines.append(gap_lines[idx])
+                            idx += 1
+                        empty_text = "\n".join(empty_lines)
+                        if empty_text.strip():
+                            counter[0] += 1
+                            tree_nodes.append(
+                                TheNode(
+                                    id=_tao_id("matho", counter[0]),
+                                    ma="ma_tho",
+                                    o={"nguyen_van": empty_text},
+                                    than=[],
+                                    line_start=empty_start,
+                                    line_end=empty_start + len(empty_lines) - 1,
+                                    indent=0,
+                                    duoi_dong="",
+                                    raw_text=empty_text,
+                                )
+                            )
 
             matched = _phan_tich_ast_statement(stmt, lines, full_source, counter)
             if matched is None:
@@ -612,22 +732,64 @@ def doc_chuoi_py_sang_cay_the(
         # Chú thích / dòng trống cuối file
         if current_line <= len(lines):
             trailing_lines = lines[current_line - 1 :]
-            trailing_text = "\n".join(trailing_lines)
-            if trailing_text:
-                counter[0] += 1
-                tree_nodes.append(
-                    TheNode(
-                        id=_tao_id("matho", counter[0]),
-                        ma="ma_tho",
-                        o={"nguyen_van": trailing_text},
-                        than=[],
-                        line_start=current_line,
-                        line_end=len(lines),
-                        indent=0,
-                        duoi_dong="",
-                        raw_text=trailing_text,
-                    )
-                )
+            idx = 0
+            while idx < len(trailing_lines):
+                line_no = current_line + idx
+                t_line = trailing_lines[idx]
+                s_t_line = t_line.strip()
+                if s_t_line.startswith("#"):
+                    counter[0] += 1
+                    if _la_dong_ma_thuat(t_line, line_no):
+                        tree_nodes.append(
+                            TheNode(
+                                id=_tao_id("matho", counter[0]),
+                                ma="ma_tho",
+                                o={"nguyen_van": t_line},
+                                than=[],
+                                line_start=line_no,
+                                line_end=line_no,
+                                indent=0,
+                                duoi_dong="",
+                                raw_text=t_line,
+                            )
+                        )
+                    else:
+                        tree_nodes.append(
+                            TheNode(
+                                id=_tao_id("chuthich", counter[0]),
+                                ma="chu_thich",
+                                o={"noi_dung": s_t_line},
+                                than=[],
+                                line_start=line_no,
+                                line_end=line_no,
+                                indent=len(t_line) - len(t_line.lstrip()),
+                                duoi_dong="",
+                                raw_text=t_line,
+                            )
+                        )
+                    idx += 1
+                else:
+                    empty_start = line_no
+                    empty_lines = []
+                    while idx < len(trailing_lines) and not trailing_lines[idx].strip().startswith("#"):
+                        empty_lines.append(trailing_lines[idx])
+                        idx += 1
+                    empty_text = "\n".join(empty_lines)
+                    if empty_text.strip():
+                        counter[0] += 1
+                        tree_nodes.append(
+                            TheNode(
+                                id=_tao_id("matho", counter[0]),
+                                ma="ma_tho",
+                                o={"nguyen_van": empty_text},
+                                than=[],
+                                line_start=empty_start,
+                                line_end=empty_start + len(empty_lines) - 1,
+                                indent=0,
+                                duoi_dong="",
+                                raw_text=empty_text,
+                            )
+                        )
 
     except SyntaxError:
         counter[0] += 1
@@ -661,42 +823,37 @@ def doc_chuoi_py_sang_cay_the(
 # ==============================================================================
 
 def sinh_dong_the_don(node: TheNode, indent_level: int = 0) -> str:
-    """Sinh chuỗi mã Python cho 1 thẻ đơn (chưa kèm thân con)."""
+    """Sinh chuỗi mã 1 dòng cho một TheNode duy nhất kèm duoi_dong."""
     spaces = " " * (indent_level * 4)
     ma = node.ma
 
     if ma == "gan":
-        ten_bien = node.o.get("ten_bien", "x")
-        gia_tri = node.o.get("gia_tri", "None")
-        base = f"{spaces}{ten_bien} = {gia_tri}"
+        ten_b = node.o.get("ten_bien", "x")
+        gia_t = node.o.get("gia_tri", "10")
+        base = f"{spaces}{ten_b} = {gia_t}"
     elif ma == "in_ra":
-        noi_dung = node.o.get("noi_dung", "")
-        base = f"{spaces}print({noi_dung})"
+        noi_d = node.o.get("noi_dung", "")
+        base = f'{spaces}print({noi_d})'
     elif ma == "neu":
-        dieu_kien = node.o.get("dieu_kien", "True")
-        if node.o.get("noi_tiep") == "1":
-            base = f"{spaces}elif {dieu_kien}:"
-        else:
-            base = f"{spaces}if {dieu_kien}:"
+        dieu_k = node.o.get("dieu_kien", "True")
+        prefix = "elif" if node.o.get("noi_tiep") == "1" else "if"
+        base = f"{spaces}{prefix} {dieu_k}:"
     elif ma == "nguoc_lai":
         base = f"{spaces}else:"
     elif ma == "lap_moi":
-        bien = node.o.get("bien", "item")
-        day = node.o.get("day", "[]")
+        bien = node.o.get("bien", "i")
+        day = node.o.get("day", "range(10)")
         base = f"{spaces}for {bien} in {day}:"
     elif ma == "lap_khi":
-        dieu_kien = node.o.get("dieu_kien", "True")
-        base = f"{spaces}while {dieu_kien}:"
+        dieu_k = node.o.get("dieu_kien", "True")
+        base = f"{spaces}while {dieu_k}:"
     elif ma == "tra_ve":
-        gia_tri = node.o.get("gia_tri", "")
-        if gia_tri:
-            base = f"{spaces}return {gia_tri}".rstrip()
-        else:
-            base = f"{spaces}return"
+        gia_t = node.o.get("gia_tri", "")
+        base = f"{spaces}return {gia_t}".rstrip()
     elif ma == "ham":
         ten_ham = node.o.get("ten_ham", "ham")
         tham_so = node.o.get("tham_so", "")
-        kieu_tra_ve = node.o.get("kieu_tra_ve", "").strip()
+        kieu_tra_ve = node.o.get("kieu_tra_ve", "")
         prefix = "async def" if node.o.get("async") == "1" else "def"
         
         lines = []
@@ -722,6 +879,11 @@ def sinh_dong_the_don(node: TheNode, indent_level: int = 0) -> str:
         phep = node.o.get("phep", "+")
         phai = node.o.get("phai", "b")
         base = f"{spaces}{trai} {phep} {phai}"
+    elif ma == "chu_thich":
+        nd = node.o.get("noi_dung", "").strip()
+        if not nd.startswith("#"):
+            nd = f"# {nd}"
+        base = f"{spaces}{nd}"
     elif ma == "ma_tho":
         raw = node.o.get("nguyen_van", node.raw_text or "")
         return raw

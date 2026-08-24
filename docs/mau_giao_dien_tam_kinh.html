@@ -1,0 +1,191 @@
+<meta charset="utf-8">
+<title>Bốn cách vẽ — Sếp chỉ cái nào giống trong đầu</title>
+<style>
+  :root{
+    --bg:#0B1120; --surface:#111827; --line:#1F2937;
+    --txt:#E5E7EB; --dim:#94A3B8; --mono:"Cascadia Code",Consolas,"Courier New",monospace;
+    --kw:#C084FC; --fn:#FBBF24; --str:#86EFAC; --num:#7DD3FC; --cmt:#64748B;
+    --ham:#F97316; --dk:#3B82F6; --dl:#22C55E; --vr:#A855F7; --ct:#0D9488;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+       font:14px/1.5 "Segoe UI",system-ui,sans-serif;padding:22px}
+  h1{font-size:19px;margin:0 0 4px}
+  .sub{color:var(--dim);font-size:13px;margin-bottom:22px;max-width:760px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));gap:18px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .hd{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;
+      align-items:center;gap:10px;flex-wrap:wrap}
+  .tag{font-size:11px;font-weight:700;letter-spacing:.4px;padding:2px 8px;border-radius:99px}
+  .t-now{background:#7F1D1D;color:#FCA5A5}
+  .t-a{background:#164E63;color:#67E8F9}
+  .t-b{background:#3730A3;color:#C7D2FE}
+  .t-c{background:#134E4A;color:#5EEAD4}
+  .hd b{font-size:14px}
+  .hd span{color:var(--dim);font-size:12px}
+  .body{padding:14px;font-family:var(--mono);font-size:13px;overflow-x:auto}
+
+  /* ===== chung cho ba ban KINH ===== */
+  .sheet{position:relative}
+  .ln{display:flex;align-items:flex-start;min-height:22px;position:relative}
+  .no{width:26px;flex:0 0 26px;text-align:right;color:#334155;
+      font-size:11px;padding-right:10px;user-select:none;line-height:22px}
+  .code{white-space:pre;line-height:22px}
+  .rail{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:2px}
+  .blk{position:relative;padding-left:9px;margin-left:26px}
+  .kw{color:var(--kw)} .fn{color:var(--fn)} .st{color:var(--str)}
+  .nu{color:var(--num)} .cm{color:var(--cmt);font-style:italic}
+
+  /* ===== ban HIEN NAY: hop tung dong ===== */
+  .box{border:1px solid #334155;border-left:3.5px solid var(--dl);
+       background:#0F172A;border-radius:5px;padding:4px 10px;margin:5px 0;
+       min-height:28px;display:flex;align-items:center;box-shadow:0 1px 2px #0006}
+  .box.f{border-left-color:var(--ham)} .box.i{border-left-color:var(--dk)}
+  .box.r{border-left-color:var(--ham)} .box.p{border-left-color:var(--vr)}
+  .ind1{margin-left:22px} .ind2{margin-left:44px}
+  .empty{flex:1}
+
+  .note{padding:10px 14px;border-top:1px solid var(--line);
+        color:var(--dim);font-size:12px;line-height:1.6}
+  .note b{color:var(--txt)}
+  .q{margin-top:24px;padding:14px 16px;background:#0F172A;
+     border:1px solid var(--line);border-left:3px solid var(--fn);border-radius:8px;
+     font-size:13px;line-height:1.7}
+  .q b{color:#FBBF24}
+  code{font-family:var(--mono);font-size:12px;color:#CBD5E1}
+</style>
+
+<h1>Bốn cách vẽ cùng một đoạn mã</h1>
+<div class="sub">
+  Cùng một hàm, vẽ bốn kiểu. Ô đầu là <b>app hiện nay</b>. Ba ô sau là ba mức
+  "tấm kính". Sếp nhìn rồi nói cái nào gần với trong đầu nhất — hoặc lấy phần
+  này của ô kia ghép vào ô nọ cũng được.
+</div>
+
+<div class="grid">
+
+  <!-- ================= HIEN NAY ================= -->
+  <div class="card">
+    <div class="hd"><span class="tag t-now">HIỆN NAY</span><b>Hộp từng dòng</b>
+      <span>— mỗi dòng một khung riêng</span></div>
+    <div class="body">
+      <div class="box f"><span class="kw">def</span>&nbsp;<span class="fn">tinh_diem</span>(bai, muc)<span>:</span><span class="empty"></span></div>
+      <div class="box ind1"><span class="cm"># cong diem tung bai, bo bai chua nop</span><span class="empty"></span></div>
+      <div class="box ind1"><span>tong = </span><span class="nu">0</span><span class="empty"></span></div>
+      <div class="box i ind1"><span class="kw">for</span>&nbsp;<span>b</span>&nbsp;<span class="kw">in</span>&nbsp;<span>bai</span><span>:</span><span class="empty"></span></div>
+      <div class="box i ind2"><span class="kw">if</span>&nbsp;<span>b.da_nop</span><span>:</span><span class="empty"></span></div>
+      <div class="box ind2" style="margin-left:66px"><span>tong += b.diem</span><span class="empty"></span></div>
+      <div class="box r ind1"><span class="kw">return</span>&nbsp;<span>tong / muc</span><span class="empty"></span></div>
+    </div>
+    <div class="note">
+      Khung là thứ đập vào mắt trước, mã nằm bên trong khung.
+      Đo trên app thật: <b>88% bề ngang bỏ trống</b> — thẻ 820px, chữ 106px.
+    </div>
+  </div>
+
+  <!-- ================= KINH A ================= -->
+  <div class="card">
+    <div class="hd"><span class="tag t-a">KÍNH A</span><b>Kính mỏng nhất</b>
+      <span>— chỉ dải màu bên trái cho mỗi KHỐI</span></div>
+    <div class="body sheet">
+      <div class="ln"><span class="no">1</span><span class="code"><span class="kw">def</span> <span class="fn">tinh_diem</span>(bai, muc):</span></div>
+      <div class="blk"><div class="rail" style="background:var(--ham)"></div>
+        <div class="ln"><span class="no" style="margin-left:-26px">2</span><span class="code cm"># cong diem tung bai, bo bai chua nop</span></div>
+        <div class="ln"><span class="no" style="margin-left:-26px">3</span><span class="code">tong = <span class="nu">0</span></span></div>
+        <div class="ln"><span class="no" style="margin-left:-26px">4</span><span class="code"><span class="kw">for</span> b <span class="kw">in</span> bai:</span></div>
+        <div class="blk"><div class="rail" style="background:var(--dk)"></div>
+          <div class="ln"><span class="no" style="margin-left:-26px">5</span><span class="code"><span class="kw">if</span> b.da_nop:</span></div>
+          <div class="blk"><div class="rail" style="background:var(--dk);opacity:.55"></div>
+            <div class="ln"><span class="no" style="margin-left:-26px">6</span><span class="code">tong += b.diem</span></div>
+          </div>
+        </div>
+        <div class="ln"><span class="no" style="margin-left:-26px">7</span><span class="code"><span class="kw">return</span> tong / muc</span></div>
+      </div>
+    </div>
+    <div class="note">
+      Mã <b>liền mạch như trong vở</b>. Kính chỉ thêm <b>một dải màu dọc</b> cho
+      mỗi khối — cam là hàm, xanh là <code>for</code>/<code>if</code>. Không viền,
+      không nền, không hộp.
+    </div>
+  </div>
+
+  <!-- ================= KINH B ================= -->
+  <div class="card">
+    <div class="hd"><span class="tag t-b">KÍNH B</span><b>Kính + nền nhạt theo cấp lồng</b>
+      <span>— thấy ngay chỗ nào sâu</span></div>
+    <div class="body sheet">
+      <div class="ln"><span class="no">1</span><span class="code"><span class="kw">def</span> <span class="fn">tinh_diem</span>(bai, muc):</span></div>
+      <div class="blk" style="background:#F9731608;border-radius:4px">
+        <div class="rail" style="background:var(--ham)"></div>
+        <div class="ln"><span class="no" style="margin-left:-26px">2</span><span class="code cm"># cong diem tung bai, bo bai chua nop</span></div>
+        <div class="ln"><span class="no" style="margin-left:-26px">3</span><span class="code">tong = <span class="nu">0</span></span></div>
+        <div class="ln"><span class="no" style="margin-left:-26px">4</span><span class="code"><span class="kw">for</span> b <span class="kw">in</span> bai:</span></div>
+        <div class="blk" style="background:#3B82F60E;border-radius:4px">
+          <div class="rail" style="background:var(--dk)"></div>
+          <div class="ln"><span class="no" style="margin-left:-26px">5</span><span class="code"><span class="kw">if</span> b.da_nop:</span></div>
+          <div class="blk" style="background:#3B82F614;border-radius:4px">
+            <div class="rail" style="background:var(--dk);opacity:.55"></div>
+            <div class="ln"><span class="no" style="margin-left:-26px">6</span><span class="code">tong += b.diem</span></div>
+          </div>
+        </div>
+        <div class="ln"><span class="no" style="margin-left:-26px">7</span><span class="code"><span class="kw">return</span> tong / muc</span></div>
+      </div>
+    </div>
+    <div class="note">
+      Như A, thêm <b>nền mờ dần theo cấp lồng</b>. Càng vào sâu nền càng đậm một
+      chút — nhìn là biết dòng nào nằm trong dòng nào, không cần đếm dấu cách.
+    </div>
+  </div>
+
+  <!-- ================= KINH C ================= -->
+  <div class="card">
+    <div class="hd"><span class="tag t-c">KÍNH C</span><b>Kính + nhãn khối + nhịp</b>
+      <span>— dày nhất, gần app hiện nay nhất</span></div>
+    <div class="body sheet">
+      <div style="display:flex;gap:10px">
+        <div style="flex:0 0 40px;padding-top:2px">
+          <div style="font-size:9px;color:#475569;letter-spacing:.5px;margin-bottom:3px">NHỊP</div>
+          <div style="width:5px;height:22px;background:var(--dl);border-radius:2px"></div>
+          <div style="width:5px;height:66px;background:var(--dk);border-radius:2px;margin-top:2px"></div>
+          <div style="width:5px;height:22px;background:var(--ham);border-radius:2px;margin-top:2px"></div>
+        </div>
+        <div style="flex:1">
+          <div class="ln"><span class="no">1</span><span class="code"><span class="kw">def</span> <span class="fn">tinh_diem</span>(bai, muc):</span>
+            <span style="margin-left:10px;font-size:10px;color:var(--ham);border:1px solid var(--ham);
+                         padding:0 5px;border-radius:99px;line-height:16px">hàm</span></div>
+          <div class="blk"><div class="rail" style="background:var(--ham)"></div>
+            <div class="ln"><span class="no" style="margin-left:-26px">2</span><span class="code cm" style="color:var(--ct)"># cong diem tung bai, bo bai chua nop</span></div>
+            <div class="ln"><span class="no" style="margin-left:-26px">3</span><span class="code">tong = <span class="nu">0</span></span></div>
+            <div class="ln"><span class="no" style="margin-left:-26px">4</span><span class="code"><span class="kw">for</span> b <span class="kw">in</span> bai:</span>
+              <span style="margin-left:10px;font-size:10px;color:var(--dk);border:1px solid var(--dk);
+                           padding:0 5px;border-radius:99px;line-height:16px">lặp</span></div>
+            <div class="blk"><div class="rail" style="background:var(--dk)"></div>
+              <div class="ln"><span class="no" style="margin-left:-26px">5</span><span class="code"><span class="kw">if</span> b.da_nop:</span></div>
+              <div class="blk"><div class="rail" style="background:var(--dk);opacity:.55"></div>
+                <div class="ln"><span class="no" style="margin-left:-26px">6</span><span class="code">tong += b.diem</span></div>
+              </div>
+            </div>
+            <div class="ln"><span class="no" style="margin-left:-26px">7</span><span class="code"><span class="kw">return</span> tong / muc</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="note">
+      Như B, thêm <b>nhãn nhỏ</b> ở đầu khối và <b>cột nhịp</b> bên trái. Chú
+      thích tô màu riêng (xanh ngọc) cho nổi lên — đúng ý Sếp về thẻ chú thích.
+      Nhiều dấu nhất, nên cũng ồn nhất.
+    </div>
+  </div>
+
+</div>
+
+<div class="q">
+  <b>Sếp chỉ giúp em bốn điều:</b><br>
+  1. Ô nào gần trong đầu Sếp nhất — A, B hay C?<br>
+  2. Có dấu nào <b>thừa</b> không (số dòng · nhãn khối · cột nhịp · nền lồng)?<br>
+  3. Có dấu nào <b>thiếu</b> mà Sếp đang hình dung mà em chưa vẽ?<br>
+  4. Chú thích nên nằm đâu — cùng dòng với mã, hay một dòng riêng như trong ảnh?
+  <br><br>
+  Sếp không cần tả bằng chữ. Chỉ cần nói <i>"lấy B, bỏ số dòng, thêm nhãn của C"</i>
+  là em đủ để viết bản giao.
+</div>

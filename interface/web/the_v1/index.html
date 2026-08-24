@@ -73,81 +73,95 @@
 
   <!-- Main App Layout (3 Columns) -->
   <main class="app-main" id="appMain">
-    <!-- Left Column: KHAY THẺ (Toolbox) -->
+    <!-- Left Column: KHAY THẺ (Toolbox) ⇅ CÂY THƯ MỤC (File Tree) -->
     <aside class="sidebar-left" id="sidebarLeft">
       <div class="sidebar-header">
         <div class="sidebar-header-row">
-          <h2 class="sidebar-title">Khay Thẻ Lệnh</h2>
-          <button class="icon-btn-sm" id="btnCloseSidebarLeft" title="Thu gọn khay thẻ">✕</button>
+          <h2 class="sidebar-title" id="sidebarLeftTitle">Khay Thẻ Lệnh</h2>
+          <button class="icon-btn-sm" id="btnCloseSidebarLeft" title="Thu gọn bảng trái">✕</button>
         </div>
+        
+        <!-- Toggle Chuyển Đổi 1 Click: Khay Thẻ ⇅ Cây Thư Mục -->
+        <div class="sidebar-mode-toggle">
+          <button class="mode-btn active" id="btnModeToolbox" title="Khay thẻ lệnh để kéo thả">Khay Thẻ</button>
+          <button class="mode-btn" id="btnModeFiles" title="Duyệt cây thư mục tệp tin trong kho">Cây Thư Mục</button>
+        </div>
+
         <div class="search-box">
-          <input type="text" id="toolSearch" placeholder="Tìm thẻ..." autocomplete="off">
+          <input type="text" id="toolSearch" placeholder="Tìm thẻ hoặc tệp..." autocomplete="off">
           <span class="search-icon">🔍</span>
         </div>
       </div>
 
+      <!-- View 1: Khay thẻ lệnh (6 Nhóm Thẻ) -->
       <div class="toolbox-content" id="toolboxContainer">
-        <!-- Rendered dynamically by app.js with 5 category groups in 2 columns -->
+        <!-- Rendered dynamically by app.js with 6 category groups -->
+      </div>
+
+      <!-- View 2: Cây thư mục tệp tin (File Tree kết nối /api/tep_tin) -->
+      <div class="file-tree-container" id="fileTreeContainer" style="display: none;">
+        <!-- Rendered dynamically by app.js from /api/tep_tin -->
       </div>
 
       <div class="toolbox-footer">
         <div class="tip-box">
           <span class="tip-icon">💡</span>
-          <span class="tip-text">Kéo thẻ vào soạn thảo hoặc click để chèn nhanh.</span>
+          <span class="tip-text" id="leftFooterTip">Nhấp đúp hoặc kéo thẻ vào vùng soạn thảo.</span>
         </div>
       </div>
     </aside>
 
-    <!-- Center Column: VÙNG SOẠN THẢO (Canvas) -->
+    <!-- Center Column: VÙNG SOẠN THẢO THẺ Ở TRÊN + BẢNG 4 TAB Ở DƯỚI (CHIA ĐÔI KÉO ĐƯỢC) -->
     <section class="canvas-center">
-      <div class="canvas-toolbar">
-        <div class="canvas-status">
-          <span class="status-indicator" id="overallStatusDot"></span>
-          <span class="status-text" id="overallStatusText">0 Lỗi · 0 Cảnh báo</span>
+      <!-- Nửa trên: Canvas Thẻ Soạn Thảo -->
+      <div class="canvas-top-pane" id="canvasTopPane">
+        <div class="canvas-toolbar">
+          <div class="canvas-status">
+            <span class="status-indicator" id="overallStatusDot"></span>
+            <span class="status-text" id="overallStatusText">0 Lỗi · 0 Cảnh báo</span>
+            <span class="current-file-badge" id="currentFileBadge" style="margin-left: 8px; font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">[Chưa lưu]</span>
+          </div>
+
+          <div class="canvas-actions">
+            <button class="icon-btn" id="btnUndo" title="Hoàn tác (Ctrl+Z)">↶</button>
+            <button class="icon-btn" id="btnRedo" title="Làm lại (Ctrl+Y)">↷</button>
+            <button class="icon-btn" id="btnClearCanvas" title="Xoá toàn bộ">🗑️</button>
+          </div>
         </div>
 
-        <div class="canvas-actions">
-          <button class="icon-btn" id="btnUndo" title="Hoàn tác (Ctrl+Z)">↶</button>
-          <button class="icon-btn" id="btnRedo" title="Làm lại (Ctrl+Y)">↷</button>
-          <button class="icon-btn" id="btnClearCanvas" title="Xoá toàn bộ">🗑️</button>
+        <!-- Dải Nhịp Thực Thi (Execution Rhythms Ribbon) -->
+        <div class="rhythm-ribbon-bar" id="rhythmRibbonBar">
+          <div class="rhythm-label">
+            <span class="rhythm-icon">⚡</span>
+            <span class="rhythm-title">DẢI NHỊP THỰC THI:</span>
+          </div>
+          <div class="rhythm-tracks" id="rhythmPillsContainer">
+            <span class="rhythm-empty-hint">Chưa có hàm hoặc thẻ phân tầng...</span>
+          </div>
+        </div>
+
+        <!-- Vùng lắp ghép thẻ nối thẳng -->
+        <div class="canvas-workspace" id="canvasWorkspace">
+          <div class="card-chain-container" id="cardChainRoot">
+            <!-- Cards rendered here with straight connectors and pill styling -->
+          </div>
+
+          <div class="empty-canvas-guide" id="emptyCanvasGuide">
+            <div class="guide-illustration">🧩</div>
+            <h3>Vùng soạn thảo đang trống</h3>
+            <p>Nhặt thẻ từ khay bên trái thả vào đây, hoặc click vào một thẻ để bắt đầu lắp ghép chương trình.</p>
+            <button class="btn btn-secondary btn-sm" id="btnLoadSampleIntro">Thử bài mẫu: Hàm cộng hai số</button>
+          </div>
         </div>
       </div>
 
-      <!-- Dải Nhịp Thực Thi (Execution Rhythms Ribbon) -->
-      <div class="rhythm-ribbon-bar" id="rhythmRibbonBar">
-        <div class="rhythm-label">
-          <span class="rhythm-icon">⚡</span>
-          <span class="rhythm-title">DẢI NHỊP THỰC THI:</span>
-        </div>
-        <div class="rhythm-tracks" id="rhythmPillsContainer">
-          <span class="rhythm-empty-hint">Chưa có hàm hoặc thẻ phân tầng...</span>
-        </div>
-      </div>
+      <!-- Thanh chia đôi kéo được giữa Canvas và 4 Tab dưới -->
+      <div class="splitter-h" id="middleSplitter" title="Kéo để chỉnh độ cao bảng chẩn đoán & terminal"></div>
 
-      <!-- Card Workspace Drop Zone -->
-      <div class="canvas-workspace" id="canvasWorkspace">
-        <div class="card-chain-container" id="cardChainRoot">
-          <!-- Cards rendered here with dynamic SVG chain links -->
-        </div>
-
-        <div class="empty-canvas-guide" id="emptyCanvasGuide">
-          <div class="guide-illustration">🧩</div>
-          <h3>Vùng soạn thảo đang trống</h3>
-          <p>Nhặt thẻ từ khay bên trái thả vào đây, hoặc click vào một thẻ để bắt đầu lắp ghép chương trình.</p>
-          <button class="btn btn-secondary btn-sm" id="btnLoadSampleIntro">Thử bài mẫu: Hàm cộng hai số</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Right Column: MÃ PYTHON, MẠCH NƯỚC NGẦM, CHẨN ĐOÁN, KỊCH BẢN & TERMINAL -->
-    <aside class="sidebar-right" id="sidebarRight">
-      <!-- Top Half: Code Preview & Diagnostics Tabs -->
-      <div class="right-top-pane">
+      <!-- Nửa dưới: Bảng 4 Tab (Mạch Nước Ngầm, Chẩn Đoán, Kịch Bản, Terminal Chạy Thử) -->
+      <div class="canvas-bottom-pane" id="canvasBottomPane">
         <div class="pane-tabs">
-          <button class="tab-btn active" data-tab="tabCode" title="Xem mã Python sinh từ thẻ">
-            <span class="tab-icon">🐍</span> Mã Python
-          </button>
-          <button class="tab-btn" data-tab="tabTrace" title="Truy vết dòng chảy dữ liệu">
+          <button class="tab-btn active" data-tab="tabTrace" title="Truy vết dòng chảy dữ liệu & E1">
             <span class="tab-icon">🌊</span> Mạch Nước Ngầm
           </button>
           <button class="tab-btn" data-tab="tabDiag" title="Chẩn đoán lỗi và cảnh báo">
@@ -156,20 +170,14 @@
           <button class="tab-btn" data-tab="tabNarrative" title="Kịch bản logic diễn giải">
             <span class="tab-icon">📖</span> Kịch Bản
           </button>
+          <button class="tab-btn" data-tab="tabTerminal" title="Terminal chạy thử trong tiến trình riêng">
+            <span class="tab-icon">⚡</span> Terminal Chạy Thử
+          </button>
         </div>
 
         <div class="tab-contents">
-          <!-- Tab 1: Python Code Preview -->
-          <div class="tab-pane active" id="tabCode">
-            <div class="code-preview-header">
-              <span class="code-lang">Python 3 (Thụt lề 4 spaces)</span>
-              <button class="btn-copy" id="btnCopyCode" title="Sao chép mã Python">Sao chép</button>
-            </div>
-            <pre class="code-preview-body"><code id="pythonCodeOutput"># Mã Python sinh từ chuỗi thẻ sẽ hiển thị ở đây...</code></pre>
-          </div>
-
-          <!-- Tab 2: Mạch Nước Ngầm Biến Số (Runtime Data Flow Trace) & E1 Định Vị Lỗi -->
-          <div class="tab-pane" id="tabTrace">
+          <!-- Tab 1: Mạch Nước Ngầm Biến Số (Runtime Data Flow Trace) & E1 Định Vị Lỗi -->
+          <div class="tab-pane active" id="tabTrace">
             <div class="trace-header">
               <div class="trace-control-bar">
                 <button class="btn btn-primary btn-sm" id="btnRunTrace" title="Chạy truy vết dòng chảy dữ liệu trên test đỏ">
@@ -214,7 +222,7 @@
             </div>
           </div>
 
-          <!-- Tab 3: Diagnostics Panel -->
+          <!-- Tab 2: Diagnostics Panel -->
           <div class="tab-pane" id="tabDiag">
             <div class="diag-header">
               <div class="diag-counters">
@@ -227,7 +235,7 @@
             </div>
           </div>
 
-          <!-- Tab 4: Kịch Bản Logic (Narrative) -->
+          <!-- Tab 3: Kịch Bản Logic (Narrative) -->
           <div class="tab-pane" id="tabNarrative">
             <div class="narrative-header">
               <div class="narrative-notice">
@@ -239,34 +247,58 @@
               <!-- Narrative generated dynamically -->
             </div>
           </div>
+
+          <!-- Tab 4: Terminal Chạy Thử -->
+          <div class="tab-pane" id="tabTerminal">
+            <div class="terminal-header">
+              <div class="terminal-title-bar">
+                <span class="term-dot dot-red"></span>
+                <span class="term-dot dot-yellow"></span>
+                <span class="term-dot dot-green"></span>
+                <span class="terminal-title">Terminal Chạy Thử</span>
+              </div>
+              <div class="terminal-meta" id="terminalMeta">
+                <span class="meta-status ready" id="metaStatus">SẴN SÀNG</span>
+                <span class="meta-time" id="metaTime">-- ms</span>
+              </div>
+            </div>
+
+            <div class="terminal-body" id="terminalBody">
+              <div class="term-line term-dim">> Sẵn sàng chạy. Bấm nút "CHẠY THỬ" hoặc nhấn Ctrl+Enter.</div>
+            </div>
+
+            <div class="terminal-footer">
+              <span class="sandbox-badge">
+                <span class="shield-icon">🛡️</span> Sandbox: Trần 5s | Tiến trình riêng | Kiểm soát an toàn đường dẫn
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: AGENT WORKSPACE (DÀNH TRỌN 100% CHO AGENT) -->
+    <aside class="sidebar-right" id="sidebarRight">
+      <div class="agent-header">
+        <div class="agent-info">
+          <div class="agent-avatar">🤖</div>
+          <div>
+            <div class="agent-name">Agent AURA</div>
+            <div class="agent-status-tag">● Sẵn sàng trợ giúp</div>
+          </div>
+        </div>
+        <button class="icon-btn-sm" id="btnToggleSidebarRightClose" title="Thu gọn bảng Agent">✕</button>
+      </div>
+
+      <div class="agent-chat-container" id="agentChatContainer">
+        <div class="agent-msg bot">
+          <strong>Xin chào!</strong> Tôi là Agent đồng hành cùng bạn. Bạn có thể yêu cầu tôi gợi ý thuật toán, sửa lỗi thẻ hoặc tự động sinh mã chương trình.
         </div>
       </div>
 
-
-      <!-- Bottom Half: Terminal Output -->
-      <div class="right-bottom-pane">
-        <div class="terminal-header">
-          <div class="terminal-title-bar">
-            <span class="term-dot dot-red"></span>
-            <span class="term-dot dot-yellow"></span>
-            <span class="term-dot dot-green"></span>
-            <span class="terminal-title">Terminal Chạy Thử</span>
-          </div>
-          <div class="terminal-meta" id="terminalMeta">
-            <span class="meta-status ready" id="metaStatus">SẴN SÀNG</span>
-            <span class="meta-time" id="metaTime">-- ms</span>
-          </div>
-        </div>
-
-        <div class="terminal-body" id="terminalBody">
-          <div class="term-line term-dim">> Sẵn sàng chạy. Bấm nút "CHẠY THỬ" hoặc nhấn Ctrl+Enter.</div>
-        </div>
-
-        <div class="terminal-footer">
-          <span class="sandbox-badge">
-            <span class="shield-icon">🛡️</span> Sandbox: Trần 5s | Tiến trình riêng | CHƯA chặn được ghi tệp | Chưa có trần RAM
-          </span>
-        </div>
+      <div class="agent-input-container" id="agentInputContainer">
+        <input type="text" id="agentInput" placeholder="Nhập yêu cầu cho Agent..." autocomplete="off">
+        <button class="btn btn-primary btn-sm" id="btnSendAgent">Gửi</button>
       </div>
     </aside>
   </main>

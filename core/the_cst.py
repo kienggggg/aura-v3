@@ -205,6 +205,30 @@ def _o_thanh_chu(ma: str, ban_do: Dict[str, Any], mod) -> Dict[str, str]:
     return o
 
 
+def _la_dong_ma_thuat(line: str, line_no: int) -> bool:
+    if line_no > 2:
+        return False
+    t = line.strip()
+    return t.startswith("#!") or "coding:" in t or "coding=" in t or "-*-" in t
+
+
+def _tao_the_chu_thich_tu_cmt(cmt_val: str, line_no: int, muc: int, dem: list[int], ban_do: dict, cmt_node: Any) -> TheNode:
+    dem[0] += 1
+    if _la_dong_ma_thuat(cmt_val, line_no):
+        mid = "ma_tho_%d" % dem[0]
+        t = TheNode(id=mid, ma="ma_tho", o={"nguyen_van": cmt_val}, raw_text=cmt_val, line_start=line_no, line_end=line_no, indent=muc * 4)
+        ban_do[mid] = cmt_node
+        return t
+    else:
+        mid = "chu_thich_%d" % dem[0]
+        nd = cmt_val.strip()
+        if nd.startswith("#"):
+            nd = nd[1:].lstrip()
+        t = TheNode(id=mid, ma="chu_thich", o={"noi_dung": nd}, raw_text=cmt_val, line_start=line_no, line_end=line_no, indent=muc * 4)
+        ban_do[mid] = (cmt_node, nd, cmt_val)
+        return t
+
+
 def doc_chuoi_py_sang_cay_the(nguon: str,
                               duong_dan: Optional[str] = None,
                               bo_sau: bool = False) -> BanGhiCST:
@@ -288,12 +312,30 @@ def doc_chuoi_py_sang_cay_the(nguon: str,
             t.than += _di_bieu_thuc(v, muc + 1)
         return [t]
 
+    def lam_danh_sach(ds, muc: int) -> List[TheNode]:
+        res: List[TheNode] = []
+        for nut in ds:
+            lls = getattr(nut, "leading_lines", [])
+            first_elem = nut.decorators[0] if getattr(nut, "decorators", None) else nut
+            L = vi_tri[first_elem].start.line if first_elem in vi_tri else 1
+            for i, el in enumerate(lls):
+                if el.comment is not None:
+                    calc_line = max(1, L - len(lls) + i)
+                    res.append(_tao_the_chu_thich_tu_cmt(el.comment.value, calc_line, muc, dem, ban_do, el))
+            res.append(lam(nut, muc))
+        return res
+
     def than_cua(nut, muc: int) -> List[TheNode]:
         con: List[TheNode] = []
         than = getattr(nut, "body", None)
         if isinstance(than, cst.IndentedBlock):
-            for c in than.body:
-                con.append(lam(c, muc))
+            con.extend(lam_danh_sach(than.body, muc))
+            ft = getattr(than, "footer", [])
+            L_end = vi_tri[nut].end.line if nut in vi_tri else 1
+            for i, el in enumerate(ft):
+                if el.comment is not None:
+                    calc_line = max(1, L_end - len(ft) + i)
+                    con.append(_tao_the_chu_thich_tu_cmt(el.comment.value, calc_line, muc, dem, ban_do, el))
         orelse = getattr(nut, "orelse", None)
         if orelse is not None:
             if isinstance(orelse, cst.If):
@@ -301,7 +343,23 @@ def doc_chuoi_py_sang_cay_the(nguon: str,
             con.append(lam(orelse, muc - 1))
         return con
 
-    cay = [lam(c, 0) for c in mod.body]
+    cay: List[TheNode] = []
+    # 1. mod.header
+    cur_line = 1
+    for el in getattr(mod, "header", []):
+        if el.comment is not None:
+            cay.append(_tao_the_chu_thich_tu_cmt(el.comment.value, cur_line, 0, dem, ban_do, el))
+        cur_line += 1
+
+    # 2. mod.body
+    cay.extend(lam_danh_sach(mod.body, 0))
+
+    # 3. mod.footer
+    for el in getattr(mod, "footer", []):
+        if el.comment is not None:
+            cay.append(_tao_the_chu_thich_tu_cmt(el.comment.value, cur_line, 0, dem, ban_do, el))
+        cur_line += 1
+
     b = nguon.encode("utf-8")
     return BanGhiCST(duong_dan, b, mod.default_newline,
                      nguon.splitlines(), cay, mod, ban_do)
@@ -478,21 +536,34 @@ def luu_cay_the_ra_tep_py(ban_ghi: BanGhiCST) -> bytes:
     def gom(ns):
         for n in ns:
             if n.da_sua and n.id in ban_ghi._ban_do:
-                nut = ban_ghi._ban_do[n.id]
+                entry = ban_ghi._ban_do[n.id]
+                if isinstance(entry, tuple):
+                    nut = entry[0]
+                    orig_nd = entry[1]
+                else:
+                    nut = entry
+                    orig_nd = None
+
                 if n.ma == "ma_tho":
                     moi = n.o.get("nguyen_van", n.raw_text or "")
-                    # KHÔNG ĐỔI THÌ KHÔNG ĐỤNG — giống hệt luật `khac()` của
-                    # thẻ thường. Phân tích lại rồi cắm vào khối thụt sẽ khiến
-                    # LibCST thụt lại các dòng TRỐNG bên trong, thêm khoảng
-                    # trắng cuối dòng: đo 20/08, the_v1.py:538 và
-                    # test_the_v1.py:351 đổi '' thành '    '.
                     if moi == (n.raw_text or ""):
                         continue
                     doi[id(nut)] = ("__tho__", moi)
+                elif n.ma == "chu_thich":
+                    moi_nd = n.o.get("noi_dung", "").strip()
+                    if orig_nd is not None and moi_nd == orig_nd:
+                        continue
+                    if moi_nd == (n.raw_text or "").strip().lstrip("#").lstrip():
+                        continue
+                    moi = f"# {moi_nd}" if moi_nd else "#"
+                    doi[id(nut)] = ("__chu_thich__", moi)
                 else:
                     ma, _, cac_o = _ma_cua(nut)
-                    doi[id(nut)] = (dict(n.o),
-                                    _o_thanh_chu(ma, cac_o, ban_ghi._mod))
+                    o_moi = dict(n.o)
+                    o_cu = _o_thanh_chu(ma, cac_o, ban_ghi._mod)
+                    if o_moi == o_cu:
+                        continue
+                    doi[id(nut)] = (o_moi, o_cu)
             gom(n.than)
     gom(ban_ghi.tree)
 
@@ -500,16 +571,18 @@ def luu_cay_the_ra_tep_py(ban_ghi: BanGhiCST) -> bytes:
         return ban_ghi._mod.code.encode("utf-8")
 
     tho = {k: v[1] for k, v in doi.items() if v[0] == "__tho__"}
-    thuong = {k: v for k, v in doi.items() if v[0] != "__tho__"}
+    chu_thich_doi = {k: v[1] for k, v in doi.items() if v[0] == "__chu_thich__"}
+    thuong = {k: v for k, v in doi.items() if v[0] not in ("__tho__", "__chu_thich__")}
 
     class _VaTho(_Vasua):
         def on_leave(self, cu, moi):
+            if id(cu) in chu_thich_doi:
+                moi_cmt = chu_thich_doi[id(cu)]
+                if isinstance(moi, cst.EmptyLine):
+                    return moi.with_changes(comment=cst.Comment(moi_cmt))
+                return moi
             if id(cu) in tho:
                 m = cst.parse_module(tho[id(cu)])
-                # GIỮ LẠI DÒNG TRỐNG ĐỨNG TRƯỚC. `leading_lines` không nằm
-                # trong đoạn văn bản người dùng cầm, nên nút mới sinh ra không
-                # có chúng — bản đầu làm 141 thẻ `Mã thô` nuốt mất dòng trống
-                # phía trên (chat_contract.py:8 và 5 chỗ khác).
                 dau = getattr(cu, "leading_lines", None)
                 if len(m.body) == 1:
                     n0 = m.body[0]

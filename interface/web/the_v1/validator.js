@@ -33,6 +33,7 @@
     du_lieu: { ten: "Dữ liệu", mau: "#10B981" },
     vao_ra: { ten: "Vào / Ra", mau: "#8B5CF6" },
     ham: { ten: "Hàm", mau: "#F59E0B" },
+    chu_thich: { ten: "Chú thích", mau: "#14B8A6" },
     ma_tho: { ten: "Mã thô", mau: "#6B7280" }
   };
 
@@ -140,6 +141,16 @@
       ],
       co_than: false,
       mau: "#10B981"
+    },
+    chu_thich: {
+      ma: "chu_thich",
+      ten: "Chú thích",
+      nhom: "chu_thich",
+      o: [
+        { ten: "noi_dung", kieu: "chu", bat_buoc: true, goi_y: "# Chú thích" }
+      ],
+      co_than: false,
+      mau: "#14B8A6"
     },
     ma_tho: {
       ma: "ma_tho",
@@ -687,6 +698,10 @@
         const p = (node.o && node.o.phep) || "+";
         const ph = (node.o && node.o.phai) || "b";
         base = `${spaces}${tr} ${p} ${ph}`;
+      } else if (ma === "chu_thich") {
+        let nd = ((node.o && node.o.noi_dung) || "").trim();
+        if (!nd.startsWith("#")) nd = `# ${nd}`;
+        base = `${spaces}${nd}`;
       } else {
         base = `${spaces}pass`;
       }

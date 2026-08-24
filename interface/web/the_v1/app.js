@@ -162,7 +162,8 @@
   }
 
   // ==========================================================================
-  // 2. KHỞI TẠO KHAY THẺ (5 NHÓM MÀU, 2 CỘT & BỘ ĐẾM ×N)
+  // ==========================================================================
+  // 2. KHỞI TẠO KHAY THẺ (6 NHÓM MÀU CHUẨN, 12 THẺ & BỘ ĐẾM ×N)
   // ==========================================================================
   function renderToolbox() {
     const container = document.getElementById('toolboxContainer');
@@ -170,11 +171,12 @@
     container.innerHTML = '';
 
     const groups = [
-      { id: 'dieu_khien', title: 'Điều khiển (Xanh)', cards: ['neu', 'nguoc_lai', 'lap_moi', 'lap_khi'] },
-      { id: 'du_lieu', title: 'Dữ liệu (Xanh lá)', cards: ['gan', 'pheptinh'] },
-      { id: 'vao_ra', title: 'Vào / Ra (Tím)', cards: ['in_ra'] },
-      { id: 'ham', title: 'Hàm (Cam)', cards: ['ham', 'goi_ham', 'tra_ve'] },
-      { id: 'ma_tho', title: 'Mã thô (Xám)', cards: ['ma_tho'] }
+      { id: 'ham', title: 'Hàm (Cam)', color: 'var(--ham)', cards: ['ham', 'goi_ham', 'tra_ve'] },
+      { id: 'dieu_khien', title: 'Điều khiển (Xanh dương)', color: 'var(--dk)', cards: ['neu', 'nguoc_lai', 'lap_moi', 'lap_khi'] },
+      { id: 'du_lieu', title: 'Dữ liệu (Xanh lá)', color: 'var(--dl)', cards: ['gan', 'pheptinh'] },
+      { id: 'vao_ra', title: 'Vào / Ra (Tím)', color: 'var(--vr)', cards: ['in_ra'] },
+      { id: 'chu_thich', title: 'Chú thích (Xanh ngọc)', color: 'var(--ct)', cards: ['chu_thich'] },
+      { id: 'ma_tho', title: 'Mã thô (Xám)', color: 'var(--tho)', cards: ['ma_tho'] }
     ];
 
     groups.forEach(g => {
@@ -185,7 +187,7 @@
       const titleEl = document.createElement('div');
       titleEl.className = 'group-title';
       titleEl.textContent = g.title;
-      titleEl.style.color = TheValidator.NHOM_THE[g.id]?.mau || '#94A3B8';
+      titleEl.style.color = g.color;
       groupEl.appendChild(titleEl);
 
       const cardsGrid = document.createElement('div');
@@ -198,7 +200,7 @@
         const itemEl = document.createElement('div');
         itemEl.className = 'tool-item';
         itemEl.dataset.ma = cardMa;
-        itemEl.style.borderLeftColor = cardDef.mau;
+        itemEl.style.borderLeftColor = g.color;
         itemEl.draggable = true;
         itemEl.title = `Thẻ ${cardDef.ten}: Click để chèn nhanh hoặc kéo vào canvas`;
 
@@ -222,6 +224,7 @@
         else if (cardMa === 'ham') syntaxEl.textContent = 'def fn(args):';
         else if (cardMa === 'goi_ham') syntaxEl.textContent = 'fn(args)';
         else if (cardMa === 'pheptinh') syntaxEl.textContent = 'a + b';
+        else if (cardMa === 'chu_thich') syntaxEl.textContent = '# Chú thích';
         else if (cardMa === 'ma_tho') syntaxEl.textContent = 'raw code';
         infoEl.appendChild(syntaxEl);
 
@@ -268,8 +271,33 @@
   }
 
   // ==========================================================================
-  // 3. RENDER VÙNG SOẠN THẢO & MẮT XÍCH NỐI ĐỘNG (MỤC 3.3)
+  // 3. RENDER VÙNG SOẠN THẢO THẺ NỐI THẲNG (mau_the_noi_thang.html)
   // ==========================================================================
+  function chinhCotDoc() {
+    if (typeof document === 'undefined') return;
+    document.querySelectorAll('.khoi').forEach(function(k) {
+      const hang = Array.prototype.filter.call(k.children, function(e) {
+        return e.classList.contains('hang');
+      });
+      if (!hang.length) return;
+      const cuoi = hang[hang.length - 1];
+      const rk = k.getBoundingClientRect();
+      const rc = cuoi.getBoundingClientRect();
+      k.style.setProperty('--cao-cot', Math.round(rc.top + rc.height / 2 - rk.top + 4) + 'px');
+    });
+  }
+
+  function yeuCauChinhCotDoc() {
+    if (typeof document === 'undefined') return;
+    chinhCotDoc();
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(() => {
+        chinhCotDoc();
+        window.requestAnimationFrame(chinhCotDoc);
+      });
+    }
+  }
+
   function taoTheNode(ma) {
     state.nodeIdCounter++;
     const cardDef = TheValidator.BO_THE_V1[ma];
@@ -297,8 +325,12 @@
   function createCodeInput(node, fieldName, placeholder = '', className = '') {
     const input = document.createElement('input');
     input.type = 'text';
-    input.className = `code-inline-input ${className}`.trim();
-    input.value = (node.o && node.o[fieldName] !== undefined) ? node.o[fieldName] : '';
+    input.className = `the-inline-input ${className}`.trim();
+    let val = (node.o && node.o[fieldName] !== undefined) ? String(node.o[fieldName]) : '';
+    if (node.ma === 'chu_thich' && fieldName === 'noi_dung' && val.startsWith('#')) {
+      val = val.replace(/^#\s*/, '');
+    }
+    input.value = val;
     input.placeholder = placeholder || fieldName;
     input.spellcheck = false;
     input.autocomplete = 'off';
@@ -321,124 +353,130 @@
   }
 
   function renderCodeLineContent(node, cardDef) {
-    const wrap = document.createElement('div');
-    wrap.className = 'code-line-content';
+    const wrap = document.createElement('span');
+    wrap.className = 'the-content';
 
     if (node.ma === 'gan') {
-      wrap.appendChild(createCodeInput(node, 'ten_bien', 'x', 'code-var'));
+      wrap.appendChild(createCodeInput(node, 'ten_bien', 'x', 'ma'));
       const op = document.createElement('span');
-      op.className = 'code-op';
+      op.className = 'ma';
       op.textContent = ' = ';
       wrap.appendChild(op);
-      wrap.appendChild(createCodeInput(node, 'gia_tri', 'giá_trị', 'code-val'));
+      wrap.appendChild(createCodeInput(node, 'gia_tri', 'giá_trị', 'n'));
     } else if (node.ma === 'in_ra') {
-      const kw = document.createElement('span');
-      kw.className = 'code-kw';
-      kw.textContent = 'print';
-      wrap.appendChild(kw);
       const p1 = document.createElement('span');
-      p1.className = 'code-punc';
-      p1.textContent = '(';
+      p1.className = 'ma';
+      p1.textContent = 'print(';
       wrap.appendChild(p1);
-      wrap.appendChild(createCodeInput(node, 'noi_dung', 'nội_dung', 'code-val'));
+      wrap.appendChild(createCodeInput(node, 'noi_dung', 'nội_dung', 's'));
       const p2 = document.createElement('span');
-      p2.className = 'code-punc';
+      p2.className = 'ma';
       p2.textContent = ')';
       wrap.appendChild(p2);
     } else if (node.ma === 'ham') {
       const kw = document.createElement('span');
-      kw.className = 'code-kw';
+      kw.className = 'kw';
       kw.textContent = (node.o && node.o.async === '1') ? 'async def ' : 'def ';
       wrap.appendChild(kw);
-      wrap.appendChild(createCodeInput(node, 'ten_ham', 'tên_hàm', 'code-fn'));
+      wrap.appendChild(createCodeInput(node, 'ten_ham', 'tên_hàm', 'fn'));
       const p1 = document.createElement('span');
-      p1.className = 'code-punc';
+      p1.className = 'ma';
       p1.textContent = '(';
       wrap.appendChild(p1);
-      wrap.appendChild(createCodeInput(node, 'tham_so', 'tham_số', 'code-params'));
+      wrap.appendChild(createCodeInput(node, 'tham_so', 'tham_số', 'ma'));
       const p2 = document.createElement('span');
-      p2.className = 'code-punc';
+      p2.className = 'ma';
       p2.textContent = ')';
       wrap.appendChild(p2);
 
       if (node.o && (node.o.kieu_tra_ve || node.o.kieu_tra_ve === '')) {
         const arrow = document.createElement('span');
-        arrow.className = 'code-op';
+        arrow.className = 'kw';
         arrow.textContent = ' -> ';
         wrap.appendChild(arrow);
-        wrap.appendChild(createCodeInput(node, 'kieu_tra_ve', 'kiểu', 'code-val'));
+        wrap.appendChild(createCodeInput(node, 'kieu_tra_ve', 'kiểu', 'fn'));
       }
 
       const pColon = document.createElement('span');
-      pColon.className = 'code-punc';
+      pColon.className = 'ma';
       pColon.textContent = ':';
       wrap.appendChild(pColon);
     } else if (node.ma === 'neu') {
       const kw = document.createElement('span');
-      kw.className = 'code-kw';
+      kw.className = 'kw';
       kw.textContent = (node.o && node.o.noi_tiep === '1') ? 'elif ' : 'if ';
       wrap.appendChild(kw);
-      wrap.appendChild(createCodeInput(node, 'dieu_kien', 'điều_kiện', 'code-cond'));
+      wrap.appendChild(createCodeInput(node, 'dieu_kien', 'điều_kiện', 'ma'));
       const p = document.createElement('span');
-      p.className = 'code-punc';
+      p.className = 'ma';
       p.textContent = ':';
       wrap.appendChild(p);
     } else if (node.ma === 'nguoc_lai') {
       const kw = document.createElement('span');
-      kw.className = 'code-kw';
-      kw.textContent = 'else:';
+      kw.className = 'kw';
+      kw.textContent = 'else';
       wrap.appendChild(kw);
+      const p = document.createElement('span');
+      p.className = 'ma';
+      p.textContent = ':';
+      wrap.appendChild(p);
     } else if (node.ma === 'lap_moi') {
       const kw1 = document.createElement('span');
-      kw1.className = 'code-kw';
+      kw1.className = 'kw';
       kw1.textContent = 'for ';
       wrap.appendChild(kw1);
-      wrap.appendChild(createCodeInput(node, 'bien', 'item', 'code-var'));
+      wrap.appendChild(createCodeInput(node, 'bien', 'i', 'ma'));
       const kw2 = document.createElement('span');
-      kw2.className = 'code-kw';
+      kw2.className = 'kw';
       kw2.textContent = ' in ';
       wrap.appendChild(kw2);
-      wrap.appendChild(createCodeInput(node, 'day', 'seq', 'code-val'));
+      wrap.appendChild(createCodeInput(node, 'day', 'range(10)', 'ma'));
       const p = document.createElement('span');
-      p.className = 'code-punc';
+      p.className = 'ma';
       p.textContent = ':';
       wrap.appendChild(p);
     } else if (node.ma === 'lap_khi') {
       const kw = document.createElement('span');
-      kw.className = 'code-kw';
+      kw.className = 'kw';
       kw.textContent = 'while ';
       wrap.appendChild(kw);
-      wrap.appendChild(createCodeInput(node, 'dieu_kien', 'điều_kiện', 'code-cond'));
+      wrap.appendChild(createCodeInput(node, 'dieu_kien', 'điều_kiện', 'ma'));
       const p = document.createElement('span');
-      p.className = 'code-punc';
+      p.className = 'ma';
       p.textContent = ':';
       wrap.appendChild(p);
     } else if (node.ma === 'tra_ve') {
       const kw = document.createElement('span');
-      kw.className = 'code-kw';
+      kw.className = 'kw';
       kw.textContent = 'return ';
       wrap.appendChild(kw);
-      wrap.appendChild(createCodeInput(node, 'gia_tri', 'giá_trị', 'code-val'));
+      wrap.appendChild(createCodeInput(node, 'gia_tri', 'giá_trị', 'n'));
     } else if (node.ma === 'goi_ham') {
-      wrap.appendChild(createCodeInput(node, 'ten_ham', 'tên_hàm', 'code-fn'));
+      wrap.appendChild(createCodeInput(node, 'ten_ham', 'tên_hàm', 'fn'));
       const p1 = document.createElement('span');
-      p1.className = 'code-punc';
+      p1.className = 'ma';
       p1.textContent = '(';
       wrap.appendChild(p1);
-      wrap.appendChild(createCodeInput(node, 'doi_so', 'đối_số', 'code-args'));
+      wrap.appendChild(createCodeInput(node, 'doi_so', 'đối_số', 's'));
       const p2 = document.createElement('span');
-      p2.className = 'code-punc';
+      p2.className = 'ma';
       p2.textContent = ')';
       wrap.appendChild(p2);
     } else if (node.ma === 'pheptinh') {
-      wrap.appendChild(createCodeInput(node, 'trai', 'vế_trái', 'code-val'));
-      wrap.appendChild(createCodeInput(node, 'phep', '+', 'code-op'));
-      wrap.appendChild(createCodeInput(node, 'phai', 'vế_phải', 'code-val'));
+      wrap.appendChild(createCodeInput(node, 'trai', 'vế_trái', 'ma'));
+      wrap.appendChild(createCodeInput(node, 'phep', '+', 'kw'));
+      wrap.appendChild(createCodeInput(node, 'phai', 'vế_phải', 'ma'));
+    } else if (node.ma === 'chu_thich') {
+      const cm = document.createElement('span');
+      cm.className = 'cm';
+      cm.textContent = '# ';
+      wrap.appendChild(cm);
+      wrap.appendChild(createCodeInput(node, 'noi_dung', 'chú thích...', 'cm'));
     } else if (node.ma === 'ma_tho') {
       const rawVal = (node.o && node.o.nguyen_van !== undefined) ? node.o.nguyen_van : (node.raw_text || '');
       const input = document.createElement('input');
       input.type = 'text';
-      input.className = 'code-inline-input code-raw';
+      input.className = 'the-inline-input ma';
       input.value = rawVal;
       input.placeholder = '# Mã Python thô...';
       input.spellcheck = false;
@@ -462,11 +500,11 @@
       cardDef.o.forEach((oDef, idx) => {
         if (idx > 0) {
           const sep = document.createElement('span');
-          sep.className = 'code-punc';
+          sep.className = 'ma';
           sep.textContent = ' ';
           wrap.appendChild(sep);
         }
-        wrap.appendChild(createCodeInput(node, oDef.ten, oDef.goi_y || oDef.ten, 'code-val'));
+        wrap.appendChild(createCodeInput(node, oDef.ten, oDef.goi_y || oDef.ten, 'ma'));
       });
     }
 
@@ -481,38 +519,46 @@
     const hasDo = nodeDiags.some(d => d.muc_do === 'do');
     const hasVang = nodeDiags.some(d => d.muc_do === 'vang');
 
-    // Thụt lề: 16px cho cấp 0-4, +8px cho cấp >= 5
-    const indentPx = (depth <= 5) ? (depth - 1) * 16 : 64 + (depth - 5) * 8;
+    // Xác định lớp màu và CSS variable theo nhóm chuẩn
+    let colorClass = 'c-tho';
+    let groupVar = 'var(--tho)';
+    if (node.ma === 'ham' || node.ma === 'goi_ham' || node.ma === 'tra_ve') {
+      colorClass = 'c-ham';
+      groupVar = 'var(--ham)';
+    } else if (node.ma === 'neu' || node.ma === 'nguoc_lai' || node.ma === 'lap_moi' || node.ma === 'lap_khi') {
+      colorClass = 'c-dk';
+      groupVar = 'var(--dk)';
+    } else if (node.ma === 'gan' || node.ma === 'pheptinh') {
+      colorClass = 'c-dl';
+      groupVar = 'var(--dl)';
+    } else if (node.ma === 'in_ra') {
+      colorClass = 'c-vr';
+      groupVar = 'var(--vr)';
+    } else if (node.ma === 'chu_thich') {
+      colorClass = 'c-ct';
+      groupVar = 'var(--ct)';
+    } else {
+      colorClass = 'c-tho';
+      groupVar = 'var(--tho)';
+    }
 
-    const nodeWrap = document.createElement('div');
-    nodeWrap.className = 'card-node-item';
-    nodeWrap.style.marginLeft = `${indentPx}px`;
+    const fragment = document.createDocumentFragment();
 
-    // Thẻ một dòng (Card Block - 1 Hàng Duy Nhất, chiều cao 28px)
-    const cardEl = document.createElement('div');
-    cardEl.className = `card-block ${hasDo ? 'status-do' : (hasVang ? 'status-vang' : '')}`;
-    cardEl.id = `node_${node.id}`;
-    cardEl.style.borderLeftColor = cardDef.mau;
-    cardEl.dataset.nodeId = node.id;
+    // 1. Dòng thẻ (.hang)
+    const hangEl = document.createElement('div');
+    hangEl.className = 'hang';
+    hangEl.style.color = groupVar;
+    hangEl.id = `node_${node.id}`;
+    hangEl.dataset.nodeId = node.id;
 
-    // Tooltip tóm tắt câu lệnh khi hover
-    let previewText = cardDef.ten;
-    if (node.ma === 'gan') previewText = `${node.o?.ten_bien || 'x'} = ${node.o?.gia_tri || ''}`;
-    else if (node.ma === 'in_ra') previewText = `print(${node.o?.noi_dung || ''})`;
-    else if (node.ma === 'ham') previewText = `def ${node.o?.ten_ham || 'ham'}(${node.o?.tham_so || ''}):`;
-    else if (node.ma === 'neu') previewText = `if ${node.o?.dieu_kien || ''}:`;
-    else if (node.ma === 'nguoc_lai') previewText = `else:`;
-    else if (node.ma === 'lap_moi') previewText = `for ${node.o?.bien || 'item'} in ${node.o?.day || 'seq'}:`;
-    else if (node.ma === 'lap_khi') previewText = `while ${node.o?.dieu_kien || ''}:`;
-    else if (node.ma === 'tra_ve') previewText = `return ${node.o?.gia_tri || ''}`;
-    else if (node.ma === 'pheptinh') previewText = `${node.o?.trai || ''} ${node.o?.phep || '+'} ${node.o?.phai || ''}`;
-    else if (node.ma === 'goi_ham') previewText = `${node.o?.ten_ham || 'fn'}(${node.o?.doi_so || ''})`;
-    else if (node.ma === 'ma_tho') previewText = (node.o?.nguyen_van || node.raw_text || '').slice(0, 100);
-    cardEl.title = `[Cấp ${depth}] [${cardDef.ten}] ${previewText}`;
+    // 2. Thẻ viên thuốc (.the)
+    const theEl = document.createElement('span');
+    theEl.className = `the ${colorClass} ${hasDo ? 'status-do' : (hasVang ? 'status-vang' : '')}`;
 
-    // Line container
-    const lineEl = document.createElement('div');
-    lineEl.className = 'card-line';
+    // Lỗ cạnh TRÁI (.lo)
+    const loEl = document.createElement('span');
+    loEl.className = 'lo';
+    theEl.appendChild(loEl);
 
     // Chấm báo lỗi / cảnh báo
     if (hasDo) {
@@ -520,20 +566,31 @@
       badge.className = 'card-diag-icon do';
       badge.textContent = '🔴';
       badge.title = nodeDiags.filter(d => d.muc_do === 'do').map(d => d.thong_diep).join('\n');
-      lineEl.appendChild(badge);
+      theEl.appendChild(badge);
     } else if (hasVang) {
       const badge = document.createElement('span');
       badge.className = 'card-diag-icon vang';
       badge.textContent = '🟡';
       badge.title = nodeDiags.filter(d => d.muc_do === 'vang').map(d => d.thong_diep).join('\n');
-      lineEl.appendChild(badge);
+      theEl.appendChild(badge);
     }
 
-    // Nội dung dòng mã
-    const codeContent = renderCodeLineContent(node, cardDef);
-    lineEl.appendChild(codeContent);
+    // Nội dung thẻ (tokens + inputs)
+    const contentEl = renderCodeLineContent(node, cardDef);
+    theEl.appendChild(contentEl);
 
-    // Nút điều khiển hover
+    // Chú thích cuối dòng (duoi_dong) nếu có
+    if (node.duoi_dong) {
+      const ddEl = document.createElement('span');
+      ddEl.className = 'cm duoi-dong-badge';
+      ddEl.textContent = ` ${node.duoi_dong.trim()}`;
+      ddEl.title = 'Chú thích cuối dòng';
+      theEl.appendChild(ddEl);
+    }
+
+    hangEl.appendChild(theEl);
+
+    // Controls hover
     const controlsEl = document.createElement('div');
     controlsEl.className = 'card-controls';
 
@@ -593,39 +650,38 @@
     });
     controlsEl.appendChild(btnDel);
 
-    lineEl.appendChild(controlsEl);
-    cardEl.appendChild(lineEl);
-    nodeWrap.appendChild(cardEl);
+    hangEl.appendChild(controlsEl);
+    fragment.appendChild(hangEl);
 
-    // Thân con lồng nhau (Nested slot)
+    // 3. Khối con (.khoi) nếu thẻ có thân
     if (cardDef.co_than) {
-      const slotEl = document.createElement('div');
-      slotEl.className = 'nested-body-slot';
-      slotEl.dataset.slotId = node.id;
+      const khoiEl = document.createElement('div');
+      khoiEl.className = 'khoi cuoi';
+      khoiEl.dataset.slotId = node.id;
 
       if (node.than && node.than.length > 0) {
-        renderCardList(node.than, slotEl, depth + 1);
+        renderCardList(node.than, khoiEl, depth + 1);
       } else {
         const ph = document.createElement('div');
         ph.className = 'slot-placeholder';
         ph.textContent = '+ Thả thẻ vào thân này...';
-        slotEl.appendChild(ph);
+        khoiEl.appendChild(ph);
       }
 
-      // Hỗ trợ thả thẻ vào slot con
-      slotEl.addEventListener('dragover', (e) => {
+      // Drag and drop vào slot
+      khoiEl.addEventListener('dragover', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        slotEl.style.borderColor = 'var(--color-chain-active)';
+        khoiEl.style.outline = '1px dashed var(--color-chain-active)';
       });
-      slotEl.addEventListener('dragleave', (e) => {
+      khoiEl.addEventListener('dragleave', (e) => {
         e.preventDefault();
-        slotEl.style.borderColor = 'var(--border-color)';
+        khoiEl.style.outline = 'none';
       });
-      slotEl.addEventListener('drop', (e) => {
+      khoiEl.addEventListener('drop', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        slotEl.style.borderColor = 'var(--border-color)';
+        khoiEl.style.outline = 'none';
         const raw = e.dataTransfer.getData('text/plain');
         if (!raw) return;
         try {
@@ -636,34 +692,38 @@
             node.than.push(newNode);
             onTreeChanged();
           }
-        } catch (err) {}
+        } catch (_) {}
       });
 
-      nodeWrap.appendChild(slotEl);
+      fragment.appendChild(khoiEl);
     }
 
-    return nodeWrap;
+    return fragment;
   }
 
   function renderCardList(nodeList, parentContainer, depth = 1) {
     for (let i = 0; i < nodeList.length; i++) {
       const node = nodeList[i];
-      const nodeEl = renderCard(node, nodeList, i, depth);
-      parentContainer.appendChild(nodeEl);
+      const nodeFrag = renderCard(node, nodeList, i, depth);
+      parentContainer.appendChild(nodeFrag);
     }
   }
 
   function renderCanvas() {
     const rootContainer = document.getElementById('cardChainRoot');
     const emptyGuide = document.getElementById('emptyCanvasGuide');
+    if (!rootContainer) return;
     rootContainer.innerHTML = '';
 
     if (state.tree.length === 0) {
-      emptyGuide.style.display = 'flex';
+      if (emptyGuide) emptyGuide.style.display = 'flex';
     } else {
-      emptyGuide.style.display = 'none';
+      if (emptyGuide) emptyGuide.style.display = 'none';
       renderCardList(state.tree, rootContainer, 1);
     }
+
+    // Đo đạc và tinh chỉnh cột dọc ngay sau khi render xong (double rAF)
+    yeuCauChinhCotDoc();
   }
 
   // ==========================================================================
@@ -688,7 +748,10 @@
     capNhatDaiNhip();
     capNhatKichBan();
 
-    // 3. Đồng bộ với Backend API /api/kiem (Python làm trọng tài)
+    // 3. Đảm bảo căn chỉnh cột dọc sau mọi thay đổi cây thẻ
+    yeuCauChinhCotDoc();
+
+    // 4. Đồng bộ với Backend API /api/kiem (Python làm trọng tài)
     clearTimeout(syncTimeout);
     syncTimeout = setTimeout(syncWithBackendValidator, 300);
   }
@@ -707,6 +770,7 @@
         updateDiagnosticsPanel();
         updateStatusBar();
         updateToolboxCounters();
+        yeuCauChinhCotDoc();
       }
     } catch (err) {
       console.warn('Không thể kết nối /api/kiem:', err);
@@ -1641,6 +1705,7 @@
           ? data.duong_dan.replace('core/', 'tests/test_')
           : (data.duong_dan.startsWith('tests/') ? data.duong_dan : 'tests/test_' + data.ten_tep);
         loadAvailableTests(testPath);
+        yeuCauChinhCotDoc();
       } else {
         const err = await readJsonSafely(resp);
         alert(`Lỗi mở tệp: ${err.error}`);
@@ -1753,6 +1818,151 @@
   }
 
   // ==========================================================================
+  // 6. CÂY THƯ MỤC TỆP TIN & CHUYỂN ĐỔI CHẾ ĐỘ CỘT TRÁI (1 CLICK)
+  // ==========================================================================
+  async function loadFileTree() {
+    const container = document.getElementById('fileTreeContainer');
+    if (!container) return;
+    container.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 12px;">Đang tải danh sách tệp từ kho...</div>';
+
+    try {
+      const resp = await authFetch('/api/tep_tin');
+      if (!resp.ok) {
+        container.innerHTML = '<div style="color: var(--color-error-do); font-size: 12px; padding: 12px;">Không tải được danh sách tệp.</div>';
+        return;
+      }
+      const data = await resp.json();
+      const files = data.danh_sach || [];
+      renderFileTree(files, container);
+    } catch (err) {
+      container.innerHTML = `<div style="color: var(--color-error-do); font-size: 12px; padding: 12px;">Lỗi: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  function renderFileTree(files, container) {
+    container.innerHTML = '';
+    const groups = {};
+    files.forEach(f => {
+      const p = f.duong_dan || f;
+      const parts = p.split(/[\\/]/);
+      const dir = parts.length > 1 ? parts[0] : 'root';
+      if (!groups[dir]) groups[dir] = [];
+      groups[dir].push(p);
+    });
+
+    for (const dir in groups) {
+      const dirNode = document.createElement('div');
+      dirNode.className = 'file-tree-node';
+
+      const dirRow = document.createElement('div');
+      dirRow.className = 'file-tree-row folder';
+      dirRow.innerHTML = `<span class="folder-icon">📂</span> <span style="font-weight:600;">${escapeHtml(dir)}/</span>`;
+      dirNode.appendChild(dirRow);
+
+      const childrenContainer = document.createElement('div');
+      childrenContainer.className = 'file-tree-children';
+
+      groups[dir].forEach(filePath => {
+        const fileRow = document.createElement('div');
+        fileRow.className = `file-tree-row ${state.activeFilePath === filePath ? 'active' : ''}`;
+        fileRow.dataset.path = filePath;
+        const fileName = filePath.split(/[\\/]/).pop();
+        fileRow.innerHTML = `<span class="file-icon">🐍</span> <span>${escapeHtml(fileName)}</span>`;
+
+        fileRow.addEventListener('click', () => {
+          document.querySelectorAll('.file-tree-row').forEach(r => r.classList.remove('active'));
+          fileRow.classList.add('active');
+          openPyFile(filePath);
+        });
+
+        childrenContainer.appendChild(fileRow);
+      });
+
+      dirRow.addEventListener('click', () => {
+        const isHidden = childrenContainer.style.display === 'none';
+        childrenContainer.style.display = isHidden ? 'flex' : 'none';
+        dirRow.querySelector('.folder-icon').textContent = isHidden ? '📂' : '📁';
+      });
+
+      dirNode.appendChild(childrenContainer);
+      container.appendChild(dirNode);
+    }
+  }
+
+  function setupBottomSplitter() {
+    const splitter = document.getElementById('middleSplitter');
+    const bottomPane = document.getElementById('canvasBottomPane');
+    if (!splitter || !bottomPane) return;
+
+    let isDragging = false;
+    let startY = 0;
+    let startHeight = 0;
+
+    splitter.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      startY = e.clientY;
+      startHeight = bottomPane.getBoundingClientRect().height;
+      splitter.classList.add('dragging');
+      document.body.style.cursor = 'row-resize';
+      document.body.style.userSelect = 'none';
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const deltaY = startY - e.clientY;
+      const newHeight = Math.max(100, Math.min(window.innerHeight * 0.65, startHeight + deltaY));
+      bottomPane.style.height = `${newHeight}px`;
+      yeuCauChinhCotDoc();
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        splitter.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        chinhCotDoc();
+      }
+    });
+  }
+
+  function setupAgentWorkspace() {
+    const btnSend = document.getElementById('btnSendAgent');
+    const input = document.getElementById('agentInput');
+    const chatContainer = document.getElementById('agentChatContainer');
+    if (!btnSend || !input || !chatContainer) return;
+
+    const handleSend = () => {
+      const text = input.value.trim();
+      if (!text) return;
+
+      const userMsg = document.createElement('div');
+      userMsg.className = 'agent-msg user';
+      userMsg.textContent = text;
+      chatContainer.appendChild(userMsg);
+      input.value = '';
+
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+
+      setTimeout(() => {
+        const botMsg = document.createElement('div');
+        botMsg.className = 'agent-msg bot';
+        botMsg.innerHTML = `Đã nhận yêu cầu: <em>"${escapeHtml(text)}"</em>.<br>Tôi đang kiểm tra cấu trúc thẻ và hỗ trợ thao tác tự động...`;
+        chatContainer.appendChild(botMsg);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }, 350);
+    };
+
+    btnSend.addEventListener('click', handleSend);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSend();
+      }
+    });
+  }
+
+  // ==========================================================================
   // 7. SỰ KIỆN & LẮNG NGHE NGƯỜI DÙNG
   // ==========================================================================
   function setupEventListeners() {
@@ -1766,15 +1976,40 @@
     const btnToggleRight = document.getElementById('btnToggleSidebarRight');
     if (btnToggleRight) btnToggleRight.addEventListener('click', toggleSidebarRight);
 
-    // 2. Font Zoom Controls
-    const btnZoomIn = document.getElementById('btnZoomIn');
-    if (btnZoomIn) btnZoomIn.addEventListener('click', () => setCodeFontSize(state.codeFontSize + 1));
+    const btnCloseRight = document.getElementById('btnToggleSidebarRightClose');
+    if (btnCloseRight) btnCloseRight.addEventListener('click', toggleSidebarRight);
 
-    const btnZoomOut = document.getElementById('btnZoomOut');
-    if (btnZoomOut) btnZoomOut.addEventListener('click', () => setCodeFontSize(state.codeFontSize - 1));
+    // 2. Chuyển đổi chế độ Khay Thẻ ⇅ Cây Thư Mục (1 Bấm)
+    const btnModeToolbox = document.getElementById('btnModeToolbox');
+    const btnModeFiles = document.getElementById('btnModeFiles');
+    const toolboxContainer = document.getElementById('toolboxContainer');
+    const fileTreeContainer = document.getElementById('fileTreeContainer');
+    const sidebarTitle = document.getElementById('sidebarLeftTitle');
+    const toolSearch = document.getElementById('toolSearch');
+    const footerTip = document.getElementById('leftFooterTip');
 
-    const btnZoomReset = document.getElementById('btnZoomReset');
-    if (btnZoomReset) btnZoomReset.addEventListener('click', () => setCodeFontSize(14));
+    if (btnModeToolbox && btnModeFiles) {
+      btnModeToolbox.addEventListener('click', () => {
+        btnModeToolbox.classList.add('active');
+        btnModeFiles.classList.remove('active');
+        if (toolboxContainer) toolboxContainer.style.display = 'flex';
+        if (fileTreeContainer) fileTreeContainer.style.display = 'none';
+        if (sidebarTitle) sidebarTitle.textContent = 'Khay Thẻ Lệnh';
+        if (toolSearch) toolSearch.placeholder = 'Tìm thẻ...';
+        if (footerTip) footerTip.textContent = 'Nhấp đúp hoặc kéo thẻ vào vùng soạn thảo.';
+      });
+
+      btnModeFiles.addEventListener('click', () => {
+        btnModeFiles.classList.add('active');
+        btnModeToolbox.classList.remove('active');
+        if (toolboxContainer) toolboxContainer.style.display = 'none';
+        if (fileTreeContainer) fileTreeContainer.style.display = 'flex';
+        if (sidebarTitle) sidebarTitle.textContent = 'Cây Thư Mục';
+        if (toolSearch) toolSearch.placeholder = 'Tìm tệp python...';
+        if (footerTip) footerTip.textContent = 'Click vào tệp để mở trực tiếp trên canvas.';
+        loadFileTree();
+      });
+    }
 
     // 3. Toolbar buttons
     document.getElementById('btnRun').addEventListener('click', runProgram);
@@ -1859,21 +2094,11 @@
       saveFile(p, type);
     });
 
-    // Copy Code Button
-    document.getElementById('btnCopyCode').addEventListener('click', () => {
-      const code = document.getElementById('pythonCodeOutput').textContent;
-      navigator.clipboard.writeText(code).then(() => {
-        const btn = document.getElementById('btnCopyCode');
-        btn.textContent = 'Đã chép!';
-        setTimeout(() => btn.textContent = 'Sao chép', 1500);
-      });
-    });
-
-    // Right Tabs Switch
-    document.querySelectorAll('.tab-btn').forEach(btn => {
+    // Bottom Pane Tabs Switch (4 tabs)
+    document.querySelectorAll('.canvas-bottom-pane .tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.canvas-bottom-pane .tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.canvas-bottom-pane .tab-pane').forEach(p => p.classList.remove('active'));
         btn.classList.add('active');
         const targetTab = document.getElementById(btn.dataset.tab);
         if (targetTab) targetTab.classList.add('active');
@@ -1896,32 +2121,62 @@
       });
     }
 
-    // Tìm kiếm thẻ trên khay
-    document.getElementById('toolSearch').addEventListener('input', (e) => {
-      const query = e.target.value.toLowerCase().trim();
-      document.querySelectorAll('.tool-item').forEach(item => {
-        const ma = item.dataset.ma;
-        const def = TheValidator.BO_THE_V1[ma];
-        const match = ma.includes(query) || (def && def.ten.toLowerCase().includes(query));
-        item.style.display = match ? 'flex' : 'none';
+    // Tìm kiếm thẻ hoặc tệp
+    if (toolSearch) {
+      toolSearch.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        if (btnModeToolbox && btnModeToolbox.classList.contains('active')) {
+          document.querySelectorAll('.tool-item').forEach(item => {
+            const ma = item.dataset.ma;
+            const def = TheValidator.BO_THE_V1[ma];
+            const match = ma.includes(query) || (def && def.ten.toLowerCase().includes(query));
+            item.style.display = match ? 'flex' : 'none';
+          });
+        } else {
+          document.querySelectorAll('.file-tree-row:not(.folder)').forEach(row => {
+            const path = (row.dataset.path || '').toLowerCase();
+            const match = path.includes(query);
+            row.style.display = match ? 'flex' : 'none';
+          });
+        }
       });
-    });
+    }
 
     // Drag-and-drop vào Canvas Root
     const workspace = document.getElementById('canvasWorkspace');
-    workspace.addEventListener('dragover', (e) => {
-      e.preventDefault();
-    });
-    workspace.addEventListener('drop', (e) => {
-      e.preventDefault();
-      const raw = e.dataTransfer.getData('text/plain');
-      if (!raw) return;
-      try {
-        const payload = JSON.parse(raw);
-        if (payload.type === 'NEW_CARD') {
-          addNewCardToRoot(payload.ma);
-        }
-      } catch (err) {}
+    if (workspace) {
+      workspace.addEventListener('dragover', (e) => {
+        e.preventDefault();
+      });
+      workspace.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const raw = e.dataTransfer.getData('text/plain');
+        if (!raw) return;
+        try {
+          const payload = JSON.parse(raw);
+          if (payload.type === 'NEW_CARD') {
+            addNewCardToRoot(payload.ma);
+          }
+        } catch (_) {}
+      });
+    }
+
+    // ResizeObserver trên khung chứa thẻ để tự động chỉnh cột dọc khi DOM reflow
+    const cardRoot = document.getElementById('cardChainRoot');
+    if (cardRoot && typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => {
+        yeuCauChinhCotDoc();
+      });
+      ro.observe(cardRoot);
+    }
+
+    // Thiết lập Splitter chia đôi kéo được & Agent Workspace
+    setupBottomSplitter();
+    setupAgentWorkspace();
+
+    // Lắng nghe window resize để tính lại chiều cao cột dọc
+    window.addEventListener('resize', () => {
+      yeuCauChinhCotDoc();
     });
 
     // Phím tắt bàn phím IDE chuẩn
@@ -1968,6 +2223,7 @@
     document.getElementById('currentFileName').textContent = '1. Hàm cộng hai số';
     onTreeChanged();
     loadAvailableTests();
+    yeuCauChinhCotDoc();
   });
 
   if (typeof window !== 'undefined') {
@@ -1979,6 +2235,8 @@
     window.openPyFile = openPyFile;
     window.saveFile = saveFile;
     window.chayDinhViLoiE1 = chayDinhViLoiE1;
+    window.chinhCotDoc = chinhCotDoc;
+    window.yeuCauChinhCotDoc = yeuCauChinhCotDoc;
   }
 
   if (typeof module !== 'undefined' && module.exports) {
@@ -1994,6 +2252,8 @@
       loadAvailableTests,
       openPyFile,
       saveFile,
+      chinhCotDoc,
+      yeuCauChinhCotDoc,
     };
   }
 

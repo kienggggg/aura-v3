@@ -123,10 +123,22 @@
           </div>
 
           <div class="canvas-actions">
+            <button class="icon-btn" id="btnFindInFile" title="Tìm trong chương trình (Ctrl+F)">🔍</button>
             <button class="icon-btn" id="btnUndo" title="Hoàn tác (Ctrl+Z)">↶</button>
             <button class="icon-btn" id="btnRedo" title="Làm lại (Ctrl+Y)">↷</button>
             <button class="icon-btn" id="btnClearCanvas" title="Xoá toàn bộ">🗑️</button>
           </div>
+        </div>
+
+        <!-- Thanh tìm trong chương trình đang mở (khác ô tìm ở khay trái:
+             ô kia lọc KHAY THẺ / CÂY THƯ MỤC, thanh này tìm trong CÂY THẺ) -->
+        <div class="find-bar" id="findBar" style="display: none;">
+          <span class="find-icon">🔍</span>
+          <input type="text" id="findInput" placeholder="Tìm trong chương trình..." autocomplete="off" spellcheck="false">
+          <span class="find-count" id="findCount">0/0</span>
+          <button class="icon-btn" id="btnFindPrev" title="Kết quả trước (Shift+Enter)">↑</button>
+          <button class="icon-btn" id="btnFindNext" title="Kết quả sau (Enter)">↓</button>
+          <button class="icon-btn" id="btnFindClose" title="Đóng (Esc)">✕</button>
         </div>
 
         <!-- Dải Nhịp Thực Thi (Execution Rhythms Ribbon) -->

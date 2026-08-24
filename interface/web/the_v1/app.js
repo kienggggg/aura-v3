@@ -892,6 +892,19 @@
 
     // Đo đạc và tinh chỉnh cột dọc ngay sau khi render xong (double rAF)
     yeuCauChinhCotDoc();
+
+    // renderCanvas dựng lại TOÀN BỘ DOM thẻ, nên mọi class đánh dấu tìm kiếm
+    // bay hết. Chạy lại phép tìm để dấu bám đúng thẻ sau khi sửa/hoàn tác —
+    // không thì đang tìm mà sửa một ô là kết quả biến mất im lặng.
+    if (timKiem.tuKhoa) {
+      const idHienTai = timKiem.viTri >= 0 ? timKiem.danhSach[timKiem.viTri] : null;
+      timKiem.danhSach = gomThePhuHop(state.tree, timKiem.tuKhoa, []);
+      // Giữ nguyên kết quả đang xem nếu thẻ đó vẫn còn khớp; nếu nó vừa bị
+      // sửa cho hết khớp (hoặc bị xoá) thì lùi về kết quả đầu.
+      const viTriMoi = idHienTai ? timKiem.danhSach.indexOf(idHienTai) : -1;
+      timKiem.viTri = viTriMoi >= 0 ? viTriMoi : (timKiem.danhSach.length ? 0 : -1);
+      veKetQuaTimKiem(false);
+    }
   }
 
   // ==========================================================================
@@ -1826,6 +1839,102 @@
   // 5. CHẠY THỬ CÓ CHỦ ĐÍCH (TẮT MẶC ĐỊNH VÌ CHƯA PHẢI SANDBOX THẬT)
   // ==========================================================================
 
+  // ==========================================================================
+  // TÌM TRONG CHƯƠNG TRÌNH (Ctrl+F)
+  // ==========================================================================
+  // Khác hẳn ô tìm ở khay trái (`toolSearch`): ô kia LỌC danh sách khay thẻ
+  // hoặc cây thư mục; cái này tìm trong CÂY THẺ đang mở và nhảy tới từng kết
+  // quả. Hai thứ khác nhau nên để riêng, không gộp.
+  const timKiem = { danhSach: [], viTri: -1, tuKhoa: '' };
+
+  // Gom mọi CHỮ mà người dùng nhìn thấy trên một thẻ: các ô nhập (node.o, tuỳ
+  // loại thẻ) + chú thích cuối dòng. Không lấy node.id/node.ma vì đó là thứ
+  // nội bộ, người dùng không thấy — tìm theo chúng sẽ ra kết quả khó hiểu.
+  function chuTrenThe(node) {
+    const phan = [];
+    if (node.o) {
+      for (const k in node.o) {
+        const v = node.o[k];
+        if (v !== null && v !== undefined && typeof v !== 'object') phan.push(String(v));
+      }
+    }
+    if (node.duoi_dong) phan.push(String(node.duoi_dong));
+    return phan.join(' ').toLowerCase();
+  }
+
+  function gomThePhuHop(danhSach, tuKhoa, ra) {
+    (danhSach || []).forEach(node => {
+      if (chuTrenThe(node).includes(tuKhoa)) ra.push(node.id);
+      // Đi vào cả khối lồng nhau — thẻ trong thân `if`/`for` cũng phải tìm ra.
+      if (node.than && node.than.length) gomThePhuHop(node.than, tuKhoa, ra);
+    });
+    return ra;
+  }
+
+  function xoaDanhDauTimKiem() {
+    document.querySelectorAll('.the.tim-thay, .the.tim-thay-hien-tai')
+      .forEach(el => el.classList.remove('tim-thay', 'tim-thay-hien-tai'));
+  }
+
+  // `cuon`: chỉ cuộn khi người dùng CHỦ ĐỘNG nhảy kết quả (gõ, bấm ↑/↓).
+  // renderCanvas cũng gọi hàm này để vẽ lại dấu sau khi cây đổi — lúc đó mà
+  // cuộn thì màn hình giật mỗi lần gõ một ký tự vào ô thẻ.
+  function veKetQuaTimKiem(cuon = true) {
+    xoaDanhDauTimKiem();
+    const oDem = document.getElementById('findCount');
+    const tong = timKiem.danhSach.length;
+    if (oDem) {
+      oDem.textContent = tong === 0 ? '0/0' : `${timKiem.viTri + 1}/${tong}`;
+      // Ô rỗng thì không phải "không tìm thấy", chỉ là chưa gõ gì.
+      oDem.classList.toggle('khong-thay', tong === 0 && timKiem.tuKhoa.length > 0);
+    }
+    timKiem.danhSach.forEach((id, i) => {
+      const el = document.querySelector('#node_' + id + ' .the');
+      if (!el) return;
+      el.classList.add(i === timKiem.viTri ? 'tim-thay-hien-tai' : 'tim-thay');
+    });
+    if (cuon && timKiem.viTri >= 0) {
+      const el = document.getElementById('node_' + timKiem.danhSach[timKiem.viTri]);
+      if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
+
+  function chayTimKiem(tuKhoa) {
+    timKiem.tuKhoa = (tuKhoa || '').toLowerCase().trim();
+    timKiem.danhSach = timKiem.tuKhoa
+      ? gomThePhuHop(state.tree, timKiem.tuKhoa, [])
+      : [];
+    timKiem.viTri = timKiem.danhSach.length > 0 ? 0 : -1;
+    veKetQuaTimKiem();
+  }
+
+  function nhayKetQua(buoc) {
+    if (timKiem.danhSach.length === 0) return;
+    // Quay vòng: qua kết quả cuối thì về đầu, và ngược lại.
+    const n = timKiem.danhSach.length;
+    timKiem.viTri = (timKiem.viTri + buoc + n) % n;
+    veKetQuaTimKiem();
+  }
+
+  function moThanhTim() {
+    const bar = document.getElementById('findBar');
+    const input = document.getElementById('findInput');
+    if (!bar || !input) return;
+    bar.style.display = 'flex';
+    input.focus();
+    input.select();
+    if (input.value) chayTimKiem(input.value);
+  }
+
+  function dongThanhTim() {
+    const bar = document.getElementById('findBar');
+    if (bar) bar.style.display = 'none';
+    timKiem.danhSach = [];
+    timKiem.viTri = -1;
+    timKiem.tuKhoa = '';
+    xoaDanhDauTimKiem();
+  }
+
   // Traceback Python trỏ dòng trong run_script.py (tệp tạm, người dùng
   // không bao giờ thấy). Lấy khung CUỐI CÙNG thuộc script chính (không phải
   // khung nằm sâu trong thư viện chuẩn — traceback liệt kê theo thứ tự gọi
@@ -2371,6 +2480,29 @@
     if (btnUndo) btnUndo.addEventListener('click', hoanTac);
     if (btnRedo) btnRedo.addEventListener('click', lamLai);
 
+    // Tìm trong chương trình
+    const btnFind = document.getElementById('btnFindInFile');
+    const findInput = document.getElementById('findInput');
+    if (btnFind) btnFind.addEventListener('click', moThanhTim);
+    if (findInput) {
+      findInput.addEventListener('input', (e) => chayTimKiem(e.target.value));
+      findInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          nhayKetQua(e.shiftKey ? -1 : 1);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          dongThanhTim();
+        }
+      });
+    }
+    const btnFindNext = document.getElementById('btnFindNext');
+    const btnFindPrev = document.getElementById('btnFindPrev');
+    const btnFindClose = document.getElementById('btnFindClose');
+    if (btnFindNext) btnFindNext.addEventListener('click', () => nhayKetQua(1));
+    if (btnFindPrev) btnFindPrev.addEventListener('click', () => nhayKetQua(-1));
+    if (btnFindClose) btnFindClose.addEventListener('click', dongThanhTim);
+
     // Mẫu bài Modal
     document.getElementById('btnSamples').addEventListener('click', () => {
       loadSamples();
@@ -2565,6 +2697,15 @@
       } else if (e.ctrlKey && e.key === '0') {
         e.preventDefault();
         setCodeFontSize(14);
+      } else if (e.ctrlKey && (e.key === 'f' || e.key === 'F')) {
+        // Cướp Ctrl+F khỏi trình duyệt: tìm trong CÂY THẺ mới đúng thứ người
+        // dùng cần, chứ không phải tìm chữ trong toàn trang HTML (sẽ khớp cả
+        // tên nút, nhãn khay thẻ, chữ trong terminal...).
+        e.preventDefault();
+        moThanhTim();
+      } else if (e.key === 'Escape') {
+        const bar = document.getElementById('findBar');
+        if (bar && bar.style.display !== 'none') dongThanhTim();
       } else if (e.ctrlKey && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
         // Đang gõ trong ô nhập thì để trình duyệt tự hoàn tác CHỮ trong ô đó,
         // đừng cướp phím để hoàn tác cả cây thẻ — người dùng sẽ mất nguyên

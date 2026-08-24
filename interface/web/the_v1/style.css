@@ -458,6 +458,58 @@ body {
   opacity: 0.35;
 }
 
+/* ============ THANH TÌM TRONG CHƯƠNG TRÌNH (Ctrl+F) ============ */
+.find-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--bg-surface-elevated);
+  border-bottom: 1px solid var(--border-color);
+}
+.find-bar .find-icon {
+  font-size: 12px;
+  opacity: 0.7;
+}
+.find-bar input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 8px;
+  outline: none;
+}
+.find-bar input:focus {
+  border-color: var(--color-chain-active);
+}
+.find-bar .find-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  min-width: 42px;
+  text-align: center;
+}
+/* Không tìm thấy: đổi màu chữ đếm, không đổi layout để ô không bị nhảy */
+.find-bar .find-count.khong-thay {
+  color: var(--color-error-do);
+}
+
+/* Thẻ khớp từ khoá — viền mờ, không tranh chỗ với trạng thái đỏ/vàng */
+.the.tim-thay {
+  outline: 1.5px solid var(--color-chain-active);
+  outline-offset: 1px;
+}
+/* Kết quả ĐANG chọn — đậm hơn hẳn để phân biệt với các kết quả khác */
+.the.tim-thay-hien-tai {
+  outline: 2px solid var(--color-chain-active);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.25);
+}
+
 /* Vạch báo "sẽ chèn TRƯỚC/SAU đây" khi kéo sắp xếp lại thứ tự thẻ.
    inset box-shadow thay vì border thật để không đẩy layout — hàng bên cạnh
    không bị nhảy vị trí trong lúc rê chuột. */

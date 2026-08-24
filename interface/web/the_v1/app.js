@@ -1988,10 +1988,14 @@
     listContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 11px; padding: 6px;">Đang tải danh sách tệp...</div>';
 
     try {
-      const resp = await authFetch(`/api/tep_tin?dir=${encodeURIComponent(dir)}`);
+      // 24/08: tham số & tên trường từng viết theo API tưởng tượng, không phải
+      // API thật (interface/the_api.py:396 chỉ đọc `thu_muc`, trả về `danh_sach`
+      // với trường `kich_thuoc`). Hộp "Mở tệp" vì vậy LUÔN báo rỗng, mọi thư mục
+      // — bắt được khi tự dùng thử, đối chiếu thẳng response JSON.
+      const resp = await authFetch(`/api/tep_tin?thu_muc=${encodeURIComponent(dir)}`);
       if (resp.ok) {
         const data = await resp.json();
-        const files = data.tep_tin || [];
+        const files = data.danh_sach || [];
         listContainer.innerHTML = '';
         if (files.length === 0) {
           listContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 11px; padding: 6px;">Không có tệp .py nào trong thư mục này.</div>';
@@ -2006,7 +2010,7 @@
           chip.className = 'chip';
           chip.dataset.path = f.duong_dan;
           chip.textContent = f.duong_dan;
-          chip.title = `Mở tệp ${f.duong_dan} (${f.dung_luong_bytes} bytes)`;
+          chip.title = `Mở tệp ${f.duong_dan} (${f.kich_thuoc} bytes)`;
           chip.addEventListener('click', () => {
             document.getElementById('openFilePath').value = f.duong_dan;
             openPyFile(f.duong_dan);
@@ -2202,7 +2206,11 @@
         if (fileTreeContainer) fileTreeContainer.style.display = 'none';
         if (sidebarTitle) sidebarTitle.textContent = 'Khay Thẻ Lệnh';
         if (toolSearch) toolSearch.placeholder = 'Tìm thẻ...';
-        if (footerTip) footerTip.textContent = 'Nhấp đúp hoặc kéo thẻ vào vùng soạn thảo.';
+        // 24/08: chữ cũ ghi "Nhấp đúp" trong khi itemEl chỉ gắn 'click' đơn
+        // (dòng ~245) — bấm đúp theo đúng lời hướng dẫn cũ chèn TRÙNG thẻ 2
+        // lần, im lặng. Sửa chữ cho khớp việc thật, không đổi hành vi bấm đơn
+        // vì nó đúng và tiện hơn (không cần hai cú bấm chính xác liên tiếp).
+        if (footerTip) footerTip.textContent = 'Nhấp hoặc kéo thẻ vào vùng soạn thảo.';
       });
 
       btnModeFiles.addEventListener('click', () => {

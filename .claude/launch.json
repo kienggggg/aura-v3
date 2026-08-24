@@ -1,0 +1,16 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "the-app",
+      "runtimeExecutable": "venv/Scripts/python.exe",
+      "runtimeArgs": [
+        "-m",
+        "interface.the_app",
+        "--port",
+        "8088"
+      ],
+      "port": 8088
+    }
+  ]
+}

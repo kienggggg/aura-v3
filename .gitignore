@@ -8,7 +8,7 @@
 # repo cũ, tệp nhật ký kiểu này chứa mật khẩu wifi thật vì AURA đọc nó ra màn
 # hình trước khi có core/secret_guard.py.
 data/chat_sessions/
-data/
+data/*
 
 # ─── Hồ sơ trình duyệt của cửa sổ ứng dụng ───
 # `aura_app.pyw` mở Chrome với `--user-data-dir=data/app_window` để Windows coi
@@ -38,3 +38,18 @@ _rac/
 
 # venv rieng cho phep do LibCST (29 MB, khong dua vao git)
 .venv-cst/
+
+# ─── Ngoại lệ đúng MỘT tệp ───
+# `core/lat_nguoc.py:36` đọc sổ này để dựng câu "đã thử 64 lỗi NGOÀI 5 họ đó",
+# và app in câu ấy dưới mỗi kết quả E1. Đo 24/08 trên bản sao KHÔNG có `data/`:
+# `pytest tests` ra **2 failed, 622 passed** — hai test trong
+# `tests/test_e1_app.py` rơi về câu chung chung. Tức là ai clone kho về cũng
+# gặp hai vết đỏ không phải lỗi của họ.
+#
+# `data/` (có gạch chéo) chặn cả thư mục nên git KHÔNG đi xuống, và khi ấy `!`
+# vô tác dụng — phải mở đường theo từng cấp mới ăn.
+#
+# Đã soi tệp trước khi theo dõi: 64 mục, 0 khoá, 0 đường dẫn tuyệt đối, 16,7 KB.
+!data/evidence_sprint/
+data/evidence_sprint/*
+!data/evidence_sprint/e1_ngoai_ho.json

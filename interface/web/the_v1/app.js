@@ -899,7 +899,76 @@
   // ==========================================================================
   let syncTimeout = null;
 
+  // Trần 50 bước: cây thẻ của core/web_search.py là 281 thẻ, mỗi ảnh chụp
+  // JSON.stringify tốn vài trăm KB — giữ vô hạn thì gõ một lúc là phình bộ
+  // nhớ. 50 bước đủ cho thao tác sửa thật, và là trần CÓ THẬT chứ không phải
+  // hứa suông.
+  const TRAN_LICH_SU = 50;
+
+  // Ảnh chụp SÂU. Cây thẻ lồng nhau qua `than`, nên sao chép nông sẽ khiến
+  // "bản cũ" và "bản hiện tại" dùng chung mảng con — hoàn tác xong vẫn thấy
+  // thay đổi, đúng loại lỗi im lặng khó tìm nhất.
+  function anhChupCay() {
+    return JSON.stringify(state.tree);
+  }
+
+  // Mở tệp khác / tải mẫu khác / xoá sạch: lịch sử của CÂY CŨ phải bỏ hẳn,
+  // nếu không Ctrl+Z sẽ lôi ngược về cây của tệp trước đó — vừa vô nghĩa vừa
+  // nguy hiểm (người dùng tưởng đang sửa tệp này, thực ra đang ghi đè bằng
+  // nội dung tệp khác).
+  function xoaLichSu() {
+    state.history = [];
+    state.historyIndex = -1;
+    // Cập nhật nút NGAY: một số chỗ gọi xoaLichSu() SAU onTreeChanged(), nên
+    // nếu không tự cập nhật ở đây thì nút Hoàn tác vẫn sáng dù lịch sử rỗng
+    // — bấm vào không có gì xảy ra, đúng cái bệnh vừa sửa xong.
+    capNhatNutLichSu();
+  }
+
+  function ghiLichSu() {
+    const anh = anhChupCay();
+    // Bỏ qua nếu cây không đổi thật — tránh Ctrl+Z phải bấm nhiều lần cho
+    // một thao tác (vd. renderCanvas gọi lại onTreeChanged mà cây y nguyên).
+    if (state.historyIndex >= 0 && state.history[state.historyIndex] === anh) return;
+    // Đang ở giữa lịch sử mà sửa tiếp -> nhánh tương lai cũ bị bỏ, đúng như
+    // mọi trình soạn thảo.
+    state.history = state.history.slice(0, state.historyIndex + 1);
+    state.history.push(anh);
+    if (state.history.length > TRAN_LICH_SU) state.history.shift();
+    state.historyIndex = state.history.length - 1;
+    capNhatNutLichSu();
+  }
+
+  function capNhatNutLichSu() {
+    const btnUndo = document.getElementById('btnUndo');
+    const btnRedo = document.getElementById('btnRedo');
+    if (btnUndo) btnUndo.disabled = state.historyIndex <= 0;
+    if (btnRedo) btnRedo.disabled = state.historyIndex >= state.history.length - 1;
+  }
+
+  // `pushHistory = false`: khôi phục cây từ ảnh chụp thì KHÔNG được ghi lại
+  // vào lịch sử, nếu không Ctrl+Z sẽ tự sinh ra một bước mới và không bao giờ
+  // lùi được quá một bước.
+  function apDungAnhChup(anh) {
+    state.tree = JSON.parse(anh);
+    onTreeChanged(false, true);
+    capNhatNutLichSu();
+  }
+
+  function hoanTac() {
+    if (state.historyIndex <= 0) return;
+    state.historyIndex--;
+    apDungAnhChup(state.history[state.historyIndex]);
+  }
+
+  function lamLai() {
+    if (state.historyIndex >= state.history.length - 1) return;
+    state.historyIndex++;
+    apDungAnhChup(state.history[state.historyIndex]);
+  }
+
   function onTreeChanged(pushHistory = true, markDirty = true) {
+    if (pushHistory) ghiLichSu();
     if (markDirty) state.hasModifications = true;
     document.getElementById('fileModifiedBadge').style.display =
       state.activeFilePath && state.hasModifications ? 'inline-block' : 'none';
@@ -1909,6 +1978,7 @@
           `;
           card.addEventListener('click', () => {
             state.tree = JSON.parse(JSON.stringify(m.tree));
+            xoaLichSu();
             state.activeFilePath = '';
             state.activeFileSha256 = null;
             document.getElementById('currentFileName').textContent = m.ten;
@@ -1937,13 +2007,20 @@
           throw new Error('Phản hồi mở tệp không hợp lệ');
         }
         state.tree = data.tree;
+        xoaLichSu();
         state.activeFilePath = data.duong_dan;
         state.activeFileSha256 = data.sha256;
         state.hasModifications = false;
         document.getElementById('currentFileName').textContent = data.ten_tep;
         document.getElementById('fileModifiedBadge').style.display = 'none';
         document.getElementById('openFileModal').style.display = 'none';
+        // `pushHistory=false` để không đánh dấu tệp là "đã sửa" ngay khi vừa
+        // mở, nhưng vẫn phải GHI MỘT MỐC GỐC: nếu không, thao tác sửa ĐẦU
+        // TIÊN sau khi mở tệp trở thành bước gốc và không lùi về đâu được.
+        // Đo 24/08: mở dong_ho.py (7 thẻ) rồi thêm 1 thẻ -> bấm Hoàn tác vẫn
+        // là 8 thẻ, không lùi.
         onTreeChanged(false, false);
+        ghiLichSu();
 
         const testPath = data.duong_dan.startsWith('core/')
           ? data.duong_dan.replace('core/', 'tests/test_')
@@ -2269,6 +2346,7 @@
     document.getElementById('btnNew').addEventListener('click', () => {
       if (confirm('Tạo chương trình mới? Thao tác này sẽ dọn sạch vùng soạn thảo.')) {
         state.tree = [];
+        xoaLichSu();
         state.activeFilePath = '';
         state.activeFileSha256 = null;
         document.getElementById('currentFileName').textContent = 'Chương trình mới (Chưa lưu)';
@@ -2283,6 +2361,15 @@
         onTreeChanged();
       }
     });
+
+    // Hoàn tác / Làm lại. 24/08: hai nút này CÓ trong index.html (dòng 126,
+    // 127) nhưng chưa từng có handler nào — bấm vào im lặng, không gì xảy ra.
+    // `state.history`/`historyIndex` cũng khai báo sẵn từ đầu rồi bỏ đó.
+    // Bắt được lúc tự dùng thử: thêm một thẻ rồi bấm Hoàn tác, số thẻ vẫn là 3.
+    const btnUndo = document.getElementById('btnUndo');
+    const btnRedo = document.getElementById('btnRedo');
+    if (btnUndo) btnUndo.addEventListener('click', hoanTac);
+    if (btnRedo) btnRedo.addEventListener('click', lamLai);
 
     // Mẫu bài Modal
     document.getElementById('btnSamples').addEventListener('click', () => {
@@ -2478,6 +2565,18 @@
       } else if (e.ctrlKey && e.key === '0') {
         e.preventDefault();
         setCodeFontSize(14);
+      } else if (e.ctrlKey && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+        // Đang gõ trong ô nhập thì để trình duyệt tự hoàn tác CHỮ trong ô đó,
+        // đừng cướp phím để hoàn tác cả cây thẻ — người dùng sẽ mất nguyên
+        // câu vừa gõ chỉ vì lỡ tay.
+        if (e.target.closest('input, textarea')) return;
+        e.preventDefault();
+        hoanTac();
+      } else if (e.ctrlKey && ((e.key === 'y' || e.key === 'Y') ||
+                               ((e.key === 'z' || e.key === 'Z') && e.shiftKey))) {
+        if (e.target.closest('input, textarea')) return;
+        e.preventDefault();
+        lamLai();
       }
     });
   }

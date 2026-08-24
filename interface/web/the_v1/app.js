@@ -1282,6 +1282,29 @@
       return;
     }
 
+    // Chặn TRƯỚC khi gọi, bằng câu người dùng hiểu được. 24/08: bấm nút này
+    // lúc chưa mở tệp thì server trả "403 Forbidden: Tệp nguồn chưa được mở
+    // trong phiên làm việc" — và app in NGUYÊN VĂN mã lỗi HTTP đó lên màn
+    // hình. Nút "Chạy thử" cạnh bên đã làm đúng từ lâu (câu tiếng Việt rõ
+    // ràng khi có lỗi đỏ); nút này thì phun lỗi kỹ thuật.
+    if (!state.activeFilePath) {
+      statusPill.className = 'trace-status-pill cut';
+      statusPill.textContent = 'Hãy mở một tệp .py trước khi dò vết';
+      timelineBody.style.display = 'block';
+      timelineBody.innerHTML = '<div class="trace-empty-hint">Dò dòng dữ liệu chạy trên một tệp .py có sẵn trong kho. Bấm "Mở Tệp" để chọn tệp, rồi chọn tệp test tương ứng ở ô bên dưới.</div>';
+      return;
+    }
+
+    const testSelectTrace = document.getElementById('e1TestSelect');
+    const tepTest = testSelectTrace && testSelectTrace.value ? testSelectTrace.value : '';
+    if (!tepTest) {
+      statusPill.className = 'trace-status-pill cut';
+      statusPill.textContent = 'Hãy chọn tệp test ở ô bên dưới';
+      timelineBody.style.display = 'block';
+      timelineBody.innerHTML = '<div class="trace-empty-hint">Dò dòng dữ liệu cần một tệp test để biết chạy hàm nào. Chọn tệp test ở ô "Tệp test" ngay dưới đây.</div>';
+      return;
+    }
+
     btnTrace.disabled = true;
     statusPill.className = 'trace-status-pill ready';
     statusPill.textContent = 'Đang dò vết...';
@@ -1290,9 +1313,20 @@
     timelineBody.innerHTML = '<div class="trace-empty-hint">Đang thu thập chuỗi biến đổi dữ liệu thực thi (Trần 5000 bước)...</div>';
 
     try {
+      // 24/08: dòng cũ là
+      //   tep_test: state.activeFilePath.replace('core/', 'tests/test_')
+      // — KHÔNG BAO GIỜ khớp, vì `activeFilePath` là đường dẫn tuyệt đối
+      // Windows dùng dấu `\` (`D:\AURA_v3\core\dong_ho.py`), còn chuỗi tìm là
+      // `core/` với dấu `/`. Đo thật: replace xong ra CHÍNH chuỗi cũ, nên
+      // `tep_test` = đường dẫn tệp NGUỒN, server từ chối "Tệp test không hợp
+      // lệ (phải nằm dưới tests/)". Nút này chưa từng chạy được, với mọi tệp.
+      //
+      // Dùng lại ĐÚNG nguồn mà E1 (dòng ~1464) đang dùng và chạy tốt: dropdown
+      // `e1TestSelect` do người dùng chọn. Hai nút nằm cùng một khu vực, cùng
+      // cần một tệp test — không có lý do gì để đoán riêng.
       const payload = {
-        tep_nguon: state.activeFilePath || 'core/dong_ho.py',
-        tep_test: state.activeFilePath ? state.activeFilePath.replace('core/', 'tests/test_') : 'tests/test_dong_ho.py',
+        tep_nguon: state.activeFilePath,
+        tep_test: tepTest,
         max_steps: 5000
       };
 

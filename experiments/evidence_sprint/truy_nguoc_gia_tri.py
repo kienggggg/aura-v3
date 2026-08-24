@@ -174,8 +174,28 @@ def truy_nguoc(
     su_kien: List[dict],
     nguon: str,
     sau_toi_da: int = 40,
+    im_lang_khi_khong_lui: bool = False,
 ) -> Dict[str, Any]:
-    """Đi ngược từ giá trị trả về sai về các dòng đã sinh ra nó."""
+    """Đi ngược từ giá trị trả về sai về các dòng đã sinh ra nó.
+
+    `im_lang_khi_khong_lui` — luật rút ra từ bộ đề 1 ngày 24/08:
+
+        chuỗi ĐÚNG 1 dòng, TRÚNG   15
+        chuỗi ĐÚNG 1 dòng, TRƯỢT   22   <- chỉ một dòng, và chỉ SAI
+        chuỗi  >1 dòng, TRÚNG      17
+        chuỗi  >1 dòng, TRƯỢT       9
+
+    Trong 37 ca trả lời đúng một dòng thì chỉ 15 đúng — 41%, tệ hơn tung đồng
+    xu mà trông chắc chắn hơn hẳn. Chuỗi một dòng nghĩa là **không lùi được
+    bước nào**: tên mà dòng ấy đọc không có ai ghi trong vết, nên máy chỉ đang
+    đọc lại chỗ chương trình chết — đúng thứ traceback Python in sẵn miễn phí.
+
+    Bật cờ này thì những ca ấy trả `khong_biet` thay vì chỉ vào một dòng.
+
+    CẢNH BÁO: luật này rút ra TỪ bộ đề 1. Chấm nó trên bộ đề 1 là lấy kết quả
+    chứng minh cho giả thiết sinh ra từ chính kết quả ấy. Muốn có bằng chứng
+    thì phải chạy trên bộ đề 2 — mã nguồn khác hẳn.
+    """
     if not su_kien:
         return {"trang_thai": "khong_do_duoc", "vi_sao": "không có sự kiện vết chạy",
                 "chuoi": [], "dong": []}
@@ -239,11 +259,26 @@ def truy_nguoc(
         if isinstance(d, int) and d not in dong:
             dong.append(d)
 
+    # Chuỗi chỉ có mốc bắt đầu = không lùi được bước nào.
+    khong_lui = len(chuoi) <= 1
+    if im_lang_khi_khong_lui and khong_lui:
+        return {
+            "trang_thai": "khong_biet",
+            "vi_sao": "không lùi được bước nào — tên mà dòng ấy đọc không có "
+                      "ai ghi trong vết. Traceback Python đã chỉ đúng chỗ này.",
+            "chuoi": chuoi,
+            "dong": [],
+            "khong_lui": True,
+            "model_calls": 0,
+            "external_submit": False,
+        }
+
     return {
-        "trang_thai": "co_chuoi" if len(chuoi) > 1 else "chuoi_rong",
+        "trang_thai": "chuoi_rong" if khong_lui else "co_chuoi",
         "vi_sao": "",
         "chuoi": chuoi,
         "dong": dong,
+        "khong_lui": khong_lui,
         "model_calls": 0,
         "external_submit": False,
     }

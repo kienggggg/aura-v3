@@ -57,15 +57,27 @@ sys.path.insert(0, str(GOC))
 from dung_de_loi import chay_test                         # noqa: E402
 from core.lat_nguoc import tao_cac_ung_vien               # noqa: E402
 
-TEP = ("core/may_tinh.py", "core/web_search.py",
-       "core/dong_ho.py", "core/loai_cau_hoi.py")
-TEP_TEST = {
-    "core/may_tinh.py": "tests/test_may_tinh.py",
-    "core/web_search.py": "tests/test_web_search.py",
-    "core/dong_ho.py": "tests/test_dong_ho.py",
-    "core/loai_cau_hoi.py": "tests/test_loai_cau_hoi.py",
+# Bo 1 (mac dinh). Bo 2 mo bang co `--bo2`: TEP KHAC HAN, khong trung mot
+# tep nao voi bo 1.
+#
+# 24/08/2026: bo sinh de nay KHONG co hat giong ngau nhien nao — no liet ke
+# tuan tu `for muc in range(tong_cho)` roi lay 6 de dau moi ho moi tep. Nen
+# "sinh lai voi hat giong khac" la chuyen khong ton tai. Muon mot bo doc lap
+# that thi phai doi MA NGUON, khong phai doi so ngau nhien.
+#
+# Vi sao can bo 2: luat "im lang khi khong lui duoc buoc nao" cua truy nguoc
+# gia tri duoc rut ra TU CHINH bo 1. Cham no tren bo 1 la lay ket qua chung
+# minh cho gia thiet sinh ra tu chinh ket qua ay.
+BO_DE = {
+    1: (("core/may_tinh.py", "core/web_search.py",
+         "core/dong_ho.py", "core/loai_cau_hoi.py"), "de_ngoai_ho.json"),
+    2: (("core/secret_guard.py", "core/user_memory.py",
+         "core/doc_so_phien.py", "core/kiem_tien.py"), "de_ngoai_ho_2.json"),
 }
-RA = NHA / "de_ngoai_ho.json"
+_BO = 2 if "--bo2" in sys.argv else 1
+TEP = BO_DE[_BO][0]
+TEP_TEST = {t: "tests/test_" + Path(t).name for t in TEP}
+RA = NHA / BO_DE[_BO][1]
 TRAN_MOI_HO_MOI_TEP = 6      # du de co so, khong lam phep do dai vo ich
 
 

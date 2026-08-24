@@ -272,7 +272,7 @@
       try {
         const payload = JSON.parse(raw);
         if (payload.type === 'EXISTING_CARD' && payload.nodeId) {
-          if (xoaTheTheoId(state.tree, payload.nodeId)) {
+          if (layVaXoaTheTheoId(payload.nodeId)) {
             onTreeChanged();
           }
         }
@@ -348,21 +348,61 @@
     onTreeChanged();
   }
 
-  // Tìm node theo id trong cây (kể cả khối con .than) và xoá tại chỗ.
-  // Dùng cho kéo thẻ NGƯỢC từ canvas ra khay để xoá — cùng thao tác splice
-  // như nút ✕, chỉ khác điểm vào (kéo thả thay vì bấm nút).
-  function xoaTheTheoId(danhSach, nodeId) {
+  // Tìm node theo id trong cây (kể cả khối con .than), KHÔNG xoá — nền dùng
+  // chung cho cả xoá (kéo ra khay) lẫn di chuyển (kéo sắp xếp lại).
+  function timTheTheoId(danhSach, nodeId) {
     for (let i = 0; i < danhSach.length; i++) {
       if (danhSach[i].id === nodeId) {
-        danhSach.splice(i, 1);
-        return true;
+        return { node: danhSach[i], dsCha: danhSach, chiSo: i };
       }
-      if (danhSach[i].than && danhSach[i].than.length > 0 &&
-          xoaTheTheoId(danhSach[i].than, nodeId)) {
-        return true;
+      if (danhSach[i].than && danhSach[i].than.length > 0) {
+        const sau = timTheTheoId(danhSach[i].than, nodeId);
+        if (sau) return sau;
       }
     }
-    return false;
+    return null;
+  }
+
+  // Xoá node theo id, trả về node đã xoá (hoặc null nếu không thấy). Dùng
+  // cho kéo thẻ NGƯỢC từ canvas ra khay để xoá — cùng thao tác splice như
+  // nút ✕, chỉ khác điểm vào (kéo thả thay vì bấm nút).
+  function layVaXoaTheTheoId(nodeId) {
+    const tim = timTheTheoId(state.tree, nodeId);
+    if (!tim) return null;
+    tim.dsCha.splice(tim.chiSo, 1);
+    return tim.node;
+  }
+
+  // `node` có phải chính là `targetId`, hoặc `targetId` nằm trong khối con
+  // (.than) của `node`? Chặn kéo một khối THẢ VÀO CHÍNH THÂN NÓ (hoặc thân
+  // của một khối con của nó) — việc này sẽ tạo một cây có node chứa chính
+  // nó, vỡ mọi thứ đọc cây bằng đệ quy (kể cả renderCard đang gọi hàm này).
+  function laTuThaVaoChinhNoHoacConNo(node, targetId) {
+    if (!targetId) return false;
+    if (node.id === targetId) return true;
+    if (!node.than) return false;
+    return node.than.some(con => laTuThaVaoChinhNoHoacConNo(con, targetId));
+  }
+
+  // Di chuyển một thẻ ĐÃ CÓ tới vị trí mới — dùng cho kéo sắp xếp lại thứ tự.
+  //   dsDich:     mảng đích (state.tree hoặc node.than nào đó)
+  //   idKhoiDich: id của thẻ đang SỞ HỮU dsDich (null nếu dsDich là gốc
+  //               state.tree) — dùng để chặn tự-thả-vào-thân-mình
+  //   viTri:      chỉ số muốn chèn vào, tính TRÊN dsDich TRƯỚC khi rút thẻ
+  //               cũ ra (nếu cùng mảng, hàm tự bù lại chỗ vừa rút)
+  function diChuyenThe(nodeId, dsDich, idKhoiDich, viTri) {
+    const tim = timTheTheoId(state.tree, nodeId);
+    if (!tim) return false;
+    const { node, dsCha, chiSo } = tim;
+
+    if (laTuThaVaoChinhNoHoacConNo(node, idKhoiDich)) return false;
+
+    let viTriMoi = viTri;
+    if (dsCha === dsDich && chiSo < viTriMoi) viTriMoi -= 1;
+
+    dsCha.splice(chiSo, 1);
+    dsDich.splice(viTriMoi, 0, node);
+    return true;
   }
 
   function createCodeInput(node, fieldName, placeholder = '', className = '') {
@@ -554,7 +594,27 @@
     return wrap;
   }
 
-  function renderCard(node, parentList, index, depth = 1) {
+  // Dòng thẻ đang được đánh dấu "sẽ chèn trước/sau đây" trong lúc kéo. Theo
+  // dõi ĐÚNG MỘT phần tử ở đây thay vì quét toàn bộ DOM mỗi lần dragover —
+  // cây có thể tới vài trăm thẻ (281 trên core/web_search.py), dragover bắn
+  // liên tục khi rê chuột.
+  let hangDangDanhDau = null;
+  function danhDauViTriTha(hangEl, truoc) {
+    if (hangDangDanhDau && hangDangDanhDau !== hangEl) {
+      hangDangDanhDau.classList.remove('tha-truoc-hang', 'tha-sau-hang');
+    }
+    hangEl.classList.toggle('tha-truoc-hang', truoc);
+    hangEl.classList.toggle('tha-sau-hang', !truoc);
+    hangDangDanhDau = hangEl;
+  }
+  function xoaDanhDauViTriTha() {
+    if (hangDangDanhDau) {
+      hangDangDanhDau.classList.remove('tha-truoc-hang', 'tha-sau-hang');
+      hangDangDanhDau = null;
+    }
+  }
+
+  function renderCard(node, parentList, index, depth = 1, parentBlockId = null) {
     const cardDef = TheValidator.BO_THE_V1[node.ma] || { ten: node.ma, mau: '#6B7280', co_than: false, o: [] };
     
     // Tìm lỗi / cảnh báo ứng với nút này
@@ -613,6 +673,41 @@
       hangEl.classList.remove('dang-keo-ra');
       const tc = document.getElementById('toolboxContainer');
       if (tc) tc.classList.remove('vung-tha-xoa');
+      xoaDanhDauViTriTha();
+    });
+
+    // Kéo SẮP XẾP LẠI: rê một thẻ (từ khay hoặc từ chỗ khác trên canvas) tới
+    // gần dòng này — thả nửa TRÊN thì chèn trước, nửa DƯỚI thì chèn sau.
+    // stopPropagation để khối .khoi/canvas bao ngoài không tô viền chồng lên.
+    hangEl.addEventListener('dragover', (e) => {
+      if (state.draggingCardId === node.id) return; // đang kéo chính mình
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'move';
+      const r = hangEl.getBoundingClientRect();
+      const truoc = (e.clientY - r.top) < r.height / 2;
+      danhDauViTriTha(hangEl, truoc);
+    });
+    hangEl.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const chenTruoc = hangEl.classList.contains('tha-truoc-hang');
+      xoaDanhDauViTriTha();
+      const raw = e.dataTransfer.getData('text/plain');
+      if (!raw) return;
+      try {
+        const payload = JSON.parse(raw);
+        const viTri = chenTruoc ? index : index + 1;
+        if (payload.type === 'NEW_CARD') {
+          const newNode = taoTheNode(payload.ma);
+          parentList.splice(viTri, 0, newNode);
+          onTreeChanged();
+        } else if (payload.type === 'EXISTING_CARD' && payload.nodeId && payload.nodeId !== node.id) {
+          if (diChuyenThe(payload.nodeId, parentList, parentBlockId, viTri)) {
+            onTreeChanged();
+          }
+        }
+      } catch (_) {}
     });
 
     // 2. Thẻ viên thuốc (.the)
@@ -724,7 +819,7 @@
       khoiEl.dataset.slotId = node.id;
 
       if (node.than && node.than.length > 0) {
-        renderCardList(node.than, khoiEl, depth + 1);
+        renderCardList(node.than, khoiEl, depth + 1, node.id);
       } else {
         const ph = document.createElement('div');
         ph.className = 'slot-placeholder';
@@ -755,6 +850,15 @@
             if (!node.than) node.than = [];
             node.than.push(newNode);
             onTreeChanged();
+          } else if (payload.type === 'EXISTING_CARD' && payload.nodeId) {
+            // Thả vào NỀN của khối (không trúng dòng thẻ con nào) -> đưa
+            // xuống CUỐI thân khối này. Thả trúng một dòng thẻ cụ thể thì
+            // dragover/drop của chính dòng đó (ở trên) đã xử lý trước và
+            // stopPropagation, nên nhánh này không chạy.
+            if (!node.than) node.than = [];
+            if (diChuyenThe(payload.nodeId, node.than, node.id, node.than.length)) {
+              onTreeChanged();
+            }
           }
         } catch (_) {}
       });
@@ -2250,6 +2354,11 @@
       workspace.addEventListener('dragover', (e) => {
         e.preventDefault();
       });
+      workspace.addEventListener('dragleave', (e) => {
+        // Rời hẳn khung canvas (không phải chỉ đi qua một thẻ con) — dọn dấu
+        // "sẽ chèn ở đây" còn sót lại nếu chuột rê ra vùng chết giữa hai thẻ.
+        if (e.target === workspace) xoaDanhDauViTriTha();
+      });
       workspace.addEventListener('drop', (e) => {
         e.preventDefault();
         const raw = e.dataTransfer.getData('text/plain');
@@ -2258,6 +2367,12 @@
           const payload = JSON.parse(raw);
           if (payload.type === 'NEW_CARD') {
             addNewCardToRoot(payload.ma);
+          } else if (payload.type === 'EXISTING_CARD' && payload.nodeId) {
+            // Thả vào nền canvas (không trúng dòng thẻ nào) -> đưa xuống
+            // CUỐI cấp gốc. Thả trúng một dòng cụ thể thì dòng đó tự xử lý.
+            if (diChuyenThe(payload.nodeId, state.tree, null, state.tree.length)) {
+              onTreeChanged();
+            }
           }
         } catch (_) {}
       });

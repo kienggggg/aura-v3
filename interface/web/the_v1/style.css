@@ -458,6 +458,16 @@ body {
   opacity: 0.35;
 }
 
+/* Vạch báo "sẽ chèn TRƯỚC/SAU đây" khi kéo sắp xếp lại thứ tự thẻ.
+   inset box-shadow thay vì border thật để không đẩy layout — hàng bên cạnh
+   không bị nhảy vị trí trong lúc rê chuột. */
+.hang.tha-truoc-hang {
+  box-shadow: inset 0 2px 0 0 var(--color-chain-active);
+}
+.hang.tha-sau-hang {
+  box-shadow: inset 0 -2px 0 0 var(--color-chain-active);
+}
+
 /* Khay thẻ bố cục 2 cột gọn gàng */
 .tool-group-cards {
   display: grid;

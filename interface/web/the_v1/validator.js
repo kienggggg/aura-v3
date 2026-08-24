@@ -611,9 +611,23 @@
     };
   }
 
-  function sinhMaPython(nodes, indentLevel = 0) {
+  // `sourceMap` là tham số RA (out-param), tuỳ chọn: mảng rỗng do người gọi
+  // truyền vào, hàm này ĐIỀN VÀO — mỗi phần tử là node.id của thẻ sinh ra
+  // đúng DÒNG VẬT LÝ đó trong mã cuối cùng. Không đổi kiểu trả về (vẫn là
+  // string) nên mọi chỗ gọi cũ không bị ảnh hưởng.
+  //
+  // Vì sao gắn NGAY TẠI ĐÂY thay vì viết một hàm dò-ngược riêng: hàm dò-ngược
+  // sẽ là BẢN SAO logic của hàm này, phải tay đồng bộ mãi mãi — đúng bệnh vừa
+  // dọn sáng 24/08 giữa core/lat_nguoc.py và tools/_worker_e1_exec.py. Ở đây
+  // sourceMap sinh ra CÙNG LƯỢT với `code`, nên khớp 100% với thứ THẬT SỰ
+  // được chạy, không phải suy luận lại từ một bản sinh mã khác.
+  function sinhMaPython(nodes, indentLevel = 0, sourceMap = null) {
     if (!nodes) return "";
     const resLines = [];
+    const ghiDong = (dong, nodeId) => {
+      resLines.push(dong);
+      if (sourceMap) sourceMap.push(nodeId);
+    };
 
     for (const node of nodes) {
       const ma = node.ma;
@@ -623,9 +637,9 @@
           const spaces = " ".repeat(indentLevel * 4);
           for (const rl of raw.split("\n")) {
             if (rl.trim()) {
-              resLines.push(`${spaces}${rl}`);
+              ghiDong(`${spaces}${rl}`, node.id);
             } else {
-              resLines.push("");
+              ghiDong("", node.id);
             }
           }
         }
@@ -706,24 +720,34 @@
         base = `${spaces}pass`;
       }
 
-      if (node.duoi_dong) {
-        let dd = node.duoi_dong;
-        if (dd.trimStart().startsWith("#") && !dd.startsWith(" ")) {
-          dd = " " + dd;
+      // `base` có thể là NHIỀU dòng vật lý (vd. "ham" kèm decorator, xem
+      // dòng lines.join("\n") ở trên) — mỗi dòng đều thuộc về node này.
+      // Chú thích cuối dòng (duoi_dong) chỉ dính vào dòng CUỐI của base.
+      const baseLines = base.split("\n");
+      baseLines.forEach((bl, i) => {
+        if (i === baseLines.length - 1 && node.duoi_dong) {
+          let dd = node.duoi_dong;
+          if (dd.trimStart().startsWith("#") && !dd.startsWith(" ")) {
+            dd = " " + dd;
+          }
+          ghiDong(`${bl}${dd}`, node.id);
+        } else {
+          ghiDong(bl, node.id);
         }
-        resLines.push(`${base}${dd}`);
-      } else {
-        resLines.push(base);
-      }
+      });
 
       const defn = BO_THE_V1[ma];
       if (defn && defn.co_than) {
         if (node.than && node.than.length > 0) {
           const childIndent = curIndent + 1;
-          resLines.push(sinhMaPython(node.than, childIndent));
+          // Truyền THẲNG sourceMap xuống đệ quy con (không tạo mảng con rồi
+          // nối sau): con ghi trực tiếp vào cùng mảng, đúng thứ tự đệ quy —
+          // trùng khớp tự nhiên với thứ tự dòng trong resLines.join("\n"),
+          // không cần tính offset.
+          resLines.push(sinhMaPython(node.than, childIndent, sourceMap));
         } else {
           const childSpaces = " ".repeat((curIndent + 1) * 4);
-          resLines.push(`${childSpaces}pass`);
+          ghiDong(`${childSpaces}pass`, node.id);
         }
       }
     }

@@ -1757,6 +1757,33 @@
   // 5. CHẠY THỬ CÓ CHỦ ĐÍCH (TẮT MẶC ĐỊNH VÌ CHƯA PHẢI SANDBOX THẬT)
   // ==========================================================================
 
+  // Traceback Python trỏ dòng trong run_script.py (tệp tạm, người dùng
+  // không bao giờ thấy). Lấy khung CUỐI CÙNG thuộc script chính (không phải
+  // khung nằm sâu trong thư viện chuẩn — traceback liệt kê theo thứ tự gọi
+  // hàm, khung cuối luôn gần chỗ lỗi THẬT SỰ xảy ra nhất), tra `sourceMap`
+  // để biết thẻ nào sinh ra dòng đó, rồi mượn NGUYÊN hạ tầng hiển thị lỗi
+  // ĐỎ tĩnh sẵn có (badge trên .the, lọc theo node_id) — không cần CSS hay
+  // đường vẽ mới.
+  function danhDauTheGayLoiRuntime(stderr, sourceMap) {
+    if (!stderr) return;
+    const khopDong = [...stderr.matchAll(/File\s+"[^"]*run_script\.py",\s*line\s+(\d+)/g)];
+    if (khopDong.length === 0) return;
+    const soDong = parseInt(khopDong[khopDong.length - 1][1], 10);
+    const nodeId = sourceMap[soDong - 1];
+    if (!nodeId) return;
+
+    const dongCuoi = stderr.trim().split('\n').filter(l => l.trim()).pop() || 'Lỗi khi chạy';
+    state.diagnostics.danh_sach = state.diagnostics.danh_sach || [];
+    state.diagnostics.danh_sach.push({
+      muc_do: 'do',
+      ma_loi: 'runtime_error',
+      thong_diep: `⚡ Lỗi khi chạy: ${dongCuoi}`,
+      node_id: nodeId,
+      nguon: 'runtime',
+    });
+    renderCanvas();
+  }
+
   async function runProgram() {
     const btnRun = document.getElementById('btnRun');
     const runText = document.getElementById('runBtnText');
@@ -1776,7 +1803,17 @@
       return;
     }
 
-    const code = TheValidator.sinhMaPython(state.tree);
+    // sourceMap[i] = node.id sinh ra dòng vật lý thứ (i+1) của `code`. Khi
+    // chạy lỗi, traceback trỏ số dòng trong run_script.py — tra bảng này để
+    // biết THẺ NÀO gây lỗi, thay vì chỉ hiện số dòng của một tệp tạm người
+    // dùng chưa từng thấy (khoảng trống bắt được 24/08 lúc tự dùng thử: lỗi
+    // TĨNH đã sáng đúng thẻ từ lâu qua node_id, lỗi CHẠY THẬT thì chưa).
+    const sourceMap = [];
+    const code = TheValidator.sinhMaPython(state.tree, 0, sourceMap);
+    // Dọn annotation lỗi runtime của lần chạy TRƯỚC — không phải lỗi tĩnh,
+    // chỉ dọn đúng loại 'runtime' để không đụng vào diagnostics tĩnh hiện có.
+    state.diagnostics.danh_sach = (state.diagnostics.danh_sach || [])
+      .filter(d => d.nguon !== 'runtime');
     if (!code || !code.trim()) {
       termBody.innerHTML = '<div class="term-line term-dim">> Chương trình rỗng, không có lệnh nào để chạy.</div>';
       return;
@@ -1820,6 +1857,7 @@
           <div class="term-line term-stderr">${escapeHtml(res.stderr || 'Lỗi không xác định')}</div>
           <div class="term-line term-dim">----------------------------------------\n[Thất bại · Exit code: ${res.exit_code}]</div>
         `;
+        danhDauTheGayLoiRuntime(res.stderr, sourceMap);
       }
     } catch (err) {
       metaStatus.className = 'meta-status error';

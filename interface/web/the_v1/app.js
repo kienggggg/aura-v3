@@ -2270,6 +2270,11 @@
     // Mở tệp Modal & Bộ duyệt tệp động
     document.getElementById('btnOpenFile').addEventListener('click', () => {
       loadRepoFiles('core');
+      // 24/08: bat gap khi tu dung thu — o nay KHONG duoc don khi mo lai
+      // modal, nen van con duong dan cua lan mo truoc. Bam vao roi go tiep
+      // (thao tac tu nhien nhat) noi chuoi cu voi chuoi moi thanh mot duong
+      // dan vo nghia, vi input KHONG tu chon toan bo chu khi duoc focus.
+      document.getElementById('openFilePath').value = '';
       document.getElementById('openFileModal').style.display = 'flex';
     });
     document.getElementById('btnCloseOpenFile').addEventListener('click', () => {
@@ -2281,6 +2286,12 @@
     document.getElementById('btnConfirmOpenFile').addEventListener('click', () => {
       const p = document.getElementById('openFilePath').value;
       openPyFile(p);
+    });
+    // Bam vao chip trong danh sach van dien san duong dan (dong 2015) roi
+    // nguoi dung co the muon sua tay — focus thi chon san toan bo chu, kieu
+    // o dia chi trinh duyet, de go de la thay ngay chu bam khong noi vao.
+    document.getElementById('openFilePath').addEventListener('focus', function () {
+      this.select();
     });
 
     document.querySelectorAll('.filter-tag').forEach(tag => {
@@ -2306,6 +2317,11 @@
       const p = document.getElementById('saveFilePath').value;
       const type = document.querySelector('input[name="saveType"]:checked').value;
       saveFile(p, type);
+    });
+    // Cùng bệnh với ô openFilePath (24/08): ô này luôn điền sẵn đường dẫn tệp
+    // đang mở, có khi dài. Focus thì chọn hết để gõ đè sạch, không nối chuỗi.
+    document.getElementById('saveFilePath').addEventListener('focus', function () {
+      this.select();
     });
 
     // Bottom Pane Tabs Switch (4 tabs)

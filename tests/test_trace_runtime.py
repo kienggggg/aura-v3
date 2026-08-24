@@ -89,6 +89,44 @@ def test_luat_chon_test_tat_dinh_tren_de_loi_don_dong_ho(tmp_path: Path):
         shutil.copytree(PROJECT_ROOT / d, tmp_path / d)
     (tmp_path / "pytest.ini").write_text("[pytest]\npythonpath = .\n", encoding="utf-8")
 
+    # ĐÓNG ĐINH ĐỒNG HỒ — nếu không, phép đo này XANH 3/7 NGÀY TRONG TUẦN.
+    #
+    # Đo 25/08/2026: lỗi gieo ở đây là `now or ...` -> `now and ...`, làm
+    # `cau_gio()` bỏ qua mốc thời gian test truyền vào mà dùng `datetime.now()`
+    # THẬT. Ba test tham số hoá trong test_dong_ho.py so thứ với 10/08 (Thứ
+    # Hai), 15/08 (Thứ Bảy), 16/08 (Chủ Nhật) — chạy đúng một trong ba thứ ấy
+    # thì một test TÌNH CỜ xanh, số test đỏ tụt từ 6 xuống 5.
+    #
+    #     Thứ Hai / Thứ Bảy / Chủ Nhật  -> 5 đỏ -> so_test_khac = 4
+    #     bốn thứ còn lại                -> 6 đỏ -> so_test_khac = 5
+    #
+    # Hôm 24/08 (Thứ Hai) suite xanh 624; hôm sau 25/08 (Thứ Ba) đỏ, không ai
+    # đụng vào mã. Đúng bệnh mà chính `core/dong_ho.py` sinh ra để chống: lấy
+    # thời gian thật vào chỗ cần một mốc cố định.
+    #
+    # Sửa ở GỐC — làm phép đo tất định — chứ KHÔNG nới con số kỳ vọng.
+    (tmp_path / "conftest.py").write_text(
+        "import datetime as _dt\n"
+        "import pytest\n"
+        "\n"
+        "# Thứ Tư — cố ý KHÔNG trùng ba thứ mà test_dong_ho.py tham số hoá,\n"
+        "# để số test đỏ không đổi theo ngày chạy.\n"
+        "_MOC = _dt.datetime(2026, 8, 26, 9, 30)\n"
+        "\n"
+        "\n"
+        "class _DongHoDongDinh(_dt.datetime):\n"
+        "    @classmethod\n"
+        "    def now(cls, tz=None):\n"
+        "        return _MOC if tz is None else _MOC.replace(tzinfo=tz)\n"
+        "\n"
+        "\n"
+        "@pytest.fixture(autouse=True)\n"
+        "def _dong_dinh_dong_ho(monkeypatch):\n"
+        "    import core.dong_ho\n"
+        "    monkeypatch.setattr(core.dong_ho, 'datetime', _DongHoDongDinh)\n",
+        encoding="utf-8",
+    )
+
     goc_tep = tmp_path / "core" / "dong_ho.py"
     goc_code = goc_tep.read_text(encoding="utf-8")
     
@@ -116,7 +154,11 @@ def test_luat_chon_test_tat_dinh_tren_de_loi_don_dong_ho(tmp_path: Path):
 
     # 1. Khẳng định ĐÚNG tên test được chọn theo luật tất định (ít bước nhất -> thứ tự pytest)
     assert ten_test_chot == "tests/test_dong_ho.py::test_cau_gio_noi_dung_thu_va_ngay"
-    assert so_test_khac == 4, f"dong_ho.py lỗi đơn có 5 test đỏ (1 chốt + 4 khác), nhận được {so_test_khac}"
+    # 5 (không phải 4 như bản cũ): với đồng hồ đóng đinh vào Thứ Tư, cả BA test
+    # tham số hoá theo thứ đều đỏ. Con số 4 của bản cũ là con số của những ngày
+    # Thứ Hai / Thứ Bảy / Chủ Nhật, khi một trong ba test tình cờ xanh. Đây
+    # KHÔNG phải nới ngưỡng: phép đo nay tất định, nên con số cũng đổi theo.
+    assert so_test_khac == 5, f"dong_ho.py lỗi đơn có 6 test đỏ (1 chốt + 5 khác), nhận được {so_test_khac}"
 
     # 2. Khẳng định trace_result của test được chọn đi qua dòng đột biến (Tầng 1 thực thi thật)
     res_chot = next(r for r in danh_sach if r.ten_test == ten_test_chot)

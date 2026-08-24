@@ -55,7 +55,10 @@
 
   /* Bố cục IDE 3 cột */
   --sidebar-left-width: 240px;
-  --sidebar-right-width: 300px;
+  /* 24/08: về 0 sau khi gỡ panel Agent (xem ghi chú ở index.html). Cột phải
+     giữ lại nhưng ĐANG RỖNG — để 300px thì mất một phần tư màn hình cho một
+     ô trống. Đổi lại 300px khi nối Agent thật vào. */
+  --sidebar-right-width: 0px;
 
   /* Hiệu ứng */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);

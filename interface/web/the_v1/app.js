@@ -2360,41 +2360,9 @@
     });
   }
 
-  function setupAgentWorkspace() {
-    const btnSend = document.getElementById('btnSendAgent');
-    const input = document.getElementById('agentInput');
-    const chatContainer = document.getElementById('agentChatContainer');
-    if (!btnSend || !input || !chatContainer) return;
-
-    const handleSend = () => {
-      const text = input.value.trim();
-      if (!text) return;
-
-      const userMsg = document.createElement('div');
-      userMsg.className = 'agent-msg user';
-      userMsg.textContent = text;
-      chatContainer.appendChild(userMsg);
-      input.value = '';
-
-      chatContainer.scrollTop = chatContainer.scrollHeight;
-
-      setTimeout(() => {
-        const botMsg = document.createElement('div');
-        botMsg.className = 'agent-msg bot';
-        botMsg.innerHTML = `Đã nhận yêu cầu: <em>"${escapeHtml(text)}"</em>.<br>Tôi đang kiểm tra cấu trúc thẻ và hỗ trợ thao tác tự động...`;
-        chatContainer.appendChild(botMsg);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-      }, 350);
-    };
-
-    btnSend.addEventListener('click', handleSend);
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handleSend();
-      }
-    });
-  }
+  // 24/08: setupAgentWorkspace() da GO. Panel Agent chi tra loi bang chuoi
+  // cung + setTimeout 350ms gia vo suy nghi, khong goi API nao. Xem ghi chu
+  // day du o index.html cho <aside id="sidebarRight">.
 
   // ==========================================================================
   // 7. SỰ KIỆN & LẮNG NGHE NGƯỜI DÙNG
@@ -2479,6 +2447,18 @@
     const btnRedo = document.getElementById('btnRedo');
     if (btnUndo) btnUndo.addEventListener('click', hoanTac);
     if (btnRedo) btnRedo.addEventListener('click', lamLai);
+
+    // Ba nút chỉnh cỡ chữ. 24/08: cùng bệnh với Hoàn tác — CÓ nút trên
+    // giao diện (index.html dòng 37-39), CÓ sẵn hàm setCodeFontSize, có cả
+    // phím tắt Ctrl+= / Ctrl+- / Ctrl+0, nhưng ba nút thì chưa từng nối.
+    // Đo: bấm A+ -> 14px vẫn là 14px; nhấn Ctrl+= -> 15px. Người dùng bấm
+    // nút trước, không ai đọc tooltip để biết có phím tắt.
+    const btnZoomIn = document.getElementById('btnZoomIn');
+    const btnZoomOut = document.getElementById('btnZoomOut');
+    const btnZoomReset = document.getElementById('btnZoomReset');
+    if (btnZoomIn) btnZoomIn.addEventListener('click', () => setCodeFontSize(state.codeFontSize + 1));
+    if (btnZoomOut) btnZoomOut.addEventListener('click', () => setCodeFontSize(state.codeFontSize - 1));
+    if (btnZoomReset) btnZoomReset.addEventListener('click', () => setCodeFontSize(14));
 
     // Tìm trong chương trình
     const btnFind = document.getElementById('btnFindInFile');
@@ -2668,9 +2648,8 @@
       ro.observe(cardRoot);
     }
 
-    // Thiết lập Splitter chia đôi kéo được & Agent Workspace
+    // Thiết lập Splitter chia đôi kéo được
     setupBottomSplitter();
-    setupAgentWorkspace();
 
     // Lắng nghe window resize để tính lại chiều cao cột dọc
     window.addEventListener('resize', () => {

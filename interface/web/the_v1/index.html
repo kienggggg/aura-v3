@@ -65,7 +65,12 @@
         <span id="runBtnText">CHẠY THỬ</span>
       </button>
 
-      <button class="icon-btn-header" id="btnToggleSidebarRight" title="Thu gọn/Mở Bảng Phụ & Terminal (Ctrl+J)">
+      <!-- 24/08: ẨN cùng lúc gỡ panel Agent. Nút này ghi "Thu gọn/Mở Bảng Phụ
+           & Terminal" nhưng đo thật thì terminal KHÔNG đổi (flex -> flex) —
+           nó chỉ thu gọn CỘT PHẢI, mà cột phải nay đã rỗng. Bấm vào không
+           thấy gì xảy ra, đúng loại nút hứa một việc rồi làm việc khác.
+           Hiện lại khi nối Agent thật vào cột phải. -->
+      <button class="icon-btn-header" id="btnToggleSidebarRight" title="Thu gọn/Mở cột phải (Ctrl+J)" style="display: none;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="15" y1="3" x2="15" y2="21"></line></svg>
       </button>
     </div>
@@ -289,30 +294,16 @@
       </div>
     </section>
 
-    <!-- Right Column: AGENT WORKSPACE (DÀNH TRỌN 100% CHO AGENT) -->
-    <aside class="sidebar-right" id="sidebarRight">
-      <div class="agent-header">
-        <div class="agent-info">
-          <div class="agent-avatar">🤖</div>
-          <div>
-            <div class="agent-name">Agent AURA</div>
-            <div class="agent-status-tag">● Sẵn sàng trợ giúp</div>
-          </div>
-        </div>
-        <button class="icon-btn-sm" id="btnToggleSidebarRightClose" title="Thu gọn bảng Agent">✕</button>
-      </div>
-
-      <div class="agent-chat-container" id="agentChatContainer">
-        <div class="agent-msg bot">
-          <strong>Xin chào!</strong> Tôi là Agent đồng hành cùng bạn. Bạn có thể yêu cầu tôi gợi ý thuật toán, sửa lỗi thẻ hoặc tự động sinh mã chương trình.
-        </div>
-      </div>
-
-      <div class="agent-input-container" id="agentInputContainer">
-        <input type="text" id="agentInput" placeholder="Nhập yêu cầu cho Agent..." autocomplete="off">
-        <button class="btn btn-primary btn-sm" id="btnSendAgent">Gửi</button>
-      </div>
-    </aside>
+    <!-- Cột phải: ĐỂ TRỐNG, chờ thứ thật đứng sau.
+         24/08/2026 gỡ panel "Agent AURA" xuống. Nó KHÔNG gọi API nào: câu trả
+         lời là chuỗi cứng, kèm setTimeout 350ms để trông như đang suy nghĩ.
+         Đo thật: gõ "xoa het the di" -> cây 2 thẻ trước, 2 thẻ sau, 0 request.
+         Mà câu nó in ra là "Tôi đang kiểm tra cấu trúc thẻ và hỗ trợ thao tác
+         tự động..." — một khẳng định về việc nó đang làm, mà nó không làm.
+         Người mới học code sẽ tin và ngồi chờ.
+         Giữ lại <aside> rỗng để bố cục ba cột và nút thu gọn (Ctrl+J) không
+         vỡ; nối Agent thật vào đây khi có model đứng sau. -->
+    <aside class="sidebar-right" id="sidebarRight"></aside>
   </main>
 
   <!-- Modals -->

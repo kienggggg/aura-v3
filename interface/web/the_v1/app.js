@@ -17,7 +17,8 @@
     nodeIdCounter: 100,
     sidebarLeftCollapsed: false,
     sidebarRightCollapsed: false,
-    codeFontSize: 14
+    codeFontSize: 14,
+    draggingCardId: null
   };
 
   // ==========================================================================
@@ -202,15 +203,13 @@
         itemEl.dataset.ma = cardMa;
         itemEl.style.borderLeftColor = g.color;
         itemEl.draggable = true;
+        // Nhãn dịch nghĩa ("Định nghĩa hàm", "Gọi hàm"...) bỏ khỏi thân thẻ —
+        // Sếp đọc cú pháp Python trực tiếp nhanh hơn đọc tên tiếng Việt rồi tự
+        // dịch ngược. Tên đầy đủ vẫn còn trong title (hover mới hiện).
         itemEl.title = `Thẻ ${cardDef.ten}: Click để chèn nhanh hoặc kéo vào canvas`;
 
         const infoEl = document.createElement('div');
         infoEl.className = 'tool-info';
-
-        const nameEl = document.createElement('span');
-        nameEl.className = 'tool-name';
-        nameEl.textContent = cardDef.ten;
-        infoEl.appendChild(nameEl);
 
         const syntaxEl = document.createElement('span');
         syntaxEl.className = 'tool-syntax';
@@ -251,6 +250,33 @@
 
       groupEl.appendChild(cardsGrid);
       container.appendChild(groupEl);
+    });
+
+    // Vùng thả để XOÁ — chiều ngược của kéo-từ-khay-vào-canvas. Chỉ hiện đỏ khi
+    // đang kéo một thẻ THẬT SỰ có trên canvas (state.draggingCardId), để kéo
+    // một thẻ mẫu từ khay rồi buông ngay trên khay không bị hiểu nhầm là xoá.
+    container.addEventListener('dragover', (e) => {
+      if (!state.draggingCardId) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      container.classList.add('vung-tha-xoa');
+    });
+    container.addEventListener('dragleave', (e) => {
+      if (e.target === container) container.classList.remove('vung-tha-xoa');
+    });
+    container.addEventListener('drop', (e) => {
+      e.preventDefault();
+      container.classList.remove('vung-tha-xoa');
+      const raw = e.dataTransfer.getData('text/plain');
+      if (!raw) return;
+      try {
+        const payload = JSON.parse(raw);
+        if (payload.type === 'EXISTING_CARD' && payload.nodeId) {
+          if (xoaTheTheoId(state.tree, payload.nodeId)) {
+            onTreeChanged();
+          }
+        }
+      } catch (_) {}
     });
   }
 
@@ -320,6 +346,23 @@
     const node = taoTheNode(ma);
     state.tree.push(node);
     onTreeChanged();
+  }
+
+  // Tìm node theo id trong cây (kể cả khối con .than) và xoá tại chỗ.
+  // Dùng cho kéo thẻ NGƯỢC từ canvas ra khay để xoá — cùng thao tác splice
+  // như nút ✕, chỉ khác điểm vào (kéo thả thay vì bấm nút).
+  function xoaTheTheoId(danhSach, nodeId) {
+    for (let i = 0; i < danhSach.length; i++) {
+      if (danhSach[i].id === nodeId) {
+        danhSach.splice(i, 1);
+        return true;
+      }
+      if (danhSach[i].than && danhSach[i].than.length > 0 &&
+          xoaTheTheoId(danhSach[i].than, nodeId)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   function createCodeInput(node, fieldName, placeholder = '', className = '') {
@@ -550,6 +593,27 @@
     hangEl.style.color = groupVar;
     hangEl.id = `node_${node.id}`;
     hangEl.dataset.nodeId = node.id;
+
+    // Kéo NGƯỢC: từ canvas ra khay để xoá — chiều còn thiếu trước 24/08, khay
+    // chỉ kéo được một chiều (khay -> canvas). `input, button` trong dòng thẻ
+    // cần giữ được bấm/chọn chữ bình thường nên chặn drag khi bắt đầu từ đó.
+    hangEl.draggable = true;
+    hangEl.addEventListener('dragstart', (e) => {
+      if (e.target.closest('input, textarea, select, button')) {
+        e.preventDefault();
+        return;
+      }
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'EXISTING_CARD', nodeId: node.id }));
+      state.draggingCardId = node.id;
+      hangEl.classList.add('dang-keo-ra');
+    });
+    hangEl.addEventListener('dragend', () => {
+      state.draggingCardId = null;
+      hangEl.classList.remove('dang-keo-ra');
+      const tc = document.getElementById('toolboxContainer');
+      if (tc) tc.classList.remove('vung-tha-xoa');
+    });
 
     // 2. Thẻ viên thuốc (.the)
     const theEl = document.createElement('span');

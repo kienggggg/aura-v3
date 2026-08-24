@@ -38,165 +38,28 @@ from core.trace_runtime import chot_test_can_trace
 
 PY = sys.executable
 
-OP_STR = {
-    ast.Lt: "<",
-    ast.LtE: "<=",
-    ast.Gt: ">",
-    ast.GtE: ">=",
-    ast.Eq: "==",
-    ast.NotEq: "!=",
-}
-
-
-def doc_thong_tin_gioi_han(project_root: Path) -> str:
-    """Đọc động số liệu giới hạn thực tế từ sổ bằng chứng ngoài họ."""
-    sprint_file = project_root / "data" / "evidence_sprint" / "e1_ngoai_ho.json"
-    if sprint_file.is_file():
-        try:
-            data = json.loads(sprint_file.read_text(encoding="utf-8"))
-            danh_sach = data.get("ket_qua", [])
-            tong_de = len(danh_sach)
-            tim_ra = sum(1 for d in danh_sach if d.get("tim_thay"))
-            if tim_ra == 0:
-                return f"Chỉ dò được 5 họ lỗi so sánh/logic. Đã thử {tong_de} lỗi NGOÀI 5 họ đó — không dò ra ca nào."
-            else:
-                return f"Chỉ dò được 5 họ lỗi so sánh/logic. Đã thử {tong_de} lỗi NGOÀI 5 họ đó (tìm ra {tim_ra} ca)."
-        except Exception:
-            pass
-    return "Chỉ dò năm họ phép E1 hiện có; không tìm thấy không có nghĩa là mã không có lỗi."
-
-NGHICH_SS = {
-    ast.Lt: ast.LtE,
-    ast.LtE: ast.Lt,
-    ast.Gt: ast.GtE,
-    ast.GtE: ast.Gt,
-    ast.Eq: ast.NotEq,
-    ast.NotEq: ast.Eq,
-}
-
-PHAM_VI_PHEP = [
-    "so_sanh",
-    "logic",
-    "bo_phu_dinh",
-    "bool_constant",
-    "int_constant",
-]
-
-
-def lat_tren_van_ban(nguon: str, node: ast.AST, tu: str, sang: str) -> str:
-    """Đổi ĐÚNG một token toán tử trong vùng của node, giữ nguyên mọi byte khác."""
-    dong = nguon.splitlines(keepends=True)
-    bat_dau = sum(len(d) for d in dong[:node.lineno - 1]) + node.col_offset
-    ket = sum(len(d) for d in dong[:node.end_lineno - 1]) + node.end_col_offset
-    if isinstance(node, ast.Constant):
-        return nguon[:bat_dau] + sang + nguon[ket:]
-    vung = nguon[bat_dau:ket]
-    for tok in tokenize.generate_tokens(io.StringIO(vung).readline):
-        if tok.string == tu and tok.type in (tokenize.NAME, tokenize.OP, tokenize.NUMBER):
-            r0 = sum(len(l) for l in vung.splitlines(keepends=True)[:tok.start[0] - 1]) + tok.start[1]
-            return nguon[:bat_dau + r0] + sang + nguon[bat_dau + r0 + len(tu):]
-    raise ValueError(f"khong thay token '{tu}' trong vung node")
-
-
-class _Lat(ast.NodeTransformer):
-    """Lật ĐÚNG MỘT chỗ theo chỉ số `muc`. Đếm theo thứ tự duyệt AST."""
-
-    def __init__(self, muc: int):
-        self.muc = muc
-        self.dem = 0
-        self.da = ""
-        self.danh_sach: list[tuple[int, int, str]] = []
-        self.target_node: Optional[ast.AST] = None
-        self.tu: str = ""
-        self.sang: str = ""
-
-    def _lay(self, ten: str, nut: ast.AST, tu: str = "", sang: str = "") -> bool:
-        d = self.dem
-        self.danh_sach.append((d, int(getattr(nut, "lineno", 0) or 0), ten))
-        self.dem += 1
-        if d == self.muc:
-            self.da = ten
-            self.target_node = nut
-            self.tu = tu
-            self.sang = sang
-            return True
-        return False
-
-    def visit_Compare(self, n):
-        self.generic_visit(n)
-        if len(n.ops) == 1 and type(n.ops[0]) in NGHICH_SS:
-            op_cls = type(n.ops[0])
-            target_cls = NGHICH_SS[op_cls]
-            tu = OP_STR[op_cls]
-            sang = OP_STR[target_cls]
-            if self._lay(f"so sánh {op_cls.__name__} -> {target_cls.__name__}", n, tu=tu, sang=sang):
-                n.ops = [target_cls()]
-        return n
-
-    def visit_BoolOp(self, n):
-        self.generic_visit(n)
-        if isinstance(n.op, ast.And):
-            if self._lay("logic And -> Or", n, tu="and", sang="or"):
-                n.op = ast.Or()
-        elif isinstance(n.op, ast.Or):
-            if self._lay("logic Or -> And", n, tu="or", sang="and"):
-                n.op = ast.And()
-        return n
-
-    def visit_UnaryOp(self, n):
-        self.generic_visit(n)
-        if isinstance(n.op, ast.Not) and self._lay("bỏ phủ định", n, tu="not", sang=""):
-            return n.operand
-        return n
-
-    def visit_Constant(self, n):
-        if isinstance(n.value, bool):
-            target_val = not n.value
-            if self._lay(f"bool {n.value} -> {target_val}", n, tu=str(n.value), sang=str(target_val)):
-                return ast.Constant(value=target_val)
-        elif isinstance(n.value, int) and not isinstance(n.value, bool):
-            # Parity AST legacy: n -> n - 1 (với literal âm -5 là USub(Constant(5)) -> USub(Constant(4)) tức -4)
-            if self._lay(f"số {n.value} -> {n.value - 1}", n, tu=str(n.value), sang=str(n.value - 1)):
-                return ast.Constant(value=n.value - 1)
-        return n
-
-
-def _liet_ke_cho(ma: str) -> list[tuple[int, int, str]]:
-    d = _Lat(-1)
-    d.visit(ast.parse(ma))
-    return [(chi_so, dong, ten) for chi_so, dong, ten in d.danh_sach]
-
-
-def _ma_sau_lat(nguon: str, chi_so: int) -> tuple[str, str]:
-    bd = _Lat(chi_so)
-    bd.visit(ast.parse(nguon))
-    if bd.target_node is not None:
-        moi = lat_tren_van_ban(nguon, bd.target_node, bd.tu, bd.sang)
-        return moi, bd.da
-    return nguon, ""
-
-
-def tao_cac_ung_vien(ma: str, dong_da_chay: Optional[Set[int]] = None) -> list[tuple[int, str, str]]:
-    cac_cho = _liet_ke_cho(ma)
-    res = []
-    for chi_so, dong, mo_ta in cac_cho:
-        if dong_da_chay is not None and dong not in dong_da_chay:
-            continue
-        ma_moi, da = _ma_sau_lat(ma, chi_so)
-        res.append((dong, mo_ta, ma_moi))
-    return res
-
-
-def _tao_unified_diff(goc_str: str, moi_str: str, filename: str) -> str:
-    lines_goc = goc_str.splitlines(keepends=True)
-    lines_moi = moi_str.splitlines(keepends=True)
-    diff = difflib.unified_diff(
-        lines_goc,
-        lines_moi,
-        fromfile=f"a/{filename}",
-        tofile=f"b/{filename}",
-    )
-    return "".join(diff)
+# 24/08/2026: tệp này từng chép nguyên 3 hằng số + 13 hàm/lớp từ
+# `core/lat_nguoc.py`. Đo bằng AST, bỏ docstring: 13/14 tên trùng GIỐNG HỆT
+# TỪNG NÚT; chỉ `_chon_test_va_dong` là khác thật nên giữ lại bên dưới.
+#
+# Cùng ngày, CẢ HAI bản đều phải nhận đúng một bản vá (`lat_tren_van_ban`,
+# `suite_khong_do_duoc`, `diff_basis`). Lần ấy làm đủ cả hai, nhưng nhờ cẩn
+# thận chứ không nhờ cấu trúc — mà hai bên phục vụ hai đường khác nhau:
+#
+#     core/lat_nguoc.py         <- experiments/evidence_sprint/do_e1_ngoai_ho.py
+#                                  (bộ sinh con số "0/64 lỗi ngoài họ")
+#     tools/_worker_e1_exec.py  <- app thật, qua e1_supervisor_bootstrap
+#
+# Quên một bên thì app đo một đằng, sổ bằng chứng đo một nẻo, KHÔNG AI BÁO.
+# Thêm một test canh lệch cũng được, nhưng xoá hẳn bản sao thì lệch trở thành
+# KHÔNG THỂ — rẻ hơn và không có cửa nào phải bảo trì.
+from core.lat_nguoc import (  # noqa: E402
+    PHAM_VI_PHEP,
+    _liet_ke_cho,
+    _ma_sau_lat,
+    _tao_unified_diff,
+    doc_thong_tin_gioi_han,
+)
 
 
 def _chon_test_va_dong(

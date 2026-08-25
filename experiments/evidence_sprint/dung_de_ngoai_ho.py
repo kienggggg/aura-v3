@@ -101,8 +101,21 @@ BO_DE = {
     # Het ba tep nay thi kho khong con tep doc lap nao nua.
     5: (("core/chat_service.py", "core/the_cst.py",
          "core/the_v1.py"), "de_ngoai_ho_5.json"),
+    # Bo 6, 25/08 — MOT TEP, va la tep DUY NHAT con lai trong kho.
+    #
+    # Sau bo 5, 16 tep da dung het. `redact`/`paths` khong co test;
+    # `trace_runtime` la chinh module dang duoc do nen dung la vong tron.
+    # `lat_nguoc.py` truoc hom nay cung khong dung duoc vi 0 test — do la
+    # LY DO viet test cho no. Nay no co 70 test va 123 cho gieo duoc.
+    #
+    # Hinh dang: 579 dong, 14 ham, ham noi bo 7/14 = 50%. Gan y het bo 4
+    # (49%) — tuc mot bo TRUNG TINH, KHONG nham dich. Do la thu can de tra
+    # loi cau ma bo 4 khong tra loi noi (thieu ca sau) va bo 5 khong tra
+    # loi duoc (chon theo gia thuyet): CO MAY DA DUNG DUOC CHUA.
+    6: (("core/lat_nguoc.py",), "de_ngoai_ho_6.json"),
 }
-_BO = (5 if "--bo5" in sys.argv else
+_BO = (6 if "--bo6" in sys.argv else
+       5 if "--bo5" in sys.argv else
        4 if "--bo4" in sys.argv else
        3 if "--bo3" in sys.argv else
        2 if "--bo2" in sys.argv else 1)

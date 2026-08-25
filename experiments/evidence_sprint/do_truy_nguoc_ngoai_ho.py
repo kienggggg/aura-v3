@@ -53,11 +53,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from core.trace_runtime import chot_test_can_trace          # noqa: E402
 from truy_nguoc_gia_tri import truy_nguoc                    # noqa: E402
 
+_BO6 = "--bo6" in sys.argv
 _BO5 = "--bo5" in sys.argv
 _BO4 = "--bo4" in sys.argv
 _BO3 = "--bo3" in sys.argv
 _BO2 = "--bo2" in sys.argv
-_SO_BO = 5 if _BO5 else (4 if _BO4 else (3 if _BO3 else (2 if _BO2 else 1)))
+_SO_BO = 6 if _BO6 else (5 if _BO5 else (4 if _BO4 else (3 if _BO3 else (2 if _BO2 else 1))))
 _HAU = "" if _SO_BO == 1 else "_%d" % _SO_BO
 DE = GOC / "experiments" / "evidence_sprint" / ("de_ngoai_ho%s.json" % _HAU)
 RA = GOC / "data" / "evidence_sprint" / ("truy_nguoc_ngoai_ho%s.json" % _HAU)
@@ -135,6 +136,52 @@ NGUONG_KHAC_HAM = 0.50
 NGUONG_CUNG_HAM = 0.80
 # Dưới ngưỡng này thì mẫu quá nhỏ để kết luận A -> báo KHÔNG ĐO ĐƯỢC.
 TOI_THIEU_CA_KHAC_HAM = 10
+
+# ===========================================================================
+# BỘ ĐỀ 6 — ngưỡng đăng ký 25/08/2026, TRƯỚC khi bộ đề 6 sinh xong
+# ===========================================================================
+# Bộ 6 là `core/lat_nguoc.py` — TỆP DUY NHẤT còn lại trong kho. 16 tệp kia
+# đã dùng cho năm bộ trước; `redact`/`paths` không có test; `trace_runtime`
+# là chính module đang được đo nên dùng là vòng tròn.
+#
+# Trước hôm nay `lat_nguoc.py` cũng không dùng được vì 0 test. Đó là lý do
+# viết test cho nó. Nay: 70 test, 123 chỗ gieo được.
+#
+# HÌNH DẠNG — đo TRƯỚC khi sinh đề, như đã làm với bộ 4 và bộ 5:
+#
+#     579 dòng · 14 hàm · hàm nội bộ 7/14 = 50%
+#
+#     bộ 1  63%      bộ 3  72%      bộ 5  74–82%  (nhắm đích)
+#     bộ 2  50%      bộ 4  49%      bộ 6  50%     <- TRUNG TÍNH
+#
+# Bộ 6 gần y hệt bộ 4 — tức KHÔNG nhắm đích. Đó chính là thứ cần: bộ 4 không
+# trả lời nổi câu hỏi chính vì chỉ có 8 ca sâu (dưới mức tối thiểu 10), còn
+# bộ 5 không trả lời được vì nó chọn tệp theo chính giả thuyết đang kiểm.
+#
+# CÂU BỘ 6 TRẢ LỜI: **cỗ máy truy ngược đã dùng được chưa, trên mã bình thường?**
+# Con số hiện có cho câu ấy là bộ 4 sạch: 0,56 — dưới ngưỡng 0,60.
+#
+# CẢNH BÁO ĐĂNG KÝ TRƯỚC, vì nó dễ bị nuốt sau khi thấy kết quả:
+#
+# 1. Bộ 6 chỉ có MỘT tệp. Năm bộ trước có 3–4 tệp, và cả năm lần đều cho thấy
+#    kết quả phân tán rất mạnh theo tệp (`khay_the` 9% so với `chat_contract`
+#    91% trong cùng bộ 3). Một tệp nghĩa là KHÔNG có phương sai giữa tệp để
+#    mà nhìn — con số ra sẽ là con số CỦA TỆP NÀY, không phải của "mã bình
+#    thường" nói chung. Phải nói ra chứ không được im.
+#
+# 2. `lat_nguoc.py` nhập `core/trace_runtime.py` — chính mô-đun mà phép đo
+#    dùng để lấy vết. Gieo lỗi vào `lat_nguoc` KHÔNG làm hỏng `trace_runtime`,
+#    nên không vòng tròn. Nhưng nếu thấy tỉ lệ `khong_do_duoc` cao bất thường
+#    thì phải kiểm chỗ này trước khi kết luận.
+#
+#   A. chính xác trên ca SÂU           >= 0,50   (giữ nguyên bộ 4 và bộ 5)
+#   B. ca NÔNG máy MỚI >= máy CŨ trên CHÍNH bộ 6 — so cặp, cùng bộ đề
+#   C. chính xác tổng khi nó nói       >= 0,60   (giữ nguyên)
+#   D. độ phủ                          >= 0,25   (giữ nguyên)
+#   E. model_calls                     = 0       (giữ nguyên)
+#
+# Không nới một con số nào của bộ 4 hay bộ 5. Nếu dưới 10 ca sâu thì ngưỡng A
+# KHÔNG ĐO ĐƯỢC — báo là không đo được, y như bộ 4, không lấy C đắp vào.
 
 # ===========================================================================
 # BỘ ĐỀ 5 — ngưỡng đăng ký 25/08/2026, TRƯỚC khi bộ đề 5 sinh xong

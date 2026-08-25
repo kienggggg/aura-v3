@@ -171,14 +171,51 @@ def _ma_sau_lat(nguon: str, chi_so: int) -> tuple[str, str]:
     return nguon, ""
 
 
+# Những chỗ `tao_cac_ung_vien` phải BỎ QUA vì `_ma_sau_lat` ném lỗi.
+#
+# Danh sách này được XOÁ SẠCH rồi ghi lại ở đầu mỗi lượt `tao_cac_ung_vien`,
+# nên nó luôn nói về lượt gần nhất. Có nó thì bỏ qua là chuyện ĐẾM ĐƯỢC, không
+# phải chuyện im lặng.
+CHO_BO_QUA: list[tuple[int, int, str]] = []      # (chỉ số, dòng, tên lỗi)
+
+
 def tao_cac_ung_vien(ma: str, dong_da_chay: Optional[Set[int]] = None) -> list[tuple[int, str, str]]:
-    """Tạo danh sách ứng viên (dong, mo_ta_phep, ma_moi)."""
+    """Tạo danh sách ứng viên (dong, mo_ta_phep, ma_moi).
+
+    MỘT NÚT HỎNG KHÔNG ĐƯỢC GIẾT CẢ TỆP — sửa 25/08/2026.
+
+    Trước hôm nay hàm này không bọc `_ma_sau_lat`, nên một chỗ ném lỗi là cả
+    lượt gọi ném theo và E1 trả về KHÔNG ỨNG VIÊN NÀO cho tệp ấy.
+
+    Đo trên chính `core/lat_nguoc.py`: **1 chỗ hỏng trong 123, mất cả 123.**
+    Chỗ hỏng là dòng 543 — một f-string chứa phép so sánh trong dấu nháy lồng:
+
+        reason = f"Đã tìm thấy {sum(1 for c in candidates_out
+                                    if c['full_suite_status'] == 'XANH')} bản vá"
+
+    `lat_tren_van_ban` cắt đúng đoạn văn bản của nút Compare rồi `tokenize`
+    riêng đoạn ấy; cắt ra khỏi ngữ cảnh thì đoạn ấy có chuỗi hở, và `tokenize`
+    ném `TokenError`.
+
+    Quét cả `core/*.py`: 22 tệp lành, **1 tệp mất sạch**. Phạm vi hôm nay hẹp,
+    nhưng kiểu hỏng là được-ăn-cả-ngã-về-không, và nó ĐÃ chặn nguyên một bộ đề:
+    bộ 6 sinh ra đúng 1 đề trên 423 chỗ, vì bộ sinh đề bọc lời gọi này trong
+    `except Exception: continue` — nuốt lỗi nên suốt thời gian ấy không ai thấy.
+
+    Sửa: bọc TỪNG chỗ, và ghi chỗ bị bỏ vào `CHO_BO_QUA` để đếm được. Bỏ qua
+    mà không ghi lại thì lại thành một cái nuốt lỗi nữa.
+    """
     cac_cho = _liet_ke_cho(ma)
+    CHO_BO_QUA.clear()
     res = []
     for chi_so, dong, mo_ta in cac_cho:
         if dong_da_chay is not None and dong not in dong_da_chay:
             continue
-        ma_moi, da = _ma_sau_lat(ma, chi_so)
+        try:
+            ma_moi, da = _ma_sau_lat(ma, chi_so)
+        except Exception as loi:                          # noqa: BLE001
+            CHO_BO_QUA.append((chi_so, dong, type(loi).__name__))
+            continue
         res.append((dong, mo_ta, ma_moi))
     return res
 

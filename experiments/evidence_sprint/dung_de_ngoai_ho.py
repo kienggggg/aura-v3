@@ -233,6 +233,39 @@ def dot_bien_ngoai(nguon: str, muc: int, ten_gan: set[str]):
 
 
 def main() -> int:
+    # ==========================================================================
+    # KHÔNG GHI ĐÈ MỘT BỘ ĐỀ ĐÃ CÓ, TRỪ KHI BẢO RÕ
+    # ==========================================================================
+    #
+    # ĐẶT Ở ĐẦU `main()`, KHÔNG ĐẶT Ở KHÂU GHI.
+    #
+    # Bản đầu tôi đặt nó ngay trước `RA.write_text`. Chạy thử thì nó vẫn
+    # sinh đề hết HAI PHÚT rồi mới từ chối — đúng, nhưng vô ích. Chặn thì
+    # phải chặn trước khi tốn công.
+    #
+    # 26/08: bộ sinh đề KHÔNG có cache tiếp-tục — chạy lại là ghi đè sạch. Mà
+    # bộ đề sinh ra từ MÃ NGUỒN TẠI THỜI ĐIỂM CHẠY: `core/the_v1.py` đã thêm
+    # 5 thẻ và `core/the_cst.py` đã đổi từ 25/08, nên chạy lại `--bo5` hôm nay
+    # cho ra một bộ đề KHÁC HẲN bộ đề mà mọi con số bộ 5 trong `docs/` đang
+    # nói tới.
+    #
+    # Ghi đè thì không có gì nổ. Chỉ là từ đó trở đi, đo lại ra số khác và
+    # không ai biết vì sao — sổ nói về một bộ đề không còn tồn tại.
+    #
+    # Đúng họ bệnh §4 "phép đo phải tất định": ở đó biến số là ngày chạy và
+    # cây mã; ở đây là BỘ ĐỀ bị thay dưới chân phép đo.
+    if RA.is_file() and "--ghi-de" not in sys.argv:
+        print()
+        print("  ***  KHÔNG GHI GÌ CẢ  ***")
+        print("  %s đã tồn tại (%d byte)." % (RA.name, RA.stat().st_size))
+        print("  Bộ đề sinh từ mã nguồn TẠI THỜI ĐIỂM CHẠY. Mã đã đổi thì bộ")
+        print("  đề mới KHÁC bộ cũ, và mọi con số đã ghi trong docs/ sẽ thành")
+        print("  nói về một bộ đề không còn tồn tại.")
+        print()
+        print("  Muốn thay thật thì thêm cờ --ghi-de, và nhớ đo lại TẤT CẢ.")
+        print("  Chỉ muốn xem thử thì đổi tên tệp cũ đi trước.")
+        return 2
+
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
     tam_goc = Path(tempfile.mkdtemp())
     tam = tam_goc / "kho"

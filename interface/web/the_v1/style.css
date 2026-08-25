@@ -1995,4 +1995,12 @@ body {
   color: #fcd34d;
 }
 
-
+/* Thẻ đang chọn (Ctrl+C / Ctrl+X / Ctrl+V).
+   Viền nét đứt, KHÁC hẳn nền vàng của kết quả tìm kiếm — hai thứ có thể
+   cùng xuất hiện trên một thẻ, nhìn giống nhau thì không biết cái nào là
+   cái nào. */
+.the.dang-chon {
+  outline: 2px dashed var(--dk, #3B82F6);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

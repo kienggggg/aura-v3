@@ -18,7 +18,8 @@
     sidebarLeftCollapsed: false,
     sidebarRightCollapsed: false,
     codeFontSize: 14,
-    draggingCardId: null
+    draggingCardId: null,
+    selectedNodeId: null
   };
 
   // ==========================================================================
@@ -714,6 +715,13 @@
     // chỉ kéo được một chiều (khay -> canvas). `input, button` trong dòng thẻ
     // cần giữ được bấm/chọn chữ bình thường nên chặn drag khi bắt đầu từ đó.
     hangEl.draggable = true;
+    // Bấm vào DÒNG thẻ thì chọn nó. Bấm vào ô nhập / nút thì KHÔNG chọn —
+    // lúc ấy người dùng đang gõ hoặc đang bấm nút, không phải đang chọn thẻ.
+    hangEl.addEventListener('click', (e) => {
+      if (e.target.closest('input, textarea, select, button')) return;
+      chonThe(node.id);
+    });
+
     hangEl.addEventListener('dragstart', (e) => {
       if (e.target.closest('input, textarea, select, button')) {
         e.preventDefault();
@@ -845,10 +853,9 @@
     btnDup.title = 'Nhân bản thẻ này';
     btnDup.addEventListener('click', (e) => {
       e.stopPropagation();
-      const clone = JSON.parse(JSON.stringify(node));
-      state.nodeIdCounter++;
-      clone.id = `the_${node.ma}_${state.nodeIdCounter}`;
-      clone.da_sua = true;
+      // 25/08: bản cũ chỉ đổi id thẻ NGOÀI CÙNG -> nhân bản một `for` có con
+      // là cây có ngay hai thẻ trùng id. Xem chú thích ở `chepSauSinhIdMoi`.
+      const clone = chepSauSinhIdMoi(node);
       parentList.splice(index + 1, 0, clone);
       onTreeChanged();
     });
@@ -960,6 +967,7 @@
       const viTriMoi = idHienTai ? timKiem.danhSach.indexOf(idHienTai) : -1;
       timKiem.viTri = viTriMoi >= 0 ? viTriMoi : (timKiem.danhSach.length ? 0 : -1);
       veKetQuaTimKiem(false);
+    veDanhDauChon();
     }
   }
 
@@ -1928,6 +1936,108 @@
   // ==========================================================================
   // 5. CHẠY THỬ CÓ CHỦ ĐÍCH (TẮT MẶC ĐỊNH VÌ CHƯA PHẢI SANDBOX THẬT)
   // ==========================================================================
+
+  // ==========================================================================
+  // ==========================================================================
+  // CHÉP / CẮT / DÁN THẺ (Ctrl+C · Ctrl+X · Ctrl+V)
+  // ==========================================================================
+  //
+  // Trước 25/08 app không có khái niệm "thẻ đang chọn", nên phải dựng thêm.
+  // Chọn bằng cách bấm vào DÒNG thẻ; bấm vào ô nhập hay nút thì không chọn —
+  // người dùng đang gõ chứ không đang chọn.
+
+  const bangGhiThe = { node: null };     // bảng ghi tạm, chỉ trong phiên này
+
+  /**
+   * Chép sâu một thẻ và SINH ID MỚI CHO CẢ CÂY CON.
+   *
+   * ĐÂY LÀ CHỖ NÚT "NHÂN BẢN" ĐÃ SAI TỪ TRƯỚC 25/08. Bản cũ chỉ đổi id của
+   * thẻ ngoài cùng:
+   *
+   *     const clone = JSON.parse(JSON.stringify(node));
+   *     clone.id = `the_${node.ma}_${++state.nodeIdCounter}`;   // chỉ MỘT id
+   *
+   * Nhân bản một `for` có hai thẻ con thì cây có NGAY hai `in_1` và hai
+   * `gan_1`. Đo hậu quả thật ngày 25/08, tái hiện được:
+   *
+   *   - tìm "chao" ra 2 kết quả, nhảy sang kết quả 2/2 (bản SAO), bấm "Thay"
+   *   - `timTheTheoId` tra theo id nên trả về thẻ ĐẦU TIÊN
+   *   - bản GỐC bị sửa thành "XIN_CHAO", bản SAO giữ nguyên "chao"
+   *
+   * Người dùng nhìn thấy con trỏ ở bản sao, sửa xong thì bản gốc đổi. Không
+   * lỗi, không báo gì. Cùng họ với "giao diện hứa một việc, mã làm việc khác"
+   * ở §4.
+   *
+   * Mọi đường tra theo id đều dính: `timTheTheoId`, `layVaXoaTheTheoId`,
+   * đánh dấu kết quả tìm, và bản đồ dòng lỗi runtime về thẻ.
+   */
+  function chepSauSinhIdMoi(node) {
+    const ban = JSON.parse(JSON.stringify(node));
+    (function danhSoLai(n) {
+      state.nodeIdCounter++;
+      n.id = `the_${n.ma}_${state.nodeIdCounter}`;
+      n.da_sua = true;
+      (n.than || []).forEach(danhSoLai);
+    })(ban);
+    return ban;
+  }
+
+  function xoaDanhDauChon() {
+    document.querySelectorAll('.the.dang-chon')
+      .forEach(el => el.classList.remove('dang-chon'));
+  }
+
+  function veDanhDauChon() {
+    xoaDanhDauChon();
+    if (!state.selectedNodeId) return;
+    const el = document.querySelector('#node_' + state.selectedNodeId + ' .the');
+    if (el) el.classList.add('dang-chon');
+  }
+
+  function chonThe(nodeId) {
+    state.selectedNodeId = nodeId || null;
+    veDanhDauChon();
+  }
+
+  function chepThe() {
+    if (!state.selectedNodeId) return false;
+    const boc = timTheTheoId(state.tree, state.selectedNodeId);
+    if (!boc || !boc.node) return false;
+    // Chép NGAY lúc bấm, không giữ tham chiếu: người dùng sửa tiếp thẻ gốc
+    // rồi mới dán thì phải ra bản LÚC CHÉP, đúng như mọi trình soạn thảo.
+    bangGhiThe.node = JSON.parse(JSON.stringify(boc.node));
+    return true;
+  }
+
+  function catThe() {
+    if (!chepThe()) return false;
+    const boc = timTheTheoId(state.tree, state.selectedNodeId);
+    if (!boc) return false;
+    boc.dsCha.splice(boc.chiSo, 1);
+    state.selectedNodeId = null;
+    onTreeChanged();
+    return true;
+  }
+
+  function danThe() {
+    if (!bangGhiThe.node) return false;
+    const ban = chepSauSinhIdMoi(bangGhiThe.node);
+    if (state.selectedNodeId) {
+      const boc = timTheTheoId(state.tree, state.selectedNodeId);
+      if (boc) {
+        // Dán NGAY SAU thẻ đang chọn, cùng cấp với nó — kể cả khi thẻ ấy
+        // nằm trong thân một khối.
+        boc.dsCha.splice(boc.chiSo + 1, 0, ban);
+      } else {
+        state.tree.push(ban);
+      }
+    } else {
+      state.tree.push(ban);
+    }
+    onTreeChanged();                 // một lần dán = một bước hoàn tác
+    chonThe(ban.id);                 // chọn bản vừa dán, dán tiếp thì nối tiếp
+    return true;
+  }
 
   // ==========================================================================
   // TÌM TRONG CHƯƠNG TRÌNH (Ctrl+F)
@@ -2934,6 +3044,17 @@
         // tên nút, nhãn khay thẻ, chữ trong terminal...).
         e.preventDefault();
         moThanhTim();
+      } else if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
+        // Đang gõ trong ô nhập thì để trình duyệt chép CHỮ, đừng cướp phím
+        // để chép cả thẻ. Cùng lối phòng thủ như Ctrl+Z ở dưới.
+        if (e.target.closest('input, textarea')) return;
+        if (state.selectedNodeId) { e.preventDefault(); chepThe(); }
+      } else if (e.ctrlKey && (e.key === 'x' || e.key === 'X')) {
+        if (e.target.closest('input, textarea')) return;
+        if (state.selectedNodeId) { e.preventDefault(); catThe(); }
+      } else if (e.ctrlKey && (e.key === 'v' || e.key === 'V')) {
+        if (e.target.closest('input, textarea')) return;
+        if (bangGhiThe.node) { e.preventDefault(); danThe(); }
       } else if (e.ctrlKey && (e.key === 'h' || e.key === 'H')) {
         // Ctrl+H mở CẢ hàng thay thế. Ctrl+F chỉ mở hàng tìm — người chỉ muốn
         // tìm thì không phải nhìn thấy nút xoá được cả chương trình.
@@ -2942,6 +3063,7 @@
       } else if (e.key === 'Escape') {
         const bar = document.getElementById('findBar');
         if (bar && bar.style.display !== 'none') dongThanhTim();
+        else if (state.selectedNodeId) chonThe(null);
       } else if (e.ctrlKey && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
         // Đang gõ trong ô nhập thì để trình duyệt tự hoàn tác CHỮ trong ô đó,
         // đừng cướp phím để hoàn tác cả cây thẻ — người dùng sẽ mất nguyên

@@ -103,6 +103,23 @@ def dong_co_return(nguon: str) -> Set[int]:
     return ra
 
 
+def dong_trong_except(nguon: str) -> Set[int]:
+    """Những dòng nằm TRONG thân một `except`."""
+    try:
+        cay = ast.parse(nguon)
+    except SyntaxError:
+        return set()
+    ra: Set[int] = set()
+    for n in ast.walk(cay):
+        if isinstance(n, ast.ExceptHandler):
+            for than in n.body:
+                d1 = getattr(than, "lineno", 0)
+                d2 = getattr(than, "end_lineno", d1) or d1
+                for d in range(d1, d2 + 1):
+                    ra.add(d)
+    return ra
+
+
 def _moc_bat_dau(su_kien: List[dict], nguon: str) -> Tuple[Optional[dict], str]:
     """Bắt đầu truy ngược từ đâu — và đây là chỗ dễ sai nhất.
 
@@ -128,6 +145,7 @@ def _moc_bat_dau(su_kien: List[dict], nguon: str) -> Tuple[Optional[dict], str]:
     if not tra_ve:
         return (su_kien[-1] if su_kien else None), "sự kiện cuối cùng"
     co_ret = dong_co_return(nguon)
+    trong_except = dong_trong_except(nguon)
 
     # Đuôi gỡ ngăn xếp: dãy `tra_ve` liên tiếp ở CUỐI vết. Một lượt gỡ thì các
     # tầng bật ra liên tiếp, không xen sự kiện gán nào — vì không có gì được gán.
@@ -179,11 +197,120 @@ def _moc_bat_dau(su_kien: List[dict], nguon: str) -> Tuple[Optional[dict], str]:
         while j + 1 < n and su_kien[j + 1].get("su_kien") == "tra_ve":
             j += 1
         # Dãy su_kien[i..j] là các tầng bật ra liên tiếp.
-        if su_kien[j].get("dong") not in co_ret:
+        #
+        # ---- BỘ ĐỀ 3 BÁC BỎ "KHÔNG PHẢI RETURN THÌ LÀ CHẾT" ----
+        #
+        # Luật trên một mình BÁO ĐỘNG GIẢ. Đo 25/08 trên `core/khay_the.py`,
+        # đề `doi_bien` gieo vào dòng 43:
+        #
+        #   buoc=27  dong=182  <tra_ve>=None   ra[n.name] = The(ten=..., ...)
+        #
+        # Dòng 182 dựng một đối tượng. `sys.settrace` phát `tra_ve` khi
+        # `The.__init__` xong, và dòng 182 KHÔNG phải câu lệnh `return` — nên
+        # luật cũ kêu "chết ở đây" ngay bước 27, trong khi chương trình còn
+        # chạy tiếp tới bước 95. Chuỗi vì thế chỉ thấy sự kiện trước bước 27,
+        # quay vòng trong thân `sinh_khay` và không bao giờ gặp lời gọi
+        # `gan_phan_biet` ở dòng 183 — nơi dẫn xuống chỗ hỏng thật.
+        #
+        # Trả về ngầm (hàm hết thân, không có `return`) và lời gọi hàm dựng
+        # đối tượng đều rơi vào bẫy này.
+        #
+        # Phân biệt được mà KHÔNG cần biết đáp án: một cú chết BỊ NUỐT thì
+        # phải có kẻ nuốt. Sau lượt gỡ, luồng chạy nhảy vào thân một `except`.
+        # Không có bằng chứng ấy thì đây chỉ là một lần trả về bình thường.
+        #
+        # Luật §4 của kho này: "phán quyết phải đi kèm phép đo tạo ra nó".
+        # Ở đây phán quyết là "chết", còn phép đo là "bước kế tiếp có ở trong
+        # except không".
+        ke_tiep = su_kien[j + 1] if j + 1 < n else None
+        bi_nuot = ke_tiep is not None and (ke_tiep.get("dong") in trong_except)
+        if su_kien[j].get("dong") not in co_ret and bi_nuot:
             return su_kien[i], "chỗ chương trình chết (lỗi bị nuốt giữa chừng)"
         i = j + 1
 
     return tra_ve[-1], "giá trị test nhìn thấy"
+
+
+def map_ham_theo_dong(nguon: str) -> Dict[int, str]:
+    """{số dòng -> tên hàm chứa nó}. Hàm lồng nhau thì hàm TRONG CÙNG thắng."""
+    try:
+        cay = ast.parse(nguon)
+    except SyntaxError:
+        return {}
+    tam: Dict[int, Tuple[str, int]] = {}
+    for n in ast.walk(cay):
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            d2 = n.end_lineno or n.lineno
+            rong = d2 - n.lineno
+            for d in range(n.lineno, d2 + 1):
+                if d not in tam or rong < tam[d][1]:
+                    tam[d] = (n.name, rong)
+    return {d: v[0] for d, v in tam.items()}
+
+
+def map_dong_goi(nguon: str) -> Dict[int, Set[str]]:
+    """{số dòng -> tên các hàm ĐỊNH NGHĨA TRONG CHÍNH TỆP mà dòng ấy gọi}.
+
+    Chỉ lấy hàm của tệp này. Gọi `unicodedata.normalize` thì không có vết để
+    mà đi vào, đem vào chỉ tổ nạp rác cho hàng đợi.
+    """
+    try:
+        cay = ast.parse(nguon)
+    except SyntaxError:
+        return {}
+    co_that = {n.name for n in ast.walk(cay)
+               if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    ra: Dict[int, Set[str]] = {}
+    for n in ast.walk(cay):
+        if not isinstance(n, ast.Call):
+            continue
+        f = n.func
+        ten = getattr(f, "id", None) or getattr(f, "attr", None)
+        if ten not in co_that:
+            continue
+        d = getattr(n, "lineno", 0)
+        if d:
+            ra.setdefault(d, set()).add(ten)
+    return ra
+
+
+def _ra_khoi_ham_gan_nhat(
+    su_kien: List[dict], ham: str, nguon: str, truoc_buoc: int
+) -> Optional[dict]:
+    """Lượt chạy GẦN NHẤT của `ham` trước `truoc_buoc` kết thúc ở sự kiện nào.
+
+    VÌ SAO CÓ HÀM NÀY — đo 25/08/2026, bộ đề 1 + bộ đề 3 gộp lại:
+
+        lỗi CÙNG hàm với mốc bắt đầu   42/49 = 0,86
+        lỗi KHÁC hàm với mốc bắt đầu    1/31 = 0,03
+
+    `_viet_gan_nhat` tìm lần ghi gần nhất theo TÊN, trên một danh sách sự kiện
+    PHẲNG, không có phạm vi hàm. Một lời gọi hàm vì thế là bức tường kín: ở
+    `core/khay_the.py`, mốc bắt đầu là dòng 183 `return gan_phan_biet(...)`,
+    còn lỗi nằm ở dòng 43 trong `bo_dau()`, cách ba tầng gọi. Cái tên
+    `gan_phan_biet` là một `def` chứ không phải phép gán nên không ai "ghi"
+    nó — nhánh ấy tắt ngay bước đầu, chuỗi quay về thân vòng `for` và đốt hết
+    ngân sách 21 bước tại đó. Kết quả: khay_the.py trúng 2/22, mà 18 trong 22
+    ca là khác-hàm và cả 18 đều trượt.
+
+    Cạnh còn thiếu chính là cái này: dòng đang xét GỌI một hàm của cùng tệp
+    thì phải nhảy vào lượt chạy của hàm ấy rồi truy tiếp từ trong đó.
+
+    Trả về sự kiện CUỐI CÙNG bên trong hàm trước `truoc_buoc` — là `tra_ve`
+    nếu hàm trả về bình thường, là chỗ chết nếu nó ném lỗi ra ngoài. Cả hai
+    đều đúng chỗ cần đi tiếp.
+    """
+    hd = map_ham_theo_dong(nguon)
+    tot = None
+    for e in su_kien:
+        b = e.get("buoc", 0)
+        if b >= truoc_buoc:
+            continue
+        if hd.get(e.get("dong") or 0) != ham:
+            continue
+        if tot is None or b > tot.get("buoc", 0):
+            tot = e
+    return tot
 
 
 def _viet_gan_nhat(
@@ -244,15 +371,24 @@ def truy_nguoc(
         return {"trang_thai": "khong_do_duoc", "vi_sao": "không có mốc bắt đầu",
                 "chuoi": [], "dong": []}
 
+    mg = map_dong_goi(nguon)
+
     chuoi: List[dict] = []
     da_xet: Set[Tuple[int, str]] = set()
-    # hàng đợi: (bước hiện tại, tên cần truy, vì sao)
-    hang: List[Tuple[int, str, str]] = []
+    # hàng đợi: (bước hiện tại, tên cần truy, vì sao, kiểu)
+    #   kiểu "ten" — truy biến, như cũ
+    #   kiểu "goi" — dòng ấy GỌI một hàm của cùng tệp, nhảy vào trong hàm đó
+    hang: List[Tuple[int, str, str, str]] = []
 
     def nap(buoc: int, dong: int, vi_sao: str) -> None:
         for ten in sorted(md.get(dong, set())):
             if (buoc, ten) not in da_xet:
-                hang.append((buoc, ten, vi_sao))
+                hang.append((buoc, ten, vi_sao, "ten"))
+        # Cạnh QUA RANH GIỚI HÀM. Nạp SAU các tên, nên bề rộng vẫn ưu tiên
+        # truy trong cùng hàm trước — chỉ đi sâu khi trong hàm đã cạn.
+        for ham in sorted(mg.get(dong, set())):
+            if (buoc, "()" + ham) not in da_xet:
+                hang.append((buoc, ham, vi_sao, "goi"))
 
     chuoi.append({
         "dong": goc.get("dong"),
@@ -269,10 +405,28 @@ def truy_nguoc(
         sau += 1
         if sau > sau_toi_da:
             break
-        buoc, ten, vi_sao = hang.pop(0)
-        if (buoc, ten) in da_xet:
+        buoc, ten, vi_sao, kieu = hang.pop(0)
+        khoa = ("()" + ten) if kieu == "goi" else ten
+        if (buoc, khoa) in da_xet:
             continue
-        da_xet.add((buoc, ten))
+        da_xet.add((buoc, khoa))
+
+        if kieu == "goi":
+            e = _ra_khoi_ham_gan_nhat(su_kien, ten, nguon, buoc)
+            if e is None:
+                # Hàm có trong mã nhưng không chạy trong vết này.
+                continue
+            chuoi.append({
+                "dong": e.get("dong"),
+                "ten_bien": e.get("ten_bien"),
+                "gia_tri": e.get("gia_tri_moi"),
+                "dong_ma": e.get("dong_ma", ""),
+                "vi_sao": "%s vào trong %s()" % (vi_sao, ten),
+                "sau": sau,
+            })
+            nap(e.get("buoc", 0), e.get("dong", 0), ten + "()")
+            continue
+
         e = _viet_gan_nhat(su_kien, ten, buoc)
         if e is None:
             # Không ai ghi -> tham số hàm hoặc biến toàn cục. Hết đường lùi.

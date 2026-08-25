@@ -77,8 +77,35 @@ BO_DE = {
     # no co test — do chinh la module dang duoc DO, dung no la vong tron.
     3: (("core/chat_contract.py", "core/khay_the.py",
          "core/nho_lai.py", "core/omega.py"), "de_ngoai_ho_3.json"),
+    # Bo 4, 25/08: luat chon noi TRUOC khi tinh hinh dang — chua dung o bo
+    # 1-3, co test, khong phai trace_runtime.py (module dang duoc do, dung
+    # no la vong tron), tong dong xap xi cac bo truoc. 1270 dong / 46 test
+    # (bo 3 = 1258 dong). Giu nguyen luat sau khi thay ti le ham noi bo cua
+    # bo nay chi 49% — thap nhat bon bo — vi doi luat luc do chinh la thu
+    # tinh chinh theo gia thuyet ma bo de nay sinh ra de kiem.
+    4: (("core/chat_runtime.py", "core/local_first_gateway.py",
+         "core/cua_hoc_vet.py", "core/nhip_thuc_thi.py"), "de_ngoai_ho_4.json"),
+    # Bo 5, 25/08 — BO DE NHAM DICH, khong phai bo ngau nhien.
+    #
+    # Bo 4 chi ra 8 ca khac-ham, duoi muc toi thieu 10 da dang ky, nen nguong
+    # A KHONG DO DUOC. Nguyen nhan da canh bao truoc khi sinh de: bo 4 co ti
+    # le ham noi bo 49%, thap nhat bon bo.
+    #
+    # Bo 5 CO Y chon tep co ti le ham noi bo cao — tuc chon theo chinh gia
+    # thuyet dang kiem. Phai noi ro: con so cua bo nay CHI tra loi "khi co
+    # nhieu ca khac-ham thi ban sua lam duoc gi", KHONG tra loi "co may dung
+    # duoc chua". Ba tep cuoi cung con lai co test:
+    #
+    #     chat_service  82% (sau 3)   the_cst  77% (sau 9)   the_v1  74% (sau 5)
+    #
+    # Het ba tep nay thi kho khong con tep doc lap nao nua.
+    5: (("core/chat_service.py", "core/the_cst.py",
+         "core/the_v1.py"), "de_ngoai_ho_5.json"),
 }
-_BO = 3 if "--bo3" in sys.argv else (2 if "--bo2" in sys.argv else 1)
+_BO = (5 if "--bo5" in sys.argv else
+       4 if "--bo4" in sys.argv else
+       3 if "--bo3" in sys.argv else
+       2 if "--bo2" in sys.argv else 1)
 TEP = BO_DE[_BO][0]
 TEP_TEST = {t: "tests/test_" + Path(t).name for t in TEP}
 RA = NHA / BO_DE[_BO][1]

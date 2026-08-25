@@ -53,9 +53,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from core.trace_runtime import chot_test_can_trace          # noqa: E402
 from truy_nguoc_gia_tri import truy_nguoc                    # noqa: E402
 
+_BO5 = "--bo5" in sys.argv
+_BO4 = "--bo4" in sys.argv
 _BO3 = "--bo3" in sys.argv
 _BO2 = "--bo2" in sys.argv
-_SO_BO = 3 if _BO3 else (2 if _BO2 else 1)
+_SO_BO = 5 if _BO5 else (4 if _BO4 else (3 if _BO3 else (2 if _BO2 else 1)))
 _HAU = "" if _SO_BO == 1 else "_%d" % _SO_BO
 DE = GOC / "experiments" / "evidence_sprint" / ("de_ngoai_ho%s.json" % _HAU)
 RA = GOC / "data" / "evidence_sprint" / ("truy_nguoc_ngoai_ho%s.json" % _HAU)
@@ -89,6 +91,114 @@ NGUONG_THU_HEP = 0.50
 # hứa.
 NGUONG_CHINH_XAC = 0.60
 NGUONG_DO_PHU = 0.25
+
+# ===========================================================================
+# BỘ ĐỀ 4 — ngưỡng đăng ký 25/08/2026, TRƯỚC khi bộ đề 4 sinh xong
+# ===========================================================================
+# Giả thuyết đem ra thử: chuỗi truy ngược trượt vì nó KHÔNG BƯỚC QUA NỔI RANH
+# GIỚI HÀM. Gộp bộ 1 + bộ 3 đo được:
+#
+#     lỗi CÙNG hàm với mốc bắt đầu   42/49 = 0,86
+#     lỗi KHÁC hàm với mốc bắt đầu    1/31 = 0,03
+#
+# Giả thuyết ấy SINH RA TỪ bộ 1 và bộ 3, nên đo lại trên chính chúng là vòng
+# tròn. Bộ 4 dùng bốn tệp chưa đụng tới: chat_runtime · local_first_gateway ·
+# cua_hoc_vet · nhip_thuc_thi.
+#
+# CẢNH BÁO ĐĂNG KÝ TRƯỚC — bộ 4 có thể ra điểm cao mà KHÔNG nhờ bản sửa nào.
+# Đo tỉ lệ "hàm được gọi từ một hàm khác trong cùng tệp", tức đúng hình dạng
+# đẻ ra ca khác-hàm, TRƯỚC khi sinh đề:
+#
+#     bộ 1  19/30 = 63%      bộ 3  26/36 = 72%
+#     bộ 2  11/22 = 50%      bộ 4  17/35 = 49%   <- THẤP NHẤT trong bốn bộ
+#
+# Nên con số TỔNG của bộ 4 không phải bằng chứng cho bản sửa: nó có thể lên
+# chỉ vì bộ này ít ca khác-hàm hơn. Lần trước tôi đoán sai đúng kiểu này (đoán
+# bộ 3 "dễ ăn" vì nhiều ca sập; đo ra 47% so 43%, chênh 4 điểm, vô nghĩa).
+#
+# Vì vậy CON SỐ DUY NHẤT được tính là bằng chứng: chính xác trên ca KHÁC HÀM.
+#
+#   A. chính xác trên ca KHÁC HÀM      >= 0,50   (hiện 1/31 = 0,03)
+#   B. chính xác trên ca CÙNG HÀM      >= 0,80   (hiện 42/49 = 0,86 — bản sửa
+#                                                 KHÔNG được làm hỏng chỗ đang chạy)
+#   C. chính xác tổng khi nó nói       >= 0,60   (giữ nguyên ngưỡng cũ)
+#   D. độ phủ                          >= 0,25   (giữ nguyên)
+#   E. model_calls                     = 0       (giữ nguyên)
+#
+# Ngưỡng A đặt ở 0,50 chứ không phải 0,86: 0,86 là mức của ca cùng hàm, đem
+# nó làm đích cho ca khác hàm là lấy hy vọng làm ngưỡng. 0,50 vẫn là gấp 16
+# lần con số 0,03 hiện thời, đủ để không nhầm với nhiễu.
+#
+# NẾU BỘ 4 CÓ QUÁ ÍT CA KHÁC HÀM thì ngưỡng A KHÔNG ĐO ĐƯỢC — phải nói là
+# không đo được, không được lấy ngưỡng C đạt mà bảo giả thuyết đúng.
+NGUONG_KHAC_HAM = 0.50
+NGUONG_CUNG_HAM = 0.80
+# Dưới ngưỡng này thì mẫu quá nhỏ để kết luận A -> báo KHÔNG ĐO ĐƯỢC.
+TOI_THIEU_CA_KHAC_HAM = 10
+
+# ===========================================================================
+# BỘ ĐỀ 5 — ngưỡng đăng ký 25/08/2026, TRƯỚC khi bộ đề 5 sinh xong
+# ===========================================================================
+# BỘ ĐỀ NHẮM ĐÍCH. Bộ 4 chỉ ra 8 ca khác-hàm, dưới mức tối thiểu 10 đã đăng
+# ký, nên ngưỡng A KHÔNG ĐO ĐƯỢC — đúng điều đã cảnh báo trước khi sinh đề
+# (bộ 4 có tỉ lệ hàm nội bộ 49%, thấp nhất bốn bộ).
+#
+# Bộ 5 CỐ Ý chọn tệp có tỉ lệ hàm nội bộ cao, tức chọn theo chính giả thuyết
+# đang kiểm. Điều đó KHÔNG làm phép đo vô giá trị, nhưng làm HẸP câu nó trả
+# lời lại:
+#
+#     TRẢ LỜI ĐƯỢC : khi có nhiều ca khác-hàm thì bản sửa làm được gì
+#     KHÔNG TRẢ LỜI: cỗ máy đã dùng được chưa, trên mã bình thường
+#
+# Ai đọc con số của bộ 5 mà bỏ dòng trên là đọc sai. Muốn biết "dùng được
+# chưa" thì con số phải lấy từ bộ chọn KHÔNG theo giả thuyết — bộ 1 tới 4.
+#
+# SỬA THƯỚC ĐO — bắt được 25/08 khi chạy bộ 4 bằng CẢ HAI cỗ máy.
+#
+# Ngưỡng A và B của bộ 4 phân loại ca theo "dòng lỗi có cùng hàm với MỐC BẮT
+# ĐẦU không". Mốc bắt đầu là thứ CỖ MÁY chọn, mà bản sửa `_moc_bat_dau` đã
+# dời mốc — nên số ca mỗi loại đổi theo cỗ máy:
+#
+#     máy CŨ   khác hàm 14 ca · cùng hàm 22 ca
+#     máy MỚI  khác hàm  8 ca · cùng hàm 28 ca
+#
+# "B tụt 0,82 -> 0,68" vì thế là so HAI TẬP CA KHÁC NHAU, không phải so hai
+# cỗ máy. Hai ngưỡng ấy VÔ HIỆU — không phải trượt, không phải đạt, mà là
+# hỏng thước. Cùng họ với §4 "đừng tự chấm điểm bằng dò chuỗi con": ở đó thước
+# đo bắt nhầm chuỗi, ở đây thước đo phụ thuộc chính thứ nó đang chấm.
+#
+# Thay bằng thuộc tính CỦA CA, tất định, không đụng tới cỗ máy:
+#
+#     ca SÂU  = dòng lỗi nằm trong một hàm ĐƯỢC GỌI TỪ MỘT HÀM KHÁC cùng tệp
+#     ca NÔNG = còn lại
+#
+# Chấm lại bộ 4 bằng thước này (cùng 8 ca, cùng 28 ca, chỉ cỗ máy đổi):
+#
+#     máy CŨ   ca sâu 1/8 = 0,12    ca nông 17/28 = 0,61    tổng 0,50
+#     máy MỚI  ca sâu 3/8 = 0,38    ca nông 17/28 = 0,61    tổng 0,56
+#
+# Bản sửa giúp đúng chỗ dự đoán và không làm hỏng chỗ đang chạy. Nhưng 8 ca
+# thì quá ít để kết luận — đó là lý do có bộ 5.
+#
+#   A. chính xác trên ca SÂU           >= 0,50   (bộ 4 máy mới: 0,38 trên 8 ca)
+#   B. ca NÔNG máy MỚI không được THẤP HƠN ca NÔNG máy CŨ trên CHÍNH bộ 5
+#      — so cặp, cùng bộ đề, chỉ cỗ máy đổi. Không đặt ngưỡng tuyệt đối nữa,
+#      vì con số tuyệt đối của ca nông đổi theo bộ đề chứ không theo cỗ máy.
+#   (giữ nguyên C, D, E bên dưới)
+#
+#   [VÔ HIỆU, giữ lại để thấy vết] A cũ. chính xác ca KHÁC HÀM  >= 0,50
+#   B. chính xác trên ca CÙNG HÀM      >= 0,80   (giữ nguyên)
+#   C. chính xác tổng khi nó nói       >= 0,60   (giữ nguyên)
+#   D. độ phủ                          >= 0,25   (giữ nguyên)
+#   E. model_calls                     = 0       (giữ nguyên)
+#
+# Không nới một con số nào của bộ 4. Bộ 5 dễ hơn cho giả thuyết ở chỗ nó cho
+# ĐỦ CA để chấm, không phải ở chỗ hạ ngưỡng.
+#
+# ĐĂNG KÝ TRƯỚC MỘT ĐIỀU NỮA, vì nó dễ bị nuốt sau khi thấy kết quả: nếu
+# ngưỡng A đạt mà ngưỡng B vẫn dưới 0,80 thì bản sửa ĐỔI CHỖ HỎNG chứ không
+# sửa được gì — chữa ca khác-hàm bằng cách làm hỏng ca cùng-hàm. Phải báo là
+# TRƯỢT, không được báo "A đạt".
 
 # ===========================================================================
 # BỘ ĐỀ 3 — ngưỡng đăng ký 25/08/2026, TRƯỚC khi bộ đề 3 sinh xong

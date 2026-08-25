@@ -2016,9 +2016,152 @@
     if (input.value) chayTimKiem(input.value);
   }
 
+  // ==========================================================================
+  // THAY THẾ (Ctrl+H)
+  // ==========================================================================
+  //
+  // Nửa còn lại của Ctrl+F. Người mới học đổi tên biến bằng tay là chỗ sai
+  // nhiều nhất: sửa được 7 chỗ, sót 1 chỗ, rồi ngồi dò `NameError`.
+  //
+  // BA ĐIỀU PHẢI ĐÚNG, và cả ba đều dễ làm sai:
+  //
+  // 1. TÌM không phân biệt hoa thường (Ctrl+F đang thế), nên THAY cũng phải
+  //    tìm không phân biệt hoa thường — nhưng chỉ đổi ĐÚNG đoạn khớp, giữ
+  //    nguyên mọi byte khác của ô. Dùng `toLowerCase()` rồi `split/join` là
+  //    hỏng: nó trả về ô đã bị hạ hết chữ hoa.
+  //
+  // 2. Không dùng biểu thức chính quy trên chuỗi người dùng gõ. Gõ `(` hay
+  //    `[` là `RegExp` ném lỗi, hoặc tệ hơn: `.` khớp mọi ký tự và thay nhầm
+  //    chỗ mà không ai thấy.
+  //
+  // 3. THAY TẤT CẢ phải là MỘT bước hoàn tác. Ghi lịch sử từng ô là người
+  //    dùng phải bấm Ctrl+Z ba chục lần để lấy lại chương trình cũ.
+
+  /** Mọi vị trí `kim` xuất hiện trong `chuoi`, so không phân biệt hoa thường. */
+  function viTriKhop(chuoi, kim) {
+    const ra = [];
+    if (!kim) return ra;
+    const a = String(chuoi).toLowerCase();
+    const b = kim.toLowerCase();
+    let i = a.indexOf(b);
+    while (i !== -1) {
+      ra.push(i);
+      // Nhảy qua đoạn vừa khớp, không cho khớp chồng lên nhau: tìm "aa"
+      // trong "aaaa" phải ra 2 chỗ, không phải 3.
+      i = a.indexOf(b, i + b.length);
+    }
+    return ra;
+  }
+
+  /** Thay mọi chỗ khớp trong MỘT chuỗi. Trả `[chuỗi mới, số chỗ đã thay]`. */
+  function thayTrongChuoi(chuoi, kim, moi) {
+    const vt = viTriKhop(chuoi, kim);
+    if (vt.length === 0) return [chuoi, 0];
+    const g = String(chuoi);
+    let ra = '', truoc = 0;
+    for (const i of vt) {
+      ra += g.slice(truoc, i) + moi;
+      truoc = i + kim.length;
+    }
+    // Phần đuôi sau chỗ khớp cuối — quên nó là cắt cụt ô của người dùng.
+    ra += g.slice(truoc);
+    return [ra, vt.length];
+  }
+
+  /** Thay trong mọi ô CHỮ của một thẻ. Trả số chỗ đã thay. */
+  function thayTrongThe(node, kim, moi) {
+    let dem = 0;
+    if (node.o) {
+      for (const k in node.o) {
+        const v = node.o[k];
+        // Đúng bộ ô mà `chuTrenThe` đọc — tìm ở đâu thì thay ở đó, không
+        // rộng hơn. Rộng hơn là thay vào chỗ người dùng không nhìn thấy.
+        if (v === null || v === undefined || typeof v === 'object') continue;
+        const [moiV, n] = thayTrongChuoi(String(v), kim, moi);
+        if (n > 0) { node.o[k] = moiV; dem += n; }
+      }
+    }
+    if (node.duoi_dong) {
+      const [moiD, n] = thayTrongChuoi(String(node.duoi_dong), kim, moi);
+      if (n > 0) { node.duoi_dong = moiD; dem += n; }
+    }
+    if (dem > 0) node.da_sua = true;
+    return dem;
+  }
+
+  function baoThayThe(soCho, soThe) {
+    const o = document.getElementById('replaceCount');
+    if (!o) return;
+    o.textContent = soCho === 0
+      ? 'không có chỗ nào'
+      : `đã thay ${soCho} chỗ · ${soThe} thẻ`;
+  }
+
+  function thayMotCho() {
+    const kim = timKiem.tuKhoa;
+    const moi = (document.getElementById('replaceInput') || {}).value || '';
+    if (!kim || timKiem.viTri < 0) { baoThayThe(0, 0); return; }
+    // `timTheTheoId` trả về BỌC `{node, dsCha, chiSo}`, không trả về thẻ.
+    // 25/08: bản đầu truyền thẳng cái bọc vào `thayTrongThe`; nó tìm `.o`
+    // không thấy nên thay 0 chỗ và IM LẶNG — nút bấm được, hàm chạy, không
+    // có gì xảy ra. Đúng bệnh "đọc sai tên trường" trong bảng tám lỗi ở §4
+    // (`data.tep_tin` so với `danh_sach`), và cửa "mọi nút có người nghe"
+    // KHÔNG bắt được loại này: người nghe có thật, chỉ là nó làm sai việc.
+    // Bắt được bằng cách tự bấm ba lần rồi nhìn cây thẻ không đổi.
+    const boc = timTheTheoId(state.tree, timKiem.danhSach[timKiem.viTri]);
+    if (!boc || !boc.node) { baoThayThe(0, 0); return; }
+
+    const n = thayTrongThe(boc.node, kim, moi);
+    if (n === 0) { baoThayThe(0, 0); return; }
+    onTreeChanged();                 // một thẻ = một bước hoàn tác
+
+    // Tìm lại: thẻ vừa sửa có thể không còn khớp nữa, nên danh sách đổi.
+    // Giữ vị trí ở chỗ CŨ để bấm "Thay" liên tiếp đi tới, không dậm chân.
+    const truoc = timKiem.viTri;
+    chayTimKiem(kim);
+    if (timKiem.danhSach.length > 0) {
+      timKiem.viTri = truoc % timKiem.danhSach.length;
+      veKetQuaTimKiem();
+    }
+    baoThayThe(n, 1);
+  }
+
+  function thayTatCa() {
+    const kim = timKiem.tuKhoa;
+    const moi = (document.getElementById('replaceInput') || {}).value || '';
+    if (!kim) { baoThayThe(0, 0); return; }
+
+    let soCho = 0, soThe = 0;
+    (function di(ds) {
+      (ds || []).forEach(node => {
+        const n = thayTrongThe(node, kim, moi);
+        if (n > 0) { soCho += n; soThe += 1; }
+        if (node.than && node.than.length) di(node.than);
+      });
+    })(state.tree);
+
+    if (soCho === 0) { baoThayThe(0, 0); return; }
+    // MỘT lần gọi cho TẤT CẢ -> đúng một bước hoàn tác.
+    onTreeChanged();
+    chayTimKiem(kim);
+    baoThayThe(soCho, soThe);
+  }
+
+  function moThanhThayThe() {
+    const bar = document.getElementById('replaceBar');
+    if (bar) bar.style.display = 'flex';
+    moThanhTim();
+    const o = document.getElementById('replaceInput');
+    if (o) o.focus();
+  }
+
   function dongThanhTim() {
     const bar = document.getElementById('findBar');
     if (bar) bar.style.display = 'none';
+    const barTT = document.getElementById('replaceBar');
+    if (barTT) barTT.style.display = 'none';
+    const oBao = document.getElementById('replaceCount');
+    if (oBao) oBao.textContent = '';
     timKiem.danhSach = [];
     timKiem.viTri = -1;
     timKiem.tuKhoa = '';
@@ -2573,6 +2716,25 @@
     if (btnFindPrev) btnFindPrev.addEventListener('click', () => nhayKetQua(-1));
     if (btnFindClose) btnFindClose.addEventListener('click', dongThanhTim);
 
+    const btnReplaceOne = document.getElementById('btnReplaceOne');
+    const btnReplaceAll = document.getElementById('btnReplaceAll');
+    const replaceInput = document.getElementById('replaceInput');
+    if (btnReplaceOne) btnReplaceOne.addEventListener('click', thayMotCho);
+    if (btnReplaceAll) btnReplaceAll.addEventListener('click', thayTatCa);
+    if (replaceInput) {
+      replaceInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          // Enter = thay MỘT chỗ. "Thay tất cả" phải bấm nút — thao tác xoá
+          // được cả chương trình thì không nên nằm dưới một phím Enter lỡ tay.
+          e.preventDefault();
+          thayMotCho();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          dongThanhTim();
+        }
+      });
+    }
+
     // Mẫu bài Modal
     document.getElementById('btnSamples').addEventListener('click', () => {
       loadSamples();
@@ -2772,6 +2934,11 @@
         // tên nút, nhãn khay thẻ, chữ trong terminal...).
         e.preventDefault();
         moThanhTim();
+      } else if (e.ctrlKey && (e.key === 'h' || e.key === 'H')) {
+        // Ctrl+H mở CẢ hàng thay thế. Ctrl+F chỉ mở hàng tìm — người chỉ muốn
+        // tìm thì không phải nhìn thấy nút xoá được cả chương trình.
+        e.preventDefault();
+        moThanhThayThe();
       } else if (e.key === 'Escape') {
         const bar = document.getElementById('findBar');
         if (bar && bar.style.display !== 'none') dongThanhTim();

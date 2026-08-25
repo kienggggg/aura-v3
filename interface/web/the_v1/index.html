@@ -146,6 +146,17 @@
           <button class="icon-btn" id="btnFindClose" title="Đóng (Esc)">✕</button>
         </div>
 
+        <!-- Hàng THAY THẾ. Ẩn khi mở bằng Ctrl+F, hiện khi mở bằng Ctrl+H —
+             người chỉ muốn tìm thì không phải nhìn thấy nút xoá được cả
+             chương trình. -->
+        <div class="find-bar" id="replaceBar" style="display: none;">
+          <span class="find-icon">↔</span>
+          <input type="text" id="replaceInput" placeholder="Thay bằng..." autocomplete="off" spellcheck="false">
+          <span class="find-count" id="replaceCount"></span>
+          <button class="icon-btn" id="btnReplaceOne" title="Thay chỗ đang chọn rồi sang chỗ sau">Thay</button>
+          <button class="icon-btn" id="btnReplaceAll" title="Thay tất cả (hoàn tác được bằng Ctrl+Z)">Thay tất cả</button>
+        </div>
+
         <!-- Dải Nhịp Thực Thi (Execution Rhythms Ribbon) -->
         <div class="rhythm-ribbon-bar" id="rhythmRibbonBar">
           <div class="rhythm-label">

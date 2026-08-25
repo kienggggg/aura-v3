@@ -149,6 +149,40 @@ def _moc_bat_dau(su_kien: List[dict], nguon: str) -> Tuple[Optional[dict], str]:
     # `khong_dau` KHÔNG hề được gán -> hàm không trả về gì cả, nó chết.
     if duoi and su_kien[-1].get("dong") not in co_ret:
         return duoi[0], "chỗ chương trình chết (gỡ ngăn xếp)"
+
+    # ---- BỘ ĐỀ 2 BÁC BỎ GIẢ ĐỊNH "CHẾT LUÔN Ở CUỐI VẾT" ----
+    #
+    # Luật trên chỉ nhìn ĐUÔI vết. Đo 24/08 trên bộ đề 2, mã TÍCH HỢP có lớp
+    # `try/except Exception` bọc ngoài (`core/chat_service.py:371,583,612,675`)
+    # thì cú chết nằm GIỮA vết, còn cuối vết là một tính toán khác, hợp lệ:
+    #
+    #   buoc=6   dong=45   <tra_ve>=None                 <- CHẾT ở đây
+    #   buoc=8   dong=74   <tra_ve>=None                 <- lan lên hàm gọi
+    #   ... 10 bước sau, một nhánh KHÁC của cùng test ...
+    #   buoc=40  dong=111  <tra_ve>=OutwardContent(...)  <- giá trị HỢP LỆ
+    #
+    # ChatService nuốt lặng lẽ NameError, rẽ sang nhánh dự phòng, rồi trả về
+    # một giá trị đúng. Luật cũ lấy `tra_ve` cuối (bước 40) — không bao giờ
+    # chạm chỗ hỏng. Kết quả: `secret_guard` 2/9 đúng, `user_memory` 3/11,
+    # trong khi hai tệp thuần logic cùng bộ được 60% và 89%.
+    #
+    # Sửa: quét MỌI dãy `tra_ve` liên tiếp trong vết, không chỉ dãy cuối. Dãy
+    # nào kết thúc ở dòng KHÔNG phải `return` là một lượt gỡ ngăn xếp; lấy
+    # phần tử đầu của lượt gỡ SỚM NHẤT — chỗ chết đầu tiên.
+    i = 0
+    n = len(su_kien)
+    while i < n:
+        if su_kien[i].get("su_kien") != "tra_ve":
+            i += 1
+            continue
+        j = i
+        while j + 1 < n and su_kien[j + 1].get("su_kien") == "tra_ve":
+            j += 1
+        # Dãy su_kien[i..j] là các tầng bật ra liên tiếp.
+        if su_kien[j].get("dong") not in co_ret:
+            return su_kien[i], "chỗ chương trình chết (lỗi bị nuốt giữa chừng)"
+        i = j + 1
+
     return tra_ve[-1], "giá trị test nhìn thấy"
 
 

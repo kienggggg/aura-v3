@@ -73,8 +73,12 @@ BO_DE = {
          "core/dong_ho.py", "core/loai_cau_hoi.py"), "de_ngoai_ho.json"),
     2: (("core/secret_guard.py", "core/user_memory.py",
          "core/doc_so_phien.py", "core/kiem_tien.py"), "de_ngoai_ho_2.json"),
+    # Bo 3, 25/08: lai KHAC HAN bo 1 va bo 2. Tranh core/trace_runtime.py du
+    # no co test — do chinh la module dang duoc DO, dung no la vong tron.
+    3: (("core/chat_contract.py", "core/khay_the.py",
+         "core/nho_lai.py", "core/omega.py"), "de_ngoai_ho_3.json"),
 }
-_BO = 2 if "--bo2" in sys.argv else 1
+_BO = 3 if "--bo3" in sys.argv else (2 if "--bo2" in sys.argv else 1)
 TEP = BO_DE[_BO][0]
 TEP_TEST = {t: "tests/test_" + Path(t).name for t in TEP}
 RA = NHA / BO_DE[_BO][1]

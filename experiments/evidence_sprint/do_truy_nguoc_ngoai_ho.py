@@ -53,11 +53,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from core.trace_runtime import chot_test_can_trace          # noqa: E402
 from truy_nguoc_gia_tri import truy_nguoc                    # noqa: E402
 
+_BO3 = "--bo3" in sys.argv
 _BO2 = "--bo2" in sys.argv
-DE = GOC / "experiments" / "evidence_sprint" / (
-    "de_ngoai_ho_2.json" if _BO2 else "de_ngoai_ho.json")
-RA = GOC / "data" / "evidence_sprint" / (
-    "truy_nguoc_ngoai_ho_2.json" if _BO2 else "truy_nguoc_ngoai_ho.json")
+_SO_BO = 3 if _BO3 else (2 if _BO2 else 1)
+_HAU = "" if _SO_BO == 1 else "_%d" % _SO_BO
+DE = GOC / "experiments" / "evidence_sprint" / ("de_ngoai_ho%s.json" % _HAU)
+RA = GOC / "data" / "evidence_sprint" / ("truy_nguoc_ngoai_ho%s.json" % _HAU)
 
 NGUONG_TRONG_CHUOI = 32
 NGUONG_DAI_CHUOI = 8
@@ -88,6 +89,36 @@ NGUONG_THU_HEP = 0.50
 # hứa.
 NGUONG_CHINH_XAC = 0.60
 NGUONG_DO_PHU = 0.25
+
+# ===========================================================================
+# BỘ ĐỀ 3 — ngưỡng đăng ký 25/08/2026, TRƯỚC khi bộ đề 3 sinh xong
+# ===========================================================================
+# Giả thuyết đang kiểm: `_moc_bat_dau` cũ chỉ nhận ra "chương trình chết" khi
+# cú gỡ ngăn xếp nằm ở CUỐI vết. Bộ đề 2 bác bỏ giả định ấy — mã có lớp
+# `try/except Exception` bọc ngoài thì cú chết nằm GIỮA vết:
+#
+#   bộ 2, chỉ nhóm "có trả lời"   doc_so_phien 6/10 · kiem_tien 8/9   (thuần)
+#                                  secret_guard 2/9 · user_memory 3/11 (tích hợp)
+#
+# Bản mới quét MỌI dãy `tra_ve` liên tiếp, không chỉ dãy cuối.
+#
+# Bộ đề 3 dùng BỐN TỆP LẠI KHÁC HẲN cả bộ 1 lẫn bộ 2 (chat_contract ·
+# khay_the · nho_lai · omega). Đây là bằng chứng độc lập THỨ HAI — luật rút
+# ra từ bộ 2, nên chấm trên bộ 2 là vòng tròn.
+#
+#   1. chính xác khi nó NÓI          >= 0,60   (bộ 2 bản cũ: 0,49 — TRƯỢT)
+#   2. im lặng bỏ câu SAI >= câu ĐÚNG
+#   3. độ phủ                        >= 0,25
+#   4. thu hẹp trung vị              <= 0,50
+#   5. model_calls                    = 0
+#
+# Giữ NGUYÊN năm ngưỡng của bộ 2, không nới một con số nào. Nếu bản sửa thật
+# sự đúng thì chính con số 0,49 kia phải tự vượt lên; nới ngưỡng để nó "đạt"
+# là tự lừa mình.
+#
+# CẢNH BÁO nếu bộ 3 ĐẠT: mới là hai bộ độc lập liên tiếp, KHÔNG phải "đã
+# giải quyết xong". `CLAUDE.md` §4 — ba điểm khớp không chứng minh được điểm
+# thứ tư.
 
 
 def dong_loi_trong_ma(d: dict) -> List[int]:
@@ -150,6 +181,12 @@ def chay_mot_de(d: dict) -> dict:
             "so_dong_da_chay": len(da_chay),
             "so_dong_chuoi": len(dong_chuoi),
             "dai_chuoi": len(kq["chuoi"]),
+            # 25/08: ghi them MOC BAT DAU va CAC DONG CHUOI. Khong co hai
+            # truong nay thi khong doi chieu duoc "loi nam trong ham nao so
+            # voi ham chuoi dang di" — da phai chay lai ca bo mot lan chi de
+            # lay chung. Ban ghi truoc 25/08 khong co: rong nghia la CU.
+            "dong_moc": (kq["chuoi"][0].get("dong") if kq.get("chuoi") else None),
+            "cac_dong_chuoi": sorted(set(dong_chuoi)),
             "dong_trong_ma": dl,
             "trace_toi_dong_loi": toi_dong_loi,
             "dong_loi_trong_chuoi": any(x in dong_chuoi for x in dl),
@@ -181,6 +218,26 @@ def main() -> int:
         de = [x for x in de if (x["tep"], x["muc"]) not in xong]
 
     RA.parent.mkdir(parents=True, exist_ok=True)
+
+    # 25/08: BỘ CHẤM PHẢI NÓI RÕ SỐ NÀO LÀ SỐ CŨ.
+    #
+    # Cache tiếp-tục ở trên bỏ qua mọi mục đã có trong sổ. Sổ đầy đủ thì
+    # `de` rỗng — không đo lại dòng nào — NHƯNG bộ chấm vẫn in nguyên bảng
+    # kết quả, trông y hệt một lần đo mới. Hôm nay tôi đọc lướt qua đúng cái
+    # bảng ấy và suýt báo "bộ 1 bản MỚI = 0,65" trong khi 0,65 là số đo hôm
+    # 24/08 bằng bản CŨ: sổ ghi 11:44:54 hôm trước, lúc đọc là 07:00 hôm sau.
+    #
+    # Cùng họ với luật §4 "phép đo không chạy phải NÓI LÀ KHÔNG CHẠY": ở đó
+    # là giấu việc không chạy, ở đây là giấu việc SỐ NÀY LẤY TỪ HÔM NÀO.
+    if so and not de:
+        print("  ***  KHÔNG ĐO LẠI DÒNG NÀO  ***")
+        print("  Toàn bộ %d mục đọc từ sổ CŨ: %s" % (len(so), RA.name))
+        print("  Sổ ghi lúc: %s" % time.strftime(
+            "%d/%m/%Y %H:%M:%S", time.localtime(RA.stat().st_mtime)))
+        print("  Bảng dưới là số của LẦN ĐO ĐÓ, không phải của bản mã đang")
+        print("  nằm trên đĩa lúc này. Muốn đo lại thì xoá sổ đi.\n")
+    elif so:
+        print("  %d mục đọc từ sổ cũ, %d mục đo mới\n" % (len(so), len(de)))
     print("  %d đề — truy ngược giá trị, không có model\n" % len(de))
     t0 = time.monotonic()
 
@@ -288,8 +345,8 @@ def cham_im_lang(do_duoc: list) -> bool:
     print("  CHẾ ĐỘ IM LẶNG — không lùi được bước nào thì nói KHÔNG BIẾT")
     print("=" * 68)
     print("  luật này rút ra TỪ bộ đề 1; đây là %s"
-          % ("BỘ ĐỀ 2, bốn tệp khác hẳn — bằng chứng độc lập" if _BO2
-             else "CHÍNH bộ đề 1 — chỉ là kiểm bản cài đặt, KHÔNG phải bằng chứng"))
+          % (("BỘ ĐỀ %d, bốn tệp khác hẳn — bằng chứng độc lập" % _SO_BO) if _SO_BO >= 2
+             else "CHÍNH bộ đề cũ — chỉ là kiểm bản cài đặt, KHÔNG phải bằng chứng"))
     print("-" * 68)
     print("  trả lời          : %d/%d ca" % (len(noi), len(do_duoc)))
     print("  im lặng          : %d/%d ca" % (len(im), len(do_duoc)))

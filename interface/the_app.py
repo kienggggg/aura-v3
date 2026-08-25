@@ -18,6 +18,40 @@ from aiohttp import web
 from interface import the_api
 
 
+# Thư mục cấp một mà hộp "Mở tệp" được phép liệt kê.
+#
+# ĐÂY LÀ HÀNG RÀO AN TOÀN THẬT, không phải tiện nghi. `tests/test_the_app.py`
+# đóng đinh: `?thu_muc=data` phải trả 403. Nới bừa là mở rào mà không ai biết.
+#
+# 25/08, lúc đóng gói: bộ ba `("core","interface","tests")` đóng cứng theo bố
+# cục CỦA KHO NÀY. Chạy thử trên một dự án khác thì chỉ `core` tồn tại — hai
+# thư mục kia không có, và một dự án của người dùng thì chẳng có lý do gì phải
+# đặt tên như vậy.
+#
+# Sửa: chạy trên chính kho này thì giữ NGUYÊN bộ ba cũ (test 403 không đổi);
+# chạy với `--du-an` trỏ chỗ khác thì suy từ thư mục cấp một CÓ THẬT của dự
+# án, loại thư mục ẩn và mấy thứ không ai muốn duyệt.
+#
+# Hàng rào thứ hai vẫn còn nguyên bên trong `api_danh_sach_tep`:
+# `is_relative_to(project_root)`. Cái ở đây chỉ là hàng rào ngoài.
+BO_QUA_KHI_QUET = {"venv", ".venv", "__pycache__", "node_modules", "site-packages"}
+
+
+def thu_muc_duoc_quet(root: Path) -> tuple[str, ...]:
+    """Danh mục thư mục cấp một cho phép liệt kê, suy từ `root`."""
+    if root.resolve(strict=False) == the_api.DEFAULT_PROJECT_ROOT.resolve(strict=False):
+        # Chạy ngay trên kho AURA — giữ đúng hàng rào cũ, kể cả việc CHẶN `data`.
+        return the_api.ALLOWED_SCAN_DIRS
+    try:
+        ten = sorted(
+            d.name for d in root.iterdir()
+            if d.is_dir() and not d.name.startswith(".") and d.name not in BO_QUA_KHI_QUET
+        )
+    except OSError:
+        return ()
+    return tuple(ten)
+
+
 def tao_app(
     project_root: Optional[Path | str] = None,
     allow_code_execution: Optional[bool] = None,
@@ -33,8 +67,8 @@ def tao_app(
 
     config = the_api.AppConfig(
         project_root=root,
-        static_dir=(root / "interface" / "web" / "the_v1").resolve(strict=False),
-        allowed_scan_dirs=the_api.ALLOWED_SCAN_DIRS,
+        static_dir=the_api.STATIC_DIR_GOI.resolve(strict=False),
+        allowed_scan_dirs=thu_muc_duoc_quet(root),
         auth_token=token,
         allow_code_execution=bool(allow_code_execution),
     )
@@ -84,8 +118,15 @@ def tao_app(
 
 
 def main():
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    # Chỉnh CẢ HAI: `stdout` và `stderr`.
+    #
+    # 25/08: bản đầu chỉ chỉnh `stdout`. Chạy bản đã cài thì `--help` ra đúng,
+    # nhưng câu từ chối bind — thứ đi ra `stderr` — vẫn hỏng:
+    #   "AURA Chat v1 chưa c? x?c thực n?n từ chối..."
+    # Người dùng gặp lỗi chính là lúc cần đọc được câu tiếng Việt nhất.
+    for _luong in (sys.stdout, sys.stderr):
+        if hasattr(_luong, "reconfigure"):
+            _luong.reconfigure(encoding="utf-8", errors="replace")
 
     parser = argparse.ArgumentParser(description="AURA App Lập trình bằng THẺ (v1)")
     parser.add_argument("--host", default="127.0.0.1", help="Địa chỉ bind (chỉ loopback)")
@@ -99,6 +140,10 @@ def main():
         "--allow-exec", action="store_true",
         help="Bật chạy mã/test (/api/chay, /api/trace, /api/dinh_vi_loi). "
              "Tắt mặc định vì tiến trình chưa được cách ly khỏi tệp/mạng/RAM")
+    parser.add_argument(
+        "--du-an", default=None, metavar="ĐƯỜNG_DẪN",
+        help="Thư mục dự án — nơi mở và lưu tệp .py. Mặc định: thư mục hiện "
+             "tại, theo lối `git` hay `code .`")
     args = parser.parse_args()
     if args.allow_exec:
         os.environ["AURA_THE_ALLOW_CODE_EXECUTION"] = "1"
@@ -108,7 +153,20 @@ def main():
         print(f"[BẢO MẬT]: Từ chối bind vào địa chỉ ngoài loopback: {args.host}", flush=True)
         sys.exit(1)
 
-    app = tao_app()
+    # 25/08: mặc định là THƯ MỤC HIỆN TẠI, không phải thư mục chứa mã app.
+    #
+    # Cài bằng `pip` thì mã app nằm ở `site-packages` — không ai muốn mở/lưu
+    # tệp .py của mình ở đó. Chạy `aura-the` ngay trong thư mục dự án là lối
+    # quen thuộc của `git`, `code .`, `jupyter notebook`.
+    #
+    # Chạy từ trong kho AURA thì thư mục hiện tại CHÍNH LÀ gốc kho, nên hành
+    # vi cũ không đổi.
+    du_an = Path(args.du_an).resolve(strict=False) if args.du_an else Path.cwd()
+    if not du_an.is_dir():
+        print("[LỖI]: Thư mục dự án không tồn tại: %s" % du_an, flush=True)
+        sys.exit(1)
+
+    app = tao_app(project_root=du_an)
     token = app["aura_config"].auth_token
     app_url = f"http://{args.host}:{args.port}/?token={token}"
 

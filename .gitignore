@@ -22,6 +22,9 @@ data/app_window/
 __pycache__/
 *.py[cod]
 *.egg-info/
+build/
+dist/
+*.whl
 
 # ─── Virtualenv ───
 venv/

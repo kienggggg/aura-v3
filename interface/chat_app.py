@@ -12,6 +12,7 @@ from datetime import datetime
 from ipaddress import ip_address
 import os
 from pathlib import Path
+import sys
 from typing import Sequence
 
 from aiohttp import web
@@ -161,6 +162,28 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Khởi động máy chủ chat AURA trên loopback. Mã thoát 0 nếu dừng sạch."""
+    # 25/08: THIẾU HAI DÒNG NÀY THÌ `aura-chat --help` GÃY NGAY.
+    #
+    # Bắt được lúc kiểm bản đã cài: chạy `aura-chat.exe --help` từ một venv
+    # sạch thì nổ `UnicodeEncodeError: 'charmap' codec can't encode character
+    # 'ạ'` — cp1252 không mã hoá nổi chữ "ạ" trong phần trợ giúp. Người
+    # dùng gõ `--help` lần đầu là gặp traceback.
+    #
+    # Trong kho thì không thấy, vì ở đây luôn chạy qua `python -X utf8`. Chỉ
+    # bản CÀI mới lộ ra — đó là lý do phải cài thật rồi chạy thật, chứ không
+    # đọc mã mà tin.
+    #
+    # `interface/the_app.py:121` đã có đúng hai dòng này từ trước; chỗ ấy
+    # thoát nạn còn chỗ này thì không.
+    # Chỉnh CẢ HAI: `stdout` và `stderr`.
+    #
+    # 25/08: bản đầu chỉ chỉnh `stdout`. Chạy bản đã cài thì `--help` ra đúng,
+    # nhưng câu từ chối bind — thứ đi ra `stderr` — vẫn hỏng:
+    #   "AURA Chat v1 chưa c? x?c thực n?n từ chối..."
+    # Người dùng gặp lỗi chính là lúc cần đọc được câu tiếng Việt nhất.
+    for _luong in (sys.stdout, sys.stderr):
+        if hasattr(_luong, "reconfigure"):
+            _luong.reconfigure(encoding="utf-8", errors="replace")
     args = build_parser().parse_args(argv)
     try:
         host = require_loopback(args.host)

@@ -10,7 +10,39 @@ python -m venv venv
 venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Ba gói ngoài, không hơn: `aiohttp`, `httpx`, `pytest`.
+Ba gói ngoài, không hơn: `aiohttp`, `httpx`, `libcst`.
+
+(`pytest` là gói kiểm thử, không cần để chạy app. Trước 25/08 cả README
+lẫn CLAUDE.md đều ghi nhầm `pytest` vào chỗ này và bỏ sót `libcst` —
+gói mà `core/the_cst.py` dùng để mở/sửa/lưu Python giữ nguyên định dạng.
+Bắt được lúc khai `pyproject.toml`, bằng cách quét `import` thật trong mã
+chứ không đọc tài liệu.)
+
+---
+
+## Cài như một gói
+
+Cách trên là chạy thẳng trong kho. Muốn cài để gọi từ bất kỳ đâu:
+
+```bash
+venv\Scripts\python.exe -m pip install .
+```
+
+Xong thì có hai lệnh: `aura-the` và `aura-chat`.
+
+**`aura-the` mở và lưu tệp `.py` trong THƯ MỤC HIỆN TẠI**, theo lối `git` hay
+`code .`. Nên cách dùng là `cd` vào thư mục dự án của mình rồi gõ:
+
+```bash
+cd D:\bai_tap_cua_toi
+aura-the --port 8088
+```
+
+Muốn trỏ chỗ khác thì `--du-an D:\duong\dan\khac`.
+
+Bản wheel dựng ra 220 KB, 37 tệp: 23 tệp `core`, 9 tệp `interface`, 4 tệp giao
+diện web. **Không** có `tests`, `tools`, `experiments`, `data`, `docs` — những
+thứ ấy không thuộc bản phát hành.
 
 ---
 

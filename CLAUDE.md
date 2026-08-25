@@ -20,7 +20,11 @@ venv\Scripts\python.exe aura_chat.py      ->  http://127.0.0.1:8799
 venv\Scripts\python.exe -m pytest tests -q
 ```
 
-17 tệp · 4.248 dòng · **3 gói ngoài** (`aiohttp`, `httpx`, `pytest`).
+17 tệp · 4.248 dòng · **3 gói ngoài** (`aiohttp`, `httpx`, `libcst`).
+
+> Dòng trên trước 25/08 ghi `pytest` thay cho `libcst`. `pytest` là gói
+> kiểm thử, không cần để chạy app; `libcst` thì `core/the_cst.py` cần
+> thật. Bắt được bằng cách quét `import` trong mã, không bằng đọc lại.
 
 Con số đó là cả lý do v3 tồn tại. AURA v2 có **339 tệp .py / 47.566 dòng**, với
 **33 cờ bật-tắt tính năng mà 29 cái đang TẮT**. Bệnh không phải "mã dở" — bệnh

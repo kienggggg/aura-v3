@@ -56,7 +56,18 @@ def doc_chuoi_py_sang_cay_the(nguon, duong_dan=None):
 
 
 DEFAULT_PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_STATIC_DIR = DEFAULT_PROJECT_ROOT / "interface" / "web" / "the_v1"
+# TÀI NGUYÊN WEB NEO VÀO CHÍNH GÓI, KHÔNG SUY TỪ THƯ MỤC DỰ ÁN.
+#
+# 25/08: trước đây `static_dir` suy từ `project_root`. Chạy thử trỏ
+# `project_root` sang một dự án khác: `static_dir` đi theo, và `index.html`
+# KHÔNG tồn tại ở đó — app không phục vụ nổi giao diện.
+#
+# Đó là chỗ chặn chính của việc đóng gói: cài xong thì mã app nằm ở
+# `site-packages`, còn mã người dùng nằm chỗ khác hẳn. Hai thứ ấy phải rời
+# nhau ra. `__file__` của chính tệp này là cái neo đúng — nó luôn nằm cạnh
+# thư mục `web/`, dù chạy từ kho hay từ gói đã cài.
+STATIC_DIR_GOI = (Path(__file__).resolve().parent / "web" / "the_v1")
+DEFAULT_STATIC_DIR = STATIC_DIR_GOI
 ALLOWED_SCAN_DIRS: Tuple[str, ...] = ("core", "interface", "tests")
 LOOPBACK: Set[str] = {"127.0.0.1", "localhost", "::1"}
 
@@ -99,7 +110,7 @@ def lay_config(request: Optional[web.Request] = None) -> AppConfig:
         token = str(request.app.get("auth_token", AUTH_TOKEN))
         return AppConfig(
             project_root=root,
-            static_dir=(root / "interface" / "web" / "the_v1").resolve(strict=False),
+            static_dir=STATIC_DIR_GOI.resolve(strict=False),
             allowed_scan_dirs=ALLOWED_SCAN_DIRS,
             auth_token=token,
             allow_code_execution=allow_exec,

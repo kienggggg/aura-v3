@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aura-v3"
+version = "0.1.0"
+description = "Lập trình bằng thẻ — dựng chương trình Python bằng cách kéo thả, kèm bộ tìm lỗi"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "Phạm Xuân Kiên" }]
+
+# BA GÓI NÀY ĐO BẰNG CÁCH QUÉT `import` THẬT, KHÔNG CHÉP TỪ TÀI LIỆU.
+#
+# 25/08: lúc viết tệp này, cả `README.md` lẫn `CLAUDE.md` đều ghi ba gói là
+# `aiohttp, httpx, pytest`. Sai hai chỗ: `pytest` là gói KIỂM THỬ, không cần
+# để chạy app; còn `libcst` — thứ `core/the_cst.py` dùng để mở/sửa/lưu Python
+# mà giữ nguyên định dạng — thì bị bỏ sót.
+#
+# Khai sai ở đây thì cài xong app gãy ngay lần mở tệp đầu tiên. Bắt được bằng
+# cách duyệt AST mọi `import` trong `core/`, `interface/`, `aura_chat.py` rồi
+# trừ đi thư viện chuẩn.
+dependencies = [
+    "aiohttp",
+    "httpx",
+    "libcst==1.9.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+# `aura-the` chạy trong THƯ MỤC DỰ ÁN của người dùng, theo lối `git` / `code .`
+aura-the = "interface.the_app:main"
+# Tệp `aura_chat.py` ở gốc kho chỉ tái xuất `main` từ `interface.chat_app`,
+# nên trỏ thẳng vào đó — khỏi phải đóng gói thêm một mô-đun cấp gốc.
+aura-chat = "interface.chat_app:main"
+
+[tool.setuptools]
+# Kho này không có `__init__.py` nào — `core` và `interface` là gói ngầm định.
+# Liệt kê thẳng ra thay vì để `find` tự đoán, vì `find` sẽ quét trúng cả
+# `tests`, `tools`, `experiments`, `data`, `docs` — những thứ KHÔNG thuộc bản
+# phát hành.
+packages = ["core", "interface"]
+
+[tool.setuptools.package-data]
+# Thiếu dòng này thì cài xong KHÔNG CÓ GIAO DIỆN: `index.html`, `app.js`,
+# `validator.js`, `style.css` nằm ngoài mã Python nên `pip` bỏ qua chúng.
+# Đây là chỗ hỏng lặng lẽ — gói cài được, chạy được, chỉ là trang trắng.
+interface = ["web/the_v1/*"]

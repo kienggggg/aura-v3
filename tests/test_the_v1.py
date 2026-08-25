@@ -19,7 +19,7 @@ import pytest
 from core.the_v1 import (
     BO_THE_V1,
     TheNode,
-    chay_ma_python_sandbox,
+    chay_ma_tien_trinh_rieng,
     kiem_tra_cay_the,
     sinh_dong_the_don,
     sinh_ma_python,
@@ -736,7 +736,7 @@ def test_sandbox_chay_ma_thanh_cong():
         '    return a + b\n'
         'print(cong(5, 7))\n'
     )
-    res = chay_ma_python_sandbox(code, timeout=5.0)
+    res = chay_ma_tien_trinh_rieng(code, timeout=5.0)
     assert res.status == "PASS"
     assert res.exit_code == 0
     assert res.stdout.strip() == "12"
@@ -746,7 +746,7 @@ def test_sandbox_chay_ma_thanh_cong():
 def test_sandbox_chay_ma_loi_cu_phap_hoac_runtime():
     """Chạy mã lỗi runtime -> Status ERROR, bắt đúng stderr và exit_code != 0."""
     code = 'print(1 / 0)\n'
-    res = chay_ma_python_sandbox(code, timeout=5.0)
+    res = chay_ma_tien_trinh_rieng(code, timeout=5.0)
     assert res.status == "ERROR"
     assert res.exit_code != 0
     assert "ZeroDivisionError" in res.stderr
@@ -755,7 +755,7 @@ def test_sandbox_chay_ma_loi_cu_phap_hoac_runtime():
 def test_sandbox_chong_lap_vo_han_timeout_5s():
     """Chạy vòng lặp vô hạn -> Kill sau timeout (thử với timeout=1.0s trong test để chạy nhanh)."""
     code = 'while True:\n    pass\n'
-    res = chay_ma_python_sandbox(code, timeout=1.0)
+    res = chay_ma_tien_trinh_rieng(code, timeout=1.0)
     assert res.status == "TIMEOUT"
     assert res.timed_out
     assert res.exit_code == 124

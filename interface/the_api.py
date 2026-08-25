@@ -29,7 +29,7 @@ from core.the_v1 import (
     BO_THE_V1,
     NHOM_THE,
     TheNode,
-    chay_ma_python_sandbox,
+    chay_ma_tien_trinh_rieng,
     kiem_tra_cay_the,
     sinh_ma_python,
 )
@@ -505,7 +505,7 @@ async def api_chay_ma(request: web.Request) -> web.Response:
         if not code:
             return web.json_response({"error": "Mã thực thi trống"}, status=400)
 
-        res = await asyncio.to_thread(chay_ma_python_sandbox, code, timeout=5.0)
+        res = await asyncio.to_thread(chay_ma_tien_trinh_rieng, code, timeout=5.0)
         return web.json_response({
             "status": res.status,
             "exit_code": res.exit_code,

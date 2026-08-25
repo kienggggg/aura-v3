@@ -33,7 +33,7 @@ class TestCuaAGuard(AioHTTPTestCase):
 
     @unittest_run_loop
     async def test_cua_a_chay_ma_bi_khoa(self):
-        with patch("interface.the_api.chay_ma_python_sandbox", side_effect=RuntimeError("SPY_CHAY_CALLED")) as mock_chay:
+        with patch("interface.the_api.chay_ma_tien_trinh_rieng", side_effect=RuntimeError("SPY_CHAY_CALLED")) as mock_chay:
             resp = await self.client.post(
                 "/api/chay",
                 headers=self.get_headers(),

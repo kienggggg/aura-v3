@@ -1456,13 +1456,34 @@ class ExecutionResult:
     status: str       # "PASS" | "ERROR" | "TIMEOUT"
 
 
-def chay_ma_python_sandbox(code: str, timeout: float = 5.0) -> ExecutionResult:
-    """Chạy mã Python người dùng trong một tiến trình con độc lập.
-    
-    CHÚ THÍCH BẮT BUỘC THEO MỤC 13.1:
-    Đây KHÔNG PHẢI hộp cát. Mã người dùng có mọi quyền của tài khoản đang chạy app.
-    v1 chỉ có trần giờ 5 giây và tiến trình riêng — hai thứ ấy chống lặp vô hạn và chống
-    treo app, KHÔNG chống được mã phá hoại.
+def chay_ma_tien_trinh_rieng(code: str, timeout: float = 5.0) -> ExecutionResult:
+    """Chạy mã Python người dùng trong một tiến trình con riêng, trần 5 giây.
+
+    TÊN CŨ LÀ `chay_ma_python_sandbox` — ĐỔI NGÀY 25/08/2026.
+
+    Chú thích cũ đã nói đúng ("đây KHÔNG PHẢI hộp cát"), nhưng cái TÊN nói
+    ngược lại, và cái tên là thứ người sau đọc. Ai gọi `..._sandbox` sẽ tin
+    là đã cô lập, rồi dựa vào đó mà quyết định.
+
+    ĐO THẬT 25/08/2026, chạy qua đúng hàm này, không đọc mã mà suy:
+
+        ghi tệp bằng đường dẫn TUYỆT ĐỐI ngoài cwd   GHI ĐƯỢC
+        gọi tiến trình con (`cmd /c echo`)           CHẠY ĐƯỢC
+        mở socket, lắng nghe                         MỞ ĐƯỢC (cổng 57658)
+        đọc tệp bất kỳ trên đĩa                      ĐỌC ĐƯỢC
+        đọc biến môi trường                          ĐỌC ĐƯỢC
+
+    Thứ duy nhất hàm này có: tiến trình riêng + trần 5 giây. Hai thứ ấy chống
+    lặp vô hạn và chống treo app. Chúng KHÔNG chống mã phá hoại, và không có
+    giới hạn RAM, hệ tệp, mạng hay tiến trình nào cả.
+
+    Kế hoạch 19/08 từng hứa "giới hạn 256 MB RAM" (`import resource` — API
+    Unix, Windows không có) và "cwd ở thư mục tạm, không cấp quyền ghi ra
+    ngoài" (chạy thử: ghi được). Cả hai lời hứa ấy chưa bao giờ tồn tại.
+
+    Dùng được cho: người dùng chạy mã CỦA CHÍNH HỌ trên máy CỦA CHÍNH HỌ —
+    đúng quyền họ vốn có khi mở `python` lên gõ.
+    Không dùng được cho: máy chủ nhiều người, hoặc chạy mã tải từ nơi khác.
     """
     t_start = time.perf_counter()
     timed_out = False

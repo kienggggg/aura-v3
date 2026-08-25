@@ -34,15 +34,25 @@ def test_nhom_1_dong_ho_cau_gio():
 
 
 def test_nhom_2_web_search_public_http_url():
-    """Nhóm 2: core/web_search.py :: _public_http_url — 15 thẻ, đúng 6 nhịp."""
+    """Nhóm 2: core/web_search.py :: _public_http_url — đúng 8 nhịp.
+
+    CON SỐ ĐỔI 6 -> 8 NGÀY 25/08/2026, VÀ ĐÂY KHÔNG PHẢI NỚI NGƯỠNG.
+
+    Hàm này có HAI khối `try/except ValueError` (`core/web_search.py:303` và
+    `:330`). Trước 25/08 khay thẻ không có thẻ nào cho `try`, nên mỗi khối gom
+    thành ĐÚNG MỘT thẻ `ma_tho`. Từ khi có thẻ `thu` và `bat_loi`, mỗi khối
+    tách thành hai thẻ có cấu trúc — cộng đúng 2 nhịp.
+
+    Kiểm được: đếm `try:` trong hàm ra 2, và 6 + 2 = 8. Bất biến thật của phép
+    đo — MỌI nhịp phải đóng bằng `X` — không đổi và vẫn được khẳng định dưới.
+    """
     tep = PROJECT_ROOT / "core" / "web_search.py"
     nhip_list = phan_tich_nhip_cho_ham(tep, "_public_http_url")
 
-    assert len(nhip_list) == 6, f"_public_http_url phải có đúng 6 nhịp, nhận được {len(nhip_list)}"
+    assert len(nhip_list) == 8, f"_public_http_url phải có đúng 8 nhịp, nhận được {len(nhip_list)}"
     mat_cat_cac_nhip = [n.mat_cat for n in nhip_list]
-    # Cấu trúc: KBX | BX | BX | KBX | BX | KKX (hoặc tương đương các cụm đóng bằng X)
     assert all(mc.endswith("X") for mc in mat_cat_cac_nhip)
-    assert "".join(mat_cat_cac_nhip) == "KBXBXBXKBXBXKKX"
+    assert "".join(mat_cat_cac_nhip) == "KBXKKXBXBXKBXKKKBXBXKKX"
 
 
 def test_nhom_3_doc_so_phien_tra_so():

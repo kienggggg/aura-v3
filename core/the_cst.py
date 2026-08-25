@@ -174,8 +174,64 @@ def _ma_cua(nut) -> tuple[str, Dict[str, str], Dict[str, Any]]:
         return "lap_moi", {}, {"bien": nut.target, "day": nut.iter}
     if isinstance(nut, cst.While):
         return "lap_khi", {}, {"dieu_kien": nut.test}
+    # ---- 5 thẻ thêm 25/08/2026 ----
+    #
+    # `try` CHỈ nhận dạng khi KHÔNG có `else` và KHÔNG có `finally`. Khay chưa
+    # có thẻ cho hai thứ ấy, nên nhận dạng một `try/finally` thành thẻ là làm
+    # MẤT khối `finally` lúc lưu. Rơi về `ma_tho` thì xấu hơn nhưng không mất
+    # gì — và cửa `test_the_cst.py::test_lossless_23_files_core` canh đúng chỗ
+    # này trên cả 23 tệp.
+    if isinstance(nut, cst.Try):
+        if getattr(nut, "orelse", None) is None and getattr(nut, "finalbody", None) is None:
+            return "thu", {}, {}
+        return "ma_tho", {}, {}
+    if isinstance(nut, cst.ExceptHandler):
+        ban_do = {}
+        if nut.type is not None:
+            ban_do["loai_loi"] = nut.type
+        if nut.name is not None:
+            ban_do["ten_bien"] = nut.name.name
+        return "bat_loi", {}, ban_do
     if isinstance(nut, cst.SimpleStatementLine) and len(nut.body) == 1:
         t = nut.body[0]
+        if isinstance(t, cst.Break):
+            return "dung_lap", {}, {}
+        if isinstance(t, cst.Continue):
+            return "bo_qua", {}, {}
+        # `import` chỉ nhận dạng dạng ĐƠN GIẢN: đúng một tên. `import a, b`
+        # trên một dòng thì thẻ `nhap` không diễn đạt được — để mã thô.
+        if isinstance(t, cst.Import) and len(t.names) == 1:
+            al = t.names[0]
+            o = {"thu_vien": _ten_diem(al.name)}
+            if al.asname is not None and isinstance(al.asname.name, cst.Name):
+                o["ten_khac"] = al.asname.name.value
+            return "nhap", o, {}
+        if isinstance(t, cst.ImportFrom) and not isinstance(t.names, cst.ImportStar):
+            if t.relative:                       # `from . import x` — để mã thô
+                return "ma_tho", {}, {}
+            # IMPORT CÓ NGOẶC THÌ ĐỂ NGUYÊN MÃ THÔ.
+            #
+            # Đường lưu dựng lại câu lệnh từ ba ô, nên nó sinh ra MỘT dòng.
+            # `core/chat_service.py:13` viết 13 tên trong ngoặc trên 15 dòng —
+            # nhận dạng thành thẻ `nhap` rồi lưu là gom hết về một dòng dài
+            # 178 ký tự. Cửa `test_the_v1.py::test_cua_cung_1_mo_luu_lossless`
+            # bắt ngay: SHA lệch trên chat_service.py.
+            #
+            # Thẻ `nhap` nhắm vào `import math` của người mới học, không nhắm
+            # vào khối import 13 tên của mã tích hợp. Để mã thô thì xấu hơn
+            # nhưng KHÔNG mất byte nào.
+            if t.lpar or t.rpar:
+                return "ma_tho", {}, {}
+            mod_ten = _ten_diem(t.module) if t.module is not None else ""
+            ten_lay, ten_khac = [], ""
+            for al in t.names:
+                ten_lay.append(_ten_diem(al.name))
+                if al.asname is not None and isinstance(al.asname.name, cst.Name):
+                    ten_khac = al.asname.name.value
+            if ten_khac and len(ten_lay) > 1:
+                return "ma_tho", {}, {}          # `as` chỉ gắn được cho MỘT tên
+            return "nhap", {"thu_vien": mod_ten, "phan": ", ".join(ten_lay),
+                            **({"ten_khac": ten_khac} if ten_khac else {})}, {}
         if isinstance(t, cst.Assign) and len(t.targets) == 1:
             return "gan", {}, {"ten_bien": t.targets[0].target,
                                "gia_tri": t.value}
@@ -188,6 +244,15 @@ def _ma_cua(nut) -> tuple[str, Dict[str, str], Dict[str, Any]]:
                 return "in_ra", {}, {"noi_dung": g}      # ô = danh sách đối số
             return "goi_ham", {}, {"ten_ham": g.func, "doi_so": g}
     return "ma_tho", {}, {}
+
+
+def _ten_diem(nut) -> str:
+    """`a.b.c` (Attribute lồng nhau) hoặc `a` (Name) -> chuỗi."""
+    if isinstance(nut, cst.Name):
+        return nut.value
+    if isinstance(nut, cst.Attribute):
+        return _ten_diem(nut.value) + "." + nut.attr.value
+    return ""
 
 
 def _o_thanh_chu(ma: str, ban_do: Dict[str, Any], mod) -> Dict[str, str]:
@@ -245,7 +310,11 @@ def doc_chuoi_py_sang_cay_the(nguon: str,
     la_elif: set[int] = set()
 
     def lam(nut, muc: int) -> TheNode:
-        ma, _, cac_o = _ma_cua(nut)
+        # Phần tử GIỮA là các ô đã sẵn dạng chữ (thẻ `nhap` dùng nó — ô của
+        # nó không ứng 1:1 với một nút con nào). Bản trước bỏ qua phần tử này
+        # bằng `_`, nên thẻ `nhap` đọc lên có ĐÚNG hình dạng mà KHÔNG có nội
+        # dung: mặt thẻ trống trơn dù tệp ghi `import math`.
+        ma, o_san, cac_o = _ma_cua(nut)
         dem[0] += 1
         mid = "%s_%d" % (ma, dem[0])
         r = vi_tri[nut]
@@ -258,6 +327,7 @@ def doc_chuoi_py_sang_cay_the(nguon: str,
             return t
         
         o_dict = _o_thanh_chu(ma, cac_o, mod)
+        o_dict.update(o_san)
         if isinstance(nut, cst.FunctionDef):
             if nut.returns is not None:
                 o_dict["kieu_tra_ve"] = mod.code_for_node(nut.returns.annotation).strip()
@@ -336,6 +406,11 @@ def doc_chuoi_py_sang_cay_the(nguon: str,
                 if el.comment is not None:
                     calc_line = max(1, L_end - len(ft) + i)
                     con.append(_tao_the_chu_thich_tu_cmt(el.comment.value, calc_line, muc, dem, ban_do, el))
+        # `except` của một `try` đi ra làm THẺ EM lùi một mức, giống `else`
+        # của `if`. Bên sinh mã, `bat_loi` cũng lùi một mức (`isElseOrElif`),
+        # nên hai chiều khớp nhau.
+        for xl in getattr(nut, "handlers", []) or []:
+            con.append(lam(xl, muc - 1))
         orelse = getattr(nut, "orelse", None)
         if orelse is not None:
             if isinstance(orelse, cst.If):
@@ -398,6 +473,34 @@ def _ap_dung(nut, o_moi: Dict[str, str], o_cu: Dict[str, str]):
     """
     def khac(ten):
         return ten in o_moi and o_moi[ten] != o_cu.get(ten)
+
+    # ---- thẻ `bat_loi`: đổi loại lỗi / tên biến ----
+    #
+    # 25/08: THIẾU KHỐI NÀY THÌ SỬA THẺ RỒI LƯU LÀ MẤT LẶNG LẼ. `_ap_dung`
+    # kết thúc bằng `return nut` — nút cũ đi tiếp y nguyên, không ai báo gì.
+    # Đo thật TRƯỚC khi viết: sửa `ValueError` -> `ZeroDivisionError` trên mặt
+    # thẻ rồi lưu, tệp vẫn ghi `except ValueError as e:`.
+    #
+    # Đúng họ bệnh "giao diện hứa một việc, mã làm việc khác" ở §4.
+    if isinstance(nut, cst.ExceptHandler):
+        t = {}
+        if khac("loai_loi"):
+            moi_loai = (o_moi["loai_loi"] or "").strip()
+            t["type"] = cst.parse_expression(moi_loai) if moi_loai else None
+        if khac("ten_bien"):
+            moi_ten = (o_moi["ten_bien"] or "").strip()
+            if moi_ten:
+                # Khi trước đó không có `as`, `nut.name` là None nên không
+                # mượn được khoảng trắng cũ — phải tự đặt đúng một dấu cách.
+                t["name"] = cst.AsName(
+                    name=cst.Name(moi_ten),
+                    whitespace_before_as=cst.SimpleWhitespace(" "),
+                    whitespace_after_as=cst.SimpleWhitespace(" "))
+            else:
+                t["name"] = None
+        if t and t.get("type", nut.type) is None and t.get("name", nut.name) is not None:
+            t["name"] = None      # `except as e:` không phải Python
+        return nut.with_changes(**t) if t else nut
 
     # ---- thẻ biểu thức: đổi TOÁN TỬ thì thay lớp, GIỮ NGUYÊN khoảng trắng.
     # Bỏ khoảng trắng đi thì `a > 1` thành `a>1` — khác byte, và cửa 1 bắt ngay.
@@ -476,6 +579,32 @@ def _ap_dung(nut, o_moi: Dict[str, str], o_cu: Dict[str, str]):
         if khac("day"):
             t["iter"] = _doi_bieu_thuc(o_moi["day"])
         return nut.with_changes(**t) if t else nut
+    if isinstance(nut, cst.SimpleStatementLine) and len(nut.body) == 1 and (
+            isinstance(nut.body[0], (cst.Import, cst.ImportFrom))) and (
+            khac("thu_vien") or khac("phan") or khac("ten_khac")):
+        # Ba ô của thẻ `nhap` không ứng 1:1 với nút con nào — `from a import b`
+        # và `import a as b` là HAI lớp CST khác nhau, nên đổi một ô có thể
+        # phải đổi cả lớp. Dựng lại đúng một câu lệnh rồi thay vào `body`;
+        # `leading_lines` và `trailing_whitespace` của DÒNG vẫn là nút cũ, nên
+        # dòng trống phía trên và chú thích cuối dòng không mất.
+        tv = (o_moi.get("thu_vien", o_cu.get("thu_vien", "")) or "").strip()
+        ph = (o_moi.get("phan", o_cu.get("phan", "")) or "").strip()
+        tk = (o_moi.get("ten_khac", o_cu.get("ten_khac", "")) or "").strip()
+        if not tv:
+            return nut
+        if ph:
+            mot_ten = "," not in ph
+            cau = ("from %s import %s as %s" % (tv, ph, tk)) if (tk and mot_ten)                   else ("from %s import %s" % (tv, ph))
+        elif tk:
+            cau = "import %s as %s" % (tv, tk)
+        else:
+            cau = "import %s" % tv
+        try:
+            moi_stmt = cst.parse_statement(cau).body[0]
+        except Exception:                    # noqa: BLE001
+            return nut                        # ô đang gõ dở -> giữ nguyên
+        return nut.with_changes(body=[moi_stmt])
+
     if isinstance(nut, cst.SimpleStatementLine) and len(nut.body) == 1:
         t = nut.body[0]
         if isinstance(t, cst.Assign):

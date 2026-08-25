@@ -75,3 +75,145 @@ def test_bo_the_v1_co_chu_thich():
     assert BO_THE_V1["chu_thich"].nhom == "chu_thich"
     assert NHOM_THE["chu_thich"]["mau"] == "#14B8A6"
     assert BO_THE_V1["chu_thich"].co_than is False
+
+
+# ==============================================================================
+# 5 THẺ THÊM 25/08/2026 — nhap · dung_lap · bo_qua · thu · bat_loi
+# ==============================================================================
+
+MAU_NAM_THE = '''from math import sqrt
+import json as js
+
+
+def kiem(day):
+    for i in day:
+        if i == 1:
+            continue
+        if i == 4:
+            break
+        print(i, sqrt(i))
+    try:
+        print(sqrt(-1))
+    except ValueError as e:
+        print("bat duoc:", e)
+    return js.dumps(list(day))
+'''
+
+
+def _dem_ma(cay):
+    dem = {}
+
+    def di(ns):
+        for n in ns:
+            dem[n.ma] = dem.get(n.ma, 0) + 1
+            di(n.than)
+
+    di(cay)
+    return dem
+
+
+def _cay_cua(r):
+    return r.cay if hasattr(r, "cay") else r.tree
+
+
+def _tim(ns, ma):
+    for n in ns:
+        if n.ma == ma:
+            return n
+        t = _tim(n.than, ma)
+        if t:
+            return t
+    return None
+
+
+def test_nam_the_moi_doc_len_dung_loai():
+    """Năm cấu trúc ấy trước 25/08 đều rơi vào `ma_tho`. Nay phải thành thẻ."""
+    dem = _dem_ma(_cay_cua(cst_doc_chuoi(MAU_NAM_THE)))
+    assert dem.get("nhap") == 2, dem
+    assert dem.get("bo_qua") == 1, dem
+    assert dem.get("dung_lap") == 1, dem
+    assert dem.get("thu") == 1, dem
+    assert dem.get("bat_loi") == 1, dem
+    assert "ma_tho" not in dem, "Không được còn mã thô nào: %s" % dem
+
+
+def test_nam_the_moi_mo_roi_luu_y_nguyen_byte():
+    """Mở rồi lưu, KHÔNG sửa gì — phải trùng từng byte."""
+    r = cst_doc_chuoi(MAU_NAM_THE)
+    assert cst_luu_tep(r) == MAU_NAM_THE.encode("utf-8")
+
+
+def test_sua_the_nhap_va_bat_loi_thi_GHI_DUOC_RA_TEP():
+    """Sửa ô rồi lưu thì tệp phải ĐỔI THEO.
+
+    VÌ SAO CÓ TEST NÀY: `_ap_dung` kết thúc bằng `return nut`, nên thẻ nào nó
+    chưa biết thì sửa xong LƯU LÀ MẤT LẶNG LẼ — mặt thẻ hiện giá trị mới, tệp
+    giữ giá trị cũ, không ai báo gì. Đo thật ngày 25/08 TRƯỚC khi viết đường
+    lưu: đổi `ValueError` -> `ZeroDivisionError` rồi lưu, tệp vẫn ghi
+    `except ValueError as e:`.
+
+    Đúng họ bệnh "giao diện hứa một việc, mã làm việc khác" ở CLAUDE.md §4.
+    """
+    # 1. `from math import sqrt` -> `from statistics import mean`
+    r = cst_doc_chuoi(MAU_NAM_THE)
+    c = _cay_cua(r)
+    c[0].o["thu_vien"] = "statistics"
+    c[0].o["phan"] = "mean"
+    c[0].da_sua = True
+    ra = cst_luu_tep(r).decode("utf-8")
+    assert "from statistics import mean" in ra
+    assert "from math import sqrt" not in ra
+
+    # 2. `import json as js` -> `import csv` (bỏ luôn phần `as`)
+    r = cst_doc_chuoi(MAU_NAM_THE)
+    c = _cay_cua(r)
+    c[1].o["thu_vien"] = "csv"
+    c[1].o["ten_khac"] = ""
+    c[1].da_sua = True
+    ra = cst_luu_tep(r).decode("utf-8")
+    assert "import csv" in ra
+    assert "import json as js" not in ra
+
+    # 3. `except ValueError as e:` -> `except ZeroDivisionError as loi:`
+    r = cst_doc_chuoi(MAU_NAM_THE)
+    b = _tim(_cay_cua(r), "bat_loi")
+    b.o["loai_loi"] = "ZeroDivisionError"
+    b.o["ten_bien"] = "loi"
+    b.da_sua = True
+    ra = cst_luu_tep(r).decode("utf-8")
+    assert "except ZeroDivisionError as loi:" in ra
+
+    # 4. Bỏ tên biến -> `except ValueError:`, KHÔNG được sinh `except as ...`
+    r = cst_doc_chuoi(MAU_NAM_THE)
+    b = _tim(_cay_cua(r), "bat_loi")
+    b.o["ten_bien"] = ""
+    b.da_sua = True
+    ra = cst_luu_tep(r).decode("utf-8")
+    assert "except ValueError:" in ra
+    dong_except = [d for d in ra.splitlines() if "except" in d]
+    assert all(" as " not in d for d in dong_except), dong_except
+
+
+def test_import_nhieu_dong_trong_ngoac_van_la_ma_tho():
+    """Import có ngoặc PHẢI ở lại mã thô.
+
+    Đường lưu dựng lại câu lệnh từ ba ô nên nó sinh MỘT dòng. Nhận dạng khối
+    13 tên trong ngoặc ở `core/chat_service.py:13` thành thẻ `nhap` rồi lưu là
+    gom hết về một dòng dài — cửa lossless bắt ngay bằng SHA lệch. Test này
+    giữ cho ai đó về sau đừng gỡ hàng rào ấy ra.
+    """
+    ma = "from core.chat_contract import (\n    ChatRequest,\n    ChatResult,\n)\n"
+    r = cst_doc_chuoi(ma)
+    assert _cay_cua(r)[0].ma == "ma_tho", _cay_cua(r)[0].ma
+    assert cst_luu_tep(r) == ma.encode("utf-8")
+
+
+def test_try_co_finally_van_la_ma_tho():
+    """`try/finally` PHẢI ở lại mã thô — khay chưa có thẻ cho `finally`.
+
+    Nhận dạng nó thành thẻ `thu` là LÀM MẤT khối `finally` lúc lưu.
+    """
+    ma = "try:\n    x = 1\nfinally:\n    x = 2\n"
+    r = cst_doc_chuoi(ma)
+    assert _cay_cua(r)[0].ma == "ma_tho", _cay_cua(r)[0].ma
+    assert cst_luu_tep(r) == ma.encode("utf-8")

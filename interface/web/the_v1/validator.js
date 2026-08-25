@@ -161,6 +161,73 @@
       ],
       co_than: false,
       mau: "#6B7280"
+    },
+
+    // ======================================================================
+    // BỐN THẺ THÊM 25/08/2026 — vì sao đúng bốn thẻ này
+    // ======================================================================
+    // Đếm khay cũ: 12 loại thẻ. Đối chiếu với những gì KHÔNG diễn đạt được
+    // bằng 12 loại ấy: `import`, `class`, `try/except`, `break`, `continue`,
+    // danh sách, từ điển.
+    //
+    // Danh sách và từ điển thì thẻ `gan` đã làm được (`x = [1, 2, 3]` là một
+    // `bieu_thuc` hợp lệ) — thêm thẻ riêng chỉ tổ trùng. `class` là thứ người
+    // mới học chưa cần. Còn lại BỐN thứ dưới đây thì KHÔNG có đường nào khác
+    // ngoài `ma_tho`, mà bắt người mới gõ mã thô là đúng chỗ app sinh ra để
+    // tránh.
+    //
+    // `import` đứng đầu: thiếu nó thì không viết nổi bài "đọc tệp" hay
+    // "random" — rào cao hơn hẳn mọi tính năng IDE còn thiếu.
+    nhap: {
+      ma: "nhap",
+      ten: "Nhập thư viện",
+      nhom: "vao_ra",
+      o: [
+        { ten: "thu_vien", kieu: "chu", bat_buoc: true, goi_y: "math" },
+        { ten: "phan", kieu: "chu", bat_buoc: false, goi_y: "sqrt, pi" },
+        { ten: "ten_khac", kieu: "chu", bat_buoc: false, goi_y: "" }
+      ],
+      co_than: false,
+      mau: "#8B5CF6"
+    },
+    dung_lap: {
+      ma: "dung_lap",
+      ten: "Dừng lặp",
+      nhom: "dieu_khien",
+      o: [],
+      co_than: false,
+      mau: "#3B82F6"
+    },
+    bo_qua: {
+      ma: "bo_qua",
+      ten: "Bỏ qua vòng này",
+      nhom: "dieu_khien",
+      o: [],
+      co_than: false,
+      mau: "#3B82F6"
+    },
+    thu: {
+      ma: "thu",
+      ten: "Thử",
+      nhom: "dieu_khien",
+      o: [],
+      co_than: true,
+      mau: "#3B82F6"
+    },
+    bat_loi: {
+      ma: "bat_loi",
+      ten: "Bắt lỗi",
+      nhom: "dieu_khien",
+      // Cả hai ô đều KHÔNG bắt buộc. Bỏ trống thì sinh `except Exception:`
+      // chứ KHÔNG sinh `except:` trần — bắt trần nuốt luôn Ctrl+C và
+      // SystemExit, và người mới học sẽ chép lại thói quen ấy đi chỗ khác.
+      // Mã sinh ra hiện ngay trên khung mã nên không có gì bị giấu.
+      o: [
+        { ten: "loai_loi", kieu: "chu", bat_buoc: false, goi_y: "Exception" },
+        { ten: "ten_bien", kieu: "chu", bat_buoc: false, goi_y: "e" }
+      ],
+      co_than: true,
+      mau: "#3B82F6"
     }
   };
 
@@ -299,6 +366,29 @@
         const code = (node.o && node.o.nguyen_van) ? String(node.o.nguyen_van) : (node.raw_text || "");
         trichXuatImport(code).forEach(s => globalSymbols.add(s));
         trichXuatBienGanTrongMaTho(code).forEach(s => globalSymbols.add(s));
+      } else if (node.ma === "nhap") {
+        // Khong gop thi moi lan dung `sqrt` deu bao "bien chua duoc gan" —
+        // the `nhap` se thanh the DUY NHAT sinh ra loi gia cho chinh no.
+        const tv = (node.o && node.o.thu_vien) ? String(node.o.thu_vien).trim() : "";
+        const ph = (node.o && node.o.phan) ? String(node.o.phan).trim() : "";
+        const tk = (node.o && node.o.ten_khac) ? String(node.o.ten_khac).trim() : "";
+        if (ph) {
+          const motTen = !ph.includes(",");
+          if (tk && motTen) {
+            globalSymbols.add(tk);
+          } else {
+            ph.split(",").forEach(x => {
+              const t = x.trim();
+              if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(t)) globalSymbols.add(t);
+            });
+          }
+        } else if (tk) {
+          globalSymbols.add(tk);
+        } else if (tv) {
+          // `import a.b.c` chi dua ten `a` vao tam nhin.
+          const goc = tv.split(".")[0].trim();
+          if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(goc)) globalSymbols.add(goc);
+        }
       }
       if (node.than && node.than.length > 0) {
         thuThapBieuTuongToanCuc(node.than, globalSymbols);
@@ -322,7 +412,7 @@
     const cacBienDaDoc = new Set();
 
     // PHA 2: Duyệt kiểm tra phạm vi và cú pháp
-    function kiemTraDanhSach(nodeList, depth, insideFunction, scopeVars, parentMa = null) {
+    function kiemTraDanhSach(nodeList, depth, insideFunction, scopeVars, parentMa = null, insideLoop = false) {
       if (!nodeList) return;
       let prevNode = null;
       let daGapTraVe = false;
@@ -398,6 +488,51 @@
             node_id: node.id,
             line: node.line_start || null
           });
+        }
+
+        // LỖI ĐỎ 3b: 'Dừng lặp' / 'Bỏ qua vòng này' nằm ngoài mọi vòng lặp
+        if ((ma === "dung_lap" || ma === "bo_qua") && !insideLoop) {
+          diagnostics.push({
+            muc_do: "do",
+            ma_loi: "loop_control_outside_loop",
+            thong_diep: `Thẻ '${defn ? defn.ten : ma}' chỉ được dùng bên trong 'Lặp mỗi' hoặc 'Lặp khi'`,
+            node_id: node.id,
+            line: node.line_start || null
+          });
+        }
+
+        // LỖI ĐỎ 3c: 'Bắt lỗi' không gắn với 'Thử' nào
+        if (ma === "bat_loi") {
+          const hopLe = (parentMa === "thu") || (prevNode && prevNode.ma === "thu");
+          if (!hopLe) {
+            diagnostics.push({
+              muc_do: "do",
+              ma_loi: "orphan_except",
+              thong_diep: "Thẻ 'Bắt lỗi' phải đứng ngay sau một thẻ 'Thử'",
+              node_id: node.id,
+              line: node.line_start || null
+            });
+          }
+        }
+
+        // LỖI ĐỎ 3d: 'Thử' không có 'Bắt lỗi' đi kèm
+        //
+        // Python KHÔNG cho `try:` đứng một mình — thiếu `except` là lỗi cú
+        // pháp thật, không phải chuyện phong cách. Chấp nhận cả hai lối viết
+        // như `nguoc_lai`: em kế tiếp cùng cấp, hoặc nằm trong thân.
+        if (ma === "thu") {
+          const sau = nodeList[i + 1];
+          const coEmBatLoi = sau && sau.ma === "bat_loi";
+          const coConBatLoi = (node.than || []).some(c => c && c.ma === "bat_loi");
+          if (!coEmBatLoi && !coConBatLoi) {
+            diagnostics.push({
+              muc_do: "do",
+              ma_loi: "try_without_except",
+              thong_diep: "Thẻ 'Thử' phải đi kèm một thẻ 'Bắt lỗi' ngay sau nó",
+              node_id: node.id,
+              line: node.line_start || null
+            });
+          }
         }
 
         // LỖI ĐỎ 5: Chuỗi thẻ rỗng bên trong thẻ có thân
@@ -570,16 +705,34 @@
               childScope.add(v);
               cacBienDaGan.add(v);
             });
+          } else if (ma === "bat_loi") {
+            // `except ValueError as e:` GAN bien `e` cho than khoi.
+            // 25/08: quen cho nay thi dung `e` trong than bao "bien chua tung
+            // duoc gan" — the `bat_loi` thanh the DUY NHAT sinh loi gia cho
+            // chinh no. Bat duoc bang cach DUNG THU tren app, khong phai bang
+            // test: ma sinh ra van dung Python, chi co bang chan doan la sai.
+            const tb = (node.o && node.o.ten_bien) ? String(node.o.ten_bien).trim() : "";
+            if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(tb)) {
+              childScope.add(tb);
+              cacBienDaGan.add(tb);
+            }
           }
 
-          kiemTraDanhSach(node.than, depth + 1, isFn, childScope, ma);
+          // `dung_lap`/`bo_qua` con hieu luc khi long trong `neu` hay `thu`
+          // ben trong vong lap, nen co dinh mang xuong; nhung KHONG vuot
+          // qua ranh gioi mot `ham` — `break` trong ham long trong vong lap
+          // la loi cu phap that cua Python.
+          const trongLap = (ma === "lap_moi" || ma === "lap_khi") ? true
+                         : (ma === "ham") ? false
+                         : insideLoop;
+          kiemTraDanhSach(node.than, depth + 1, isFn, childScope, ma, trongLap);
         }
 
         prevNode = node;
       }
     }
 
-    kiemTraDanhSach(nodes, 1, false, new Set(globalSymbols), null);
+    kiemTraDanhSach(nodes, 1, false, new Set(globalSymbols), null, false);
 
     // CẢNH BÁO VÀNG 1: Biến gán rồi không dùng
     const chuaDung = [];
@@ -646,7 +799,11 @@
         continue;
       }
 
-      const isElseOrElif = (ma === "nguoc_lai") || (ma === "neu" && node.o && node.o.noi_tiep === "1");
+      // `bat_loi` lui vao giong `nguoc_lai`: no co the la em cua `thu`
+      // (cung cap) hoac nam trong than `thu` — ca hai loi deu phai ra
+      // dung mot cot voi `try:`.
+      const isElseOrElif = (ma === "nguoc_lai") || (ma === "bat_loi") ||
+                           (ma === "neu" && node.o && node.o.noi_tiep === "1");
       const curIndent = isElseOrElif ? Math.max(0, indentLevel - 1) : indentLevel;
       const spaces = " ".repeat(curIndent * 4);
 
@@ -667,6 +824,32 @@
         }
       } else if (ma === "nguoc_lai") {
         base = `${spaces}else:`;
+      } else if (ma === "nhap") {
+        const tv = (node.o && node.o.thu_vien) ? String(node.o.thu_vien).trim() : "";
+        const ph = (node.o && node.o.phan) ? String(node.o.phan).trim() : "";
+        const tk = (node.o && node.o.ten_khac) ? String(node.o.ten_khac).trim() : "";
+        if (ph) {
+          // `from X import a, b` — `as` chi gan duoc khi lay DUNG MOT ten.
+          const motTen = !ph.includes(",");
+          base = (tk && motTen)
+            ? `${spaces}from ${tv} import ${ph} as ${tk}`
+            : `${spaces}from ${tv} import ${ph}`;
+        } else if (tk) {
+          base = `${spaces}import ${tv} as ${tk}`;
+        } else {
+          base = `${spaces}import ${tv}`;
+        }
+      } else if (ma === "dung_lap") {
+        base = `${spaces}break`;
+      } else if (ma === "bo_qua") {
+        base = `${spaces}continue`;
+      } else if (ma === "thu") {
+        base = `${spaces}try:`;
+      } else if (ma === "bat_loi") {
+        const ll = (node.o && node.o.loai_loi) ? String(node.o.loai_loi).trim() : "";
+        const tb = (node.o && node.o.ten_bien) ? String(node.o.ten_bien).trim() : "";
+        const loai = ll || "Exception";
+        base = tb ? `${spaces}except ${loai} as ${tb}:` : `${spaces}except ${loai}:`;
       } else if (ma === "lap_moi") {
         const b = (node.o && node.o.bien) || "item";
         const d = (node.o && node.o.day) || "[]";

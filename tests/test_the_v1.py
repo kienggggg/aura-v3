@@ -163,7 +163,25 @@ def test_the_ma_tho_chua_cau_truc_phuc_tap():
     )
     record = doc_chuoi_py_sang_cay_the(code)
     assert len(record.tree) >= 1
-    assert sum(node.ma == "ma_tho" for node in record.tree) >= 3
+
+    # 25/08: con số cũ là `>= 3` — nó đếm CẢ HAI dòng `import` là "cấu trúc
+    # chưa hỗ trợ". Từ hôm nay khay có thẻ `nhap`, nên hai dòng ấy thành thẻ
+    # thật và số mã thô ở cấp ngoài tụt còn 1 (`class Config`).
+    #
+    # KHÔNG hạ `>= 3` xuống `>= 1` — như thế là nới ngưỡng cho vừa kết quả.
+    # Thay bằng phép kiểm CHẶT HƠN: nêu đích danh cấu trúc nào phải là mã thô
+    # và cấu trúc nào phải thành thẻ. Sai theo chiều nào cũng đỏ.
+    ma_cap_ngoai = [n.ma for n in record.tree]
+    assert ma_cap_ngoai.count("nhap") == 2, (
+        f"Hai dòng import phải thành thẻ `nhap`, nhận được {ma_cap_ngoai}")
+    assert ma_cap_ngoai.count("ma_tho") == 1, (
+        f"`class Config` (chưa có thẻ) phải là mã thô, nhận được {ma_cap_ngoai}")
+    nhap1 = next(n for n in record.tree if n.ma == "nhap")
+    assert nhap1.o.get("thu_vien") == "os"
+    nhap2 = [n for n in record.tree if n.ma == "nhap"][1]
+    assert nhap2.o.get("thu_vien") == "dataclasses"
+    assert nhap2.o.get("phan") == "dataclass"
+
     async_function = next(node for node in record.tree if node.ma == "ham")
     assert any(child.ma == "ma_tho" for child in async_function.than)
     for node in record.tree:

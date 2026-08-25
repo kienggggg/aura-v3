@@ -68,7 +68,13 @@ class TheDefinition:
     mau: str
 
 
-# 12 Thẻ chuẩn của v1
+# 17 Thẻ chuẩn của v1 (12 gốc + 5 thêm ngày 25/08/2026)
+#
+# BẢN NÀY PHẢI KHỚP 1:1 VỚI interface/web/the_v1/validator.js.
+# Hai bản sinh mã song song là bệnh trùng lặp logic, nhưng JS và Python
+# không dùng chung mã được. Thứ giữ chúng khỏi trôi là cửa
+# `tests/test_the_parity.js` — 27 cây thẻ chạy qua CẢ HAI bản rồi so.
+# Hôm 25/08 thêm 5 thẻ vào JS mà chưa thêm vào đây: cửa ấy đỏ ngay.
 BO_THE_V1: Dict[str, TheDefinition] = {
     "gan": TheDefinition(
         ma="gan",
@@ -193,6 +199,54 @@ BO_THE_V1: Dict[str, TheDefinition] = {
         ],
         co_than=False,
         mau=NHOM_THE["ma_tho"]["mau"],
+    ),
+    # ---- 5 thẻ thêm 25/08/2026, xem chú thích cùng ngày ở validator.js ----
+    "nhap": TheDefinition(
+        ma="nhap",
+        ten="Nhập thư viện",
+        nhom="vao_ra",
+        o=[
+            ODefinition(ten="thu_vien", kieu="chu", bat_buoc=True, goi_y="math"),
+            ODefinition(ten="phan", kieu="chu", bat_buoc=False, goi_y="sqrt, pi"),
+            ODefinition(ten="ten_khac", kieu="chu", bat_buoc=False, goi_y=""),
+        ],
+        co_than=False,
+        mau=NHOM_THE["vao_ra"]["mau"],
+    ),
+    "dung_lap": TheDefinition(
+        ma="dung_lap",
+        ten="Dừng lặp",
+        nhom="dieu_khien",
+        o=[],
+        co_than=False,
+        mau=NHOM_THE["dieu_khien"]["mau"],
+    ),
+    "bo_qua": TheDefinition(
+        ma="bo_qua",
+        ten="Bỏ qua vòng này",
+        nhom="dieu_khien",
+        o=[],
+        co_than=False,
+        mau=NHOM_THE["dieu_khien"]["mau"],
+    ),
+    "thu": TheDefinition(
+        ma="thu",
+        ten="Thử",
+        nhom="dieu_khien",
+        o=[],
+        co_than=True,
+        mau=NHOM_THE["dieu_khien"]["mau"],
+    ),
+    "bat_loi": TheDefinition(
+        ma="bat_loi",
+        ten="Bắt lỗi",
+        nhom="dieu_khien",
+        o=[
+            ODefinition(ten="loai_loi", kieu="chu", bat_buoc=False, goi_y="Exception"),
+            ODefinition(ten="ten_bien", kieu="chu", bat_buoc=False, goi_y="e"),
+        ],
+        co_than=True,
+        mau=NHOM_THE["dieu_khien"]["mau"],
     ),
 }
 
@@ -840,6 +894,33 @@ def sinh_dong_the_don(node: TheNode, indent_level: int = 0) -> str:
         base = f"{spaces}{prefix} {dieu_k}:"
     elif ma == "nguoc_lai":
         base = f"{spaces}else:"
+    elif ma == "nhap":
+        tv = node.o.get("thu_vien", "").strip()
+        ph = node.o.get("phan", "").strip()
+        tk = node.o.get("ten_khac", "").strip()
+        if ph:
+            # `from X import a, b` — `as` chỉ gắn được khi lấy ĐÚNG MỘT tên.
+            mot_ten = "," not in ph
+            if tk and mot_ten:
+                base = f"{spaces}from {tv} import {ph} as {tk}"
+            else:
+                base = f"{spaces}from {tv} import {ph}"
+        elif tk:
+            base = f"{spaces}import {tv} as {tk}"
+        else:
+            base = f"{spaces}import {tv}"
+    elif ma == "dung_lap":
+        base = f"{spaces}break"
+    elif ma == "bo_qua":
+        base = f"{spaces}continue"
+    elif ma == "thu":
+        base = f"{spaces}try:"
+    elif ma == "bat_loi":
+        # Bỏ trống thì `except Exception:`, KHÔNG phải `except:` trần — xem
+        # chú thích cùng ngày ở validator.js.
+        loai = node.o.get("loai_loi", "").strip() or "Exception"
+        tb = node.o.get("ten_bien", "").strip()
+        base = f"{spaces}except {loai} as {tb}:" if tb else f"{spaces}except {loai}:"
     elif ma == "lap_moi":
         bien = node.o.get("bien", "i")
         day = node.o.get("day", "range(10)")
@@ -914,7 +995,8 @@ def sinh_ma_python(nodes: List[TheNode], indent_level: int = 0) -> str:
                         res_lines.append("")
             continue
 
-        is_else_or_elif = (node.ma == "nguoc_lai") or (node.ma == "neu" and node.o.get("noi_tiep") == "1")
+        is_else_or_elif = (node.ma in ("nguoc_lai", "bat_loi")) or (
+            node.ma == "neu" and node.o.get("noi_tiep") == "1")
         cur_indent = max(0, indent_level - 1) if is_else_or_elif else indent_level
 
         head_line = sinh_dong_the_don(node, cur_indent)
@@ -1138,6 +1220,28 @@ def _thu_thap_bieu_tuong_toan_cuc(nodes: List[TheNode], global_symbols: Set[str]
             code = node.o.get("nguyen_van", node.raw_text or "")
             global_symbols.update(_trich_xuat_bieu_tuong_import(code))
             global_symbols.update(_trich_xuat_bien_gan_trong_ma_tho(code))
+        elif node.ma == "nhap":
+            # Không gom thì mỗi lần dùng `sqrt` đều báo "biến chưa được gán" —
+            # thẻ `nhap` sẽ thành thẻ DUY NHẤT sinh ra lỗi giả cho chính nó.
+            tv = node.o.get("thu_vien", "").strip()
+            ph = node.o.get("phan", "").strip()
+            tk = node.o.get("ten_khac", "").strip()
+            if ph:
+                mot_ten = "," not in ph
+                if tk and mot_ten:
+                    global_symbols.add(tk)
+                else:
+                    for x in ph.split(","):
+                        t = x.strip()
+                        if re.fullmatch(r"[a-zA-Z_][a-zA-Z0-9_]*", t):
+                            global_symbols.add(t)
+            elif tk:
+                global_symbols.add(tk)
+            elif tv:
+                # `import a.b.c` chỉ đưa tên `a` vào tầm nhìn.
+                goc = tv.split(".")[0].strip()
+                if re.fullmatch(r"[a-zA-Z_][a-zA-Z0-9_]*", goc):
+                    global_symbols.add(goc)
         if node.than:
             _thu_thap_bieu_tuong_toan_cuc(node.than, global_symbols)
 
@@ -1163,6 +1267,7 @@ def kiem_tra_cay_the(nodes: List[TheNode]) -> DiagnosticResult:
         inside_function: bool,
         scope_vars: Set[str],
         parent_ma: Optional[str] = None,
+        inside_loop: bool = False,
     ):
         prev_node: Optional[TheNode] = None
         da_gap_tra_ve = False
@@ -1238,6 +1343,54 @@ def kiem_tra_cay_the(nodes: List[TheNode]) -> DiagnosticResult:
                         line=node.line_start,
                     )
                 )
+
+            # LỖI ĐỎ 3b: 'Dừng lặp' / 'Bỏ qua vòng này' nằm ngoài mọi vòng lặp
+            if ma in ("dung_lap", "bo_qua") and not inside_loop:
+                diagnostics.append(
+                    DiagnosticItem(
+                        muc_do="do",
+                        ma_loi="loop_control_outside_loop",
+                        thong_diep=(
+                            f"Thẻ '{defn.ten if defn else ma}' chỉ được dùng "
+                            f"bên trong 'Lặp mỗi' hoặc 'Lặp khi'"
+                        ),
+                        node_id=node.id,
+                        line=node.line_start,
+                    )
+                )
+
+            # LỖI ĐỎ 3c: 'Bắt lỗi' không gắn với 'Thử' nào
+            if ma == "bat_loi":
+                hop_le = (parent_ma == "thu") or (prev_node is not None and prev_node.ma == "thu")
+                if not hop_le:
+                    diagnostics.append(
+                        DiagnosticItem(
+                            muc_do="do",
+                            ma_loi="orphan_except",
+                            thong_diep="Thẻ 'Bắt lỗi' phải đứng ngay sau một thẻ 'Thử'",
+                            node_id=node.id,
+                            line=node.line_start,
+                        )
+                    )
+
+            # LỖI ĐỎ 3d: 'Thử' không có 'Bắt lỗi' đi kèm
+            #
+            # Python KHÔNG cho `try:` đứng một mình — thiếu `except` là lỗi cú
+            # pháp thật, không phải chuyện phong cách.
+            if ma == "thu":
+                sau = node_list[idx + 1] if idx + 1 < len(node_list) else None
+                co_em = sau is not None and sau.ma == "bat_loi"
+                co_con = any(c is not None and c.ma == "bat_loi" for c in (node.than or []))
+                if not co_em and not co_con:
+                    diagnostics.append(
+                        DiagnosticItem(
+                            muc_do="do",
+                            ma_loi="try_without_except",
+                            thong_diep="Thẻ 'Thử' phải đi kèm một thẻ 'Bắt lỗi' ngay sau nó",
+                            node_id=node.id,
+                            line=node.line_start,
+                        )
+                    )
 
             # LỖI ĐỎ 5: Chuỗi thẻ rỗng bên trong thẻ có thân
             if defn and defn.co_than and not node.than:
@@ -1404,6 +1557,24 @@ def kiem_tra_cay_the(nodes: List[TheNode]) -> DiagnosticResult:
                     for b in loop_vars:
                         child_scope.add(b)
                         cac_bien_da_gan.add(b)
+                elif ma == "bat_loi":
+                    # `except ValueError as e:` GÁN biến `e` cho thân khối.
+                    # Xem chú thích cùng ngày ở validator.js.
+                    tb = node.o.get("ten_bien", "").strip()
+                    if re.fullmatch("[a-zA-Z_][a-zA-Z0-9_]*", tb):
+                        child_scope.add(tb)
+                        cac_bien_da_gan.add(tb)
+
+                # `dung_lap`/`bo_qua` còn hiệu lực khi lồng trong `neu` hay
+                # `thu` bên trong vòng lặp, nên cờ mang xuống; nhưng KHÔNG
+                # vượt qua ranh giới một `ham` — `break` trong hàm lồng trong
+                # vòng lặp là lỗi cú pháp thật của Python.
+                if ma in ("lap_moi", "lap_khi"):
+                    trong_lap = True
+                elif ma == "ham":
+                    trong_lap = False
+                else:
+                    trong_lap = inside_loop
 
                 _kiem_tra_danh_sach(
                     node.than,
@@ -1411,11 +1582,13 @@ def kiem_tra_cay_the(nodes: List[TheNode]) -> DiagnosticResult:
                     inside_function=is_fn,
                     scope_vars=child_scope,
                     parent_ma=ma,
+                    inside_loop=trong_lap,
                 )
 
             prev_node = node
 
-    _kiem_tra_danh_sach(nodes, depth=1, inside_function=False, scope_vars=set(global_symbols))
+    _kiem_tra_danh_sach(nodes, depth=1, inside_function=False,
+                        scope_vars=set(global_symbols), inside_loop=False)
 
     # CẢNH BÁO VÀNG 1: Biến gán rồi không dùng lần nào
     chua_dung = cac_bien_da_gan - cac_bien_da_doc - global_symbols

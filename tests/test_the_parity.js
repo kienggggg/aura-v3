@@ -339,9 +339,41 @@ print(json.dumps(out, ensure_ascii=False))
       console.log(`  [PASS] ${tc.name}: hop_le=${jsResult.hop_le}, do=${jsResult.so_loi_do}, vang=${jsResult.so_canh_bao_vang}`);
       passedCount++;
     } else {
-      console.error(`  [FAIL] ${tc.name} KHÔNG KHỚP GIỮA JS VÀ PYTHON:`);
-      console.error(`     JS: hop_le=${jsResult.hop_le}, do=${jsResult.so_loi_do}, vang=${jsResult.so_canh_bao_vang}, loi=${JSON.stringify(jsMaLoi)}`);
-      console.error(`     PY: hop_le=${pyResult.hop_le}, do=${pyResult.so_loi_do}, vang=${pyResult.so_canh_bao_vang}, loi=${JSON.stringify(pyMaLoi)}`);
+      // 25/08: THONG BAO PHAI CHI RA CHO LECH.
+      //
+      // Ban cu in dung hai dong hop_le/do/vang/loi roi bao "KHONG KHOP".
+      // Hom nay them 5 the vao JS ma chua them vao Python: cua do dung, nhung
+      // hai dong in ra GIONG HET NHAU — vi cho lech nam o `so_lan_dung_the`,
+      // thu khong he duoc in. Mat mot luot doc ma nguon cua chinh bo test moi
+      // biet no dang so cai gi.
+      //
+      // Cung ho voi §4 "phan quyet phai di kem phep do tao ra no".
+      const lech = [];
+      if (!hopLeMatch) lech.push(`hop_le: JS=${jsResult.hop_le} PY=${pyResult.hop_le}`);
+      if (!soDoMatch) lech.push(`so_loi_do: JS=${jsResult.so_loi_do} PY=${pyResult.so_loi_do}`);
+      if (!soVangMatch) lech.push(`so_canh_bao_vang: JS=${jsResult.so_canh_bao_vang} PY=${pyResult.so_canh_bao_vang}`);
+      if (!maLoiMatch) {
+        lech.push(`ma_loi:
+         chi co JS: ${JSON.stringify(jsMaLoi.filter(x => !pyMaLoi.includes(x)))}` +
+                  `
+         chi co PY: ${JSON.stringify(pyMaLoi.filter(x => !jsMaLoi.includes(x)))}`);
+      }
+      if (!xNMatch) {
+        const kJS = Object.keys(jsResult.so_lan_dung_the || {});
+        const kPY = Object.keys(pyResult.so_lan_dung_the || {});
+        const theChiJS = kJS.filter(k => !kPY.includes(k));
+        const thePY = kPY.filter(k => !kJS.includes(k));
+        const soLech = kJS.filter(k => kPY.includes(k) &&
+          jsResult.so_lan_dung_the[k] !== pyResult.so_lan_dung_the[k])
+          .map(k => `${k}: JS=${jsResult.so_lan_dung_the[k]} PY=${pyResult.so_lan_dung_the[k]}`);
+        const phan = [];
+        if (theChiJS.length) phan.push(`THE CHI CO TRONG JS (chua them vao Python): ${theChiJS.join(', ')}`);
+        if (thePY.length) phan.push(`THE CHI CO TRONG PYTHON (chua them vao JS): ${thePY.join(', ')}`);
+        if (soLech.length) phan.push(`dem lech: ${soLech.join(' | ')}`);
+        lech.push('so_lan_dung_the:\n         ' + phan.join('\n         '));
+      }
+      console.error(`  [FAIL] ${tc.name} KHONG KHOP GIUA JS VA PYTHON:`);
+      lech.forEach(l => console.error(`     ${l}`));
       process.exit(1);
     }
   }

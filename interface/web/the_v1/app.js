@@ -166,6 +166,36 @@
   // ==========================================================================
   // 2. KHỞI TẠO KHAY THẺ (6 NHÓM MÀU CHUẨN, 12 THẺ & BỘ ĐẾM ×N)
   // ==========================================================================
+  // Nhãn cú pháp Python hiện trên mặt thẻ trong khay.
+  //
+  // 25/08: TRƯỚC ĐÂY LÀ MỘT CHUỖI if-else KHÔNG CÓ NHÁNH DỰ PHÒNG. Thêm 5 thẻ
+  // mới thì cả 5 hiện lên khay với nhãn TRỐNG — kéo thả được, đếm ×N được, chỉ
+  // là không ai đọc nổi nó là thẻ gì. Không test nào bắt được: thẻ vẫn tồn
+  // tại, hàm vẫn trả về đúng, chỉ có mặt thẻ là trắng.
+  //
+  // Bắt được bằng cách mở app ra nhìn. Sửa ở GỐC — bảng tra cứu kèm dự phòng
+  // `cardDef.ten` — nên thẻ thêm sau này cùng lắm hiện tên tiếng Việt, không
+  // bao giờ hiện trống nữa.
+  const NHAN_CU_PHAP = {
+    gan: 'x = 10',
+    in_ra: 'print(...)',
+    neu: 'if cond:',
+    nguoc_lai: 'else:',
+    lap_moi: 'for i in day:',
+    lap_khi: 'while cond:',
+    tra_ve: 'return val',
+    ham: 'def fn(args):',
+    goi_ham: 'fn(args)',
+    pheptinh: 'a + b',
+    chu_thich: '# Chú thích',
+    ma_tho: 'raw code',
+    nhap: 'import lib',
+    dung_lap: 'break',
+    bo_qua: 'continue',
+    thu: 'try:',
+    bat_loi: 'except E as e:'
+  };
+
   function renderToolbox() {
     const container = document.getElementById('toolboxContainer');
     if (!container) return;
@@ -173,9 +203,13 @@
 
     const groups = [
       { id: 'ham', title: 'Hàm (Cam)', color: 'var(--ham)', cards: ['ham', 'goi_ham', 'tra_ve'] },
-      { id: 'dieu_khien', title: 'Điều khiển (Xanh dương)', color: 'var(--dk)', cards: ['neu', 'nguoc_lai', 'lap_moi', 'lap_khi'] },
+      // 25/08: thêm dung_lap · bo_qua · thu · bat_loi vào nhóm Điều khiển,
+      // và nhap vào nhóm Vào/Ra. Xem chú thích cùng ngày ở validator.js:
+      // năm thứ này là toàn bộ phần Python KHÔNG diễn đạt được bằng 12 thẻ cũ
+      // (trừ `class`, chưa cần cho người mới học).
+      { id: 'dieu_khien', title: 'Điều khiển (Xanh dương)', color: 'var(--dk)', cards: ['neu', 'nguoc_lai', 'lap_moi', 'lap_khi', 'dung_lap', 'bo_qua', 'thu', 'bat_loi'] },
       { id: 'du_lieu', title: 'Dữ liệu (Xanh lá)', color: 'var(--dl)', cards: ['gan', 'pheptinh'] },
-      { id: 'vao_ra', title: 'Vào / Ra (Tím)', color: 'var(--vr)', cards: ['in_ra'] },
+      { id: 'vao_ra', title: 'Vào / Ra (Tím)', color: 'var(--vr)', cards: ['nhap', 'in_ra'] },
       { id: 'chu_thich', title: 'Chú thích (Xanh ngọc)', color: 'var(--ct)', cards: ['chu_thich'] },
       { id: 'ma_tho', title: 'Mã thô (Xám)', color: 'var(--tho)', cards: ['ma_tho'] }
     ];
@@ -213,18 +247,7 @@
 
         const syntaxEl = document.createElement('span');
         syntaxEl.className = 'tool-syntax';
-        if (cardMa === 'gan') syntaxEl.textContent = 'x = 10';
-        else if (cardMa === 'in_ra') syntaxEl.textContent = 'print(...)';
-        else if (cardMa === 'neu') syntaxEl.textContent = 'if cond:';
-        else if (cardMa === 'nguoc_lai') syntaxEl.textContent = 'else:';
-        else if (cardMa === 'lap_moi') syntaxEl.textContent = 'for i in day:';
-        else if (cardMa === 'lap_khi') syntaxEl.textContent = 'while cond:';
-        else if (cardMa === 'tra_ve') syntaxEl.textContent = 'return val';
-        else if (cardMa === 'ham') syntaxEl.textContent = 'def fn(args):';
-        else if (cardMa === 'goi_ham') syntaxEl.textContent = 'fn(args)';
-        else if (cardMa === 'pheptinh') syntaxEl.textContent = 'a + b';
-        else if (cardMa === 'chu_thich') syntaxEl.textContent = '# Chú thích';
-        else if (cardMa === 'ma_tho') syntaxEl.textContent = 'raw code';
+        syntaxEl.textContent = NHAN_CU_PHAP[cardMa] || cardDef.ten;
         infoEl.appendChild(syntaxEl);
 
         itemEl.appendChild(infoEl);
@@ -435,6 +458,14 @@
     return input;
   }
 
+  /** Một mẩu từ khoá Python cố định trên mặt thẻ (không sửa được). */
+  function tuKhoa(chu) {
+    const el = document.createElement('span');
+    el.className = 'ma';
+    el.textContent = chu;
+    return el;
+  }
+
   function renderCodeLineContent(node, cardDef) {
     const wrap = document.createElement('span');
     wrap.className = 'the-content';
@@ -579,6 +610,34 @@
         onTreeChanged(false);
       });
       wrap.appendChild(input);
+    } else if (node.ma === 'nhap') {
+      // Hình dạng TĨNH, không đổi theo giá trị đang gõ.
+      //
+      // `createCodeInput` bắn `onTreeChanged(false)` mỗi phím — hàm ấy KHÔNG
+      // vẽ lại cây (vẽ lại thì mất con trỏ giữa lúc gõ). Nên từ khoá động kiểu
+      // "gõ vào ô `lấy` thì `import` đổi thành `from`" sẽ không đổi kịp, và
+      // người dùng thấy mặt thẻ nói một đằng khung mã nói một nẻo.
+      //
+      // `import` đứng đầu đúng trong CẢ HAI dạng sinh ra, nên đặt nó tĩnh;
+      // hai ô còn lại mang nhãn mờ. Khung mã bên phải luôn là sự thật.
+      wrap.appendChild(tuKhoa('import '));
+      wrap.appendChild(createCodeInput(node, 'thu_vien', 'math', 'ma'));
+      wrap.appendChild(tuKhoa(' lấy '));
+      wrap.appendChild(createCodeInput(node, 'phan', 'cả thư viện', 'ma'));
+      wrap.appendChild(tuKhoa(' as '));
+      wrap.appendChild(createCodeInput(node, 'ten_khac', '—', 'ma'));
+    } else if (node.ma === 'bat_loi') {
+      wrap.appendChild(tuKhoa('except '));
+      wrap.appendChild(createCodeInput(node, 'loai_loi', 'Exception', 'ma'));
+      wrap.appendChild(tuKhoa(' as '));
+      wrap.appendChild(createCodeInput(node, 'ten_bien', '—', 'ma'));
+      wrap.appendChild(tuKhoa(':'));
+    } else if (node.ma === 'thu') {
+      wrap.appendChild(tuKhoa('try:'));
+    } else if (node.ma === 'dung_lap') {
+      wrap.appendChild(tuKhoa('break'));
+    } else if (node.ma === 'bo_qua') {
+      wrap.appendChild(tuKhoa('continue'));
     } else if (cardDef.o && cardDef.o.length > 0) {
       cardDef.o.forEach((oDef, idx) => {
         if (idx > 0) {
@@ -623,27 +682,24 @@
     const hasVang = nodeDiags.some(d => d.muc_do === 'vang');
 
     // Xác định lớp màu và CSS variable theo nhóm chuẩn
-    let colorClass = 'c-tho';
-    let groupVar = 'var(--tho)';
-    if (node.ma === 'ham' || node.ma === 'goi_ham' || node.ma === 'tra_ve') {
-      colorClass = 'c-ham';
-      groupVar = 'var(--ham)';
-    } else if (node.ma === 'neu' || node.ma === 'nguoc_lai' || node.ma === 'lap_moi' || node.ma === 'lap_khi') {
-      colorClass = 'c-dk';
-      groupVar = 'var(--dk)';
-    } else if (node.ma === 'gan' || node.ma === 'pheptinh') {
-      colorClass = 'c-dl';
-      groupVar = 'var(--dl)';
-    } else if (node.ma === 'in_ra') {
-      colorClass = 'c-vr';
-      groupVar = 'var(--vr)';
-    } else if (node.ma === 'chu_thich') {
-      colorClass = 'c-ct';
-      groupVar = 'var(--ct)';
-    } else {
-      colorClass = 'c-tho';
-      groupVar = 'var(--tho)';
-    }
+    // 25/08: TRƯỚC ĐÂY LÀ DANH SÁCH TÊN THẺ CHÉP TAY. Thêm 5 thẻ mới thì cả
+    // 5 rơi vào nhánh `else` và nhận màu XÁM của "mã thô" — `nhap` đáng lẽ
+    // tím, bốn thẻ điều khiển đáng lẽ xanh dương. Không test nào bắt được:
+    // thẻ vẫn dựng lên, vẫn kéo được, chỉ sai màu. Bắt được bằng cách mở app
+    // ra nhìn.
+    //
+    // Nhóm đã nằm sẵn trong `BO_THE_V1[ma].nhom` — chép tay lần hai là tự
+    // tạo ra chỗ để hai bên trôi khỏi nhau.
+    const NHOM_LOP = {
+      ham: ['c-ham', 'var(--ham)'],
+      dieu_khien: ['c-dk', 'var(--dk)'],
+      du_lieu: ['c-dl', 'var(--dl)'],
+      vao_ra: ['c-vr', 'var(--vr)'],
+      chu_thich: ['c-ct', 'var(--ct)'],
+      ma_tho: ['c-tho', 'var(--tho)']
+    };
+    const defnMau = TheValidator.BO_THE_V1[node.ma];
+    const [colorClass, groupVar] = NHOM_LOP[defnMau && defnMau.nhom] || ['c-tho', 'var(--tho)'];
 
     const fragment = document.createDocumentFragment();
 

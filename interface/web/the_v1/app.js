@@ -448,6 +448,15 @@
     }
     updateWidth();
 
+    // Ctrl+Bấm vào một cái tên trong ô -> nhảy tới thẻ khai ra nó.
+    // Chỉ khi GIỮ Ctrl: bấm thường vẫn phải đặt được con trỏ để gõ.
+    input.addEventListener('click', (e) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      const tu = tuDuoiConTro(input);
+      if (tu) nhayToiDinhNghia(tu);
+    });
+
     input.addEventListener('input', (e) => {
       if (!node.o) node.o = {};
       node.o[fieldName] = e.target.value;
@@ -2040,6 +2049,125 @@
   }
 
   // ==========================================================================
+  // ==========================================================================
+  // NHẢY TỚI ĐỊNH NGHĨA (Ctrl+Bấm vào một tên · F12 trên thẻ đang chọn)
+  // ==========================================================================
+  //
+  // Trong cây thẻ, "định nghĩa" của một cái tên là thẻ KHAI ra nó. Sáu chỗ
+  // khai tên trong khay hiện tại — đọc từ `BO_THE_V1`, không chép tay:
+  //
+  //     ham       ten_ham              def f(...)
+  //     gan       ten_bien             x = ...
+  //     lap_moi   bien                 for i in ...
+  //     bat_loi   ten_bien             except E as e
+  //     nhap      phan / ten_khac      from m import a  ·  import m as a
+  //     nhap      thu_vien             import m
+  //
+  // `goi_ham` KHÔNG khai tên — nó dùng tên. Đó chính là chỗ hay bấm nhất.
+
+  /** Tên nào được thẻ này khai ra? Trả mảng (một thẻ có thể khai nhiều tên). */
+  function tenDuocKhaiBoi(node) {
+    const o = node.o || {};
+    const lay = (k) => String(o[k] || '').trim();
+    switch (node.ma) {
+      case 'ham': return [lay('ten_ham')].filter(Boolean);
+      case 'gan': return [lay('ten_bien')].filter(Boolean);
+      case 'bat_loi': return [lay('ten_bien')].filter(Boolean);
+      case 'lap_moi':
+        // `for a, b in ...` khai HAI tên. Tách như validator vẫn tách.
+        return (lay('bien').match(/\b[a-zA-Z_][a-zA-Z0-9_]*\b/g) || []);
+      case 'nhap': {
+        const ph = lay('phan'), tk = lay('ten_khac'), tv = lay('thu_vien');
+        if (ph) {
+          const motTen = !ph.includes(',');
+          if (tk && motTen) return [tk];
+          return ph.split(',').map(x => x.trim()).filter(Boolean);
+        }
+        if (tk) return [tk];
+        // `import a.b.c` chỉ đưa tên `a` vào tầm nhìn.
+        return tv ? [tv.split('.')[0].trim()].filter(Boolean) : [];
+      }
+      default: return [];
+    }
+  }
+
+  /**
+   * Thẻ nào khai ra `ten`? Trả thẻ ĐẦU TIÊN theo thứ tự đọc.
+   *
+   * Đầu tiên chứ không phải gần nhất: cây thẻ không có phạm vi thật (một hàm
+   * và mã ngoài hàm cùng nằm trong một danh sách), nên "gần nhất" sẽ phải
+   * đoán phạm vi — mà đoán sai thì nhảy tới chỗ không liên quan, tệ hơn là
+   * không nhảy. Chỗ khai đầu tiên luôn giải thích được: đó là nơi cái tên
+   * xuất hiện lần đầu.
+   */
+  function timDinhNghia(ten, danhSach) {
+    if (!ten) return null;
+    for (const node of (danhSach || state.tree)) {
+      if (tenDuocKhaiBoi(node).includes(ten)) return node;
+      if (node.than && node.than.length) {
+        const sau = timDinhNghia(ten, node.than);
+        if (sau) return sau;
+      }
+    }
+    return null;
+  }
+
+  /** Lấy chữ nằm dưới con trỏ trong một ô nhập. */
+  function tuDuoiConTro(input) {
+    const v = String(input.value || '');
+    let i = input.selectionStart;
+    if (i === null || i === undefined) i = v.length;
+    if (i > 0 && !/[\w]/.test(v[i]) && /[\w]/.test(v[i - 1])) i -= 1;
+    if (!/[\w]/.test(v[i] || '')) return '';
+    let d = i, c = i;
+    while (d > 0 && /[\w]/.test(v[d - 1])) d--;
+    while (c < v.length - 1 && /[\w]/.test(v[c + 1])) c++;
+    return v.slice(d, c + 1);
+  }
+
+  let hetGioBao = null;
+  function baoDinhNghia(chu) {
+    // PHẢI NHÌN THẤY ĐƯỢC. Bản đầu rơi về `console.log` khi không có thanh
+    // tìm — tức câu "không tìm thấy" biến mất khỏi mắt người dùng. Đúng loại
+    // hỏng lặng lẽ mà §4 nói tới.
+    const o = document.getElementById('nhanNhanh');
+    if (!o) return;
+    o.textContent = chu;
+    o.classList.add('hien');
+    if (hetGioBao) clearTimeout(hetGioBao);
+    hetGioBao = setTimeout(() => o.classList.remove('hien'), 3000);
+  }
+
+  function nhayToiDinhNghia(ten) {
+    if (!ten) return false;
+    const dich = timDinhNghia(ten, state.tree);
+    if (!dich) {
+      // KHÔNG TÌM THẤY khác KHÔNG TỒN TẠI (§4). Tên có thể đến từ thư viện
+      // chuẩn (`print`, `len`), từ tham số hàm, hay từ một thẻ `ma_tho` —
+      // ba chỗ mà cây thẻ không khai tên tường minh.
+      baoDinhNghia(`Không tìm thấy thẻ khai "${ten}" trong chương trình này`);
+      return false;
+    }
+    chonThe(dich.id);
+    const el = document.getElementById('node_' + dich.id);
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    baoDinhNghia(`→ định nghĩa "${ten}"`);
+    return true;
+  }
+
+  /** F12 trên thẻ đang chọn: nhảy theo tên CHÍNH mà thẻ ấy dùng. */
+  function nhayTuTheDangChon() {
+    if (!state.selectedNodeId) return false;
+    const boc = timTheTheoId(state.tree, state.selectedNodeId);
+    if (!boc || !boc.node) return false;
+    const o = boc.node.o || {};
+    // `goi_ham` là ca chính. `tra_ve`/`in_ra` thì lấy tên đầu trong biểu thức.
+    const ten = String(o.ten_ham || o.gia_tri || o.noi_dung || '').trim();
+    const dau = (ten.match(/\b[a-zA-Z_][a-zA-Z0-9_]*\b/) || [])[0];
+    return nhayToiDinhNghia(dau);
+  }
+
+  // ==========================================================================
   // TÌM TRONG CHƯƠNG TRÌNH (Ctrl+F)
   // ==========================================================================
   // Khác hẳn ô tìm ở khay trái (`toolSearch`): ô kia LỌC danh sách khay thẻ
@@ -3044,6 +3172,17 @@
         // tên nút, nhãn khay thẻ, chữ trong terminal...).
         e.preventDefault();
         moThanhTim();
+      } else if (e.key === 'F12') {
+        // F12 khi ĐANG GÕ trong ô: nhảy theo từ dưới con trỏ, sát với lối
+        // quen của trình soạn thảo. Ngoài ô thì nhảy theo thẻ đang chọn.
+        const o = e.target.closest('input, textarea');
+        if (o) {
+          const tu = tuDuoiConTro(o);
+          if (tu) { e.preventDefault(); nhayToiDinhNghia(tu); }
+        } else if (state.selectedNodeId) {
+          e.preventDefault();
+          nhayTuTheDangChon();
+        }
       } else if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
         // Đang gõ trong ô nhập thì để trình duyệt chép CHỮ, đừng cướp phím
         // để chép cả thẻ. Cùng lối phòng thủ như Ctrl+Z ở dưới.

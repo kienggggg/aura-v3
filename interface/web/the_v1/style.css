@@ -2004,3 +2004,14 @@ body {
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+/* Ô báo ngắn: hiện rồi tự mờ đi. Dùng cho "nhảy tới định nghĩa" — thông báo
+   ngắn không đáng chiếm một hộp thoại, nhưng phải NHÌN THẤY được. */
+.nhan-nhanh {
+  margin-left: 12px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity .25s;
+  color: var(--dk, #3B82F6);
+}
+.nhan-nhanh.hien { opacity: 1; }

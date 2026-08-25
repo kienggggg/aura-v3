@@ -2015,3 +2015,33 @@ body {
   color: var(--dk, #3B82F6);
 }
 .nhan-nhanh.hien { opacity: 1; }
+
+/* Thanh tab tệp */
+.tab-bar {
+  display: flex;
+  gap: 2px;
+  padding: 4px 8px 0;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  white-space: nowrap;
+  opacity: .65;
+}
+.tab-item:hover { opacity: .9; }
+.tab-item.dang-mo { opacity: 1; font-weight: 600; }
+.tab-dong {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0 2px;
+  color: inherit;
+}

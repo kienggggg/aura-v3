@@ -19,7 +19,10 @@
     sidebarRightCollapsed: false,
     codeFontSize: 14,
     draggingCardId: null,
-    selectedNodeId: null
+    selectedNodeId: null,
+    activeFileName: 'Chưa đặt tên',
+    tabs: [],
+    tabActive: -1
   };
 
   // ==========================================================================
@@ -1056,6 +1059,11 @@
   function onTreeChanged(pushHistory = true, markDirty = true) {
     if (pushHistory) ghiLichSu();
     if (markDirty) state.hasModifications = true;
+    // Dấu • "chưa lưu" nằm trên tab, nên tab phải vẽ lại theo mỗi lần sửa.
+    if (state.tabActive >= 0) {
+      state.tabs[state.tabActive].hasModifications = state.hasModifications;
+      veThanhTab();
+    }
     document.getElementById('fileModifiedBadge').style.display =
       state.activeFilePath && state.hasModifications ? 'inline-block' : 'none';
 
@@ -2050,6 +2058,148 @@
 
   // ==========================================================================
   // ==========================================================================
+  // ==========================================================================
+  // NHIỀU TAB TỆP
+  // ==========================================================================
+  //
+  // THIẾT KẾ: `state.tree` / `state.activeFilePath` / `state.history`... VẪN
+  // là trạng thái của tab ĐANG MỞ. Mảng `state.tabs` chỉ giữ ảnh chụp của các
+  // tab kia. Chuyển tab = chụp trạng thái sống vào tab cũ, nạp tab mới ra.
+  //
+  // Vì sao không tách hẳn ra một lớp "tệp": hơn hai chục chỗ trong tệp này
+  // đang đọc thẳng `state.activeFilePath`, `state.tree`, `state.history`
+  // (E1, dò dòng dữ liệu, lưu tệp, hoàn tác, tìm kiếm). Đổi hết là hai chục
+  // chỗ có thể sai; giữ nguyên thì không chỗ nào phải đổi.
+  //
+  // MỖI TAB GIỮ LỊCH SỬ RIÊNG. Dùng chung một lịch sử thì Ctrl+Z ở tab A lùi
+  // được sang trạng thái của tab B — không giải thích được cho ai.
+
+  function anhTabHienTai() {
+    return {
+      duong_dan: state.activeFilePath,
+      ten_tep: state.activeFileName || 'Chưa đặt tên',
+      tree: state.tree,
+      sha256: state.activeFileSha256,
+      hasModifications: state.hasModifications,
+      history: state.history,
+      historyIndex: state.historyIndex,
+      selectedNodeId: state.selectedNodeId
+    };
+  }
+
+  function dongBoTabHienTai() {
+    if (state.tabActive < 0 || state.tabActive >= state.tabs.length) return;
+    state.tabs[state.tabActive] = anhTabHienTai();
+  }
+
+  function napTab(i) {
+    if (i < 0 || i >= state.tabs.length) return;
+    const t = state.tabs[i];
+    state.tabActive = i;
+    state.tree = t.tree;
+    state.activeFilePath = t.duong_dan;
+    state.activeFileName = t.ten_tep;
+    state.activeFileSha256 = t.sha256;
+    state.hasModifications = t.hasModifications;
+    state.history = t.history;
+    state.historyIndex = t.historyIndex;
+    state.selectedNodeId = t.selectedNodeId || null;
+
+    const oTen = document.getElementById('currentFileName');
+    if (oTen) oTen.textContent = t.ten_tep;
+    // `pushHistory=false, markDirty=false`: chuyển tab KHÔNG phải một lần sửa.
+    onTreeChanged(false, false);
+    veThanhTab();
+  }
+
+  function chuyenTab(i) {
+    if (i === state.tabActive) return;
+    dongBoTabHienTai();
+    napTab(i);
+  }
+
+  /** Tab đang mở tệp này rồi thì trả chỉ số, chưa thì -1. */
+  function timTabTheoDuongDan(duongDan) {
+    return state.tabs.findIndex(t => t.duong_dan && t.duong_dan === duongDan);
+  }
+
+  function dongTab(i) {
+    if (i < 0 || i >= state.tabs.length) return;
+    const t = state.tabs[i];
+    if (t.hasModifications) {
+      const ok = window.confirm(
+        `"${t.ten_tep}" có thay đổi chưa lưu. Đóng và bỏ thay đổi?`);
+      if (!ok) return;
+    }
+    state.tabs.splice(i, 1);
+    if (state.tabs.length === 0) {
+      // Đóng tab cuối -> về trạng thái nháp, KHÔNG để màn hình trống trơn.
+      state.tabs.push({
+        duong_dan: '', ten_tep: 'Chưa đặt tên', tree: [], sha256: null,
+        hasModifications: false, history: [], historyIndex: -1,
+        selectedNodeId: null
+      });
+      napTab(0);
+      xoaLichSu();
+      return;
+    }
+    napTab(Math.min(i, state.tabs.length - 1));
+  }
+
+  /** Mở tệp: đã có tab thì chuyển sang, chưa có thì thêm tab mới. */
+  function moTrongTab(duLieu) {
+    const cu = timTabTheoDuongDan(duLieu.duong_dan);
+    if (cu !== -1) {
+      // Đã mở rồi thì CHUYỂN SANG chứ không mở thêm bản thứ hai — hai tab
+      // cùng một tệp là hai cây thẻ khác nhau ghi đè lẫn nhau lúc lưu.
+      dongBoTabHienTai();
+      napTab(cu);
+      return;
+    }
+    dongBoTabHienTai();
+    state.tabs.push({
+      duong_dan: duLieu.duong_dan,
+      ten_tep: duLieu.ten_tep,
+      tree: duLieu.tree,
+      sha256: duLieu.sha256,
+      hasModifications: false,
+      history: [], historyIndex: -1,
+      selectedNodeId: null
+    });
+    napTab(state.tabs.length - 1);
+  }
+
+  function veThanhTab() {
+    const thanh = document.getElementById('tabBar');
+    if (!thanh) return;
+    thanh.innerHTML = '';
+    // Một tab thì không cần thanh — đỡ chiếm một dòng màn hình cho không.
+    thanh.style.display = state.tabs.length <= 1 ? 'none' : 'flex';
+
+    state.tabs.forEach((t, i) => {
+      const el = document.createElement('div');
+      el.className = 'tab-item' + (i === state.tabActive ? ' dang-mo' : '');
+      el.dataset.tabIndex = String(i);
+      el.title = t.duong_dan || 'Chưa lưu ra tệp';
+
+      const ten = document.createElement('span');
+      ten.className = 'tab-ten';
+      ten.textContent = t.ten_tep + (t.hasModifications ? ' •' : '');
+      el.appendChild(ten);
+
+      const x = document.createElement('button');
+      x.className = 'tab-dong';
+      x.textContent = '✕';
+      x.title = 'Đóng tab';
+      x.addEventListener('click', (e) => { e.stopPropagation(); dongTab(i); });
+      el.appendChild(x);
+
+      el.addEventListener('click', () => chuyenTab(i));
+      thanh.appendChild(el);
+    });
+  }
+
+  // ==========================================================================
   // NHẢY TỚI ĐỊNH NGHĨA (Ctrl+Bấm vào một tên · F12 trên thẻ đang chọn)
   // ==========================================================================
   //
@@ -2586,11 +2736,11 @@
             !/^[0-9a-f]{64}$/.test(data.sha256 || '')) {
           throw new Error('Phản hồi mở tệp không hợp lệ');
         }
-        state.tree = data.tree;
+        // Mở tệp = MỞ MỘT TAB. Đã mở rồi thì chuyển sang, không mở bản
+        // thứ hai — hai tab cùng một tệp là hai cây thẻ ghi đè nhau lúc lưu.
+        moTrongTab({ duong_dan: data.duong_dan, ten_tep: data.ten_tep,
+                     tree: data.tree, sha256: data.sha256 });
         xoaLichSu();
-        state.activeFilePath = data.duong_dan;
-        state.activeFileSha256 = data.sha256;
-        state.hasModifications = false;
         document.getElementById('currentFileName').textContent = data.ten_tep;
         document.getElementById('fileModifiedBadge').style.display = 'none';
         document.getElementById('openFileModal').style.display = 'none';
@@ -2660,6 +2810,8 @@
         state.activeFilePath = data.duong_dan;
         state.activeFileSha256 = data.sha256;
         state.hasModifications = false;
+        dongBoTabHienTai();
+        veThanhTab();
         clearNodeDirtyFlags(state.tree);
         document.getElementById('currentFileName').textContent = data.duong_dan.split('/').pop().split('\\').pop();
         document.getElementById('fileModifiedBadge').style.display = 'none';
@@ -3236,8 +3388,30 @@
       ]},
       { id: "m1_3", ma: "in_ra", o: { noi_dung: "cong(5, 7)" }, than: [] }
     ];
-    document.getElementById('currentFileName').textContent = '1. Hàm cộng hai số';
-    onTreeChanged();
+    // Tab ĐẦU TIÊN là bài mẫu, chưa gắn với tệp nào trên đĩa.
+    // Không có nó thì `dongBoTabHienTai` không có chỗ để chụp, và tab tệp
+    // đầu người dùng mở sẽ NUỐT MẤT bài mẫu mà không ai thấy.
+    state.activeFileName = '1. Hàm cộng hai số';
+    state.tabs = [{
+      duong_dan: '', ten_tep: state.activeFileName, tree: state.tree,
+      sha256: null, hasModifications: false,
+      history: [], historyIndex: -1, selectedNodeId: null
+    }];
+    state.tabActive = 0;
+    document.getElementById('currentFileName').textContent = state.activeFileName;
+    // `markDirty=false`: bài mẫu vừa nạp thì CHƯA CÓ ai sửa gì.
+    //
+    // 25/08, bắt được khi làm thanh tab: bản cũ gọi `onTreeChanged()` trơn
+    // nên `hasModifications = true` ngay từ giây đầu. Trước đây không ai thấy
+    // vì huy hiệu "ĐÃ SỬA" chỉ hiện khi đã có đường dẫn tệp — mà bài mẫu thì
+    // chưa có. Thanh tab phơi nó ra: tab hiện dấu • "chưa lưu" trong khi
+    // người dùng chưa chạm vào gì.
+    //
+    // Vẫn phải GHI MỘT MỐC GỐC (`ghiLichSu`), đúng như đường mở tệp: không có
+    // mốc thì thao tác sửa ĐẦU TIÊN thành bước gốc và Ctrl+Z không lùi về đâu.
+    onTreeChanged(false, false);
+    ghiLichSu();
+    veThanhTab();
     loadAvailableTests();
     yeuCauChinhCotDoc();
   });

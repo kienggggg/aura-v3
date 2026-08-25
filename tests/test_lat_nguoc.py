@@ -443,6 +443,7 @@ def test_chay_e1_dinh_vi_chuan_hoa_duong_dan_windows(tmp_path):
     with patch("core.lat_nguoc._chon_test_va_dong") as mock_trace:
         mock_trace.return_value = {
             "trang_thai": "khong_chay",
+            "ma_ly_do": "khong_co_test_do",
             "vi_sao": "không có test nào bị đỏ trong tệp test",
             "test": "",
             "so_test_do": 0,
@@ -476,6 +477,7 @@ def test_chay_e1_dinh_vi_thu_muc_data_da_ton_tai_khong_bi_loi(tmp_path):
     with patch("core.lat_nguoc._chon_test_va_dong") as mock_trace:
         mock_trace.return_value = {
             "trang_thai": "khong_chay",
+            "ma_ly_do": "khong_co_test_do",
             "vi_sao": "không có test nào bị đỏ trong tệp test",
             "test": "",
             "so_test_do": 0,
@@ -536,6 +538,7 @@ def test_chay_e1_dinh_vi_khong_co_test_do_tra_ve_khong_tim_thay(tmp_path):
     with patch("core.lat_nguoc._chon_test_va_dong") as mock_trace:
         mock_trace.return_value = {
             "trang_thai": "khong_chay",
+            "ma_ly_do": "khong_co_test_do",
             "vi_sao": "không có test nào bị đỏ trong tệp test",
             "test": "",
             "so_test_do": 0,
@@ -1314,6 +1317,7 @@ def test_loi_hua_1_va_2_va_3_khong_doi_byte_tep_that_khong_goi_model(tmp_path):
     with patch("core.lat_nguoc._chon_test_va_dong") as mock_trace:
         mock_trace.return_value = {
             "trang_thai": "khong_chay",
+            "ma_ly_do": "khong_co_test_do",
             "vi_sao": "không có test nào bị đỏ trong tệp test",
             "test": "",
             "so_test_do": 0,
@@ -1367,6 +1371,7 @@ def test_loi_hua_4_fail_closed_xoa_sach_thu_muc_tam_ke_ca_khi_nem_loi(tmp_path):
         with patch("core.lat_nguoc._chon_test_va_dong") as mock_trace:
             mock_trace.return_value = {
                 "trang_thai": "khong_chay",
+                "ma_ly_do": "khong_co_test_do",
                 "vi_sao": "không có test nào bị đỏ trong tệp test",
                 "test": "",
                 "so_test_do": 0,
@@ -1406,6 +1411,7 @@ def test_loi_hua_5_tuyet_doi_khong_goi_dot_bien(tmp_path):
         with patch("core.lat_nguoc._chon_test_va_dong") as mock_trace:
             mock_trace.return_value = {
                 "trang_thai": "khong_chay",
+                "ma_ly_do": "khong_co_test_do",
                 "vi_sao": "không có test nào bị đỏ trong tệp test",
                 "test": "",
                 "so_test_do": 0,
@@ -1448,3 +1454,132 @@ def test_doc_thong_tin_gioi_han_khi_co_tep_co_ca_tim_ra(tmp_path):
     f.write_text(json.dumps({"ket_qua": [{"tim_thay": True}, {"tim_thay": False}, {"tim_thay": True}]}), encoding="utf-8")
     msg = doc_thong_tin_gioi_han(tmp_path)
     assert msg == "Chỉ dò được 5 họ lỗi so sánh/logic. Đã thử 3 lỗi NGOÀI 5 họ đó (tìm ra 2 ca)."
+
+
+# ==============================================================================
+# NEO 14 — hai chỗ Claude vá ngày 25/08 sau khi kiểm chứng bài nộp
+# ==============================================================================
+
+def test_khong_quyet_dinh_trang_thai_bang_DO_CHUOI_CON(tmp_path):
+    """`khong_tim_thay` / `khong_do_duoc` phải quyết bằng MÃ, không bằng câu chữ.
+
+    VÌ SAO CÓ TEST NÀY: `core/lat_nguoc.py:316` trước 25/08 viết
+
+        trang_thai_ra = ("khong_tim_thay"
+                         if "không có test nào bị đỏ" in vi_sao
+                         else "khong_do_duoc")
+
+    `vi_sao` là câu viết cho NGƯỜI ĐỌC. Đo thật trước khi vá — hai cách viết
+    cùng nghĩa cho hai kết quả ngược nhau:
+
+        "không có test nào bị đỏ trong tệp test"  ->  khong_tim_thay
+        "không có test nào ĐỎ trong tệp test"     ->  khong_do_duoc
+
+    Mà `khong_tim_thay` là ĐO ĐƯỢC mà không thấy, còn `khong_do_duoc` là KHÔNG
+    đo được — hai điều ngược nhau trong kỷ luật của kho. Sửa một câu thông báo
+    cho dễ đọc là đủ làm sổ bằng chứng ghi sai loại.
+
+    Đúng họ bệnh §4 "đừng tự chấm điểm bằng dò chuỗi con".
+
+    Test này giữ cho ai đó về sau đừng quay lại lối cũ: đổi CÂU CHỮ mà giữ MÃ
+    thì kết quả KHÔNG được đổi.
+    """
+    src = tmp_path / "core" / "x.py"
+    src.parent.mkdir(parents=True)
+    src.write_text("def f(a):\n    return a < 5\n", encoding="utf-8")
+    tst = tmp_path / "tests" / "test_x.py"
+    tst.parent.mkdir(parents=True)
+    tst.write_text("def test_1(): assert False\n", encoding="utf-8")
+
+    def _chay(ma_ly_do, vi_sao):
+        tra = {
+            "trang_thai": "khong_chay",
+            "ma_ly_do": ma_ly_do,
+            "vi_sao": vi_sao,
+            "test": "",
+            "so_test_do": 0,
+            "so_test_do_khac": 0,
+            "dong_da_chay": [],
+        }
+        with patch("core.lat_nguoc._chon_test_va_dong", return_value=tra):
+            return chay_e1_dinh_vi(tmp_path, "core/x.py", "tests/test_x.py")["trang_thai"]
+
+    goc = _chay("khong_co_test_do", "không có test nào bị đỏ trong tệp test")
+    assert goc == "khong_tim_thay"
+
+    # Câu chữ viết lại, MÃ giữ nguyên -> kết quả PHẢI giữ nguyên.
+    # Bản cũ (dò chuỗi con) sẽ trả `khong_do_duoc` ở đây.
+    viet_lai = _chay("khong_co_test_do", "không có test nào ĐỎ trong tệp test")
+    assert viet_lai == goc, (
+        "Đổi câu chữ đã đổi kết quả — dòng 316 lại đang dò chuỗi con")
+
+    # Mã khác -> phải là `khong_do_duoc`, kể cả khi câu chữ tình cờ chứa
+    # đúng cụm cũ. Chiều ngược lại cũng phải đóng đinh.
+    khac = _chay("het_tran_truoc_trace", "không có test nào bị đỏ trong tệp test")
+    assert khac == "khong_do_duoc", (
+        "Câu chữ đang thắng mã — dòng 316 lại đang dò chuỗi con")
+
+
+def test_loi_hua_1_2_tren_DUONG_CO_CHAY_THAT(tmp_path):
+    """SHA-256 tệp nguồn và tệp test KHÔNG đổi trên đường `trace_du`.
+
+    VÌ SAO CÓ TEST NÀY, 25/08: đã có một test băm SHA trước/sau — phép đo đúng,
+    nhưng nó mock `_chon_test_va_dong` trả `khong_chay`, mà
+    `core/lat_nguoc.py:313` THOÁT NGAY khi trạng thái khác `trace_du`. Nên nó
+    chứng minh "đường thoát sớm không ghi gì" — đường gần như không làm gì.
+
+    Đếm trên tệp này lúc ấy: 23 test đi qua đường `trace_du` — đường THẬT SỰ
+    lật mã và chạy suite con — và không test nào trong 23 kiểm tệp nguồn sau đó.
+
+    Lời hứa "chạy hoàn toàn trên bản sao tạm" chỉ có giá trị ở chỗ nó CÓ ghi.
+
+    Ở đây KHÔNG mock `_ma_sau_lat`: để phép lật thật chạy, để đường ghi thật
+    được đi qua. Chỉ mock `subprocess.run` để khỏi gọi pytest con.
+    """
+    src = tmp_path / "core" / "calc.py"
+    src.parent.mkdir(parents=True)
+    src_noi_dung = "def f(x):\n    return x < 5\n"
+    src.write_text(src_noi_dung, encoding="utf-8")
+
+    tst = tmp_path / "tests" / "test_calc.py"
+    tst.parent.mkdir(parents=True)
+    tst_noi_dung = "def test_1(): assert False\n"
+    tst.write_text(tst_noi_dung, encoding="utf-8")
+
+    sha_src_truoc = hashlib.sha256(src.read_bytes()).hexdigest()
+    sha_tst_truoc = hashlib.sha256(tst.read_bytes()).hexdigest()
+
+    with patch("core.lat_nguoc._chon_test_va_dong") as mock_trace:
+        mock_trace.return_value = {
+            "trang_thai": "trace_du",          # đường CÓ lật mã và chạy suite
+            "vi_sao": "ok",
+            "test": "tests/test_calc.py::test_1",
+            "so_test_do": 1,
+            "so_test_do_khac": 0,
+            "dong_da_chay": [2],
+            "so_buoc": 3,
+        }
+        with patch("subprocess.run",
+                   return_value=MagicMock(returncode=0, stdout="1 passed\n", stderr="")):
+            res = chay_e1_dinh_vi(tmp_path, "core/calc.py", "tests/test_calc.py")
+
+    # Đường này PHẢI đã thật sự làm việc — nếu nó lại thoát sớm thì test này
+    # quay về vô nghĩa y như bản cũ.
+    assert res["trang_thai"] == "tim_thay", res["trang_thai"]
+    assert res["candidate_count_before"] > 0, "không sinh ứng viên nào — chưa đi vào đường ghi"
+
+    # Bằng chứng: byte trên đĩa không đổi
+    assert hashlib.sha256(src.read_bytes()).hexdigest() == sha_src_truoc
+    assert hashlib.sha256(tst.read_bytes()).hexdigest() == sha_tst_truoc
+    assert src.read_text(encoding="utf-8") == src_noi_dung
+    assert tst.read_text(encoding="utf-8") == tst_noi_dung
+
+    # Và bản vá đề xuất PHẢI khác bản gốc — nếu giống thì phép lật không chạy,
+    # và "nguồn không đổi" trở thành hiển nhiên chứ không phải bằng chứng.
+    diff = res["candidates"][0]["unified_diff"]
+    assert "--- a/core/calc.py" in diff
+    assert diff.strip() != ""
+
+    assert res["analysis_on_temp_copy"] is True
+    assert res["model_calls"] == 0
+    assert res["external_submit"] is False

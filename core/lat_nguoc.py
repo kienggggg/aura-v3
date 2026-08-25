@@ -207,6 +207,9 @@ def _chon_test_va_dong(
     if con_lai <= 0:
         return {
             "trang_thai": "khong_chay",
+            # `ma_ly_do` là MÃ cho máy đọc; `vi_sao` là câu cho người đọc.
+            # Xem chú thích 25/08 ở chỗ dùng nó bên dưới.
+            "ma_ly_do": "het_tran_truoc_trace",
             "vi_sao": "hết trần 60 giây trước trace",
             "test": "",
             "so_test_do_khac": 0,
@@ -220,6 +223,7 @@ def _chon_test_va_dong(
     if not ten_chot or not danh_sach:
         return {
             "trang_thai": "khong_chay",
+            "ma_ly_do": "khong_co_test_do",
             "vi_sao": "không có test nào bị đỏ trong tệp test",
             "test": "",
             "so_test_do": 0,
@@ -313,7 +317,35 @@ def chay_e1_dinh_vi(
         if trace.get("trang_thai") != "trace_du":
             giay_loc = round(time.monotonic() - t0_loc, 1)
             vi_sao = trace.get("vi_sao", "Không thu thập được vết dòng đầy đủ")
-            trang_thai_ra = "khong_tim_thay" if "không có test nào bị đỏ" in vi_sao else "khong_do_duoc"
+            # 25/08: TRƯỚC ĐÂY DÒNG NÀY DÒ CHUỖI CON TRÊN CÂU TIẾNG VIỆT.
+            #
+            #     trang_thai_ra = ("khong_tim_thay"
+            #                      if "không có test nào bị đỏ" in vi_sao
+            #                      else "khong_do_duoc")
+            #
+            # `vi_sao` là câu viết cho NGƯỜI ĐỌC. Đem nó ra quyết định luồng
+            # điều khiển thì sửa lại câu chữ cho dễ đọc là đủ đổi kết quả.
+            # Chạy thử 25/08, hai cách viết cùng nghĩa:
+            #
+            #     "không có test nào bị đỏ trong tệp test"  ->  khong_tim_thay
+            #     "không có test nào ĐỎ trong tệp test"     ->  khong_do_duoc
+            #
+            # Mà hai trạng thái ấy NGƯỢC NHAU trong kỷ luật của kho:
+            # `khong_tim_thay` = ĐO ĐƯỢC mà không thấy;
+            # `khong_do_duoc`  = KHÔNG đo được.
+            # Ghi nhầm loại là sổ bằng chứng nói sai về chính phép đo.
+            #
+            # Đúng họ bệnh §4 "đừng tự chấm điểm bằng dò chuỗi con" — kho này
+            # đã trả giá năm lần trong một ngày cho nó ("ai" khớp trong "thứ
+            # hai"; "phiên này" bỏ dấu thành "p·hien nay" rồi khớp "hiện nay").
+            #
+            # Nay `_chon_test_va_dong` trả kèm `ma_ly_do` — mã cho máy đọc,
+            # tách khỏi `vi_sao` cho người đọc. Đổi câu chữ không còn đổi được
+            # kết quả nữa. Hành vi giữ NGUYÊN: đường duy nhất cho ra
+            # `khong_tim_thay` vẫn đúng là đường "không có test nào bị đỏ".
+            trang_thai_ra = ("khong_tim_thay"
+                             if trace.get("ma_ly_do") == "khong_co_test_do"
+                             else "khong_do_duoc")
             return {
                 "trang_thai": trang_thai_ra,
                 "source_path": tep_nguon_rel,

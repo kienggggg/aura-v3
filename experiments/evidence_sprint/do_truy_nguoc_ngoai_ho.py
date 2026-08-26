@@ -50,7 +50,8 @@ GOC = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(GOC))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from core.trace_runtime import chot_test_can_trace          # noqa: E402
+from core.trace_runtime import chot_test_can_trace, _chay_pytest_tim_test_do_phan_loai  # noqa: E402
+from kiem_ban_dong_bang import kiem_tra_ban_dong_bang         # noqa: E402
 from truy_nguoc_gia_tri import truy_nguoc                    # noqa: E402
 
 _BO6 = "--bo6" in sys.argv
@@ -58,6 +59,7 @@ _BO5 = "--bo5" in sys.argv
 _BO4 = "--bo4" in sys.argv
 _BO3 = "--bo3" in sys.argv
 _BO2 = "--bo2" in sys.argv
+_CO_DONG_KIEM_TRA = "--dong-kiem-tra" in sys.argv
 _SO_BO = 6 if _BO6 else (5 if _BO5 else (4 if _BO4 else (3 if _BO3 else (2 if _BO2 else 1))))
 _HAU = "" if _SO_BO == 1 else "_%d" % _SO_BO
 DE = GOC / "experiments" / "evidence_sprint" / ("de_ngoai_ho%s.json" % _HAU)
@@ -307,7 +309,7 @@ def dong_loi_trong_ma(d: dict) -> List[int]:
     return khac
 
 
-def chay_mot_de(d: dict) -> dict:
+def chay_mot_de(d: dict, dung_dong: bool = False) -> dict:
     tam_goc = Path(tempfile.mkdtemp(prefix="slice_"))
     tam = tam_goc / "kho"
     try:
@@ -317,11 +319,31 @@ def chay_mot_de(d: dict) -> dict:
         (tam / "data").mkdir(exist_ok=True)
         (tam / d["tep"]).write_text(d["ma"], encoding="utf-8")
 
+        # Cửa cứng kiểm tra bản đóng băng trước khi đo
+        ok_gate, err_gate = kiem_tra_ban_dong_bang(tam, GOC, [d["tep_test"]], verbose=False)
+        if not ok_gate:
+            return {"trang_thai": "khong_do_duoc", "vi_sao": err_gate, "so_test_do_that": 0, "so_loi_nap": 0}
+
+        # Phân loại test đỏ thật vs lỗi nạp
+        ds_do_that, ds_loi_nap = _chay_pytest_tim_test_do_phan_loai(d["tep_test"], cwd=tam)
+        if ds_loi_nap and not ds_do_that:
+            return {
+                "trang_thai": "khong_do_duoc",
+                "vi_sao": f"lỗi nạp ({len(ds_loi_nap)} lỗi collection/import)",
+                "so_test_do_that": 0,
+                "so_loi_nap": len(ds_loi_nap),
+            }
+
+        dk = d.get("dong") if dung_dong else None
         ten, so_do, ds = chot_test_can_trace(
-            d["tep"], d["tep_test"], dong_kiem_tra=None, cwd=tam)
+            d["tep"], d["tep_test"], dong_kiem_tra=dk, cwd=tam)
         if not ten or not ds:
-            return {"trang_thai": "khong_do_duoc",
-                    "vi_sao": "không có test đỏ nào trace được"}
+            return {
+                "trang_thai": "khong_do_duoc",
+                "vi_sao": "không có test đỏ nào trace được",
+                "so_test_do_that": len(ds_do_that),
+                "so_loi_nap": len(ds_loi_nap),
+            }
 
         # Luật chọn đã đăng ký: nhiều dòng nhất của tệp đích.
         tr = max(ds, key=lambda r: len(r.dong_da_chay or []))
@@ -335,6 +357,8 @@ def chay_mot_de(d: dict) -> dict:
             "trang_thai": kq["trang_thai"],
             "ten_test": tr.ten_test,
             "so_test_do_khac": so_do,
+            "so_test_do_that": len(ds_do_that),
+            "so_loi_nap": len(ds_loi_nap),
             "so_dong_da_chay": len(da_chay),
             "so_dong_chuoi": len(dong_chuoi),
             "dai_chuoi": len(kq["chuoi"]),
@@ -352,7 +376,7 @@ def chay_mot_de(d: dict) -> dict:
             "external_submit": kq.get("external_submit", False),
         }
     except Exception as e:                                   # noqa: BLE001
-        return {"trang_thai": "khong_do_duoc", "vi_sao": str(e)[:120]}
+        return {"trang_thai": "khong_do_duoc", "vi_sao": str(e)[:120], "so_test_do_that": 0, "so_loi_nap": 0}
     finally:
         shutil.rmtree(tam_goc, ignore_errors=True)
 
@@ -376,30 +400,6 @@ def main() -> int:
 
     RA.parent.mkdir(parents=True, exist_ok=True)
 
-    # 25/08: BỘ CHẤM PHẢI NÓI RÕ SỐ NÀO LÀ SỐ CŨ.
-    #
-    # Cache tiếp-tục ở trên bỏ qua mọi mục đã có trong sổ. Sổ đầy đủ thì
-    # `de` rỗng — không đo lại dòng nào — NHƯNG bộ chấm vẫn in nguyên bảng
-    # kết quả, trông y hệt một lần đo mới. Hôm nay tôi đọc lướt qua đúng cái
-    # bảng ấy và suýt báo "bộ 1 bản MỚI = 0,65" trong khi 0,65 là số đo hôm
-    # 24/08 bằng bản CŨ: sổ ghi 11:44:54 hôm trước, lúc đọc là 07:00 hôm sau.
-    #
-    # Cùng họ với luật §4 "phép đo không chạy phải NÓI LÀ KHÔNG CHẠY": ở đó
-    # là giấu việc không chạy, ở đây là giấu việc SỐ NÀY LẤY TỪ HÔM NÀO.
-    # 26/08: CHỐT TRÊN CHỈ NỔ KHI KHÔNG ĐO LẠI DÒNG NÀO — sót ca ĐO MỘT PHẦN.
-    #
-    # Hôm nay tôi chép kho ra bản đóng băng bằng `tar` và QUÊN loại `data/`,
-    # nên bản chép mang theo sổ cũ (2.538 tệp). Cache ở trên bỏ qua mọi mục đã
-    # có trong sổ: còn 34 mục để đo, `de` KHÔNG rỗng, nên chốt dưới im lặng —
-    # và bảng in ra trộn 34 số mới với số cũ từ những lần chạy trước, có lần
-    # từ hôm 25/08.
-    #
-    # Bắt được bằng ba dấu hiệu, không dấu nào là "đọc bảng thấy sai":
-    #   thời gian chạy   6 phút, lần đo thật trước đó 51 phút
-    #   phép cộng        34 ca + 45 không đo được = 79, mà bộ đề chỉ 66 mục
-    #   hai cỗ máy       bản CŨ và bản MỚI ra số GIỐNG HỆT nhau
-    #
-    # Nên nói ra ở MỌI trường hợp sổ có sẵn, không chỉ khi sổ đầy.
     if so and de:
         print("  ***  ĐO MỘT PHẦN — BẢNG DƯỚI TRỘN SỐ CŨ VỚI SỐ MỚI  ***")
         print("  %d mục đọc từ sổ CŨ (%s, ghi lúc %s)" % (
@@ -423,7 +423,7 @@ def main() -> int:
 
     for i, d in enumerate(de, 1):
         t1 = time.monotonic()
-        r = chay_mot_de(d)
+        r = chay_mot_de(d, dung_dong=_CO_DONG_KIEM_TRA)
         r.update({"tep": d["tep"], "muc": d["muc"], "ho": d["ho"],
                   "mo_ta": d["mo_ta"], "dong": d["dong"],
                   "giay": round(time.monotonic() - t1, 1)})

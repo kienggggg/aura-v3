@@ -272,6 +272,13 @@ def main() -> int:
     shutil.copytree(GOC, tam, ignore=shutil.ignore_patterns(
         "venv", ".git", "__pycache__", "data", "_rac", "*.pyc"))
 
+    from kiem_ban_dong_bang import kiem_tra_ban_dong_bang
+    ok_gate, err_gate = kiem_tra_ban_dong_bang(tam, GOC, list(TEP_TEST.values()))
+    if not ok_gate:
+        print(f"  *** CỬA ĐÓNG BĂNG TRƯỢT: {err_gate} ***")
+        shutil.rmtree(tam_goc, ignore_errors=True)
+        return 2
+
     de = []
     thong_ke: dict[str, dict[str, int]] = {}
     thong_ke_loai: dict[str, dict[str, int]] = {}

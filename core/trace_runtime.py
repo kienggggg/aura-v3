@@ -85,8 +85,8 @@ def _chay_pytest_lay_danh_sach_test(tep_test: str, cwd: Optional[Path] = None) -
         return []
 
 
-def _chay_pytest_tim_test_do(tep_test: str, cwd: Optional[Path] = None) -> list[str]:
-    """Chạy toàn bộ tệp test và trả về danh sách các test case bị FAILED/ERROR theo thứ tự."""
+def _chay_pytest_tim_test_do_phan_loai(tep_test: str, cwd: Optional[Path] = None) -> Tuple[List[str], List[str]]:
+    """Chạy toàn bộ tệp test và trả về (danh_sach_test_do_that, danh_sach_loi_nap)."""
     root = cwd or PROJECT_ROOT
     cmd = [
         PY, "-X", "utf8", "-m", "pytest", tep_test,
@@ -103,15 +103,34 @@ def _chay_pytest_tim_test_do(tep_test: str, cwd: Optional[Path] = None) -> list[
             timeout=60,
         )
         failing_tests = []
+        import_errors = []
         for line in res.stdout.splitlines():
             line = line.strip()
             if line.startswith("FAILED "):
-                # Format: FAILED tests/test_x.py::test_func[...] - AssertionError...
                 part = line[len("FAILED "):].split(" - ")[0].split(" : ")[0].strip()
                 failing_tests.append(part)
-        return failing_tests
-    except Exception:
-        return []
+            elif line.startswith("ERROR "):
+                part = line[len("ERROR "):].split(" - ")[0].split(" : ")[0].strip()
+                if "::" in part:
+                    failing_tests.append(part)
+                else:
+                    import_errors.append(part)
+            elif line.startswith("INTERNALERROR"):
+                import_errors.append(line)
+
+        if res.returncode == 2 and not failing_tests and not import_errors:
+            import_errors.append(f"Lỗi thu thập/nạp module (mã thoát 2): {res.stderr.strip()[:200]}")
+
+        return failing_tests, import_errors
+    except Exception as e:
+        return [], [str(e)]
+
+
+def _chay_pytest_tim_test_do(tep_test: str, cwd: Optional[Path] = None) -> list[str]:
+    """Chạy toàn bộ tệp test và trả về danh sách các test case bị FAILED/ERROR theo thứ tự."""
+    ds_do, _ = _chay_pytest_tim_test_do_phan_loai(tep_test, cwd=cwd)
+    return ds_do
+
 
 
 def tao_script_tracer(

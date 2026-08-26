@@ -2071,6 +2071,18 @@ body {
 }
 .nhan-nhanh.hien { opacity: 1; }
 
+/* Bao HONG VIEC: do, dam, va o lai lau hon (8 giay thay vi 3). Them
+   26/08/2026 khi bo `alert()`. Loi bao loi phai doc kip - `alert()` cu chan
+   ca trang nhung mat sach khi bam OK. */
+.nhan-nhanh.hong {
+  color: var(--color-error-do);
+  font-weight: 600;
+  max-width: 460px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Thanh tab tệp */
 .tab-bar {
   display: flex;

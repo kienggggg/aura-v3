@@ -2433,6 +2433,34 @@
   }
 
   let hetGioBao = null;
+
+  /** Báo một câu ngắn cho người dùng, KHÔNG chặn màn hình.
+   *
+   * Thêm 26/08/2026, thay cho `alert()`.
+   *
+   * Trước hôm nay app dùng `alert()` ở 6 chỗ, và một trong đó là
+   * `alert('Lưu tệp thành công!')` — bật lên MỖI LẦN LƯU. Người dùng bấm
+   * Ctrl+S theo phản xạ rồi phải bấm tiếp OK để làm việc tiếp; lưu mười lần
+   * là mười lần bị chặn. VS Code không nói gì khi lưu được — dấu chấm "chưa
+   * lưu" tắt đi là đủ, và nay thanh trạng thái đáy đã làm việc ấy.
+   *
+   * Năm chỗ còn lại là báo lỗi. `alert()` trông giống hộp cảnh báo của trình
+   * duyệt hơn là của app, chặn cả trang, và mất sạch khi bấm OK — người dùng
+   * không đọc kịp thì không xem lại được.
+   *
+   * `loai`:  '' bình thường (tự mờ sau 3 giây)
+   *          'hong' hỏng việc — đỏ, ở lại 8 giây vì người ta cần đọc kỹ hơn
+   */
+  function baoNhanh(chu, loai = '') {
+    const o = document.getElementById('nhanNhanh');
+    if (!o) return;
+    o.textContent = chu;
+    o.className = 'nhan-nhanh hien' + (loai === 'hong' ? ' hong' : '');
+    if (hetGioBao) clearTimeout(hetGioBao);
+    hetGioBao = setTimeout(
+      () => { o.className = 'nhan-nhanh'; }, loai === 'hong' ? 8000 : 3000);
+  }
+
   function baoDinhNghia(chu) {
     // PHẢI NHÌN THẤY ĐƯỢC. Bản đầu rơi về `console.log` khi không có thanh
     // tìm — tức câu "không tìm thấy" biến mất khỏi mắt người dùng. Đúng loại
@@ -2880,6 +2908,52 @@
     }
   }
 
+  // ==========================================================================
+  // NHỚ TỆP ĐANG MỞ — thêm 26/08/2026
+  // ==========================================================================
+  //
+  // Trước hôm nay, mở app lên LUÔN thấy bài mẫu "1. Hàm cộng hai số" — mã của
+  // người khác, không nằm trong dự án của người dùng. Với người mở app trong
+  // thư mục bài tập của mình, đó là câu chào bằng đồ của người lạ.
+  //
+  // Chua hơn: app ĐÃ CÓ SẴN màn hình chào cho canvas trống
+  // (`#emptyCanvasGuide` — "Vùng soạn thảo đang trống", kèm nút "Thử bài
+  // mẫu"), nhưng lúc khởi động mã nhét thẳng bài mẫu vào `state.tree` nên màn
+  // hình ấy CHƯA TỪNG HIỆN.
+  //
+  // Nay: lần đầu vào một dự án thì vẫn bài mẫu (nó dạy được, và nút trong màn
+  // hình chào cũng chỉ tới nó). Từ lần thứ hai thì mở lại tệp đang làm dở —
+  // đúng lối mọi trình soạn thảo.
+  //
+  // Khoá theo TÊN DỰ ÁN, không dùng chung một khoá: hai dự án khác nhau thì
+  // tệp đang làm dở cũng khác. Dùng chung thì mở dự án B lại đòi tệp của dự
+  // án A và nhận 400.
+  function khoaNhoTep() {
+    return 'aura_tep_dang_mo:' + (state.tenDuAn || '(khong ro)');
+  }
+
+  function nhoTepDangMo(duongDan) {
+    try {
+      if (duongDan) localStorage.setItem(khoaNhoTep(), duongDan);
+      else localStorage.removeItem(khoaNhoTep());
+    } catch (_) {
+      // Trình duyệt chặn lưu trữ (cửa sổ ẩn danh, chặn dữ liệu trang) thì bỏ
+      // qua — mất tiện nghi, không mất dữ liệu.
+    }
+  }
+
+  async function moLaiTepLanTruoc() {
+    let duongDan = null;
+    try { duongDan = localStorage.getItem(khoaNhoTep()); } catch (_) { return false; }
+    if (!duongDan) return false;
+    // Tệp có thể đã bị xoá hay đổi tên từ lần trước. `openPyFile` tự báo lỗi
+    // qua ô báo nhẹ; ở đây chỉ cần quên nó đi để lần sau khỏi đòi lại.
+    const truoc = state.activeFilePath;
+    await openPyFile(duongDan);
+    if (state.activeFilePath === truoc) { nhoTepDangMo(null); return false; }
+    return true;
+  }
+
   async function openPyFile(filePath) {
     if (!filePath || !filePath.trim()) return;
     try {
@@ -2895,6 +2969,7 @@
         }
         // Mở tệp = MỞ MỘT TAB. Đã mở rồi thì chuyển sang, không mở bản
         // thứ hai — hai tab cùng một tệp là hai cây thẻ ghi đè nhau lúc lưu.
+        nhoTepDangMo(data.duong_dan);
         moTrongTab({ duong_dan: data.duong_dan, ten_tep: data.ten_tep,
                      tree: data.tree, sha256: data.sha256 });
         xoaLichSu();
@@ -2916,10 +2991,10 @@
         yeuCauChinhCotDoc();
       } else {
         const err = await readJsonSafely(resp);
-        alert(`Lỗi mở tệp: ${err.error}`);
+        baoNhanh(`Không mở được tệp: ${err.error}`, 'hong');
       }
     } catch (err) {
-      alert(`Lỗi kết nối khi mở tệp: ${err.message}`);
+      baoNhanh(`Không nối được máy chủ khi mở tệp: ${err.message}`, 'hong');
     }
   }
 
@@ -2973,13 +3048,35 @@
         document.getElementById('currentFileName').textContent = data.duong_dan.split('/').pop().split('\\').pop();
         document.getElementById('fileModifiedBadge').style.display = 'none';
         document.getElementById('saveFileModal').style.display = 'none';
-        alert('Lưu tệp thành công!');
+        // Lưu vào tệp nào thì lần sau mở lại tệp ấy — kể cả khi vừa "lưu
+        // thành tệp mới", vì đó mới là tệp người dùng đang làm.
+        nhoTepDangMo(target);
+        // ĐƯỜNG LƯU KHÔNG ĐI QUA `onTreeChanged`, nên phải vẽ lại thanh
+        // trạng thái ở đây.
+        //
+        // Bắt được 26/08 bằng cách tự bấm Ctrl+S: lưu THÀNH CÔNG, tệp trên
+        // đĩa đúng, `state.hasModifications` đã về `false`, dấu chấm trên tab
+        // đã tắt — mà thanh trạng thái vẫn ghi "● chưa lưu". Và cờ ấy còn kéo
+        // theo `beforeunload`: đóng tab sẽ bị hỏi vô cớ trong khi không còn
+        // gì để mất.
+        //
+        // Đúng cái chú thích của chính tôi ở `veThanhTrangThai` cảnh báo:
+        // cắm vào một chỗ thì sẽ có nhánh KHÔNG đi qua chỗ ấy. Viết ra rồi
+        // vẫn vấp.
+        veThanhTrangThai();
+        // Lưu được thì KHÔNG chặn màn hình: thanh trạng thái đáy đã ghi
+        // "✓ đã lưu" và dấu chấm trên tab đã tắt. Một câu ngắn tự mờ là đủ.
+        //
+        // Chỉ hiện TÊN TỆP, không hiện đường dẫn đầy đủ: đường dẫn tuyệt đối
+        // dài hơn 100 ký tự, tràn hết ô báo và chẳng nói thêm gì — người dùng
+        // biết mình đang ở dự án nào rồi (thanh trạng thái ghi bên trái).
+        baoNhanh(`✓ Đã lưu ${target.split('/').pop().split('\\').pop()}`);
       } else {
         const err = await readJsonSafely(resp);
-        alert(`Lỗi lưu tệp: ${err.error}`);
+        baoNhanh(`Không lưu được: ${err.error}`, 'hong');
       }
     } catch (err) {
-      alert(`Lỗi kết nối khi lưu tệp: ${err.message}`);
+      baoNhanh(`Không nối được máy chủ khi lưu: ${err.message}`, 'hong');
     }
   }
 
@@ -3614,12 +3711,21 @@
   // ==========================================================================
   // KHỞI ĐỘNG ỨNG DỤNG
   // ==========================================================================
-  window.addEventListener('DOMContentLoaded', () => {
+  window.addEventListener('DOMContentLoaded', async () => {
     initAuthToken();
     initLayoutPreferences();
     renderToolbox();
     setupEventListeners();
-    configureRuntimeCapabilities();
+    // 26/08: CHỜ lượt này xong. Nó gọi `/api/status`, và `state.tenDuAn` lấy
+    // từ đó là KHOÁ để nhớ tệp đang mở của từng dự án. Không chờ thì
+    // `moLaiTepLanTruoc()` ở dưới đọc khoá '(khong ro)' — sai dự án, và lần
+    // sau mở lại đòi nhầm tệp.
+    //
+    // Đây là lần thứ hai trong buổi tôi vấp đúng chuyện này (lần trước: cây
+    // tệp vẽ xong trước khi tên dự án về, nên nhãn gốc vẫn là `root/`). Một
+    // lượt gọi mạng loopback tốn vài mili giây; chờ nó rẻ hơn nhiều so với
+    // một lỗi chỉ hiện ra ở lần chạy thứ hai.
+    await configureRuntimeCapabilities();
 
     // Nạp mặc định bài mẫu "Hàm cộng hai số" để người dùng mở ra có thể trải nghiệm ngay
     state.tree = [
@@ -3654,6 +3760,17 @@
     veThanhTab();
     loadAvailableTests();
     yeuCauChinhCotDoc();
+
+    // 26/08: mở lại tệp đang làm dở — SAU khi tab bài mẫu đã dựng xong.
+    //
+    // Thứ tự này bắt buộc: `moTrongTab` gọi `dongBoTabHienTai()` để chụp tab
+    // hiện tại trước khi mở tab mới. Chưa có tab nào thì không có chỗ chụp,
+    // và bài mẫu bị nuốt mất — đúng lỗi chú thích phía trên đã ghi.
+    //
+    // Không `await`: mở tệp là một lượt gọi mạng. Chờ nó thì màn hình đứng
+    // im cho tới khi xong; để nó tự chạy thì người dùng thấy bài mẫu trước,
+    // rồi tệp của mình thế chỗ ngay sau đó.
+    moLaiTepLanTruoc();
   });
 
   if (typeof window !== 'undefined') {

@@ -174,3 +174,13 @@ Nói ra trước khi ai đó phải hỏi:
 Kho cũ `AURA_OS_v2` có ~20 khoá API thật trong lịch sử. Kho v3 tách ra ngày
 12/08/2026, lịch sử sạch từ commit đầu, và **không cấu hình remote**. Khoá đi
 vào `.env`, không vào tệp được git theo dõi.
+
+---
+
+## Bản quyền
+
+© 2026 Phạm Xuân Kiên. Bảo lưu mọi quyền. Xem [LICENSE](LICENSE).
+
+Giấy phép độc quyền: **không được sao chép, sửa đổi hay phân phối lại** nếu
+không có văn bản cho phép. Điều khoản 6 của giấy phép nhắc lại đúng chỗ nguy
+hiểm nhất — app chạy mã người dùng với **đủ quyền tài khoản**, không có sandbox.

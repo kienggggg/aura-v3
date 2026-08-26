@@ -1,0 +1,84 @@
+GIẤY PHÉP ĐỘC QUYỀN — AURA v3
+PROPRIETARY LICENSE — AURA v3
+
+Bản quyền © 2026 Phạm Xuân Kiên. Bảo lưu mọi quyền.
+Copyright © 2026 Phạm Xuân Kiên. All rights reserved.
+
+
+TIẾNG VIỆT
+==========
+
+1. QUYỀN SỞ HỮU
+   Toàn bộ mã nguồn, tài liệu, dữ liệu và mọi tệp khác trong dự án AURA v3
+   ("Phần mềm") thuộc sở hữu của Phạm Xuân Kiên ("Chủ sở hữu").
+
+2. KHÔNG CẤP QUYỀN
+   Giấy phép này KHÔNG cấp cho bất kỳ ai quyền sử dụng, sao chép, sửa đổi,
+   hợp nhất, xuất bản, phân phối, cấp phép lại hay bán Phần mềm, dù toàn bộ
+   hay một phần, trừ khi có văn bản cho phép rõ ràng từ Chủ sở hữu.
+
+3. KHÔNG PHÂN PHỐI LẠI
+   Không được phân phối lại Phần mềm dưới bất kỳ hình thức nào — mã nguồn,
+   bản dịch, gói cài, hay bản đã sửa đổi.
+
+4. KHÔNG BẢO HÀNH
+   Phần mềm được cung cấp "NGUYÊN TRẠNG", không kèm bảo hành dưới bất kỳ
+   hình thức nào, dù rõ ràng hay ngụ ý, bao gồm nhưng không giới hạn ở bảo
+   đảm về khả năng bán được, tính phù hợp cho một mục đích cụ thể, và không
+   vi phạm quyền của bên thứ ba.
+
+5. KHÔNG CHỊU TRÁCH NHIỆM
+   Trong mọi trường hợp, Chủ sở hữu không chịu trách nhiệm cho bất kỳ khiếu
+   nại, thiệt hại hay nghĩa vụ nào phát sinh từ Phần mềm hoặc từ việc sử
+   dụng Phần mềm.
+
+6. ĐIỀU CẦN BIẾT VỀ AN TOÀN
+   Phần mềm này chạy mã Python do người dùng cung cấp, với ĐẦY ĐỦ QUYỀN của
+   tài khoản hệ điều hành đang chạy nó. KHÔNG có cơ chế cô lập (sandbox).
+   Xem mục an toàn trong README để biết chi tiết đã đo được.
+
+   Điều khoản này không phải lời chối bỏ trách nhiệm cho có: nó là một sự
+   thật kỹ thuật đã được kiểm bằng cách chạy thử, và người dùng cần biết
+   trước khi bật chức năng chạy mã.
+
+
+ENGLISH
+=======
+
+1. OWNERSHIP
+   All source code, documentation, data, and other files in the AURA v3
+   project (the "Software") are owned by Phạm Xuân Kiên (the "Owner").
+
+2. NO LICENSE GRANTED
+   This license does NOT grant any person the right to use, copy, modify,
+   merge, publish, distribute, sublicense, or sell the Software, in whole or
+   in part, except with the express written permission of the Owner.
+
+3. NO REDISTRIBUTION
+   The Software may not be redistributed in any form — source, translation,
+   installer package, or modified version.
+
+4. NO WARRANTY
+   The Software is provided "AS IS", without warranty of any kind, express
+   or implied, including but not limited to the warranties of
+   merchantability, fitness for a particular purpose, and noninfringement.
+
+5. NO LIABILITY
+   In no event shall the Owner be liable for any claim, damages, or other
+   liability arising from the Software or the use of the Software.
+
+6. SAFETY NOTICE
+   This Software executes user-supplied Python code with the FULL PRIVILEGES
+   of the operating-system account running it. There is NO sandbox. See the
+   safety section of the README for the measured details.
+
+
+---
+
+Tệp này là văn bản pháp lý viết bằng lời thường, không phải văn bản do luật
+sư soạn. Nếu Phần mềm được dùng vào mục đích thương mại hoặc phân phối ra
+ngoài, nên nhờ người có chuyên môn pháp lý xem lại.
+
+This file is a plain-language legal document, not one drafted by a lawyer.
+If the Software is used commercially or distributed externally, having it
+reviewed by qualified legal counsel is advisable.

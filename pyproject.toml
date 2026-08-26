@@ -8,7 +8,32 @@ version = "0.1.0"
 description = "Lập trình bằng thẻ — dựng chương trình Python bằng cách kéo thả, kèm bộ tìm lỗi"
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "Proprietary" }
+# Sếp chọn Proprietary ngày 26/08/2026.
+#
+# BA DẠNG KHAI, THỬ CẢ BA MỚI RA DẠNG CHẠY ĐƯỢC — không đoán:
+#
+#   license = "Proprietary"                    -> DỰNG KHÔNG ĐƯỢC
+#       "must be valid exactly by one definition" — setuptools bản này đòi
+#       dạng bảng khi KHÔNG có `license-files`.
+#
+#   license = { text = "Proprietary" }
+#   license-files = ["LICENSE"]                -> DỰNG KHÔNG ĐƯỢC
+#       "must be string" — thêm `license-files` là chuyển sang PEP 639, ở đó
+#       `license` phải là chuỗi SPDX. Hai lỗi NGƯỢC NHAU tuỳ có dòng kia hay
+#       không.
+#
+#   license = { file = "LICENSE" }             -> dựng được, NHƯNG
+#       setuptools nhét NGUYÊN VĂN BẢN giấy phép vào trường `License:` của
+#       METADATA. Wheel 234.906 byte, METADATA phình.
+#
+#   license = "LicenseRef-Proprietary"         <- DẠNG ĐANG DÙNG
+#   license-files = ["LICENSE"]
+#       PEP 639 cho tiền tố `LicenseRef-` dành riêng cho giấy phép không nằm
+#       trong danh mục SPDX. Đo: wheel 233.183 byte, METADATA 6.164 byte,
+#       `License-Expression: LicenseRef-Proprietary`, `License-File: LICENSE`,
+#       và tệp có thật trong `dist-info/licenses/`.
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE"]
 authors = [{ name = "Phạm Xuân Kiên" }]
 
 # BA GÓI NÀY ĐO BẰNG CÁCH QUÉT `import` THẬT, KHÔNG CHÉP TỪ TÀI LIỆU.

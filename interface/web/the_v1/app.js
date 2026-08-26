@@ -1162,6 +1162,7 @@
     renderCanvas();
     updateToolboxCounters();
     veThanhTrangThai();
+    kiemCauTrucDoi();
     updateCodePreview();
     updateDiagnosticsPanel();
     updateStatusBar();
@@ -2954,6 +2955,54 @@
     return true;
   }
 
+  // ==========================================================================
+  // BAO SOM: TEP MO TU DIA CHI SUA DUOC NOI DUNG O
+  // ==========================================================================
+  //
+  // 26/08/2026. Nguoi dung keo mot the moi vao mot tep dang mo, tiep tuc lam
+  // them muoi phut, roi bam Ctrl+S va nhan:
+  //
+  //   422: Ban public v1 chi ho tro sua o cua the da co;
+  //        them/xoa/doi thu tu/doi loai chua duoc phep
+  //
+  // Bao o BUOC CUOI la bao qua muon. Nay bao ngay luc the dau tien duoc
+  // them, kem loi thoat ("Luu thanh tep moi") chu khong chi bao la khong duoc.
+  //
+  // VI SAO HANG RAO AY DUNG — da do, khong phai doan. Bo ghi sua TAI CHO tren
+  // CST cua tep goc, nen the moi khong co cho tuong ung de ghi vao. Duong con
+  // lai la sinh lai ca tep tu cay the, va do tren 33 tep that:
+  //
+  //   ma nguon AURA (phuc tap)   26/28 tep MAT NOI DUNG THAT khi sinh lai
+  //                              (chu ky ham nhieu dong bi gop, thut le
+  //                               docstring doi)
+  //   tep kieu nguoi moi hoc      5/5 chi khac DONG TRONG, 0 mat noi dung
+  //
+  // Nen hang rao dung voi tep phuc tap. Voi tep don gian thi mo duoc, nhung
+  // phai vá `sinh_ma_python` giu dong trong + xuong dong cuoi tep truoc da —
+  // viec do nam trong `core/the_v1.py`, dang co phep do chay tren no.
+  //
+  // Truoc mat: noi that, noi som, va chi duong.
+
+  /** Chu ky CAU TRUC cua cay the: chi loai the va hinh long nhau, khong o. */
+  function chuKyCauTruc(ds) {
+    return (ds || []).map(
+      t => t.ma + '(' + chuKyCauTruc(t.than) + ')').join(',');
+  }
+
+  let daBaoCauTruc = false;
+
+  /** Bao mot lan khi cau truc lech khoi luc mo tep. */
+  function kiemCauTrucDoi() {
+    if (!state.activeFilePath || !state.chuKyLucMo) return;
+    const gio = chuKyCauTruc(state.tree);
+    if (gio === state.chuKyLucMo) { daBaoCauTruc = false; return; }
+    if (daBaoCauTruc) return;
+    daBaoCauTruc = true;
+    baoNhanh(
+      'Tệp mở từ đĩa chỉ sửa được NỘI DUNG Ô. Thêm/bớt thẻ thì bấm ' +
+      '"Lưu Tệp" rồi đổi tên để lưu thành tệp mới.', 'hong');
+  }
+
   async function openPyFile(filePath) {
     if (!filePath || !filePath.trim()) return;
     try {
@@ -2970,6 +3019,11 @@
         // Mở tệp = MỞ MỘT TAB. Đã mở rồi thì chuyển sang, không mở bản
         // thứ hai — hai tab cùng một tệp là hai cây thẻ ghi đè nhau lúc lưu.
         nhoTepDangMo(data.duong_dan);
+        // Chup chu ky cau truc NGAY LUC MO, de biet nguoi dung co them/bot
+        // the hay khong. So bang chu ky chu khong dem so the: doi mot the
+        // `neu` thanh `lap` khong lam so the doi, nhung backend van tu choi.
+        state.chuKyLucMo = chuKyCauTruc(data.tree);
+        daBaoCauTruc = false;
         moTrongTab({ duong_dan: data.duong_dan, ten_tep: data.ten_tep,
                      tree: data.tree, sha256: data.sha256 });
         xoaLichSu();
@@ -3063,6 +3117,9 @@
         // Đúng cái chú thích của chính tôi ở `veThanhTrangThai` cảnh báo:
         // cắm vào một chỗ thì sẽ có nhánh KHÔNG đi qua chỗ ấy. Viết ra rồi
         // vẫn vấp.
+        // Luu duoc thi cau truc tren dia = cau truc dang xem.
+        state.chuKyLucMo = chuKyCauTruc(state.tree);
+        daBaoCauTruc = false;
         veThanhTrangThai();
         // Lưu được thì KHÔNG chặn màn hình: thanh trạng thái đáy đã ghi
         // "✓ đã lưu" và dấu chấm trên tab đã tắt. Một câu ngắn tự mờ là đủ.
@@ -3073,7 +3130,18 @@
         baoNhanh(`✓ Đã lưu ${target.split('/').pop().split('\\').pop()}`);
       } else {
         const err = await readJsonSafely(resp);
-        baoNhanh(`Không lưu được: ${err.error}`, 'hong');
+        if (String(err.error || '').includes('422')) {
+          // Biến câu 422 của máy chủ thành việc người dùng LÀM ĐƯỢC.
+          //
+          // Câu gốc — "Bản public v1 chỉ hỗ trợ sửa ô của thẻ đã có;
+          // thêm/xóa/đổi thứ tự/đổi loại chưa được phép (root: số thẻ đã thay
+          // đổi)" — đúng về kỹ thuật nhưng không nói người dùng phải làm gì,
+          // và "Bản public v1" là chuyện nội bộ của người viết app.
+          baoNhanh('Tệp này mở từ đĩa nên chỉ sửa được nội dung ô. '
+                   + 'Bấm "Lưu Tệp" rồi đổi tên để lưu thành tệp mới.', 'hong');
+        } else {
+          baoNhanh(`Không lưu được: ${err.error}`, 'hong');
+        }
       }
     } catch (err) {
       baoNhanh(`Không nối được máy chủ khi lưu: ${err.message}`, 'hong');

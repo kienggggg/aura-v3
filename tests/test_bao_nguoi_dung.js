@@ -144,6 +144,61 @@ describe('mở lên thấy việc của mình', () => {
       'khởi động không chờ configureRuntimeCapabilities() — khoá nhớ tệp sẽ sai');
   });
 
+  test('nói sớm khi thêm/bớt thẻ trên tệp mở từ đĩa', () => {
+    // 26/08. Người dùng kéo một thẻ mới vào tệp đang mở, làm thêm mười phút,
+    // rồi bấm Ctrl+S và nhận:
+    //
+    //   422: Bản public v1 chỉ hỗ trợ sửa ô của thẻ đã có;
+    //        thêm/xóa/đổi thứ tự/đổi loại chưa được phép
+    //
+    // Báo ở bước cuối là báo quá muộn. Nay báo ngay lúc thẻ đầu tiên được
+    // thêm, kèm lối thoát.
+    //
+    // Hàng rào ấy ĐÚNG, đã đo trên 33 tệp thật: bộ ghi sửa tại chỗ trên CST
+    // nên thẻ mới không có chỗ ghi; đường còn lại là sinh lại cả tệp, mà sinh
+    // lại làm 26/28 tệp mã nguồn AURA MẤT NỘI DUNG THẬT (chữ ký hàm nhiều
+    // dòng bị gộp, thụt lề docstring đổi). Với tệp kiểu người mới học thì
+    // 5/5 chỉ khác dòng trống.
+    const ma = maKhongChuThich();
+    assert.ok(/function chuKyCauTruc\(ds\)/.test(ma), 'thiếu hàm chuKyCauTruc');
+    assert.ok(/function kiemCauTrucDoi\(\)/.test(ma), 'thiếu hàm kiemCauTrucDoi');
+    assert.ok(/state\.chuKyLucMo = chuKyCauTruc\(data\.tree\)/.test(ma),
+      'không chụp chữ ký cấu trúc lúc mở tệp');
+    // Phải gọi từ `onTreeChanged` — mọi đường làm cây đổi đều qua đó.
+    const i = APP_JS.indexOf('function onTreeChanged');
+    assert.ok(APP_JS.slice(i, i + 2500).includes('kiemCauTrucDoi()'),
+      'onTreeChanged không gọi kiemCauTrucDoi() — sẽ không báo gì cho tới ' +
+      'lúc bấm lưu');
+  });
+
+  test('chữ ký cấu trúc bắt cả ĐỔI LOẠI thẻ, không chỉ đếm số', () => {
+    // Đổi một thẻ `neu` thành `lap` không làm SỐ thẻ đổi, nhưng backend vẫn
+    // từ chối ("đổi loại chưa được phép"). Đếm số thẻ thì lọt ca này.
+    const m = APP_JS.match(/function chuKyCauTruc\(ds\)\s*\{[\s\S]*?\n  \}/);
+    assert.ok(m, 'không tách được hàm chuKyCauTruc');
+    const ky = new Function(`${m[0]}; return chuKyCauTruc;`)();
+
+    const a = [{ ma: 'neu', than: [{ ma: 'in_ra', than: [] }] }];
+    const b = [{ ma: 'lap', than: [{ ma: 'in_ra', than: [] }] }];
+    assert.notEqual(ky(a), ky(b), 'đổi LOẠI thẻ mà chữ ký không đổi');
+
+    const c = [{ ma: 'neu', than: [{ ma: 'in_ra', than: [] }, { ma: 'gan', than: [] }] }];
+    assert.notEqual(ky(a), ky(c), 'thêm thẻ CON mà chữ ký không đổi');
+
+    // Sửa nội dung ô thì KHÔNG được coi là đổi cấu trúc — báo bừa thì phiền.
+    const d = [{ ma: 'neu', o: { dieu_kien: 'x > 1' }, than: [{ ma: 'in_ra', than: [] }] }];
+    assert.equal(ky(a), ky(d), 'sửa ô mà chữ ký đổi — sẽ báo bừa');
+  });
+
+  test('câu 422 được dịch thành việc người dùng làm được', () => {
+    const ma = maKhongChuThich();
+    assert.ok(/includes\('422'\)/.test(ma),
+      'không bắt riêng lỗi 422 — người dùng sẽ đọc nguyên câu "Bản public v1 ' +
+      'chỉ hỗ trợ..." vốn là chuyện nội bộ của người viết app');
+    assert.ok(/Lưu Tệp.*đổi tên|đổi tên.*tệp mới/.test(ma),
+      'câu thay thế không chỉ ra việc phải làm');
+  });
+
   test('mở lại tệp cũ SAU khi tab đầu đã dựng', () => {
     // `moTrongTab` gọi `dongBoTabHienTai()` để chụp tab hiện tại trước khi mở
     // tab mới. Chưa có tab nào thì không có chỗ chụp, và bài mẫu bị nuốt mất.

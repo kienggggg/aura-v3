@@ -32,6 +32,7 @@ from core.the_v1 import (
     chay_ma_tien_trinh_rieng,
     kiem_tra_cay_the,
     sinh_ma_python,
+    sinh_ma_python_ca_tep,
 )
 from core.the_cst import (
     doc_chuoi_py_sang_cay_the as _doc_chuoi_cst,
@@ -618,11 +619,24 @@ async def api_mo_tep(request: web.Request) -> web.Response:
             tree_payload = [n.to_dict() for n in nodes]
             newline = "CRLF" if b"\r\n" in raw_bytes else "LF"
             so_dong = len(raw_bytes.decode("utf-8").splitlines())
+            # Tệp .json thì cây thẻ LÀ toàn bộ nội dung — thêm/bớt luôn được.
+            them_bot_the_duoc = True
         else:
             record = doc_chuoi_py_sang_cay_the(raw_bytes, str(safe_path))
             tree_payload = [n.to_dict() for n in record.tree]
             newline = "CRLF" if record.newline == "\r\n" else "LF"
             so_dong = len(record.lines)
+            # NÓI NGAY LÚC MỞ: tệp này có cho thêm/bớt thẻ không.
+            #
+            # Giao diện cần biết để khỏi báo bừa. Trước 26/08 nó báo "chỉ sửa
+            # được nội dung ô" cho MỌI tệp mở từ đĩa; nay với tệp biểu diễn
+            # trọn vẹn bằng thẻ thì thêm thẻ LƯU ĐƯỢC thật, nên câu báo ấy sẽ
+            # sai với đúng những tệp nó cần đúng.
+            #
+            # Tính bằng CHÍNH phép đo dùng ở đường lưu — một nguồn sự thật,
+            # không phải hai luật song song rồi lệch nhau.
+            them_bot_the_duoc = _sinh_lai_duoc_tron_ven(
+                record.tree, raw_bytes, record.newline)
 
         try:
             rel_path = str(safe_path.relative_to(config.project_root)).replace("\\", "/")
@@ -639,9 +653,63 @@ async def api_mo_tep(request: web.Request) -> web.Response:
             "newline": newline,
             "so_dong": so_dong,
             "sha256": sha256_hash,
+            "them_bot_the_duoc": them_bot_the_duoc,
         })
     except Exception as e:
         return web.json_response({"error": f"Lỗi mở tệp: {str(e)}"}, status=500)
+
+
+def _sinh_lai_duoc_tron_ven(cay_goc, nguon_goc, xuong_dong=chr(10)) -> bool:
+    """Tệp này có biểu diễn TRỌN VẸN bằng cây thẻ không?
+
+    Phép đo chạy TẠI CHỖ, trên chính tệp đang lưu: sinh lại từ cây thẻ đọc ra
+    từ nó, rồi so với bản gốc TỪNG BYTE. Giống hệt nghĩa là mọi thứ tệp mang
+    đều nằm trong cây thẻ — nên sinh lại một cây ĐÃ SỬA cũng không đánh rơi gì.
+
+    Đây là chỗ cho phép mở hàng rào "không được thêm/bớt thẻ" mà không phải
+    đoán. Đo 26/08 trên 33 tệp thật:
+
+        tệp kiểu người mới học    5/5  giống hệt  -> mở cửa
+        mã nguồn AURA            0/28  khác      -> giữ chặn
+
+    Sai lệch ở 28 tệp kia là thật, không phải khoảng trắng: chữ ký hàm nhiều
+    dòng bị gộp lại một dòng, thụt lề docstring đổi.
+
+    Trả `False` khi có bất kỳ ngoại lệ nào. Không đo được thì KHÔNG mở cửa —
+    fail-closed, vì cái giá của mở nhầm là hỏng tệp người dùng.
+    """
+    try:
+        if isinstance(nguon_goc, (bytes, bytearray)):
+            nguon_goc = bytes(nguon_goc).decode("utf-8")
+        return sinh_ma_python_ca_tep(cay_goc, xuong_dong) == nguon_goc
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _tra_loi_luu_xong(request: web.Request, safe_path: Path, new_sha: str) -> web.Response:
+    """Lời đáp chung cho mọi đường lưu thành công.
+
+    Gom lại 26/08 khi thêm đường "sinh lại cả tệp": trước đó khối này nằm đúng
+    một chỗ ở cuối hàm, và đường mới sẽ phải chép lại nó. Chép ra thì có ngày
+    một đường quên ghi tệp vào `opened_files_whitelist`, và lỗi ấy chỉ lộ ra
+    lúc người dùng bấm chạy — im lặng cho tới tận đó.
+    """
+    config = lay_config(request)
+    runtime = lay_runtime(request)
+    try:
+        rel_path = str(safe_path.relative_to(config.project_root)).replace("\\", "/")
+    except ValueError:
+        rel_path = str(safe_path).replace("\\", "/")
+    runtime.opened_files_whitelist.add(str(safe_path))
+    runtime.opened_files_whitelist.add(rel_path)
+
+    return web.json_response({
+        "status": "PASS",
+        "duong_dan": str(safe_path),
+        "duong_dan_rel": rel_path,
+        "thong_diep": "Lưu tệp thành công",
+        "sha256": new_sha,
+    })
 
 
 async def api_luu_tep(request: web.Request) -> web.Response:
@@ -730,6 +798,38 @@ async def api_luu_tep(request: web.Request) -> web.Response:
             if source_bytes is not None:
                 record = doc_chuoi_py_sang_cay_the(source_bytes, str(source_path))
                 structural_problem = _rang_buoc_cau_truc_va_danh_dau(record.tree, nodes)
+                if structural_problem and _sinh_lai_duoc_tron_ven(
+                        record.tree, source_bytes, record.newline):
+                    # THÊM/BỚT THẺ ĐƯỢC PHÉP KHI TỆP BIỂU DIỄN TRỌN VẸN BẰNG THẺ
+                    # — mở 26/08/2026.
+                    #
+                    # Bộ ghi thường sửa TẠI CHỖ trên CST của tệp gốc, nên thẻ mới
+                    # không có chỗ tương ứng để ghi vào; vì thế thêm/bớt thẻ bị
+                    # chặn. Với người dùng app — người mới học kéo thẻ vào bài
+                    # tập của mình — đó là chặn đúng việc chính họ cần làm.
+                    #
+                    # Đường thoát: sinh lại CẢ TỆP từ cây thẻ. Nhưng sinh lại chỉ
+                    # an toàn khi tệp biểu diễn được TRỌN VẸN bằng thẻ. Đo vòng
+                    # tròn trên 33 tệp thật (đọc -> cây thẻ -> sinh lại -> so
+                    # từng byte), sau khi vá `sinh_ma_python` giữ dòng trống và
+                    # thêm xuống dòng cuối tệp:
+                    #
+                    #     tệp kiểu người mới học    5/5  GIỐNG HỆT TỪNG BYTE
+                    #     mã nguồn AURA            0/28  vẫn khác
+                    #
+                    # 28 tệp kia mất thật: chữ ký hàm nhiều dòng bị gộp lại một
+                    # dòng, thụt lề docstring đổi. Sinh lại chúng là làm hỏng mã
+                    # người khác.
+                    #
+                    # Nên luật mở cửa KHÔNG phải "tệp đơn giản thì cho" — đó là
+                    # đoán. Luật là một PHÉP ĐO chạy tại chỗ, trên chính tệp này:
+                    # sinh lại cây GỐC có ra đúng bản gốc từng byte không. Ra
+                    # đúng thì mọi thứ tệp mang đều nằm trong cây thẻ, nên sinh
+                    # lại cây MỚI không đánh rơi gì. Không ra đúng thì giữ chặn.
+                    out_bytes = sinh_ma_python_ca_tep(nodes, record.newline).encode("utf-8")
+                    _ghi_nguyen_tu(safe_path, out_bytes)
+                    new_sha = hashlib.sha256(out_bytes).hexdigest()
+                    return _tra_loi_luu_xong(request, safe_path, new_sha)
                 if structural_problem:
                     return web.json_response({
                         "error": (
@@ -749,27 +849,12 @@ async def api_luu_tep(request: web.Request) -> web.Response:
                 _ghi_nguyen_tu(safe_path, out_bytes)
                 new_sha = hashlib.sha256(out_bytes).hexdigest()
             else:
-                code_text = sinh_ma_python(nodes)
+                code_text = sinh_ma_python_ca_tep(nodes)  # co xuong dong cuoi tep
                 out_bytes = code_text.encode("utf-8")
                 _ghi_nguyen_tu(safe_path, out_bytes)
                 new_sha = hashlib.sha256(out_bytes).hexdigest()
 
-        config = lay_config(request)
-        runtime = lay_runtime(request)
-        try:
-            rel_path = str(safe_path.relative_to(config.project_root)).replace("\\", "/")
-        except ValueError:
-            rel_path = str(safe_path).replace("\\", "/")
-        runtime.opened_files_whitelist.add(str(safe_path))
-        runtime.opened_files_whitelist.add(rel_path)
-
-        return web.json_response({
-            "status": "PASS",
-            "duong_dan": str(safe_path),
-            "duong_dan_rel": rel_path,
-            "thong_diep": "Lưu tệp thành công",
-            "sha256": new_sha,
-        })
+        return _tra_loi_luu_xong(request, safe_path, new_sha)
     except Exception as e:
         return web.json_response({"error": f"Lỗi lưu tệp: {str(e)}"}, status=500)
 

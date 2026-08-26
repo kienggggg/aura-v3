@@ -38,3 +38,53 @@ def test_bao_toan_kieu_tra_ve_ham():
         for fn_name, ret_type in orig_fns.items():
             assert fn_name in gen_fns, f"[{p.name}] Ham '{fn_name}' bi mat chu ky tra ve '{ret_type}'!"
             assert gen_fns[fn_name] == ret_type, f"[{p.name}] Ham '{fn_name}' bi lech kieu: goc '{ret_type}' vs sinh '{gen_fns[fn_name]}'"
+
+
+def test_sinh_lai_giu_nguyen_tep_don_gian_tung_byte():
+    """Tệp kiểu người mới học phải sinh lại GIỐNG HỆT bản gốc, từng byte.
+
+    26/08/2026. Đây là điều kiện để mở hàng rào "không được thêm/bớt thẻ":
+    `interface/the_api.py::_sinh_lai_duoc_tron_ven` chỉ cho sinh lại cả tệp
+    khi sinh lại cây GỐC ra đúng bản gốc. Hỏng phép này thì hàng rào đóng sập
+    lại với mọi tệp, và người mới học lại không thêm được thẻ nào vào bài của
+    mình — im lặng, vì không có gì nổ.
+
+    Trước bản vá cùng ngày, `sinh_ma_python` nối các thẻ bằng đúng một xuống
+    dòng nên MỌI dòng trống giữa các câu lệnh biến mất, và chuỗi trả về không
+    có xuống dòng cuối tệp. Đo vòng tròn khi ấy: 0/33 tệp giống bản gốc.
+
+    Ba ca dưới là ba thứ đã hỏng thật: dòng trống, xuống dòng cuối, và quy
+    ước CRLF của Windows — nơi app này chạy.
+    """
+    from core.the_v1 import sinh_ma_python_ca_tep
+    from core.the_cst import doc_chuoi_py_sang_cay_the
+
+    CAC_CA = {
+        "hai dòng trống giữa hàm và lời gọi": (
+            "def chao(ten):\n"
+            '    print("Xin chao", ten)\n'
+            "\n"
+            "\n"
+            'chao("Kien")\n'
+        ),
+        "một dòng trống, có chú thích đầu tệp": (
+            "# Bai 1\n"
+            "x = 10\n"
+            "\n"
+            "print(x)\n"
+        ),
+        "không dòng trống nào": (
+            "for i in range(5):\n"
+            "    print(i)\n"
+        ),
+    }
+
+    for ten_ca, goc in CAC_CA.items():
+        for nhan_xd, nguon in (("LF", goc), ("CRLF", goc.replace("\n", "\r\n"))):
+            rec = doc_chuoi_py_sang_cay_the(nguon, "bai_tap.py")
+            moi = sinh_ma_python_ca_tep(rec.tree, rec.newline)
+            assert moi == nguon, (
+                f"[{ten_ca} · {nhan_xd}] sinh lại KHÁC bản gốc.\n"
+                f"  gốc  : {nguon!r}\n"
+                f"  sinh : {moi!r}"
+            )

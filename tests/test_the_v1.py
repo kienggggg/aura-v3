@@ -530,7 +530,24 @@ def test_api_e2e_mo_sua_luu_tep_http(tmp_path):
             assert resp_missing_sha.status == 428
             assert test_file.read_bytes() == raw_sample
 
-            # Thêm thẻ là thao tác cấu trúc chưa hỗ trợ: phải 422, không được bỏ qua âm thầm.
+            # THÊM THẺ: 26/08/2026 CHUYỂN TỪ "LUÔN 422" SANG "TUỲ TỆP".
+            #
+            # Trước đây mọi thao tác cấu trúc đều 422 vì bộ ghi sửa TẠI CHỖ
+            # trên CST, thẻ mới không có chỗ ghi vào. Nay có đường thứ hai:
+            # sinh lại CẢ TỆP từ cây thẻ — nhưng chỉ khi tệp biểu diễn TRỌN
+            # VẸN bằng thẻ, đo tại chỗ bằng `_sinh_lai_duoc_tron_ven`.
+            #
+            # ĐÂY KHÔNG PHẢI NỚI TAY. Mẫu `sample_e2e.py` này sinh lại ra
+            # ĐÚNG BẢN GỐC TỪNG BYTE — đã đo, kể cả chú thích cuối dòng
+            # (`# nhánh đầu`), chú kiểu (`x: int = 1) -> bool`), `elif`, và
+            # CRLF. Cây thẻ mang trọn tệp, nên sinh lại không đánh rơi gì.
+            #
+            # Còn `core/chat_contract.py` thì sinh lại KHÁC bản gốc (chữ ký
+            # hàm nhiều dòng bị gộp), nên vẫn 422 — kiểm ngay dưới.
+            assert data_open.get("them_bot_the_duoc") is True, (
+                "/api/mo_tep phải nói ngay lúc mở là tệp này cho thêm/bớt thẻ; "
+                "thiếu thì giao diện sẽ báo bừa 'chỉ sửa được nội dung ô'")
+
             structural_tree = copy.deepcopy(tree)
             structural_tree.append({
                 "id": "the_moi", "ma": "in_ra", "o": {"noi_dung": '"mới"'},
@@ -544,8 +561,48 @@ def test_api_e2e_mo_sua_luu_tep_http(tmp_path):
                 },
                 headers=headers,
             )
-            assert resp_structural.status == 422
-            assert test_file.read_bytes() == raw_sample
+            assert resp_structural.status == 200, (
+                "tệp biểu diễn trọn vẹn bằng thẻ thì thêm thẻ phải LƯU ĐƯỢC")
+            sau_them = test_file.read_bytes()
+            # Thẻ mới phải có mặt, và MỌI thứ cũ phải còn nguyên — đây mới là
+            # điều test này bảo vệ, không phải con số 422.
+            assert b'print("m\xe1\xbb\x9bi")' in sau_them, "thẻ mới không được ghi"
+            assert b"# nh\xc3\xa1nh \xc4\x91\xe1\xba\xa7u" in sau_them, "mất chú thích cuối dòng"
+            assert b"x: int = 1" in sau_them, "mất chú kiểu tham số"
+            assert b"-> bool" in sau_them, "mất chú kiểu trả về"
+            # Chỉ chốt `elif`, KHÔNG chốt điều kiện: `tree` đã bị bước Save As
+            # phía trên sửa `x == 2` thành `x == 3`, nên chốt số cụ thể là
+            # chốt nhầm — test sai chứ không phải mã sai.
+            assert b"elif x == " in sau_them, "mất nhánh elif"
+            assert b"# Header comment" in sau_them, "mất chú thích đầu tệp"
+            assert b"\r\n" in sau_them and b"\n\n" not in sau_them.replace(b"\r\n", b"\n"), (
+                "phải giữ quy ước xuống dòng CRLF của tệp gốc")
+
+            # TỆP KHÔNG BIỂU DIỄN TRỌN VẸN THÌ VẪN CHẶN — nửa còn lại của luật.
+            phuc_tap = tmp_path / "phuc_tap.py"
+            phuc_tap.write_bytes(
+                (Path(__file__).resolve().parent.parent / "core" / "chat_contract.py")
+                .read_bytes())
+            resp_mo_pt = await client.post(
+                "/api/mo_tep", json={"duong_dan": str(phuc_tap)}, headers=headers)
+            data_pt = await resp_mo_pt.json()
+            assert data_pt.get("them_bot_the_duoc") is False, (
+                "tệp sinh lại KHÁC bản gốc mà lại báo cho thêm thẻ")
+            raw_pt = phuc_tap.read_bytes()
+            cay_pt = copy.deepcopy(data_pt["tree"])
+            cay_pt.append({"id": "x", "ma": "in_ra", "o": {"noi_dung": '"x"'},
+                           "than": [], "da_sua": True})
+            resp_pt = await client.post(
+                "/api/luu_tep",
+                json={"duong_dan": str(phuc_tap), "tree": cay_pt,
+                      "kieu_luu": "py", "expected_sha256": data_pt["sha256"]},
+                headers=headers,
+            )
+            assert resp_pt.status == 422, "tệp phức tạp vẫn phải bị chặn"
+            assert phuc_tap.read_bytes() == raw_pt, "bị chặn mà tệp vẫn đổi"
+
+            # Trả tệp mẫu về nguyên trạng cho các bước sau của test.
+            test_file.write_bytes(raw_sample)
 
             # Save As sang tệp mới phải giữ toàn bộ cú pháp ẩn nhờ byte+SHA nguồn,
             # không được dựng lại từ các ô thẻ rồi làm mất annotation/comment/elif.

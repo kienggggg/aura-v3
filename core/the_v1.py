@@ -980,10 +980,43 @@ def sinh_dong_the_don(node: TheNode, indent_level: int = 0) -> str:
     return base
 
 
+def _so_dong_trong_truoc(truoc: Optional[TheNode], nay: TheNode) -> int:
+    """Số dòng trống nằm giữa hai thẻ anh em trong TỆP GỐC.
+
+    26/08/2026. `sinh_ma_python` trước đây nối các thẻ bằng đúng một `\n`, nên
+    mọi dòng trống giữa các câu lệnh biến mất. Đo vòng tròn trên 33 tệp thật
+    (đọc tệp -> cây thẻ -> sinh lại -> so với bản gốc):
+
+        tệp kiểu người mới học   5/5 khác bản gốc, và khác ĐÚNG ở dòng trống
+        mã nguồn AURA           28/28 khác bản gốc
+
+    Một tệp `def chao(...)` rồi hai dòng trống rồi `chao("A")` sinh lại thành
+    ba dòng dính liền. Với người mới học thì đó là bài của họ bị bóp lại.
+
+    Không cần thêm trường nào: `line_start` và `line_end` ĐÃ có sẵn trên mỗi
+    thẻ khi đọc bằng CST. Khoảng hở giữa `line_end` của thẻ trước và
+    `line_start` của thẻ sau chính là số dòng trống.
+
+    Trả 0 khi thiếu thông tin dòng — thẻ do người dùng vừa kéo vào không có
+    `line_start`, và đoán bừa một dòng trống cho nó thì tệ hơn là không đoán.
+    """
+    if truoc is None or nay is None:
+        return 0
+    if not truoc.line_end or not nay.line_start:
+        return 0
+    hieu = nay.line_start - truoc.line_end - 1
+    return hieu if hieu > 0 else 0
+
+
 def sinh_ma_python(nodes: List[TheNode], indent_level: int = 0) -> str:
     """Sinh toàn bộ mã Python từ danh sách TheNode (chuẩn 4 dấu cách)."""
     res_lines: List[str] = []
+    the_truoc: Optional[TheNode] = None
     for node in nodes:
+        # Trả lại đúng số dòng trống của tệp gốc. Xem `_so_dong_trong_truoc`.
+        for _ in range(_so_dong_trong_truoc(the_truoc, node)):
+            res_lines.append("")
+        the_truoc = node
         if node.ma == "ma_tho":
             raw = node.o.get("nguyen_van", node.raw_text or "")
             if raw:
@@ -1012,6 +1045,47 @@ def sinh_ma_python(nodes: List[TheNode], indent_level: int = 0) -> str:
                 res_lines.append(f"{spaces}pass")
 
     return "\n".join(res_lines)
+
+
+def sinh_ma_python_ca_tep(nodes: List[TheNode], xuong_dong: str = "\n") -> str:
+    """Sinh mã cho MỘT TỆP HOÀN CHỈNH — có ký tự xuống dòng cuối.
+
+    `xuong_dong` GIỮ ĐÚNG QUY ƯỚC CỦA TỆP GỐC. Thêm 26/08/2026 sau khi phép
+    thử đầu tiên trượt vì đúng chuyện này: `sinh_ma_python` luôn nối bằng LF,
+    còn tệp trên Windows — Notepad, `Path.write_text`, git checkout — hầu hết
+    là CRLF. Đo trên cùng một nội dung:
+
+        tệp LF    sinh lại giống hệt  -> True
+        tệp CRLF  sinh lại khác       -> False
+
+    Nên nếu bỏ tham số này thì luật "sinh lại đúng bản gốc thì cho thêm thẻ"
+    KHÔNG BAO GIỜ MỞ trên máy Windows — mà đó chính là máy app chạy. Và ghi
+    một tệp CRLF thành LF thì git báo cả tệp đã đổi.
+
+    `FileSourceRecord.newline` đã ghi sẵn quy ước ấy lúc đọc; chỉ việc truyền
+    vào.
+
+    26/08/2026. `sinh_ma_python` nối các dòng bằng `"\\n".join()` nên chuỗi
+    trả về KHÔNG kết thúc bằng xuống dòng. Điều đó đúng cho lời gọi đệ quy
+    (thân thẻ nối vào giữa tệp), nhưng sai cho một TỆP: git, các công cụ dòng
+    lệnh và POSIX đều coi tệp văn bản là kết thúc bằng xuống dòng.
+
+    Đo vòng tròn sau khi vá dòng trống: tệp kiểu người mới học sinh lại giống
+    bản gốc TỪNG BYTE, trừ đúng ký tự cuối này.
+
+    KHÔNG thêm vào chính `sinh_ma_python` vì nó tự gọi mình cho thân thẻ; thêm
+    ở đó thì mỗi tầng lồng nhau chèn dư một dòng trống.
+    """
+    ma = sinh_ma_python(nodes)
+    if not ma:
+        return ma
+    if not ma.endswith("\n"):
+        ma += "\n"
+    # `sinh_ma_python` luôn nối bằng LF; đổi sang quy ước của tệp gốc ở BƯỚC
+    # CUỐI, một lần, thay vì rải vào mọi chỗ nối chuỗi bên trong.
+    if xuong_dong and xuong_dong != "\n":
+        ma = ma.replace("\n", xuong_dong)
+    return ma
 
 
 def luu_cay_the_ra_tep_py(record: FileSourceRecord) -> bytes:

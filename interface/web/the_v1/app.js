@@ -2993,6 +2993,17 @@
 
   /** Bao mot lan khi cau truc lech khoi luc mo tep. */
   function kiemCauTrucDoi() {
+    // 26/08, BUOI CHIEU: chi bao khi tep NAY that su khong cho them/bot the.
+    //
+    // Sang nay bao cho MOI tep mo tu dia, vi luc do backend tu choi het. Chieu
+    // nay `sinh_ma_python` da giu dong trong + xuong dong cuoi tep, nen tep
+    // bieu dien tron ven bang the thi them the LUU DUOC that — do bang API
+    // song: `don_gian.py` tra 200, `chat_contract.py` van 422.
+    //
+    // Neu van bao thi cau canh bao sai voi dung nhung tep no can dung, va
+    // nguoi dung se hoc cach lo no di. Backend noi ngay luc mo tep
+    // (`them_bot_the_duoc`), tinh bang CHINH phep do dung o duong luu.
+    if (state.themBotTheDuoc) return;
     if (!state.activeFilePath || !state.chuKyLucMo) return;
     const gio = chuKyCauTruc(state.tree);
     if (gio === state.chuKyLucMo) { daBaoCauTruc = false; return; }
@@ -3023,6 +3034,10 @@
         // the hay khong. So bang chu ky chu khong dem so the: doi mot the
         // `neu` thanh `lap` khong lam so the doi, nhung backend van tu choi.
         state.chuKyLucMo = chuKyCauTruc(data.tree);
+        // Mặc định COI LÀ KHÔNG ĐƯỢC khi máy chủ không nói gì (bản cũ, hay
+        // trường bị mất): thà báo thừa một câu còn hơn để người dùng dựng cả
+        // chương trình rồi mới biết không lưu được. Fail-closed.
+        state.themBotTheDuoc = data.them_bot_the_duoc === true;
         daBaoCauTruc = false;
         moTrongTab({ duong_dan: data.duong_dan, ten_tep: data.ten_tep,
                      tree: data.tree, sha256: data.sha256 });

@@ -377,6 +377,14 @@ async def api_status(request: web.Request) -> web.Response:
     return web.json_response({
         "app": "AURA_THE_v1",
         "status": "ready",
+        # 26/08: giao diện KHÔNG có chỗ nào hiện tên dự án. Đo trên app chạy
+        # với `--du-an <thư mục>`: tên thư mục không xuất hiện ở bất kỳ đâu
+        # trên màn hình, và cây tệp ghi gốc là `root/`. Người dùng không biết
+        # mình đang mở dự án nào — VS Code luôn hiện tên thư mục gốc.
+        #
+        # Chỉ trả TÊN thư mục, không trả đường dẫn đầy đủ: giao diện chỉ cần
+        # tên, còn đường dẫn đầy đủ đã có trong banner cho người chạy máy chủ.
+        "ten_du_an": config.project_root.name or str(config.project_root),
         "code_execution_enabled": allow_exec,
         "cac_cong_thuc_thi": ["/api/chay", "/api/trace", "/api/dinh_vi_loi"],
         "e1_limitation": doc_thong_tin_gioi_han(config.project_root),

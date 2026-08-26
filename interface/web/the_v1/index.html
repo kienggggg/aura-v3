@@ -24,8 +24,10 @@
     </div>
 
     <!-- Active File Info -->
-    <!-- Thanh tab tệp. Ẩn khi chỉ có MỘT tab — đỡ chiếm một dòng màn hình
-         cho không. -->
+    <!-- Thanh tab tệp. 26/08: TRƯỚC ĐÂY ẩn khi chỉ có một tab; nay luôn
+         hiện (xem `veThanhTab` trong app.js). Ẩn thì mở tệp thứ hai làm
+         layout nhảy, và khi có một tệp thì không chỗ nào nói đang sửa tệp
+         nào. `style` dưới chỉ là trạng thái ban đầu trước khi JS vẽ. -->
     <div class="tab-bar" id="tabBar" style="display: none;"></div>
 
     <div class="file-status-bar" id="fileStatusBar">
@@ -39,16 +41,7 @@
 
     <!-- Toolbar Action Buttons -->
     <div class="header-actions">
-      <!-- Font Zoom Controls -->
-      <div class="zoom-controls">
-        <button class="zoom-btn" id="btnZoomOut" title="Giảm cỡ chữ (Ctrl -)">A−</button>
-        <button class="zoom-btn zoom-val" id="btnZoomReset" title="Khôi phục 14px (Ctrl 0)"><span id="zoomPercent">14px</span></button>
-        <button class="zoom-btn" id="btnZoomIn" title="Tăng cỡ chữ (Ctrl +)">A+</button>
-      </div>
-
-      <div class="divider-v"></div>
-
-      <button class="btn btn-secondary" id="btnNew" title="Tạo chương trình mới (Ctrl+N)">
+      <button class="btn btn-secondary" id="btnNew" title="Tạo chương trình mới">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Mới
       </button>
@@ -60,7 +53,7 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
         Mở Tệp
       </button>
-      <button class="btn btn-secondary" id="btnSaveFile" title="Lưu tệp">
+      <button class="btn btn-secondary" id="btnSaveFile" title="Lưu tệp (Ctrl+S lưu thẳng, không hỏi đường dẫn)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
         Lưu Tệp
       </button>
@@ -323,6 +316,36 @@
          vỡ; nối Agent thật vào đây khi có model đứng sau. -->
     <aside class="sidebar-right" id="sidebarRight"></aside>
   </main>
+
+  <!-- THANH TRẠNG THÁI ĐÁY — thêm 26/08/2026.
+       Đo trước hôm nay: không một phần tử nào nằm ở đáy màn hình. Nên không
+       chỗ nào trả lời "đang mở dự án nào, tệp nào, đã lưu chưa" — mắt người
+       quen IDE tự động liếc xuống đây và không thấy gì.
+       Cao 24px, đúng cỡ thanh trạng thái của trình soạn thảo. -->
+  <footer class="status-bar" id="statusBar">
+    <div class="status-trai">
+      <span class="status-muc" id="stDuAn" title="Thư mục dự án đang mở">—</span>
+      <span class="status-muc" id="stTep" title="Tệp đang sửa">—</span>
+      <span class="status-muc" id="stLuu" title="Trạng thái lưu"></span>
+    </div>
+    <div class="status-phai">
+      <span class="status-muc" id="stSoThe" title="Số thẻ trong cây"></span>
+      <span class="status-muc" id="stLoi" title="Số lỗi validator phát hiện"></span>
+      <span class="status-muc" id="stChay" title="Chạy mã bật hay tắt"></span>
+      <!-- CỠ CHỮ CHUYỂN TỪ THANH TRÊN XUỐNG ĐÂY — 26/08/2026.
+           Đo: thanh trên có 11 nút, cụm cỡ chữ chiếm 3 trong 11 ô. Đứng ngang
+           hàng với "Mở Tệp"/"Lưu Tệp" thì nó tự nhận mình là việc chính, mà
+           nó không phải. VS Code để cỡ chữ trong Settings hoặc Ctrl+cuộn,
+           không bao giờ ở thanh công cụ chính; chỗ quen thuộc cho loại điều
+           khiển này là thanh trạng thái.
+           Ba nút giữ NGUYÊN id, nên mọi lời gọi trong app.js không phải đổi. -->
+      <div class="zoom-controls">
+        <button class="zoom-btn" id="btnZoomOut" title="Giảm cỡ chữ (Ctrl -)">A−</button>
+        <button class="zoom-btn zoom-val" id="btnZoomReset" title="Khôi phục 14px (Ctrl 0)"><span id="zoomPercent">14px</span></button>
+        <button class="zoom-btn" id="btnZoomIn" title="Tăng cỡ chữ (Ctrl +)">A+</button>
+      </div>
+    </div>
+  </footer>
 
   <!-- Modals -->
   <!-- 1. Modal Mẫu Bài -->

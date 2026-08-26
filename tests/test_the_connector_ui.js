@@ -173,15 +173,35 @@ describe('Thẻ Móc Nối Thẳng & Giao Diện Ba Cột Tests', () => {
     global.document = new FakeDocument();
   });
 
-  test('Khay thẻ có đủ 6 nhóm và 12 thẻ lệnh tiêu chuẩn', () => {
+  test('Khay thẻ có đủ 6 nhóm và 17 thẻ lệnh', () => {
+    // 26/08: CON SỐ ĐỔI 12 -> 17, và cửa này đã ĐỎ SUỐT HAI NGÀY trước khi
+    // ai đó thấy.
+    //
+    // Cửa viết ngày 24/08 (`ada7fe1`) chốt cứng 12. Ngày 25/08 khay thẻ thêm
+    // năm thẻ — `nhap` · `dung_lap` · `bo_qua` · `thu` · `bat_loi` — nên
+    // `BO_THE_V1` có 17 khoá và phép so `=== 12` đỏ từ lúc ấy.
+    //
+    // Không ai thấy vì các cửa JS chạy LẺ TỪNG TỆP: mỗi lần chỉ gõ
+    // `node --test tests/test_moi_nut_co_handler.js` hay `test_the_parity.js`,
+    // còn tệp này không nằm trong thói quen ấy. Bắt được hôm nay chỉ vì tôi
+    // chạy `for t in tests/*.js` thay vì gõ tên từng tệp.
+    //
+    // ĐÂY KHÔNG PHẢI NỚI TAY. Năm thẻ mới là thay đổi có chủ đích, đã qua
+    // duyệt, và `test_the_parity.js` vẫn chốt 27/27 giữa bản JS và bản Python
+    // — thêm thẻ một bên mà quên bên kia thì cửa ấy đỏ. Ở đây con số đổi vì
+    // KHAY THẺ đổi, không phải vì phép đo được nới ra cho vừa.
     const keys = Object.keys(TheValidator.BO_THE_V1);
-    assert.strictEqual(keys.length, 12, 'Phải có đúng 12 thẻ lệnh tiêu chuẩn');
+    assert.strictEqual(keys.length, 17, 'Phải có đúng 17 thẻ lệnh');
     assert.ok(keys.includes('chu_thich'), 'Phải có thẻ chu_thich');
     assert.ok(keys.includes('ham'), 'Phải có thẻ ham');
     assert.ok(keys.includes('neu'), 'Phải có thẻ neu');
     assert.ok(keys.includes('gan'), 'Phải có thẻ gan');
     assert.ok(keys.includes('in_ra'), 'Phải có thẻ in_ra');
     assert.ok(keys.includes('ma_tho'), 'Phải có thẻ ma_tho');
+    // Năm thẻ thêm 25/08 — chốt tên để đổi tên là đỏ, không im lặng.
+    for (const m of ['nhap', 'dung_lap', 'bo_qua', 'thu', 'bat_loi']) {
+      assert.ok(keys.includes(m), `Phải có thẻ ${m} (thêm 25/08)`);
+    }
 
     // 6 nhóm
     const nhomKeys = Object.keys(TheValidator.NHOM_THE);

@@ -76,6 +76,30 @@
       const data = await resp.json();
       state.codeExecutionEnabled = Boolean(data.code_execution_enabled);
       state.e1Limitation = data.e1_limitation || '';
+      // 26/08: giữ tên thư mục dự án để cây tệp và thanh trạng thái nói
+      // được "đang mở dự án nào". Thiếu nó thì cây tệp ghi `root/`, và
+      // đo trên app đang chạy thì tên dự án KHÔNG xuất hiện ở bất kỳ đâu
+      // trên màn hình.
+      state.tenDuAn = data.ten_du_an || '';
+      // Vẽ ngay: `onTreeChanged` chỉ chạy khi cây thẻ đổi, mà lúc mới mở app
+      // thì chưa có thay đổi nào — thiếu dòng này thanh trạng thái đứng im
+      // ở dấu gạch cho tới khi người dùng đụng vào thẻ đầu tiên.
+      veThanhTrangThai();
+      // ĐUA THỨ TỰ, bắt được 26/08 bằng cách tự bấm thử chứ không đọc mã:
+      // `btnModeFiles.click()` lúc khởi động gọi `loadFileTree()` NGAY, còn
+      // `/api/status` là lượt gọi mạng riêng và về sau. Nên cây vẽ xong khi
+      // `state.tenDuAn` còn rỗng, và nhãn gốc rơi về `root/` — đúng cái vừa
+      // sửa, vẫn hiện y như cũ.
+      //
+      // Không sắp lại thứ tự hai lượt gọi (làm thế thì cây phải CHỜ mạng mới
+      // hiện được). Thay vào đó: vẽ lại đúng MỘT lần, và chỉ khi cây thật sự
+      // đang mang tên khác. So bằng biến `tenDuAnDaVeCay` chứ không dò chữ
+      // `root/` trong HTML — dò chuỗi là đúng bệnh CLAUDE.md §4.
+      if (state.tenDuAn && state.tenDuAnDaVeCay !== undefined
+          && state.tenDuAnDaVeCay !== state.tenDuAn) {
+        const oCay = document.getElementById('fileTreeContainer');
+        if (oCay && oCay.style.display !== 'none') loadFileTree();
+      }
       if (btnRun) btnRun.disabled = !state.codeExecutionEnabled;
       if (btnTrace) btnTrace.disabled = !state.codeExecutionEnabled;
       if (btnE1) btnE1.disabled = !state.codeExecutionEnabled;
@@ -1056,6 +1080,70 @@
     apDungAnhChup(state.history[state.historyIndex]);
   }
 
+  /** Vẽ lại thanh trạng thái đáy — thêm 26/08/2026.
+   *
+   * Gọi từ `onTreeChanged`, tức MỌI đường làm cây thẻ đổi đều đi qua đây:
+   * thêm thẻ, xoá, dán, hoàn tác, chuyển tab, mở tệp, lưu tệp. Cắm vào một
+   * chỗ thay vì rải lời gọi khắp nơi — rải ra thì sẽ có nhánh quên gọi, và
+   * thanh trạng thái nói sai còn tệ hơn không có.
+   */
+  function veThanhTrangThai() {
+    const dat = (id, chu, lop) => {
+      const o = document.getElementById(id);
+      if (!o) return;
+      o.textContent = chu;
+      o.className = 'status-muc' + (lop ? ' ' + lop : '');
+    };
+    dat('stDuAn', state.tenDuAn ? '\u{1F4C2} ' + state.tenDuAn : '\u{1F4C2} (chưa rõ dự án)');
+    dat('stTep', state.activeFileName || 'Chưa đặt tên');
+    dat('stLuu',
+        state.hasModifications ? '\u25CF chưa lưu' : '\u2713 đã lưu',
+        state.hasModifications ? 'chua-luu' : '');
+
+    const soThe = demTheSau(state.tree || []);
+    dat('stSoThe', soThe + ' thẻ');
+
+    // `state.diagnostics` là ĐỐI TƯỢNG, không phải mảng:
+    //   { hop_le · so_loi_do · so_canh_bao_vang · danh_sach · so_lan_dung_the }
+    // Nó đã đếm sẵn, khỏi phải lọc.
+    //
+    // Tôi đoán sai tên trường HAI LẦN trong đúng hàm này, ngày 26/08:
+    //   lần 1  lọc `d.muc_do === 'loi'`  — `validator.js` chỉ sinh 'do' và
+    //          'vang', nên nó sẽ luôn báo "không lỗi", im lặng
+    //   lần 2  gọi `.filter()` trên đối tượng — ném `filter is not a function`,
+    //          làm hàm chết giữa chừng và HAI ô cuối của thanh trạng thái
+    //          rỗng trắng
+    //
+    // Cả hai chỉ lộ ra khi TỰ BẤM THỬ. Không cửa nào bắt được, vì lỗi nằm ở
+    // chỗ giao diện đọc dữ liệu — đúng họ bệnh hộp "Mở tệp" đọc
+    // `data.tep_tin` trong khi backend trả `danh_sach` (CLAUDE.md §4).
+    const cd = state.diagnostics || {};
+    const soDo = cd.so_loi_do || 0;
+    const soVang = cd.so_canh_bao_vang || 0;
+    const chu = soDo ? soDo + ' lỗi' + (soVang ? ', ' + soVang + ' cảnh báo' : '')
+              : soVang ? soVang + ' cảnh báo' : 'không lỗi';
+    dat('stLoi', chu, soDo ? 'co-loi' : '');
+
+    dat('stChay', state.codeExecutionEnabled ? 'Chạy mã: BẬT' : 'Chạy mã: TẮT');
+  }
+
+  /** Đếm CẢ thẻ con, không chỉ thẻ ở tầng ngoài cùng.
+   *
+   * `state.tree.length` chỉ đếm tầng một. Một chương trình có `def` bọc bốn
+   * thẻ bên trong sẽ hiện "1 thẻ" — con số ấy nói sai. */
+  function demTheSau(ds) {
+    let n = 0;
+    for (const t of ds || []) {
+      n += 1;
+      // `than` là ô chứa thẻ con DUY NHẤT — kiểm bằng cách đọc `BO_THE_V1`
+      // trong `core/the_v1.py` (thuộc tính: co_than · ma · mau · nhom · o ·
+      // ten). Bản nháp của tôi còn liệt kê `thanElse`, `body`,
+      // `cac_the_con` — ba tên KHÔNG tồn tại, chép từ trí nhớ.
+      if (Array.isArray(t.than)) n += demTheSau(t.than);
+    }
+    return n;
+  }
+
   function onTreeChanged(pushHistory = true, markDirty = true) {
     if (pushHistory) ghiLichSu();
     if (markDirty) state.hasModifications = true;
@@ -1073,6 +1161,7 @@
     // 2. Cập nhật giao diện
     renderCanvas();
     updateToolboxCounters();
+    veThanhTrangThai();
     updateCodePreview();
     updateDiagnosticsPanel();
     updateStatusBar();
@@ -2232,8 +2321,17 @@
     const thanh = document.getElementById('tabBar');
     if (!thanh) return;
     thanh.innerHTML = '';
-    // Một tab thì không cần thanh — đỡ chiếm một dòng màn hình cho không.
-    thanh.style.display = state.tabs.length <= 1 ? 'none' : 'flex';
+    // 26/08: TRƯỚC ĐÂY ẨN THANH KHI CÓ MỘT TAB, lý do cũ "đỡ chiếm một dòng
+    // màn hình cho không". Đổi vì hai chuyện đo được:
+    //
+    //   1. Mở tệp thứ hai thì thanh HIỆN RA và đẩy cả layout xuống — vùng
+    //      soạn thảo nhảy đúng lúc người dùng đang nhìn vào nó.
+    //   2. Có một tệp thì không chỗ nào trên màn hình nói đang sửa tệp nào và
+    //      đã lưu chưa. Thanh tab chính là chỗ ấy: nó mang cả tên tệp lẫn dấu
+    //      chấm "chưa lưu".
+    //
+    // Mọi trình soạn thảo đều giữ thanh tab kể cả khi mở một tệp.
+    thanh.style.display = state.tabs.length === 0 ? 'none' : 'flex';
 
     state.tabs.forEach((t, i) => {
       const el = document.createElement('div');
@@ -2956,12 +3054,18 @@
   }
 
   function renderFileTree(files, container) {
+    // Ghi lại tên đã dùng làm nhãn gốc, để chỗ nhận `/api/status` biết cây
+    // đang mang tên cũ hay tên đúng. Xem `state.tenDuAn` bên dưới.
+    state.tenDuAnDaVeCay = state.tenDuAn || 'root';
     container.innerHTML = '';
     const groups = {};
     files.forEach(f => {
       const p = f.duong_dan || f;
       const parts = p.split(/[\\/]/);
-      const dir = parts.length > 1 ? parts[0] : 'root';
+      // 26/08: tệp ở gốc dự án từng gom vào nhóm tên `root`, nên cây hiện
+      // `root/` — không cho biết đang mở dự án nào. Nay dùng tên thư mục
+      // thật; chỉ lùi về `root` khi chưa hỏi được máy chủ.
+      const dir = parts.length > 1 ? parts[0] : (state.tenDuAn || 'root');
       if (!groups[dir]) groups[dir] = [];
       groups[dir].push(p);
     });
@@ -3097,6 +3201,18 @@
         if (footerTip) footerTip.textContent = 'Click vào tệp để mở trực tiếp trên canvas.';
         loadFileTree();
       });
+
+      // 26/08: MỞ APP LÊN THÌ HIỆN CÂY TỆP, KHÔNG PHẢI KHAY THẺ.
+      //
+      // `index.html` để `btnModeToolbox` mang class `active` và
+      // `fileTreeContainer` mang `display:none`, nên lúc khởi động cây tệp cao
+      // 0 px. Đo 26/08: phải bấm 1 lần mới thấy dự án của mình. VS Code là 0
+      // lần — explorer LÀ thứ mặc định.
+      //
+      // Gọi chính handler của nút thay vì chép logic ra đây: chép ra thì hai
+      // chỗ sẽ lệch nhau lúc ai đó sửa một bên. Phải đặt SAU
+      // `addEventListener` ở trên, không thì bấm vào chỗ chưa có người nghe.
+      btnModeFiles.click();
     }
 
     // 3. Toolbar buttons

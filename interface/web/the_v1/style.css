@@ -309,11 +309,66 @@ body {
 /* ==========================================================================
    2. APP MAIN LAYOUT (CHUẨN IDE THU GỌN)
    ========================================================================== */
+/* THANH TRẠNG THÁI ĐÁY — 26/08/2026.
+   Trước đây không có gì ở đáy màn hình; `.app-main` cao đúng
+   `100vh - 56px` (chỉ trừ thanh trên). Nay trừ thêm 24px của thanh này,
+   nếu không nó bị đẩy khỏi khung nhìn và không ai thấy. */
+.status-bar {
+  height: 24px;
+  flex: 0 0 24px;
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  user-select: none;
+  z-index: 40;
+}
+
+.status-trai,
+.status-phai {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.status-muc {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+
+/* Cụm cỡ chữ khi nằm TRONG thanh trạng thái: thu nhỏ cho vừa 24px.
+   Quy tắc gốc `.zoom-controls` viết cho thanh trên cao 56px. */
+.status-bar .zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 18px;
+}
+
+.status-bar .zoom-btn {
+  height: 18px;
+  min-width: 20px;
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 18px;
+  border-radius: 3px;
+}
+
+.status-muc.chua-luu { color: var(--color-warn-vang); font-weight: 600; }
+.status-muc.co-loi   { color: var(--color-error-do); font-weight: 600; }
+
 .app-main {
   flex: 1;
   display: grid;
   grid-template-columns: var(--sidebar-left-width) 1fr var(--sidebar-right-width);
-  height: calc(100vh - 56px);
+  height: calc(100vh - 56px - 24px);
   overflow: hidden;
   transition: grid-template-columns 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }

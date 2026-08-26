@@ -73,4 +73,15 @@ packages = ["core", "interface"]
 # Thiếu dòng này thì cài xong KHÔNG CÓ GIAO DIỆN: `index.html`, `app.js`,
 # `validator.js`, `style.css` nằm ngoài mã Python nên `pip` bỏ qua chúng.
 # Đây là chỗ hỏng lặng lẽ — gói cài được, chạy được, chỉ là trang trắng.
-interface = ["web/the_v1/*"]
+# 26/08: dòng này TỪNG chỉ khai `web/the_v1/*`, và thiếu đúng cái nó cảnh
+# báo. `interface/web/chat.html` + `memory.html` nằm NGOÀI `the_v1/` nên không
+# vào gói. Hậu quả đo được trên bản cài trong venv sạch: `aura-chat --port 8799`
+# khởi động BÌNH THƯỜNG, không in một dòng lỗi nào, rồi
+# `GET http://127.0.0.1:8799/` trả **404, 0 byte** — đúng lệnh README bảo người
+# dùng gõ. `/memory` cũng 404.
+#
+# Vì sao lượt kiểm trước không thấy: nó liệt kê tệp trong
+# `site-packages/interface/web/the_v1/` — tức đúng thư mục ĐÃ được khai. Kiểm
+# trong chỗ mình vừa khai thì bao giờ cũng thấy đủ. Phải đối chiếu với thư mục
+# NGUỒN: `find interface/web -type f` ra 6 tệp, wheel có 4.
+interface = ["web/the_v1/*", "web/*.html"]

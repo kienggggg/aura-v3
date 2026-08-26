@@ -419,14 +419,76 @@ async def api_danh_sach_tep(request: web.Request) -> web.Response:
         if not target_dir.is_dir() or not target_dir.is_relative_to(project_root):
             return web.json_response({"error": "400 Bad Request: Thư mục không tồn tại hoặc ngoài phạm vi"}, status=400)
         scan_targets = [target_dir]
+        quet_them_tep_goc = False
     else:
+        # 26/08: THÊM chính `project_root` vào danh mục quét.
+        #
+        # Trước đó danh mục chỉ có các THƯ MỤC CON, nên tệp nằm NGAY gốc dự án
+        # không bao giờ được liệt kê. Đo trên bản cài trong venv sạch: tạo
+        # `bai_tap_cua_toii_du.py` rồi làm đúng lệnh README
+        # (`cd <thư mục>` · `aura-the`), `GET /api/tep_tin` trả **200 với
+        # `tong_so: 0`** — hộp "Mở tệp" trống trơn, không một dòng báo lỗi.
+        #
+        # Đúng người dùng app nhắm tới mới dính: thư mục bài tập của người mới
+        # học là một nắm tệp `.py` để thẳng ở đó, không có thư mục con nào. Mà
+        # `thu_muc_duoc_quet()` suy danh mục TỪ các thư mục con — không con nào
+        # thì danh mục rỗng, không quét gì.
+        #
+        # Vì sao chưa ai thấy: mọi lượt thử đều chạy trong CHÍNH kho AURA, nơi
+        # danh mục là `core`/`interface`/`tests` — ba thư mục có thật và đầy tệp.
+        #
+        # Quét gốc KHÔNG nới hàng rào đường dẫn: `os.walk` vẫn lọc thư mục ẩn,
+        # `__pycache__`, `venv`, và mỗi tệp vẫn phải qua `is_relative_to(
+        # project_root)` ở dưới. Chỉ thêm tệp Ở TRONG dự án, không mở lối ra
+        # ngoài.
+        # KHÔNG đưa `project_root` vào `scan_targets`: `os.walk` đệ quy, nên
+        # gốc sẽ nuốt lại cả `core/`, `interface/`, `tests/` (mỗi tệp hiện HAI
+        # lần) và nuốt luôn `data/` — đúng thư mục hàng rào cũ cố ý chặn. Quét
+        # gốc thì chỉ quét ĐỘ SÂU 0, để dưới.
         scan_targets = [
             (project_root / d).resolve(strict=False)
             for d in config.allowed_scan_dirs
             if (project_root / d).is_dir()
         ]
+        # CHỈ quét gốc khi đây là DỰ ÁN CỦA NGƯỜI DÙNG, không phải kho AURA.
+        #
+        # Chạy trên chính kho AURA thì hàng rào cũ giữ nguyên: `core` ·
+        # `interface` · `tests`, cố ý CHẶN `data`. `tests/test_the_app.py:53`
+        # chốt đúng luật ấy, và nó đã bắt được em lúc 26/08 khi bản sửa đầu
+        # tiên làm hiện thêm `apply_audit.py`, `aura_chat.py`, `test_all.py`.
+        #
+        # Nới test cho mã mình xanh là nới hàng rào. Chỗ hỏng chỉ ở dự án của
+        # người dùng — kho AURA chưa bao giờ hỏng, nên không đụng vào nó.
+        # So sánh này lặp lại đúng phép so ở `the_app.py:42`; không import chéo
+        # được vì `the_app` đã import `the_api`.
+        quet_them_tep_goc = (
+            project_root.resolve(strict=False)
+            != DEFAULT_PROJECT_ROOT.resolve(strict=False)
+        )
 
     ket_qua = []
+
+    def ghi_nhan(full_p: Path) -> None:
+        if not full_p.is_file() or not full_p.is_relative_to(project_root):
+            return
+        rel = str(full_p.relative_to(project_root)).replace("\\", "/")
+        file_bytes = full_p.read_bytes()
+        ket_qua.append({
+            "duong_dan": rel,
+            "ten_tep": full_p.name,
+            "kich_thuoc": full_p.stat().st_size,
+            "duoi_tep": full_p.suffix.lower(),
+            "sha256": hashlib.sha256(file_bytes).hexdigest(),
+        })
+
+    if quet_them_tep_goc:
+        try:
+            for f in sorted(project_root.iterdir()):
+                if f.is_file() and not f.name.startswith(".")                         and f.suffix.lower() in (".py", ".json"):
+                    ghi_nhan(f.resolve(strict=False))
+        except OSError:
+            pass
+
     for d in scan_targets:
         if not d.is_dir() or not d.is_relative_to(project_root):
             continue
@@ -437,18 +499,7 @@ async def api_danh_sach_tep(request: web.Request) -> web.Response:
                     continue
                 ext = Path(fname).suffix.lower()
                 if ext in (".py", ".json"):
-                    full_p = (Path(root) / fname).resolve(strict=False)
-                    if full_p.is_file() and full_p.is_relative_to(project_root):
-                        rel = str(full_p.relative_to(project_root)).replace("\\", "/")
-                        file_bytes = full_p.read_bytes()
-                        sha256_hex = hashlib.sha256(file_bytes).hexdigest()
-                        ket_qua.append({
-                            "duong_dan": rel,
-                            "ten_tep": full_p.name,
-                            "kich_thuoc": full_p.stat().st_size,
-                            "duoi_tep": ext,
-                            "sha256": sha256_hex,
-                        })
+                    ghi_nhan((Path(root) / fname).resolve(strict=False))
 
     ket_qua.sort(key=lambda x: x["duong_dan"])
     return web.json_response({

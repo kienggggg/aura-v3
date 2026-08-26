@@ -56,3 +56,10 @@ _rac/
 !data/evidence_sprint/
 data/evidence_sprint/*
 !data/evidence_sprint/e1_ngoai_ho.json
+
+# Rac dung goi — them 26/08/2026.
+# `scratch/` phinh len 41 MB sau mot lan dung PyInstaller do thu kich thuoc goi
+# standalone. Khong co dong nay thi mot lan `git add -A` la 41 MB nhi phan vao
+# lich su kho VINH VIEN — go ra phai viet lai lich su.
+scratch/
+*.spec

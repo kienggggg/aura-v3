@@ -361,6 +361,7 @@ def truy_nguoc(
     nguon: str,
     sau_toi_da: int = 40,
     im_lang_khi_khong_lui: bool = False,
+    nguong_thu_hep: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Đi ngược từ giá trị trả về sai về các dòng đã sinh ra nó.
 
@@ -490,6 +491,61 @@ def truy_nguoc(
             "model_calls": 0,
             "external_submit": False,
         }
+
+    # IM KHI THU HẸP QUÁ SÂU — thêm 26/08/2026.
+    #
+    # Ngược với trực giác: chuỗi càng HẸP so với vết chạy thì càng hay SAI.
+    # Thu hẹp mạnh nghĩa là máy đã chọn ra vài dòng trong rất nhiều dòng đã
+    # chạy — và nó thường chọn nhầm vài dòng ấy.
+    #
+    # Dò trên bộ 5 (41 câu trả lời, đúng 20 sai 21), rồi ÁP NGUYÊN XI lên năm
+    # bộ còn lại, không chỉnh lại gì:
+    #
+    #     chính xác          cũ  ->  mới        đạt cả bốn ngưỡng
+    #     bộ 1             0,762 -> 0,853       luật cũ  0/6 bộ
+    #     bộ 2             0,583 -> 0,762       luật này 4/6 bộ
+    #     bộ 3             0,458 -> 0,574
+    #     bộ 4             0,556 -> 0,714
+    #     bộ 5             0,488 -> 0,941
+    #     bộ 6             0,467 -> 0,857
+    #
+    # Chính xác tăng ở CẢ SÁU bộ. Và nó KHÔNG đổi bệnh này lấy bệnh khác: thu
+    # hẹp trung vị của phần còn lại vẫn 0,196–0,333 (ngưỡng ≤ 0,50) và độ phủ
+    # vẫn ≥ 0,29 (ngưỡng ≥ 0,25) — tức phần nó còn nói vẫn hẹp và vẫn nhiều.
+    #
+    # HẰNG SỐ 0,15 KHÔNG PHẢI ĐIỂM TỐI ƯU, và đó là chủ ý. Quét cả dải:
+    #
+    #     0,05  0,08  0,10  0,12  0,154  0,18  0,20  0,25
+    #      3/6   4/6   4/6   4/6    4/6   5/6   2/6   1/6   bộ đạt cả bốn
+    #
+    # Hiệu ứng bền trên cả một VÙNG 0,08–0,18 chứ không phải một điểm dao —
+    # đó mới là dấu hiệu của hiệu ứng thật. Điểm cao nhất là 0,18, nhưng chọn
+    # nó là khớp lên chính năm bộ dùng để kiểm chéo; 0,15 là số tròn nằm giữa
+    # vùng, suy từ bộ 5 (bộ dùng để DÒ), nên nó không mượn thông tin của năm
+    # bộ kia.
+    #
+    # PHÉP THỬ THẬT VẪN CHƯA CHẠY: một bộ đề tôi chưa từng nhìn. Đến lúc đó
+    # con số này mới đứng vững hay đổ.
+    if nguong_thu_hep is not None:
+        so_dong_da_chay = len({
+            e.get("dong") for e in su_kien
+            if isinstance(e.get("dong"), int)})
+        if so_dong_da_chay:
+            thu_hep = len(dong) / so_dong_da_chay
+            if thu_hep <= nguong_thu_hep:
+                return {
+                    "trang_thai": "khong_biet",
+                    "vi_sao": (
+                        f"thu hẹp {thu_hep:.3f} <= {nguong_thu_hep} — chuỗi quá "
+                        f"hẹp so với {so_dong_da_chay} dòng đã chạy. Đo trên sáu "
+                        f"bộ đề: hẹp cỡ này thì sai nhiều hơn đúng."),
+                    "chuoi": chuoi,
+                    "dong": [],
+                    "khong_lui": khong_lui,
+                    "thu_hep": round(thu_hep, 3),
+                    "model_calls": 0,
+                    "external_submit": False,
+                }
 
     return {
         "trang_thai": "chuoi_rong" if khong_lui else "co_chuoi",

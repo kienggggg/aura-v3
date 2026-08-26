@@ -351,7 +351,8 @@ def chay_mot_de(d: dict, dung_dong: bool = False) -> dict:
         dl = dong_loi_trong_ma(d)
         toi_dong_loi = any(x in da_chay for x in dl)
 
-        kq = truy_nguoc(tr.cac_su_kien, d["ma"])
+        kq = truy_nguoc(tr.cac_su_kien, d["ma"],
+                        nguong_thu_hep=NGUONG_IM_THU_HEP)
         dong_chuoi = kq["dong"]
         return {
             "trang_thai": kq["trang_thai"],
@@ -379,6 +380,22 @@ def chay_mot_de(d: dict, dung_dong: bool = False) -> dict:
         return {"trang_thai": "khong_do_duoc", "vi_sao": str(e)[:120], "so_test_do_that": 0, "so_loi_nap": 0}
     finally:
         shutil.rmtree(tam_goc, ignore_errors=True)
+
+
+# NGƯỠNG IM LẶNG theo độ THU HẸP — thêm 26/08/2026.
+#
+# TÊN PHẢI KHÁC `NGUONG_THU_HEP` ở đầu tệp (dòng 70, giá trị 0,50). Bản đầu
+# tôi đặt trùng tên và nó CHE MẤT hằng số kia — hai thứ khác hẳn nhau:
+#     NGUONG_THU_HEP     = 0,50   ngưỡng CHẤM ĐIỂM: chuỗi phải hẹp hơn mức này
+#     NGUONG_IM_THU_HEP  = 0,15   ngưỡng IM LẶNG: hẹp HƠN mức này thì đừng nói
+#
+# Hai cái đi ngược chiều nhau, nên trùng tên là hỏng lặng lẽ: bộ chấm sẽ đem
+# 0,15 ra so với trung vị thu hẹp và báo TRƯỢT ở mọi bộ đề.
+#
+# Giải thích đầy đủ vì sao 0,15 nằm trong `truy_nguoc_gia_tri.py`. Tóm tắt:
+# đo trên sáu bộ đề, chính xác tăng ở CẢ SÁU. Đặt None để tắt, trở về hành vi
+# trước 26/08.
+NGUONG_IM_THU_HEP = 0.15
 
 
 def main() -> int:

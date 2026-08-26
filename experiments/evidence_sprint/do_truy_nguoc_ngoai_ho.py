@@ -386,6 +386,29 @@ def main() -> int:
     #
     # Cùng họ với luật §4 "phép đo không chạy phải NÓI LÀ KHÔNG CHẠY": ở đó
     # là giấu việc không chạy, ở đây là giấu việc SỐ NÀY LẤY TỪ HÔM NÀO.
+    # 26/08: CHỐT TRÊN CHỈ NỔ KHI KHÔNG ĐO LẠI DÒNG NÀO — sót ca ĐO MỘT PHẦN.
+    #
+    # Hôm nay tôi chép kho ra bản đóng băng bằng `tar` và QUÊN loại `data/`,
+    # nên bản chép mang theo sổ cũ (2.538 tệp). Cache ở trên bỏ qua mọi mục đã
+    # có trong sổ: còn 34 mục để đo, `de` KHÔNG rỗng, nên chốt dưới im lặng —
+    # và bảng in ra trộn 34 số mới với số cũ từ những lần chạy trước, có lần
+    # từ hôm 25/08.
+    #
+    # Bắt được bằng ba dấu hiệu, không dấu nào là "đọc bảng thấy sai":
+    #   thời gian chạy   6 phút, lần đo thật trước đó 51 phút
+    #   phép cộng        34 ca + 45 không đo được = 79, mà bộ đề chỉ 66 mục
+    #   hai cỗ máy       bản CŨ và bản MỚI ra số GIỐNG HỆT nhau
+    #
+    # Nên nói ra ở MỌI trường hợp sổ có sẵn, không chỉ khi sổ đầy.
+    if so and de:
+        print("  ***  ĐO MỘT PHẦN — BẢNG DƯỚI TRỘN SỐ CŨ VỚI SỐ MỚI  ***")
+        print("  %d mục đọc từ sổ CŨ (%s, ghi lúc %s)" % (
+            len(so), RA.name,
+            time.strftime("%d/%m/%Y %H:%M:%S", time.localtime(RA.stat().st_mtime))))
+        print("  %d mục đo MỚI trong lần chạy này." % len(de))
+        print("  Muốn một phép đo thuần thì xoá sổ đi rồi chạy lại.")
+        print()
+
     if so and not de:
         print("  ***  KHÔNG ĐO LẠI DÒNG NÀO  ***")
         print("  Toàn bộ %d mục đọc từ sổ CŨ: %s" % (len(so), RA.name))

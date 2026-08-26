@@ -274,6 +274,7 @@ def main() -> int:
 
     de = []
     thong_ke: dict[str, dict[str, int]] = {}
+    thong_ke_loai: dict[str, dict[str, int]] = {}
     t0 = time.monotonic()
     try:
         for tep in TEP:
@@ -288,6 +289,7 @@ def main() -> int:
             tong_cho = _dem_cho(goc, ten_gan)
             dem_ho: dict[str, int] = {}
             thong_ke[tep] = {}
+            thong_ke_loai[tep] = {"xanh": 0, "loi_collection_hoac_ngat": 0}
             print("  %-22s %d cho co the gieo" % (tep.split("/")[-1], tong_cho))
 
             HO = ("binop", "bo_return", "doi_thu_tu", "doi_chi_so", "doi_bien")
@@ -312,7 +314,7 @@ def main() -> int:
                     continue
                 if any(mm == chuan for _, _, mm in uv):
                     continue
-                # ---- TEST PHAI DO ON DINH ----
+                # ---- TEST PHAI DO ON DINH (MA THOAT = 1) ----
                 f.write_text(ma, encoding="utf-8")
                 try:
                     m1, loi1 = chay_test(tam, TEP_TEST[tep])
@@ -321,7 +323,11 @@ def main() -> int:
                     f.write_text(goc, encoding="utf-8")
                     continue
                 f.write_text(goc, encoding="utf-8")
-                if m1 == 0 or m2 == 0:
+                if m1 != 1 or m2 != 1:
+                    if m1 == 0 or m2 == 0:
+                        thong_ke_loai[tep]["xanh"] += 1
+                    if m1 in (2, 3, 4, 5) or m2 in (2, 3, 4, 5):
+                        thong_ke_loai[tep]["loi_collection_hoac_ngat"] += 1
                     continue
                 sap = ("Error" in loi1 and "assert" not in loi1.lower())
                 dem_ho[ho] = dem_ho.get(ho, 0) + 1
@@ -329,7 +335,7 @@ def main() -> int:
                            "ho": ho, "mo_ta": mo_ta, "dong": dong,
                            "co_ve_sap": sap, "ma": ma})
                 print("     [%s] muc %-4d dong %-4d %s%s"
-                      % (ho, muc, dong, mo_ta, "  (co ve SAP)" if sap else ""))
+                       % (ho, muc, dong, mo_ta, "  (co ve SAP)" if sap else ""))
             for h in ("binop", "bo_return", "doi_thu_tu", "doi_chi_so", "doi_bien"):
                 thong_ke[tep][h] = dem_ho.get(h, 0)
     finally:
@@ -337,21 +343,25 @@ def main() -> int:
 
     RA.write_text(json.dumps(
         {"_vi_sao": "Bo de NGOAI HO cua _Lat. Xem docstring dung_de_ngoai_ho.py",
-         "de": de, "thong_ke": thong_ke}, ensure_ascii=False, indent=1),
+         "de": de, "thong_ke": thong_ke, "thong_ke_loai": thong_ke_loai}, ensure_ascii=False, indent=1),
         encoding="utf-8")
 
     print()
-    print("  %-22s %7s %10s %11s %11s %10s" % ("tep", "binop", "bo_return",
-                                               "doi_thu_tu", "doi_chi_so", "doi_bien"))
+    print("  %-22s %7s %10s %11s %11s %10s | %18s %12s" % (
+        "tep", "binop", "bo_return", "doi_thu_tu", "doi_chi_so", "doi_bien", "loi_collection(2/5)", "test_van_xanh"))
     for tep in TEP:
         t = thong_ke.get(tep, {})
-        print("  %-22s %7d %10d %11d %11d %10d"
+        tl = thong_ke_loai.get(tep, {})
+        print("  %-22s %7d %10d %11d %11d %10d | %18d %12d"
               % (tep.split("/")[-1][:22], t.get("binop", 0), t.get("bo_return", 0),
-                 t.get("doi_thu_tu", 0), t.get("doi_chi_so", 0), t.get("doi_bien", 0)))
+                 t.get("doi_thu_tu", 0), t.get("doi_chi_so", 0), t.get("doi_bien", 0),
+                 tl.get("loi_collection_hoac_ngat", 0), tl.get("xanh", 0)))
     print()
     n_sap = sum(1 for x in de if x["co_ve_sap"])
     print("  TONG: %d de  (co ve SAP: %d, doi gia tri ma chay tron lot: %d)"
           % (len(de), n_sap, len(de) - n_sap))
+    tong_loi_col = sum(v.get("loi_collection_hoac_ngat", 0) for v in thong_ke_loai.values())
+    print("  Tong ung vien bi loai vi ma thoat 2/5 (loi thu thap/import): %d" % tong_loi_col)
     print("  %.0f giay" % (time.monotonic() - t0))
     return 0 if de else 2
 

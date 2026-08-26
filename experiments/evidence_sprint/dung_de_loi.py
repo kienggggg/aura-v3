@@ -185,8 +185,8 @@ def main() -> int:
                 f.write_text(moi, encoding="utf-8")
                 ma_do, bao_do = chay_test(tam, tep_test)
                 f.write_text(goc_nguon, encoding="utf-8")
-                if ma_do == 0:
-                    continue                  # đột biến vô hại, không thành đề
+                if ma_do != 1:
+                    continue                  # chỉ nhận mã thoát 1 (test ĐỎ thật sự); 0 là xanh, 2/3/4/5 là lỗi thu thập/hỏng
                 de.append({"tep": tep, "tep_test": tep_test, "cho": i,
                            "mo_ta": mo_ta, "loi_test": bao_do[-400:]})
                 dat += 1

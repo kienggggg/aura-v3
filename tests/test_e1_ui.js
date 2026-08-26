@@ -168,6 +168,96 @@ describe('E1 UI & Renderer Tests', () => {
     assert.strictEqual(app.state.codeExecutionEnabled, true);
   });
 
+  test('loadAvailableTests() gọi toàn dự án và chỉ giữ hai quy ước tên pytest', async () => {
+    const select = global.document.getElementById('e1TestSelect');
+    let requestedUrl = '';
+    global.fetch = async (url) => {
+      requestedUrl = url;
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          danh_sach: [
+            { duong_dan: 'test_bai_tap.py', ten_tep: 'test_bai_tap.py', sha256: 'a'.repeat(64) },
+            { duong_dan: 'goi/phep_tinh_test.py', ten_tep: 'phep_tinh_test.py', sha256: 'b'.repeat(64) },
+            { duong_dan: 'goi/helper.py', ten_tep: 'helper.py', sha256: 'c'.repeat(64) },
+            { duong_dan: 'test_du_lieu.json', ten_tep: 'test_du_lieu.json', sha256: 'd'.repeat(64) },
+          ]
+        })
+      };
+    };
+
+    await app.loadAvailableTests('tests/test_bai_tap.py');
+
+    assert.strictEqual(requestedUrl, '/api/tep_tin');
+    assert.deepStrictEqual(
+      select.children.map(option => option.value),
+      ['test_bai_tap.py', 'goi/phep_tinh_test.py']
+    );
+    assert.strictEqual(select.children[0].selected, true, 'Phải ghép tệp ở gốc theo basename');
+    assert.deepStrictEqual(
+      Object.keys(app.state.testFilesInventory),
+      ['test_bai_tap.py', 'goi/phep_tinh_test.py']
+    );
+  });
+
+  test('loadAvailableTests() giải thích khi API 200 nhưng không có tệp pytest', async () => {
+    const select = global.document.getElementById('e1TestSelect');
+    const statusPill = global.document.getElementById('e1StatusPill');
+    global.fetch = async () => ({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({
+        danh_sach: [
+          { duong_dan: 'bai_tap.py', ten_tep: 'bai_tap.py' },
+          { duong_dan: 'test_du_lieu.json', ten_tep: 'test_du_lieu.json' },
+        ]
+      })
+    });
+
+    await app.loadAvailableTests();
+
+    assert.strictEqual(select.children.length, 1);
+    assert.strictEqual(select.children[0].disabled, true);
+    assert.ok(select.children[0].textContent.includes('Không tìm thấy tệp pytest'));
+    assert.strictEqual(statusPill.className, 'trace-status-pill cut');
+    assert.ok(statusPill.textContent.includes('Không tìm thấy tệp pytest'));
+  });
+
+  test('loadAvailableTests() hiện HTTP 403 ngay trong ô chọn và trạng thái', async () => {
+    const select = global.document.getElementById('e1TestSelect');
+    const statusPill = global.document.getElementById('e1StatusPill');
+    global.fetch = async () => ({
+      ok: false,
+      status: 403,
+      text: async () => JSON.stringify({ error: '403 Forbidden: không có quyền' })
+    });
+
+    await app.loadAvailableTests();
+
+    assert.strictEqual(select.children.length, 1);
+    assert.strictEqual(select.children[0].disabled, true);
+    assert.ok(select.children[0].textContent.includes('403 Forbidden: không có quyền'));
+    assert.strictEqual(statusPill.className, 'trace-status-pill error');
+    assert.ok(statusPill.textContent.includes('403 Forbidden: không có quyền'));
+  });
+
+  test('loadAvailableTests() không nuốt ngoại lệ kết nối', async () => {
+    const select = global.document.getElementById('e1TestSelect');
+    const statusPill = global.document.getElementById('e1StatusPill');
+    global.fetch = async () => {
+      throw new Error('mất kết nối thử nghiệm');
+    };
+
+    await app.loadAvailableTests();
+
+    assert.strictEqual(select.children.length, 1);
+    assert.strictEqual(select.children[0].disabled, true);
+    assert.ok(select.children[0].textContent.includes('mất kết nối thử nghiệm'));
+    assert.strictEqual(statusPill.className, 'trace-status-pill error');
+    assert.ok(statusPill.textContent.includes('mất kết nối thử nghiệm'));
+  });
+
   test('renderE1Results() dựng cây DOM với đầy đủ thông tin mốc E1', () => {
     const container = new FakeElement('div');
     const statusPill = global.document.getElementById('e1StatusPill');
@@ -328,4 +418,3 @@ describe('E1 UI & Renderer Tests', () => {
   });
 
 });
-

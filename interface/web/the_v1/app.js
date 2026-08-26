@@ -1492,35 +1492,80 @@
   // ==========================================================================
   // E1 — ĐỊNH VỊ LỖI BẰNG TEST TRÊN BẢN SAO TẠM
   // ==========================================================================
+  // 26/08/2026: hai lượt gọi từng đóng đinh `?thu_muc=tests`; dự án không có
+  // thư mục ấy nhận HTTP 403 rồi cả hai nhánh đều im lặng, khiến ô test rỗng.
+  // Lấy danh mục toàn dự án rồi lọc theo đúng quy ước pytest để tệp test ở gốc
+  // hay trong bất kỳ thư mục được phép nào đều có cùng một đường đi.
+  function laTepPytest(tep) {
+    if (!tep || typeof tep.duong_dan !== 'string') return false;
+    const cacPhan = tep.duong_dan.replaceAll('\\', '/').split('/');
+    const tenTep = typeof tep.ten_tep === 'string' ? tep.ten_tep : cacPhan[cacPhan.length - 1];
+    return (/^test_.*\.py$/.test(tenTep) || /_test\.py$/.test(tenTep));
+  }
+
+  async function layDanhSachTepPytest() {
+    const resp = await authFetch('/api/tep_tin');
+    const data = await readJsonSafely(resp);
+    if (!resp.ok) {
+      throw new Error(data.error || `HTTP ${resp.status} khi tải danh sách tệp`);
+    }
+    if (!Array.isArray(data.danh_sach)) {
+      throw new Error('Máy chủ không trả danh_sach tệp hợp lệ');
+    }
+    return data.danh_sach.filter(laTepPytest);
+  }
+
+  function baoDanhSachTestKhongDungDuoc(select, message, laLoi = true) {
+    state.testFilesInventory = {};
+    select.innerHTML = '';
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = message;
+    opt.disabled = true;
+    opt.selected = true;
+    select.appendChild(opt);
+
+    const statusPill = document.getElementById('e1StatusPill');
+    if (statusPill) {
+      statusPill.className = `trace-status-pill ${laLoi ? 'error' : 'cut'}`;
+      statusPill.textContent = message;
+    }
+  }
+
   async function loadAvailableTests(defaultTestPath = '') {
     const select = document.getElementById('e1TestSelect');
     if (!select) return;
     try {
-      const resp = await authFetch('/api/tep_tin?thu_muc=tests');
-      if (resp.ok) {
-        const data = await resp.json();
-        const tests = data.danh_sach || [];
-        if (!state.testFilesInventory) state.testFilesInventory = {};
-        select.innerHTML = '';
-        tests.forEach(t => {
-          state.testFilesInventory[t.duong_dan] = t;
-          const opt = document.createElement('option');
-          opt.value = t.duong_dan;
-          opt.textContent = t.duong_dan;
-          if (defaultTestPath && t.duong_dan === defaultTestPath) {
-            opt.selected = true;
-          }
-          select.appendChild(opt);
-        });
-        if (defaultTestPath && !tests.some(t => t.duong_dan === defaultTestPath)) {
-          const opt = document.createElement('option');
-          opt.value = defaultTestPath;
-          opt.textContent = defaultTestPath;
-          opt.selected = true;
-          select.appendChild(opt);
-        }
+      const tests = await layDanhSachTepPytest();
+      state.testFilesInventory = {};
+      select.innerHTML = '';
+
+      if (tests.length === 0) {
+        baoDanhSachTestKhongDungDuoc(
+          select,
+          'Không tìm thấy tệp pytest (test_*.py hoặc *_test.py)',
+          false
+        );
+        return;
       }
-    } catch (_) {}
+
+      const tenMacDinh = defaultTestPath.replaceAll('\\', '/').split('/').pop();
+      const testMacDinh = tests.find(t => t.duong_dan === defaultTestPath) ||
+        tests.find(t => tenMacDinh && t.ten_tep === tenMacDinh);
+
+      tests.forEach(t => {
+        state.testFilesInventory[t.duong_dan] = t;
+        const opt = document.createElement('option');
+        opt.value = t.duong_dan;
+        opt.textContent = t.duong_dan;
+        if (testMacDinh && t.duong_dan === testMacDinh.duong_dan) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
+      });
+    } catch (err) {
+      baoDanhSachTestKhongDungDuoc(select, `Không tải được tệp test: ${err.message}`);
+    }
   }
 
   function updateButtonsState() {
@@ -1576,9 +1621,12 @@
       return;
     }
 
-    const selectedTestFile = testSelect && testSelect.value ? testSelect.value : (
-      state.activeFilePath.replace('core/', 'tests/test_')
-    );
+    const selectedTestFile = testSelect && testSelect.value ? testSelect.value : '';
+    if (!selectedTestFile) {
+      statusPill.className = 'trace-status-pill cut';
+      statusPill.textContent = 'Chưa có tệp pytest để định vị lỗi';
+      return;
+    }
 
     let testSha = '';
     if (state.testFilesInventory && state.testFilesInventory[selectedTestFile]) {
@@ -1586,15 +1634,26 @@
     }
     if (!testSha) {
       try {
-        const respTep = await authFetch('/api/tep_tin?thu_muc=tests');
-        const dataTep = await respTep.json();
-        const match = (dataTep.danh_sach || []).find(t => t.duong_dan === selectedTestFile);
+        const tests = await layDanhSachTepPytest();
+        state.testFilesInventory = {};
+        tests.forEach(t => {
+          state.testFilesInventory[t.duong_dan] = t;
+        });
+        const match = tests.find(t => t.duong_dan === selectedTestFile);
         if (match && match.sha256) {
           testSha = match.sha256;
-          if (!state.testFilesInventory) state.testFilesInventory = {};
-          state.testFilesInventory[selectedTestFile] = match;
+        } else {
+          statusPill.className = 'trace-status-pill error';
+          statusPill.textContent = 'Tệp test không còn trong dự án';
+          renderE1Error(`Không tìm thấy ${selectedTestFile} trong danh sách tệp pytest hiện tại.`);
+          return;
         }
-      } catch (_) {}
+      } catch (err) {
+        statusPill.className = 'trace-status-pill error';
+        statusPill.textContent = 'Không tải được danh sách test';
+        renderE1Error(`Không thể lấy SHA-256 của tệp test: ${err.message}`);
+        return;
+      }
     }
 
     btnE1.disabled = true;
@@ -3299,8 +3358,73 @@
     });
 
     // Phím tắt bàn phím IDE chuẩn
+    // ======================================================================
+    // CHẶN MẤT DỮ LIỆU KHI ĐÓNG TAB — thêm 26/08/2026
+    // ======================================================================
+    //
+    // Trước hôm nay `grep -rn beforeunload interface/web/the_v1/` ra KHÔNG
+    // MỘT DÒNG NÀO. Nghĩa là đóng tab trình duyệt — bấm ✕, hay Ctrl+W —
+    // thì mọi thẻ chưa lưu bay sạch, im lặng, không một câu hỏi.
+    //
+    // Ctrl+W làm chuyện này TỰ NHIÊN đến mức nguy hiểm: trong VS Code nó đóng
+    // MỘT TỆP; ở đây nó không được app bắt (đo 26/08: `defaultPrevented` là
+    // `false`) nên trình duyệt đóng cả cửa sổ app.
+    //
+    // Đúng họ bệnh CLAUDE.md §4 — app cho sửa mà không giữ. Và nó không lộ ra
+    // trong test nào: 707 test xanh suốt trong khi chỗ này trống.
+    //
+    // Phải xét CẢ CÁC TAB KHÁC, không chỉ tab đang mở: `state.hasModifications`
+    // là cờ của tab đang xem, các tab kia giữ cờ riêng trong ảnh chụp của
+    // chúng (xem `anhTabHienTai`). Chỉ xét tab đang xem thì mở ba tệp, sửa hai
+    // tệp đầu, đứng ở tệp thứ ba mà đóng là vẫn mất hai tệp kia.
+    function coThayDoiChuaLuu() {
+      if (state.hasModifications) return true;
+      return (state.tabs || []).some(
+        (t, i) => i !== state.tabActive && t && t.hasModifications);
+    }
+
+    window.addEventListener('beforeunload', (e) => {
+      if (!coThayDoiChuaLuu()) return;
+      // Trình duyệt đời nay KHÔNG hiện câu chữ của mình, chỉ hiện hộp mặc
+      // định của nó. Cả `preventDefault()` lẫn `returnValue` đều cần: Chrome
+      // theo cái sau, chuẩn HTML theo cái trước.
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    });
+
     window.addEventListener('keydown', (e) => {
-      if (e.ctrlKey && e.key === 'Enter') {
+      if (e.ctrlKey && !e.shiftKey && (e.key === 's' || e.key === 'S')) {
+        // 26/08/2026: Ctrl+S TRƯỚC ĐÂY KHÔNG ĐƯỢC BẮT.
+        //
+        // Đo bằng cách gửi phím thật vào trang: `defaultPrevented` là `false`,
+        // tức phím rơi xuống trình duyệt — và ở trình duyệt Ctrl+S mở hộp
+        // "Lưu trang web". Không phải "không làm gì", mà là LÀM SAI: người
+        // dùng quen IDE bấm phản xạ số một của họ và nhận một hộp thoại lạc đề.
+        //
+        // Chỉ 4 trong 15 phím tắt IDE chuẩn được bắt (đo 26/08):
+        //   bắt được  Ctrl+F · Ctrl+H · Ctrl+B · Ctrl+Z/Y · Ctrl+C/X/V · Ctrl+Enter
+        //   rơi xuống Ctrl+S · Ctrl+P · Ctrl+O · Ctrl+N · Ctrl+W
+        //
+        // Lưu THẲNG khi tệp đã có đường dẫn, giống mọi trình soạn thảo. Hộp
+        // hỏi đường dẫn chỉ bật khi tệp chưa có tên — đó là "Lưu thành tệp
+        // mới", việc khác. Nút "Lưu Tệp" trên thanh trên vẫn mở hộp như cũ,
+        // không đụng tới.
+        e.preventDefault();
+        if (state.activeFilePath) {
+          const kieu = /\.json$/i.test(state.activeFilePath) ? 'json' : 'py';
+          saveFile(state.activeFilePath, kieu);
+        } else {
+          const oDuong = document.getElementById('saveFilePath');
+          const hop = document.getElementById('saveFileModal');
+          if (oDuong && hop) {
+            oDuong.value = 'my_program.py';
+            hop.style.display = 'flex';
+            oDuong.focus();
+            oDuong.select();
+          }
+        }
+      } else if (e.ctrlKey && e.key === 'Enter') {
         e.preventDefault();
         runProgram();
       } else if (e.ctrlKey && (e.key === 'b' || e.key === 'B')) {

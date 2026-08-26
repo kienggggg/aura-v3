@@ -331,6 +331,31 @@ def _viet_gan_nhat(
     return tot
 
 
+def _rut_gon_chuoi_theo_dong(chuoi: List[dict]) -> List[dict]:
+    """Giữ một mục đại diện đầu tiên cho mỗi dòng nguồn, đúng thứ tự đã tìm.
+
+    Đo bộ 5 ngày 25/08/2026: máy có cạnh qua hàm trả trung vị 18,5 mục nhưng
+    chỉ 7,0 dòng riêng. Các mục lặp cùng dòng không thêm vị trí nào để người
+    dùng kiểm tra; bộ chấm cũng xác định đúng/sai bằng tập dòng riêng.
+
+    Phải gọi hàm này SAU khi hàng đợi đã duyệt xong. Gộp ngay lúc duyệt sẽ làm
+    `len(chuoi) < sau_toi_da` đổi nghĩa, tức âm thầm cấp thêm ngân sách cho một
+    cỗ máy khác và không còn bảo đảm giữ nguyên độ chính xác 0,77 đã đo.
+    """
+    ra: List[dict] = []
+    dong_da_co: Set[int] = set()
+    for muc in chuoi:
+        dong = muc.get("dong")
+        if isinstance(dong, int):
+            if dong in dong_da_co:
+                continue
+            dong_da_co.add(dong)
+        # Không gộp các mục thiếu số dòng: chưa có bằng chứng chúng cùng một
+        # vị trí, nên gom tất cả vào khoá None sẽ làm mất dữ liệu thật.
+        ra.append(muc)
+    return ra
+
+
 def truy_nguoc(
     su_kien: List[dict],
     nguon: str,
@@ -441,14 +466,19 @@ def truy_nguoc(
         })
         nap(e.get("buoc", 0), e.get("dong", 0), ten)
 
+    # Giữ nguyên phán quyết "có lùi được hay không" của chuỗi đầy đủ; phép
+    # rút gọn chỉ thay phần trình bày, không được đổi trạng thái nghiệp vụ.
+    khong_lui = len(chuoi) <= 1
+
+    # Rút phần người dùng phải đọc, không đổi bất kỳ bước duyệt nào ở trên.
+    chuoi = _rut_gon_chuoi_theo_dong(chuoi)
+
     dong = []
     for m in chuoi:
         d = m.get("dong")
         if isinstance(d, int) and d not in dong:
             dong.append(d)
 
-    # Chuỗi chỉ có mốc bắt đầu = không lùi được bước nào.
-    khong_lui = len(chuoi) <= 1
     if im_lang_khi_khong_lui and khong_lui:
         return {
             "trang_thai": "khong_biet",

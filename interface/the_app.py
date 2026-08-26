@@ -170,20 +170,52 @@ def main():
     token = app["aura_config"].auth_token
     app_url = f"http://{args.host}:{args.port}/?token={token}"
 
+    # BANNER VIẾT CÓ DẤU, VÀ NÓI CẢ GIỚI HẠN — sửa 26/08/2026.
+    #
+    # Bản cũ viết không dấu ("APP LAP TRINH BANG THE", "Dia chi web") vì hồi
+    # ấy bảng mã còn hỏng. Nay `main()` đã chỉnh cả `stdout` lẫn `stderr` sang
+    # UTF-8 (commit 5c6ce52) nên hiện dấu được.
+    #
+    # Bản cũ in "Bao mat: 4 lop" và DỪNG Ở ĐÓ. Bốn lớp ấy CÓ THẬT — đã kiểm
+    # từng lớp bằng cách gọi API sống: `--host 0.0.0.0` thoát 1 · không token
+    # 403 · Origin lạ 403 (Origin đúng 200) · đường dẫn ra ngoài dự án 400.
+    #
+    # Nhưng câu ấy đứng một mình thì người đọc hiểu là "chạy mã ở đây an toàn".
+    # KHÔNG PHẢI. Bốn lớp bảo vệ CỔNG VÀO — ai gọi được API. Chúng không bảo
+    # vệ gì khi mã đã chạy. Đo 25/08 qua đúng đường app dùng: ghi tệp bằng
+    # đường dẫn tuyệt đối ngoài thư mục tạm GHI ĐƯỢC · gọi tiến trình con
+    # CHẠY ĐƯỢC · mở socket MỞ ĐƯỢC · đọc tệp bất kỳ ĐỌC ĐƯỢC.
+    #
+    # README và chân giao diện đã nói thật chỗ này; banner thì chưa — mà banner
+    # là thứ người dùng nhìn thấy ĐẦU TIÊN.
+    #
+    # Thêm dòng THƯ MỤC DỰ ÁN: bản cũ không in nó, nên người dùng không biết
+    # app sẽ đọc/ghi tệp ở đâu. Với `aura-the` cài bằng pip thì đó là thư mục
+    # hiện tại, và người dùng rất dễ chạy nhầm chỗ.
+    bat_chay_ma = app["aura_config"].allow_code_execution
+
     print("=" * 70, flush=True)
-    print("  [*] AURA -- APP LAP TRINH BANG THE (BAN v1)", flush=True)
+    print("  AURA — APP LẬP TRÌNH BẰNG THẺ (bản v1)", flush=True)
     print("=" * 70, flush=True)
-    print(f"  * Dia chi web  : {app_url}", flush=True)
-    print(f"  * Ma thong hanh: {token}", flush=True)
-    print("  * Bao mat      : 4 lop (Loopback + Auth Token + Origin + Whitelist)", flush=True)
-    print(
-        "  * Chay ma/Trace/E1: "
-        + ("DA BAT CO CHU DICH (/api/chay, /api/trace, /api/dinh_vi_loi)" if app["aura_config"].allow_code_execution
-           else "TAT MAC DINH (/api/chay, /api/trace, /api/dinh_vi_loi khoa; mo/sua/kiem tra/luu van hoat dong)"),
-        flush=True,
-    )
+    print(f"  Địa chỉ web   : {app_url}", flush=True)
+    print(f"  Mã thông hành : {token}", flush=True)
+    print(f"  Thư mục dự án : {du_an}", flush=True)
+    print("  Cổng vào      : 4 lớp — chỉ loopback · mã thông hành · Origin · "
+          "khoá đường dẫn", flush=True)
+    if bat_chay_ma:
+        print("  Chạy mã       : ĐÃ BẬT (--allow-exec)", flush=True)
+        print("=" * 70, flush=True)
+        print("  ⚠  Mã bạn chạy ở đây có ĐỦ QUYỀN của tài khoản Windows đang", flush=True)
+        print("     dùng. KHÔNG có hộp cát. Bốn lớp trên chỉ giữ CỔNG VÀO,", flush=True)
+        print("     chúng không giữ được gì khi mã đã chạy.", flush=True)
+        print("     Chỉ chạy mã do CHÍNH BẠN viết. Xem mục an toàn trong README.", flush=True)
+    else:
+        print("  Chạy mã       : TẮT mặc định — mở, sửa, kiểm tra, lưu vẫn dùng "
+              "được", flush=True)
+        print("                  (bật bằng --allow-exec; đọc mục an toàn trong "
+              "README trước)", flush=True)
     print("=" * 70, flush=True)
-    print("  Bam Ctrl+C de dung may chu.\n", flush=True)
+    print("  Bấm Ctrl+C để dừng máy chủ.\n", flush=True)
 
     if not args.no_browser:
         webbrowser.open(app_url)

@@ -356,6 +356,7 @@ def chay_mot_de(d: dict, dung_dong: bool = False) -> dict:
         dong_chuoi = kq["dong"]
         return {
             "trang_thai": kq["trang_thai"],
+            "vi_sao": kq.get("vi_sao", ""),
             "ten_test": tr.ten_test,
             "so_test_do_khac": so_do,
             "so_test_do_that": len(ds_do_that),
@@ -372,7 +373,7 @@ def chay_mot_de(d: dict, dung_dong: bool = False) -> dict:
             "dong_trong_ma": dl,
             "trace_toi_dong_loi": toi_dong_loi,
             "dong_loi_trong_chuoi": any(x in dong_chuoi for x in dl),
-            "thu_hep": round(len(dong_chuoi) / len(da_chay), 3) if da_chay else None,
+            "thu_hep": kq.get("thu_hep", round(len(dong_chuoi) / len(da_chay), 3) if da_chay else None),
             "model_calls": kq.get("model_calls", 0),
             "external_submit": kq.get("external_submit", False),
         }

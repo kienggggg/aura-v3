@@ -481,12 +481,18 @@ def truy_nguoc(
             dong.append(d)
 
     if im_lang_khi_khong_lui and khong_lui:
+        so_dong_da_chay = len({
+            e.get("dong") for e in su_kien
+            if isinstance(e.get("dong"), int)})
+        thu_hep_val = round(len(dong) / so_dong_da_chay, 3) if so_dong_da_chay else 0.0
         return {
             "trang_thai": "khong_biet",
-            "vi_sao": "không lùi được bước nào — tên mà dòng ấy đọc không có "
-                      "ai ghi trong vết. Traceback Python đã chỉ đúng chỗ này.",
+            "vi_sao": "khong_lui — không lùi được bước nào (tên mà dòng ấy đọc không có ai ghi trong vết)",
             "chuoi": chuoi,
             "dong": [],
+            "so_dong_chuoi": len(dong),
+            "so_dong_da_chay": so_dong_da_chay,
+            "thu_hep": thu_hep_val,
             "khong_lui": True,
             "model_calls": 0,
             "external_submit": False,
@@ -536,22 +542,30 @@ def truy_nguoc(
                 return {
                     "trang_thai": "khong_biet",
                     "vi_sao": (
-                        f"thu hẹp {thu_hep:.3f} <= {nguong_thu_hep} — chuỗi quá "
-                        f"hẹp so với {so_dong_da_chay} dòng đã chạy. Đo trên sáu "
-                        f"bộ đề: hẹp cỡ này thì sai nhiều hơn đúng."),
+                        f"thu_hep — thu hẹp {thu_hep:.3f} <= {nguong_thu_hep} "
+                        f"(chuỗi {len(dong)} dòng quá hẹp so với {so_dong_da_chay} dòng đã chạy)"),
                     "chuoi": chuoi,
                     "dong": [],
-                    "khong_lui": khong_lui,
+                    "so_dong_chuoi": len(dong),
+                    "so_dong_da_chay": so_dong_da_chay,
                     "thu_hep": round(thu_hep, 3),
+                    "khong_lui": khong_lui,
                     "model_calls": 0,
                     "external_submit": False,
                 }
 
+    so_dong_da_chay = len({
+        e.get("dong") for e in su_kien
+        if isinstance(e.get("dong"), int)})
+    thu_hep_val = round(len(dong) / so_dong_da_chay, 3) if so_dong_da_chay else None
     return {
         "trang_thai": "chuoi_rong" if khong_lui else "co_chuoi",
         "vi_sao": "",
         "chuoi": chuoi,
         "dong": dong,
+        "so_dong_chuoi": len(dong),
+        "so_dong_da_chay": so_dong_da_chay,
+        "thu_hep": thu_hep_val,
         "khong_lui": khong_lui,
         "model_calls": 0,
         "external_submit": False,

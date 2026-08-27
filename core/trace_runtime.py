@@ -284,6 +284,36 @@ print("===JSON_END===")
     return script
 
 
+# TRẦN THỜI GIAN CHO MỘT LƯỢT TRACE — nới 15 -> 90 giây, 27/08/2026.
+#
+# Trần cũ là 15 giây, đóng đinh trong thân hàm. Đo trên máy RẢNH, ba ca của
+# `core/the_cst.py` mà báo cáo vòng 4 nêu:
+#
+#     mục 89    15,0 giây  ->  khong_chay   (đụng trần)
+#     mục 97    12,0 giây  ->  trace_du
+#     mục 108   14,4 giây  ->  trace_du
+#
+# Tức vết CST chạy dưới `sys.settrace` mất 12–15 giây — NẰM SÁT MÉP TRẦN. Nới
+# lên 120 thì mục 89 chạy xong trong 15,1 giây và ra `trace_du`. Nhãn cũ của
+# nó được quyết bởi MỘT PHẦN MƯỜI GIÂY.
+#
+# Hậu quả đo được, không phải suy đoán: bộ 5 đo 26/08 trên máy rảnh ra 18 ca
+# không đo được; đo lại 27/08 trong khi tôi chạy `pytest tests -q` song song
+# thì ra 30. Cùng bộ đề, cùng cây mã, khác mỗi tải máy. Phép đo đang cân trên
+# lưỡi dao, nên mọi con số của đợt này đều mang một sai số không ai đo.
+#
+# VÌ SAO 90 CHỨ KHÔNG PHẢI 120 HAY 300: ba test cancellation của
+# `tests/test_chat_service.py` treo VĨNH VIỄN — `await web.started.wait()`
+# không có timeout nội tại, và đột biến làm `ChatService.reply()` chết trước
+# khi chạm hook `set()`. Trần càng cao thì mỗi ca treo càng đốt thêm chừng ấy
+# giây cho không. 90 là sáu lần mức đo rải (15 giây), đủ chỗ cho máy bận, mà
+# vẫn cắt được ca treo.
+#
+# Đây KHÔNG phải nới ngưỡng chấm điểm. Trần này là tham số của phép đo, và
+# giá trị cũ đang làm phép đo nói SAI về cỗ máy (xem `chot_test_can_trace`).
+TRAN_TRACE_GIAY = 90
+
+
 def chay_trace_mot_test(
     tep_nguon: str,
     node_id_test: str,
@@ -324,12 +354,12 @@ def chay_trace_mot_test(
             encoding="utf-8",
             errors="replace",
             cwd=str(root),
-            timeout=15,
+            timeout=TRAN_TRACE_GIAY,
         )
     except subprocess.TimeoutExpired:
         return TraceResult(
             trang_thai="khong_chay",
-            thong_diep="KHÔNG ĐO ĐƯỢC: Timeout thực thi quá 15 giây",
+            thong_diep=f"KHÔNG ĐO ĐƯỢC: Timeout thực thi quá {TRAN_TRACE_GIAY} giây",
             tong_buoc=0,
             ten_test=node_id_test,
             so_test_do_khac=so_test_do_khac,
@@ -454,9 +484,35 @@ def chot_test_can_trace(
     if nhom_qua_dong:
         tap_xet = nhom_qua_dong
     else:
-        # Nhánh dự phòng: không test đỏ nào đi qua dòng đột biến -> đánh dấu rõ trạng thái
+        # Nhánh dự phòng: không test đỏ nào đi qua dòng đột biến.
+        #
+        # 27/08/2026: PHẢI PHÂN BIỆT "CHẠY XONG MÀ KHÔNG QUA" VỚI "HẾT GIỜ".
+        #
+        # Trước đây nhánh này dán một nhãn duy nhất cho mọi ứng viên:
+        # "Vết thực thi không đi qua dòng đột biến". Nhưng một vết HẾT GIỜ thì
+        # `chay_trace_mot_test` trả `trang_thai = "khong_chay"` và rơi vào đây
+        # — nên câu ấy nói một điều về HÀNH VI của cỗ máy trong khi sự thật
+        # chỉ là phép đo chưa chạy xong.
+        #
+        # Đo 27/08 trên ba ca `the_cst.py` mà báo cáo vòng 4 nêu:
+        #
+        #     mục 89    trace 15,0 giây  -> khong_chay   (đụng trần 15)
+        #     mục 97    trace 12,0 giây  -> trace_du
+        #     mục 108   trace 14,4 giây  -> trace_du
+        #
+        # Nới trần lên 120 giây thì mục 89 chạy xong trong 15,1 giây và ra
+        # `trace_du`. Tức nhãn "vết không đi qua dòng đột biến" của nó được
+        # quyết bởi MỘT PHẦN MƯỜI GIÂY.
+        #
+        # Đúng luật CLAUDE.md §4: "phép đo không chạy phải NÓI LÀ KHÔNG CHẠY".
+        # Ở đây còn tệ hơn giấu việc không chạy — nó thay việc không chạy bằng
+        # một phán quyết về cỗ máy.
         tap_xet = ung_vien
         for u in tap_xet:
+            if u[4].trang_thai == "khong_chay":
+                # Giữ nguyên `khong_chay` và thông điệp gốc (đã ghi rõ hết giờ
+                # bao nhiêu giây). Đừng đổi nó thành một câu về hành vi.
+                continue
             u[4].trang_thai = "trace_khong_qua_loi"
             u[4].thong_diep = "KHÔNG ĐO ĐƯỢC: Vết thực thi không đi qua dòng đột biến"
 

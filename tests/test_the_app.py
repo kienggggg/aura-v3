@@ -4,6 +4,7 @@
 Sử dụng aiohttp.test_utils.AioHTTPTestCase (không cần plugin pytest-aiohttp).
 """
 import hashlib
+import unittest
 import tempfile
 from pathlib import Path
 from aiohttp import web
@@ -189,3 +190,60 @@ class TestKhoAuraKhongDoiHangRao(AioHTTPTestCase):
         self.assertNotIn("apply_audit.py", duong_dan)
         self.assertTrue(all(
             d.startswith(("core/", "interface/", "tests/")) for d in duong_dan))
+
+
+class TestCongBanNoiTiengNguoi(unittest.TestCase):
+    """Cổng đang bận thì báo tiếng người, không đổ vết ngăn xếp.
+
+    27/08/2026. Đo bằng cách chạy `aura-the --port 8088` hai lần: lần thứ hai
+    in ĐÚNG 12 dòng vết ngăn xếp — `aiohttp/web_runner.py` ·
+    `asyncio/base_events.py` · `OSError: [Errno 10048] ... only one usage of
+    each socket address`.
+
+    Cổng mặc định là 8088 và README cũng bảo gõ `--port 8088`, nên đây KHÔNG
+    phải ca hiếm: mở app lần hai, hoặc quên rằng lần trước chưa tắt, là gặp.
+    Người app nhắm tới là "người chưa viết nổi Python trôi chảy" — vết ngăn
+    xếp với họ chỉ là màn hình dọa người, và nó không nói phải làm gì.
+
+    Bản sửa ĐẦU của tôi bắt `OSError` quanh `web.run_app`, và câu báo hiện ra
+    đúng nhưng SAU banner: người dùng đọc "Địa chỉ web: ..." và "Bấm Ctrl+C để
+    dừng máy chủ", rồi ba dòng sau mới thấy "KHÔNG MỞ ĐƯỢC". Bắt được bằng
+    cách tự chạy hai lần và ĐỌC kết xuất, không phải bằng đọc mã.
+    """
+
+    def test_cong_ban_thi_bao_truoc_khi_in_banner(self):
+        import socket
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(("127.0.0.1", 0))
+        s.listen(1)
+        cong = s.getsockname()[1]
+        try:
+            self.assertFalse(
+                the_app._cong_dung_duoc("127.0.0.1", cong),
+                "cổng đang có người nghe mà `_cong_dung_duoc` vẫn nói còn trống")
+        finally:
+            s.close()
+
+        # Đóng rồi thì phải nói là dùng được — nếu không, cửa này luôn chặn và
+        # app không bao giờ mở nổi.
+        self.assertTrue(
+            the_app._cong_dung_duoc("127.0.0.1", cong),
+            "cổng đã thả mà vẫn báo bận")
+
+    def test_khong_dung_SO_REUSEADDR(self):
+        """Trên Windows, `SO_REUSEADDR` cho buộc chồng lên cổng đang dùng.
+
+        Đặt cờ ấy thì phép thử LUÔN nói "còn trống" và cửa thành lệnh rỗng —
+        hỏng lặng lẽ, vì app vẫn chạy được cho tới lúc `run_app` mới nổ.
+        """
+        import inspect
+
+        ma = inspect.getsource(the_app._cong_dung_duoc)
+        # Bỏ chú thích trước khi so: docstring của hàm có NHẮC tên cờ này.
+        chi_ma = "\n".join(
+            d for d in ma.splitlines()
+            if not d.strip().startswith("#"))
+        than = chi_ma.split('"""')[-1]
+        self.assertNotIn("SO_REUSEADDR", than,
+                         "thân hàm đặt SO_REUSEADDR — phép thử cổng sẽ luôn đạt")

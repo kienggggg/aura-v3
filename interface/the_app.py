@@ -117,6 +117,28 @@ def tao_app(
     return app
 
 
+def _cong_dung_duoc(host: str, port: int) -> bool:
+    """Cổng này còn trống không — hỏi hệ điều hành, không đoán.
+
+    Thử buộc một socket rồi thả ra ngay. Đây là một CỬA SỔ HẸP: giữa lúc thả
+    và lúc `web.run_app` buộc thật, một tiến trình khác có thể chen vào. Nên
+    lời gọi này KHÔNG thay cho việc bắt `OSError` ở dưới — nó chỉ để câu báo
+    hiện ra TRƯỚC banner trong ca thường gặp (app đã chạy sẵn).
+
+    KHÔNG dùng `SO_REUSEADDR`: trên Windows cờ ấy cho phép buộc chồng lên một
+    cổng đang dùng, tức phép thử sẽ luôn nói "còn trống" và cửa này thành lệnh
+    rỗng.
+    """
+    import socket
+
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind((host, port))
+        return True
+    except OSError:
+        return False
+
+
 def main():
     # Chỉnh CẢ HAI: `stdout` và `stderr`.
     #
@@ -164,6 +186,34 @@ def main():
     du_an = Path(args.du_an).resolve(strict=False) if args.du_an else Path.cwd()
     if not du_an.is_dir():
         print("[LỖI]: Thư mục dự án không tồn tại: %s" % du_an, flush=True)
+        sys.exit(1)
+
+    # KIỂM CỔNG TRƯỚC KHI IN BANNER.
+    #
+    # 27/08/2026. Bản sửa đầu của tôi bắt `OSError` quanh `web.run_app`, và
+    # câu báo hiện ra ĐÚNG nhưng SAU banner — tức người dùng đọc:
+    #
+    #     Địa chỉ web   : http://127.0.0.1:8088/?token=...
+    #     Bấm Ctrl+C để dừng máy chủ.
+    #     KHÔNG MỞ ĐƯỢC: cổng 8088 đang có thứ khác dùng.
+    #
+    # Banner nói app đang chạy, rồi ba dòng sau nói không mở được. Bắt được
+    # bằng cách tự chạy hai lần và ĐỌC kết xuất, không phải bằng đọc mã.
+    #
+    # Nên thử buộc cổng TRƯỚC, khi chưa in gì. Bận thì báo và dừng, banner
+    # không bao giờ xuất hiện.
+    if not _cong_dung_duoc(args.host, args.port):
+        print("=" * 70, flush=True)
+        print(f"  KHÔNG MỞ ĐƯỢC: cổng {args.port} đang có thứ khác dùng.",
+              flush=True)
+        print("=" * 70, flush=True)
+        print("  Thường là do AURA đã chạy sẵn rồi. Thử mở địa chỉ này trước:",
+              flush=True)
+        print(f"      http://{args.host}:{args.port}", flush=True)
+        print("", flush=True)
+        print("  Nếu không phải, dùng cổng khác:", flush=True)
+        print(f"      aura-the --port {args.port + 1}", flush=True)
+        print("=" * 70, flush=True)
         sys.exit(1)
 
     app = tao_app(project_root=du_an)
@@ -220,7 +270,43 @@ def main():
     if not args.no_browser:
         webbrowser.open(app_url)
 
-    web.run_app(app, host=args.host, port=args.port, print=None)
+    try:
+        web.run_app(app, host=args.host, port=args.port, print=None)
+    except OSError as loi:
+        # CỔNG ĐANG BẬN THÌ NÓI TIẾNG NGƯỜI, ĐỪNG ĐỔ VẾT NGĂN XẾP.
+        #
+        # 27/08/2026. Mở app lần thứ hai trên cùng cổng thì người dùng nhận
+        # ĐÚNG 12 dòng: `aiohttp/web_runner.py` · `asyncio/base_events.py` ·
+        # `OSError: [Errno 10048] ... only one usage of each socket address`.
+        # Đã đo bằng cách chạy `aura-the --port 8088` hai lần.
+        #
+        # Cổng mặc định là 8088 và README cũng bảo gõ `--port 8088`, nên đây
+        # KHÔNG phải ca hiếm: mở app lần hai, hoặc quên rằng lần trước chưa
+        # tắt, là gặp. Mà người app nhắm tới là "người chưa viết nổi Python
+        # trôi chảy" — vết ngăn xếp với họ chỉ là màn hình dọa người, và nó
+        # không nói phải làm gì.
+        #
+        # 10048 là mã Windows (WSAEADDRINUSE); 98 là Linux (EADDRINUSE). Bắt
+        # cả hai chứ không chỉ Windows — đọc `errno` chứ không dò chuỗi tiếng
+        # Anh trong lời lỗi, vì lời ấy đổi theo ngôn ngữ hệ điều hành.
+        if loi.errno not in (10048, 98):
+            raise
+        print("=" * 70, flush=True)
+        print(f"  KHÔNG MỞ ĐƯỢC: cổng {args.port} đang có thứ khác dùng.",
+              flush=True)
+        print("=" * 70, flush=True)
+        print("  Thường là do AURA đã chạy sẵn rồi. Thử mở địa chỉ này trước:",
+              flush=True)
+        print(f"      http://{args.host}:{args.port}", flush=True)
+        print("", flush=True)
+        print("  Nếu không phải, dùng cổng khác:", flush=True)
+        print(f"      aura-the --port {args.port + 1}", flush=True)
+        print("=" * 70, flush=True)
+        # `sys.exit` chứ không `return 1`: `python -m interface.the_app` gọi
+        # `main()` rồi bỏ qua giá trị trả về, nên `return` không đặt được mã
+        # thoát. Hai chỗ báo lỗi khác trong tệp này (dòng 154, 167) cũng dùng
+        # `sys.exit(1)`.
+        sys.exit(1)
 
 
 if __name__ == "__main__":

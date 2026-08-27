@@ -130,3 +130,41 @@ describe('phím tắt theo thói quen IDE', () => {
       'thiếu nhánh cho tệp CHƯA có tên (phải mở hộp hỏi đường dẫn)');
   });
 });
+
+describe('phím tắt mở tệp — thêm 27/08/2026', () => {
+  /** Thân khối `window.addEventListener('keydown', ...)` chính. */
+  function khoiPhim() {
+    const i = APP_JS.indexOf("window.addEventListener('keydown'");
+    assert.ok(i !== -1, 'không tìm thấy khối phím tắt');
+    return APP_JS.slice(i, i + 9000);
+  }
+
+  test('Ctrl+P và Ctrl+O được app bắt', () => {
+    // Đo 26/08 bằng cách gửi phím vào `document.body` rồi đọc
+    // `defaultPrevented`: cả hai rơi xuống trình duyệt.
+    //   Ctrl+P -> trình duyệt mở hộp In
+    //   Ctrl+O -> trình duyệt mở hộp chọn tệp, vô dụng vì app đọc tệp qua
+    //             máy chủ chứ không qua trình duyệt
+    // Hai phím này CHẶN ĐƯỢC — khác Ctrl+N và Ctrl+W mà Chrome giữ riêng.
+    const k = khoiPhim();
+    assert.ok(/e\.ctrlKey[^\n]*e\.key === 'p'/.test(k), 'Ctrl+P không được bắt');
+    assert.ok(/e\.ctrlKey[^\n]*e\.key === 'o'/.test(k), 'Ctrl+O không được bắt');
+  });
+
+  test('Ctrl+P mở cột trái nếu đang thu gọn', () => {
+    // Thiếu chỗ này thì bấm Ctrl+P lúc cột trái thu gọn KHÔNG THẤY GÌ XẢY RA
+    // — ô tìm có focus nhưng nằm ngoài màn hình. Đúng loại hỏng lặng lẽ.
+    const k = khoiPhim();
+    const nhanh = k.match(/e\.key === 'p'[\s\S]{0,2200}?e\.key === 'o'/);
+    assert.ok(nhanh, 'không tách được nhánh Ctrl+P');
+    assert.ok(/sidebarLeftCollapsed[\s\S]{0,80}toggleSidebarLeft\(\)/.test(nhanh[0]),
+      'Ctrl+P không mở cột trái khi nó đang thu gọn');
+    // NEO VÀO LỜI GỌI, không dò chuỗi `btnModeFiles`: chuỗi ấy còn ở dòng
+    // khai biến `const nutTep = document.getElementById('btnModeFiles')`, nên
+    // gieo lỗi vào đúng lời gọi `.click()` thì cửa VẪN XANH. Đã thử và nó
+    // trượt thật — lần thứ ba trong hai ngày tôi để một cửa khớp nhầm chỗ.
+    assert.ok(/nutTep\s*\)\s*nutTep\.click\(\)/.test(nhanh[0]),
+      'Ctrl+P không bấm nút chuyển sang cây tệp');
+    assert.ok(/focus\(\)/.test(nhanh[0]), 'Ctrl+P không đặt con trỏ vào ô tìm');
+  });
+});

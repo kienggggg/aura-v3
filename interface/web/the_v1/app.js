@@ -3720,6 +3720,40 @@
             oDuong.select();
           }
         }
+      } else if (e.ctrlKey && !e.shiftKey && (e.key === 'p' || e.key === 'P')) {
+        // Ctrl+P — MỞ NHANH TỆP. Thêm 27/08/2026.
+        //
+        // Đo 26/08: Ctrl+P rơi xuống trình duyệt (mở hộp In). Với người quen
+        // VS Code / Cursor thì đây là phím dùng nhiều thứ hai sau Ctrl+S.
+        //
+        // Chặn được — khác Ctrl+N và Ctrl+W mà Chrome giữ riêng, trang web
+        // không nhận được. Đã đo từng phím bằng cách gửi vào `document.body`
+        // rồi đọc `defaultPrevented`.
+        //
+        // Dựng từ đồ CÓ SẴN, không viết hộp tìm mới: ô tìm của cột trái đã
+        // lọc cây tệp theo đường dẫn khi đang ở chế độ tệp (xem handler
+        // `toolSearch` bên dưới). Ctrl+P chỉ cần chuyển sang cây tệp, xoá ô
+        // tìm, rồi đặt con trỏ vào đó. Viết hộp mới là thêm một chỗ nữa để
+        // lệch với cây tệp thật.
+        e.preventDefault();
+        const nutTep = document.getElementById('btnModeFiles');
+        const oTim = document.getElementById('toolSearch');
+        // Mở cột trái nếu đang thu gọn — nếu không thì bấm Ctrl+P xong không
+        // thấy gì xảy ra, đúng loại hỏng lặng lẽ.
+        if (state.sidebarLeftCollapsed) toggleSidebarLeft();
+        if (nutTep) nutTep.click();
+        if (oTim) {
+          oTim.value = '';
+          oTim.dispatchEvent(new Event('input', { bubbles: true }));
+          oTim.focus();
+        }
+      } else if (e.ctrlKey && (e.key === 'o' || e.key === 'O')) {
+        // Ctrl+O — MỞ TỆP bằng đường dẫn. Cũng rơi xuống trình duyệt trước
+        // 27/08 (mở hộp chọn tệp của trình duyệt, vô dụng ở đây vì app đọc
+        // tệp qua máy chủ chứ không qua trình duyệt).
+        e.preventDefault();
+        const nutMo = document.getElementById('btnOpenFile');
+        if (nutMo) nutMo.click();
       } else if (e.ctrlKey && e.key === 'Enter') {
         e.preventDefault();
         runProgram();

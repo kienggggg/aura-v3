@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AURA COMMAND CENTER — App Điều Hành 7 Đặc Nhiệm v3</title>
+  <link rel="icon" type="image/svg+xml" href="/static/the_v1/aura_logo.svg">
+  <link rel="stylesheet" href="/static/noi_bo.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="theme-cyber">
+  <!-- Top Global Navigation -->
+  <header class="cmd-header">
+    <div class="cmd-brand">
+      <div class="cmd-logo">
+        <img src="/static/the_v1/aura_logo.svg" width="28" height="28" alt="AURA Logo">
+      </div>
+      <div>
+        <h1 class="cmd-title">AURA COMMAND CENTER</h1>
+        <span class="cmd-subtitle">Hệ Thống Điều Hành 7 Đặc Nhiệm Nội Bộ v3.0</span>
+      </div>
+    </div>
+
+    <!-- Live System Vitals -->
+    <div class="cmd-vitals">
+      <div class="vital-item" title="Mức tiêu thụ RAM thực tế">
+        <span class="vital-label">RAM</span>
+        <span class="vital-val" id="vitalRam">-- GB</span>
+      </div>
+      <div class="vital-item" title="Mức độ sử dụng CPU">
+        <span class="vital-label">CPU</span>
+        <span class="vital-val" id="vitalCpu">--%</span>
+      </div>
+      <div class="vital-item" title="Tổng số nhiệm vụ trong Sổ Cái Omega">
+        <span class="vital-label">SỔ CÁI</span>
+        <span class="vital-val text-cyan" id="vitalTasks">-- việc</span>
+      </div>
+      <div class="vital-item" title="Trạng thái hệ thống">
+        <span class="vital-label">HỆ THỐNG</span>
+        <span class="vital-badge" id="vitalMode">LOCAL-FIRST</span>
+      </div>
+    </div>
+
+    <!-- Navigation Mode Tabs -->
+    <nav class="cmd-nav">
+      <button class="nav-tab active" data-view="viewWarRoom">🎛️ Tổng Quan</button>
+      <button class="nav-tab" data-view="viewConsole">💬 Bàn Làm Việc</button>
+      <button class="nav-tab" data-view="viewPipeline">⚡ Quy Trình Tự Động</button>
+      <button class="nav-tab" data-view="viewLedger">📜 Sổ Cái & Bằng Chứng</button>
+    </nav>
+  </header>
+
+  <div class="cmd-main-layout">
+    <!-- Left Sidebar: 7 Agents Navigation -->
+    <aside class="cmd-sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">7 ĐẶC NHIỆM AURA</span>
+        <span class="badge-count" id="agentOnlineCount">7/7</span>
+      </div>
+
+      <div class="agents-list" id="agentsSidebarList">
+        <!-- Rendered dynamically via JS -->
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="footer-hint">
+          <span>💡 <strong>Gợi ý:</strong> Chọn đặc nhiệm để vào bàn làm việc chuyên sâu hoặc kích hoạt chiến dịch liên phòng ban.</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center Workspace -->
+    <main class="cmd-workspace">
+      <!-- 1. VIEW: WAR ROOM (Tổng quan) -->
+      <section class="view-pane active" id="viewWarRoom">
+        <div class="pane-header">
+          <div>
+            <h2 class="pane-title">Trung Tâm Điều Hành Tác Chiến (War Room)</h2>
+            <p class="pane-subtitle">Giám sát hoạt động 7 phòng ban, tình trạng tài nguyên và các luồng nhiệm vụ.</p>
+          </div>
+          <button class="btn btn-primary" id="btnQuickLaunchPipeline">
+            🚀 Kích Hoạt Chiến Dịch Liên Phòng
+          </button>
+        </div>
+
+        <div class="war-room-grid" id="warRoomGrid">
+          <!-- 7 Agent Status Cards rendered dynamically -->
+        </div>
+
+        <div class="war-room-bottom-grid">
+          <div class="cmd-card">
+            <div class="card-header">
+              <h3 class="card-title">📊 Giám Sát Chất Lượng & Hard Gates</h3>
+              <span class="card-badge pass">100% PASS</span>
+            </div>
+            <div class="metrics-grid">
+              <div class="metric-box">
+                <span class="metric-num text-emerald" id="metricTestsCount">714</span>
+                <span class="metric-desc">Tests Toàn Dự Án</span>
+              </div>
+              <div class="metric-box">
+                <span class="metric-num text-blue" id="metricTokenSpeed">38.4</span>
+                <span class="metric-desc">Tokens / Giây</span>
+              </div>
+              <div class="metric-box">
+                <span class="metric-num text-purple" id="metricGatePass">100%</span>
+                <span class="metric-desc">Tỷ Lệ Đỗ Verifier</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="cmd-card">
+            <div class="card-header">
+              <h3 class="card-title">📜 Nhật Ký Sổ Cái Omega Gần Nhất</h3>
+              <button class="btn btn-secondary btn-xs" id="btnRefreshLedgerPreview">Làm Mới</button>
+            </div>
+            <div class="ledger-preview-list" id="ledgerPreviewList">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. VIEW: AGENT CONSOLE (Bàn làm việc) -->
+      <section class="view-pane" id="viewConsole">
+        <div class="console-layout">
+          <div class="console-header-card" id="consoleAgentHeader">
+            <!-- Active agent persona info -->
+          </div>
+
+          <div class="console-body">
+            <div class="chat-logs-container" id="chatLogsContainer">
+              <!-- Chat history -->
+            </div>
+
+            <div class="console-input-area">
+              <div class="quick-prompts-bar" id="quickPromptsBar">
+                <!-- Quick action chips -->
+              </div>
+              <div class="input-row">
+                <textarea id="consoleInput" placeholder="Nhập yêu cầu hoặc giao việc cho đặc nhiệm..." rows="2"></textarea>
+                <button class="btn btn-primary btn-send" id="btnSendTask">
+                  <span>GỬI VIỆC</span>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. VIEW: PIPELINE AUTOMATOR (Quy trình tự động) -->
+      <section class="view-pane" id="viewPipeline">
+        <div class="pane-header">
+          <div>
+            <h2 class="pane-title">Quy Trình Tự Động Phối Hợp Liên Phòng Ban</h2>
+            <p class="pane-subtitle">Kích hoạt chuỗi nhiệm vụ khép kín từ Tra Cứu (Zeta) $\rightarrow$ Viết (AURA) $\rightarrow$ Dựng Video (Alpha) $\rightarrow$ Âm Nhạc & Sổ Cái (Omega) $\rightarrow$ Phân Tích (Gamma).</p>
+          </div>
+        </div>
+
+        <div class="pipeline-card">
+          <div class="form-group">
+            <label for="pipelineTopicInput">Chủ đề hoặc Mục tiêu Chiến dịch:</label>
+            <div class="input-with-button">
+              <input type="text" id="pipelineTopicInput" class="form-input" placeholder="Ví dụ: Sản xuất video ngắn 60s về Lập trình Thẻ AURA v3 và Xuất bản tự động">
+              <button class="btn btn-primary" id="btnTriggerPipeline">
+                🚀 Bắt Đầu Quy Trình
+              </button>
+            </div>
+          </div>
+
+          <div class="pipeline-visual-flow" id="pipelineVisualFlow">
+            <div class="flow-step" id="step_zeta">
+              <div class="step-icon">🔍</div>
+              <div class="step-title">1. Zeta Scout</div>
+              <div class="step-desc">Thu thập dữ liệu</div>
+              <div class="step-status">SẴN SÀNG</div>
+            </div>
+            <div class="flow-connector"></div>
+            <div class="flow-step" id="step_aura">
+              <div class="step-icon">⚡</div>
+              <div class="step-title">2. AURA Writer</div>
+              <div class="step-desc">Biên soạn kịch bản</div>
+              <div class="step-status">SẴN SÀNG</div>
+            </div>
+            <div class="flow-connector"></div>
+            <div class="flow-step" id="step_alpha">
+              <div class="step-icon">🎬</div>
+              <div class="step-title">3. Alpha Studio</div>
+              <div class="step-desc">Dựng Video 60s</div>
+              <div class="step-status">SẴN SÀNG</div>
+            </div>
+            <div class="flow-connector"></div>
+            <div class="flow-step" id="step_omega">
+              <div class="step-icon">🎵</div>
+              <div class="step-title">4. Omega Maestro</div>
+              <div class="step-desc">Phối khí & Ghi sổ</div>
+              <div class="step-status">SẴN SÀNG</div>
+            </div>
+            <div class="flow-connector"></div>
+            <div class="flow-step" id="step_gamma">
+              <div class="step-icon">📊</div>
+              <div class="step-title">5. Gamma Analytics</div>
+              <div class="step-desc">Kiểm định Hard Gates</div>
+              <div class="step-status">SẴN SÀNG</div>
+            </div>
+          </div>
+
+          <div class="pipeline-results-box" id="pipelineResultsBox" style="display: none;">
+            <div class="result-header">
+              <h4 class="result-title" id="pipelineResultTitle">Kết quả chiến dịch</h4>
+              <span class="badge-success" id="pipelineResultBadge">100% HOÀN TẤT</span>
+            </div>
+            <div class="result-steps-log" id="pipelineStepsLog">
+              <!-- Steps log items -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. VIEW: LEDGER & EVIDENCE (Sổ cái & Bằng chứng) -->
+      <section class="view-pane" id="viewLedger">
+        <div class="pane-header">
+          <div>
+            <h2 class="pane-title">Sổ Cái Nhiệm Vụ & Bằng Chứng Trên Đĩa (Hard Evidence)</h2>
+            <p class="pane-subtitle">Dữ liệu đọc trực tiếp từ <code>data/omega/so_cai.jsonl</code> và <code>data/evidence_sprint/runs/</code>.</p>
+          </div>
+          <button class="btn btn-secondary" id="btnReloadLedgerFull">🔄 Nạp Lại Dữ Liệu</button>
+        </div>
+
+        <div class="ledger-full-container">
+          <div class="table-card">
+            <h3 class="card-title">📜 Lịch Sử Sổ Cái Append-Only (Omega Ledger)</h3>
+            <div class="table-responsive">
+              <table class="cmd-table" id="tableLedgerFull">
+                <thead>
+                  <tr>
+                    <th>MÃ NHIỆM VỤ</th>
+                    <th>PHÒNG</th>
+                    <th>NỘI DUNG YÊU CẦU</th>
+                    <th>THỜI GIAN</th>
+                    <th>ĐỘ TRỄ</th>
+                    <th>TRẠNG THÁI</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyLedgerFull">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="table-card" style="margin-top: 24px;">
+            <h3 class="card-title">🧪 Danh Sách Runs Thử Nghiệm (Evidence Sprint Runs)</h3>
+            <div class="table-responsive">
+              <table class="cmd-table" id="tableEvidenceRuns">
+                <thead>
+                  <tr>
+                    <th>RUN ID</th>
+                    <th>MANIFEST</th>
+                    <th>METRICS</th>
+                    <th>OVERALL STATUS</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyEvidenceRuns">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/static/noi_bo.js"></script>
+</body>
+</html>

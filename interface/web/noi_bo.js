@@ -52,6 +52,27 @@
     document.getElementById('btnTriggerPipeline')?.addEventListener('click', kichHoatPipeline);
     document.getElementById('btnReloadLedgerFull')?.addEventListener('click', taiLedgerVaEvidence);
     document.getElementById('btnRefreshLedgerPreview')?.addEventListener('click', taiLedgerVaEvidence);
+
+    // Xử lý 4 Thẻ Quy Trình 1-Click
+    const presetPrompts = {
+      card_video_shorts: 'Sản xuất video ngắn 60s về Lập trình Thẻ AURA v3 và Xuất bản tự động',
+      card_code_doctor: 'Khám bệnh mã nguồn Python, định vị lỗi AST và sinh bản vá tự động',
+      card_novel_writer: 'Sáng tác chương truyện đời thường Quán Cà Phê Cuối Ngõ và chấm điểm TTR',
+      card_system_audit: 'Kiểm toán toàn diện sinh tồn hệ thống, RAM/CPU và quét 714 test cases'
+    };
+
+    document.querySelectorAll('.preset-card, .btn-preset-run').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const presetId = btn.dataset.preset || btn.closest('.preset-card')?.dataset.preset;
+        if (presetId && presetPrompts[presetId]) {
+          const input = document.getElementById('pipelineTopicInput');
+          if (input) input.value = presetPrompts[presetId];
+          chuyenView('viewPipeline');
+          kichHoatPipeline();
+        }
+      });
+    });
   }
 
   function chuyenView(viewId) {

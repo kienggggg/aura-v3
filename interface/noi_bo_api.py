@@ -318,8 +318,57 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
 
 
 # ==============================================================================
-# 4. API QUY TRÌNH PHỐI HỢP LIÊN PHÒNG BAN (PIPELINE AUTOMATOR)
+# 4. API QUY TRÌNH PHỐI HỢP LIÊN PHÒNG BAN (PIPELINE AUTOMATOR & PRESET CARDS)
 # ==============================================================================
+
+DANH_SACH_THE_QUY_TRINH = [
+    {
+        "id": "card_video_shorts",
+        "ten": "🎬 Video Shorts 60s Tự Động",
+        "bieu_tuong": "🎬",
+        "mau_sac": "#EC4899",
+        "mo_ta": "Nhập chủ đề ngắn, tự động cào tin tức, viết kịch bản và render video 60s kèm giọng đọc.",
+        "cac_phong": ["zeta", "aura", "alpha", "omega"],
+        "tham_so_mac_dinh": "Khám phá bí mật lịch sử phố cổ Hà Nội"
+    },
+    {
+        "id": "card_code_doctor",
+        "ten": "🩺 Bác Sĩ Khám Mã & Auto-Fix",
+        "bieu_tuong": "🔧",
+        "mau_sac": "#10B981",
+        "mo_ta": "Khám lỗi cú pháp, vòng lặp vô tận hoặc hàm thiếu return bằng CST/AST và sinh bản vá tự động.",
+        "cac_phong": ["delta", "gamma"],
+        "tham_so_mac_dinh": "def tinh_tong(n):\n    s = 0\n    for i in range(n):\n        s += i"
+    },
+    {
+        "id": "card_novel_writer",
+        "ten": "✍️ Viết Truyện Đời Thường Dài Hơi",
+        "bieu_tuong": "📖",
+        "mau_sac": "#3B82F6",
+        "mo_ta": "Sáng tác 3 chương truyện đời thường liên hoàn, đo lường độ phong phú từ vựng TTR và mật độ giác quan.",
+        "cac_phong": ["aura", "gamma"],
+        "tham_so_mac_dinh": "Quán Cà Phê Cuối Ngõ"
+    },
+    {
+        "id": "card_system_audit",
+        "ten": "📊 Kiểm Toán Bằng Chứng & Sinh Tồn",
+        "bieu_tuong": "🛡️",
+        "mau_sac": "#8B5CF6",
+        "mo_ta": "Đo đạc RAM/CPU thật, kiểm tra tính toàn vẹn của Sổ cái Omega và quét toàn bộ bộ test.",
+        "cac_phong": ["gamma", "omega"],
+        "tham_so_mac_dinh": "Full Health Audit"
+    }
+]
+
+
+async def api_danh_sach_the_quy_trinh(request: web.Request) -> web.Response:
+    """Trả về danh sách 4 thẻ quy trình 1-click thông minh."""
+    return web.json_response({
+        "status": "PASS",
+        "presets": DANH_SACH_THE_QUY_TRINH
+    })
+
+
 async def api_chay_pipeline(request: web.Request) -> web.Response:
     """Kích hoạt chuỗi phối hợp tự động giữa 7 đặc nhiệm."""
     try:

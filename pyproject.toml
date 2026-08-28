@@ -84,4 +84,4 @@ packages = ["core", "interface"]
 # `site-packages/interface/web/the_v1/` — tức đúng thư mục ĐÃ được khai. Kiểm
 # trong chỗ mình vừa khai thì bao giờ cũng thấy đủ. Phải đối chiếu với thư mục
 # NGUỒN: `find interface/web -type f` ra 6 tệp, wheel có 4.
-interface = ["web/the_v1/*", "web/*.html"]
+interface = ["web/the_v1/*", "web/*.html", "web/*.css", "web/*.js"]

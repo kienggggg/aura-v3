@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AURA THẺ v1 — Lập trình bằng Thẻ Trực Quan</title>
+  <link rel="icon" type="image/svg+xml" href="/static/aura_logo.svg">
   <link rel="stylesheet" href="/static/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,7 +18,7 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
       </button>
       <div class="logo-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        <img src="/static/aura_logo.svg" width="22" height="22" alt="AURA Logo" style="display: block; border-radius: 4px;">
       </div>
       <span class="brand-title">AURA THẺ</span>
       <span class="brand-version">v1.0 IDE</span>
@@ -39,15 +40,40 @@
       <span class="nhan-nhanh" id="nhanNhanh"></span>
     </div>
 
+    <!-- Segmented Mode Control: Thẻ · Song song · Code thuần -->
+    <div class="editor-mode-selector" id="editorModeSelector">
+      <button class="mode-btn-tab" id="btnModeCards" title="Chế độ 1: Thẻ lệnh (Alt+1)">
+        <span>🔲 Thẻ</span>
+      </button>
+      <button class="mode-btn-tab active" id="btnModeSplit" title="Chế độ 2: Song song Thẻ + Code (Alt+2)">
+        <span>◫ Song Song</span>
+      </button>
+      <button class="mode-btn-tab" id="btnModeCode" title="Chế độ 3: Soạn thảo Code thuần (Alt+3)">
+        <span>📝 Mã Thuần</span>
+      </button>
+    </div>
+
     <!-- Toolbar Action Buttons -->
     <div class="header-actions">
       <button class="btn btn-secondary" id="btnNew" title="Tạo chương trình mới">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Mới
       </button>
-      <button class="btn btn-secondary" id="btnSamples" title="Chọn bài mẫu">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-        Bài Mẫu
+      <button class="btn btn-secondary" id="btnSamples" title="Kho Workflow & Dự án mẫu">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Kho Workflow
+      </button>
+      <button class="btn btn-secondary" id="btnChallenges" title="Phòng thử thách lập trình & Chấm test tự động">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.45 1-1 1H7v4h10v-4h-2c-.55 0-1-.45-1-1v-2.34"/><path d="M6 2v7a6 6 0 0 0 12 0V2H6Z"/></svg>
+        Thử Thách
+      </button>
+      <button class="btn btn-secondary" id="btnFlowchart" title="Xem sơ đồ khối thuật toán Flowchart SVG">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/><path d="M6 9v3a3 3 0 0 0 3 3h6"/><path d="m14 12 3 3-3 3"/></svg>
+        Sơ Đồ Khối
+      </button>
+      <button class="btn btn-secondary" id="btnExtensions" title="Cửa Hàng Extension & Gói Thẻ">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/></svg>
+        Extensions
       </button>
       <button class="btn btn-secondary" id="btnOpenFile" title="Mở tệp .py từ máy">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
@@ -57,28 +83,37 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
         Lưu Tệp
       </button>
+      <button class="btn btn-secondary" id="btnPackage" title="Đóng gói dự án thành file .zip hoàn chỉnh kèm tài liệu">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        Đóng Gói
+      </button>
+      <button class="btn btn-secondary" id="btnPresentation" title="Chế độ Trình chiếu toàn màn hình & Bút vẽ giảng dạy (Alt+P / F11)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Trình Chiếu
+      </button>
       
       <div class="divider-v"></div>
+
+      <button class="btn btn-warning" id="btnDebug" title="Gỡ lỗi trực quan từng bước thẻ (F9)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 2 1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3.003 3.003 0 1 1 6 0v1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6ZM12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>
+        <span id="debugBtnText">GỠ LỖI</span>
+      </button>
 
       <button class="btn btn-primary" id="btnRun" title="Chạy chương trình trong tiến trình riêng (Ctrl+Enter)">
         <svg class="run-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         <span id="runBtnText">CHẠY THỬ</span>
       </button>
 
-      <!-- 24/08: ẨN cùng lúc gỡ panel Agent. Nút này ghi "Thu gọn/Mở Bảng Phụ
-           & Terminal" nhưng đo thật thì terminal KHÔNG đổi (flex -> flex) —
-           nó chỉ thu gọn CỘT PHẢI, mà cột phải nay đã rỗng. Bấm vào không
-           thấy gì xảy ra, đúng loại nút hứa một việc rồi làm việc khác.
-           Hiện lại khi nối Agent thật vào cột phải. -->
-      <button class="icon-btn-header" id="btnToggleSidebarRight" title="Thu gọn/Mở cột phải (Ctrl+J)" style="display: none;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+      <!-- Nút mở/thu gọn Cột phải (Trợ lý AURA / Ctrl+J) -->
+      <button class="icon-btn-header" id="btnToggleSidebarRight" title="Thu gọn/Mở Trợ lý AURA (Ctrl+J)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
       </button>
     </div>
   </header>
 
   <!-- Main App Layout (3 Columns) -->
   <main class="app-main" id="appMain">
-    <!-- Left Column: KHAY THẺ (Toolbox) ⇅ CÂY THƯ MỤC (File Tree) -->
+    <!-- Left Column: KHAY THẺ (Toolbox) ⇅ CÂY THƯ MỤC (File Tree) ⇅ GÓI THẺ (Extensions) -->
     <aside class="sidebar-left" id="sidebarLeft">
       <div class="sidebar-header">
         <div class="sidebar-header-row">
@@ -86,10 +121,11 @@
           <button class="icon-btn-sm" id="btnCloseSidebarLeft" title="Thu gọn bảng trái">✕</button>
         </div>
         
-        <!-- Toggle Chuyển Đổi 1 Click: Khay Thẻ ⇅ Cây Thư Mục -->
+        <!-- Toggle Chuyển Đổi 1 Click: Khay Thẻ ⇅ Cây Thư Mục ⇅ Gói Thẻ -->
         <div class="sidebar-mode-toggle">
           <button class="mode-btn active" id="btnModeToolbox" title="Khay thẻ lệnh để kéo thả">Khay Thẻ</button>
-          <button class="mode-btn" id="btnModeFiles" title="Duyệt cây thư mục tệp tin trong kho">Cây Thư Mục</button>
+          <button class="mode-btn" id="btnModeFiles" title="Duyệt cây thư mục tệp tin trong kho">Cây Tệp</button>
+          <button class="mode-btn" id="btnModeExt" title="Gói thẻ & Extension đã cài đặt">Gói Thẻ</button>
         </div>
 
         <div class="search-box">
@@ -98,7 +134,7 @@
         </div>
       </div>
 
-      <!-- View 1: Khay thẻ lệnh (6 Nhóm Thẻ) -->
+      <!-- View 1: Khay thẻ lệnh (6 Nhóm Thẻ + Nhóm Mở Rộng) -->
       <div class="toolbox-content" id="toolboxContainer">
         <!-- Rendered dynamically by app.js with 6 category groups -->
       </div>
@@ -106,6 +142,11 @@
       <!-- View 2: Cây thư mục tệp tin (File Tree kết nối /api/tep_tin) -->
       <div class="file-tree-container" id="fileTreeContainer" style="display: none;">
         <!-- Rendered dynamically by app.js from /api/tep_tin -->
+      </div>
+
+      <!-- View 3: Quản lý Gói Thẻ Extension trong Sidebar -->
+      <div class="ext-sidebar-container" id="extSidebarContainer" style="display: none;">
+        <!-- Rendered dynamically by app.js -->
       </div>
 
       <div class="toolbox-footer">
@@ -146,9 +187,7 @@
           <button class="icon-btn" id="btnFindClose" title="Đóng (Esc)">✕</button>
         </div>
 
-        <!-- Hàng THAY THẾ. Ẩn khi mở bằng Ctrl+F, hiện khi mở bằng Ctrl+H —
-             người chỉ muốn tìm thì không phải nhìn thấy nút xoá được cả
-             chương trình. -->
+        <!-- Hàng THAY THẾ -->
         <div class="find-bar" id="replaceBar" style="display: none;">
           <span class="find-icon">↔</span>
           <input type="text" id="replaceInput" placeholder="Thay bằng..." autocomplete="off" spellcheck="false">
@@ -168,27 +207,101 @@
           </div>
         </div>
 
-        <!-- Vùng lắp ghép thẻ nối thẳng -->
-        <div class="canvas-workspace" id="canvasWorkspace">
-          <div class="card-chain-container" id="cardChainRoot">
-            <!-- Cards rendered here with straight connectors and pill styling -->
+        <!-- Thanh Điều Khiển Gỡ Lỗi Theo Bước Thẻ (Visual Card Debugger Timeline) -->
+        <div class="debug-control-bar" id="debugControlBar" style="display: none;">
+          <div class="debug-left-actions">
+            <span class="debug-badge">🐞 ĐANG GỠ LỖI</span>
+            <button class="btn-debug-step" id="btnDebugStepPrev" title="Lùi 1 bước (Shift+F10 / Alt+Left)">⏮ Lùi Bước</button>
+            <button class="btn-debug-step active" id="btnDebugStepNext" title="Bước tiếp theo (F10 / Alt+Right)">▶ Bước Tiếp</button>
+            <button class="btn-debug-step" id="btnDebugAutoPlay" title="Tự động chạy từng bước">⏯ Tự Động</button>
+            <button class="btn-debug-step stop" id="btnDebugStop" title="Dừng gỡ lỗi (Esc)">⏹ Dừng</button>
+          </div>
+          <div class="debug-timeline-wrapper">
+            <input type="range" id="debugTimelineSlider" min="1" max="1" value="1" class="debug-slider">
+            <span class="debug-step-counter" id="debugStepCounter">Bước 0 / 0</span>
+          </div>
+          <div class="debug-current-action" id="debugCurrentAction">
+            <span class="debug-action-text" id="debugActionText">Sẵn sàng gỡ lỗi...</span>
+          </div>
+        </div>
+
+        <!-- Banner Thử Thách Đang Làm (Active Challenge Banner) -->
+        <div class="challenge-active-banner" id="challengeActiveBanner" style="display: none;">
+          <div class="challenge-banner-left">
+            <span class="challenge-trophy">🏆</span>
+            <div class="challenge-banner-info">
+              <span class="challenge-banner-title" id="activeChallengeTitle">Bài 1: Tính Tổng Số Chẵn</span>
+              <span class="challenge-banner-desc" id="activeChallengeDesc">Viết hàm tong_so_chan(ds) trả về tổng các số chia hết cho 2.</span>
+            </div>
+          </div>
+          <div class="challenge-banner-actions">
+            <button class="btn btn-success btn-sm" id="btnGradeChallenge" title="Chấm điểm bài làm qua các test cases (Ctrl+Shift+Enter)">
+              <span>🏆 CHẤM ĐIỂM</span>
+            </button>
+            <button class="icon-btn-sm" id="btnCloseChallengeBanner" title="Đóng chế độ thử thách">✕</button>
+          </div>
+        </div>
+
+        <!-- Thân soạn thảo: Hỗ trợ 3 chế độ (Thẻ / Split Song Song / Code thuần) -->
+        <div class="canvas-center-body mode-split-view" id="canvasCenterBody">
+          <!-- Pane Trái: Vùng lắp ghép thẻ nối thẳng -->
+          <div class="canvas-cards-pane" id="canvasCardsPane">
+            <div class="canvas-workspace" id="canvasWorkspace">
+              <div class="card-chain-container" id="cardChainRoot">
+                <!-- Cards rendered here with straight connectors and pill styling -->
+              </div>
+
+              <div class="empty-canvas-guide" id="emptyCanvasGuide">
+                <div class="guide-illustration">🧩</div>
+                <h3>Vùng soạn thảo đang trống</h3>
+                <p>Nhặt thẻ từ khay bên trái thả vào đây, hoặc click vào một thẻ để bắt đầu lắp ghép chương trình.</p>
+                <button class="btn btn-secondary btn-sm" id="btnLoadSampleIntro">Thử bài mẫu: Hàm cộng hai số</button>
+              </div>
+            </div>
           </div>
 
-          <div class="empty-canvas-guide" id="emptyCanvasGuide">
-            <div class="guide-illustration">🧩</div>
-            <h3>Vùng soạn thảo đang trống</h3>
-            <p>Nhặt thẻ từ khay bên trái thả vào đây, hoặc click vào một thẻ để bắt đầu lắp ghép chương trình.</p>
-            <button class="btn btn-secondary btn-sm" id="btnLoadSampleIntro">Thử bài mẫu: Hàm cộng hai số</button>
+          <!-- Vách ngăn kéo dọc chia đôi Thẻ | Code -->
+          <div class="editor-splitter-v" id="editorSplitterV" title="Kéo để chỉnh tỷ lệ Thẻ / Code"></div>
+
+          <!-- Pane Phải: Trình soạn thảo Mã Python chuyên nghiệp -->
+          <div class="canvas-code-pane" id="canvasCodePane">
+            <div class="code-editor-header">
+              <div class="code-editor-title-group">
+                <span class="code-editor-icon">🐍</span>
+                <span class="code-editor-title" id="codeEditorFileName">1. Hàm cộng hai số</span>
+                <span class="code-sync-badge ok" id="codeSyncBadge" title="Trạng thái đồng bộ Live-Sync giữa Thẻ và Mã">Live-Sync ✓</span>
+              </div>
+              <div class="code-editor-actions">
+                <button class="btn-copy-code" id="btnCopyCodeEditor" title="Sao chép toàn bộ mã Python">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  Sao Chép Mã
+                </button>
+              </div>
+            </div>
+            <div class="code-editor-wrapper">
+              <div class="code-editor-gutter" id="codeEditorGutter" aria-hidden="true">1</div>
+              <textarea class="code-editor-input" id="codeEditorInput" spellcheck="false" autocomplete="off" placeholder="# Viết mã Python trực tiếp tại đây..."></textarea>
+            </div>
+            <div class="code-editor-footer">
+              <span id="codeEditorCursorPos">Dòng 1, Cột 1</span>
+              <span id="codeEditorLineCount">1 dòng</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Thanh chia đôi kéo được giữa Canvas và 4 Tab dưới -->
-      <div class="splitter-h" id="middleSplitter" title="Kéo để chỉnh độ cao bảng chẩn đoán & terminal"></div>
+      <!-- Vách ngăn kéo ngang chia đôi trên/dưới -->
+      <div class="editor-splitter-h" id="editorSplitterH" title="Kéo để chỉnh tỷ lệ vùng soạn thảo và bảng đáy"></div>
 
-      <!-- Nửa dưới: Bảng 4 Tab (Mạch Nước Ngầm, Chẩn Đoán, Kịch Bản, Terminal Chạy Thử) -->
+      <!-- Nửa dưới: Bảng 6 Tab (Chấm Điểm, Gỡ lỗi, Mạch Nước Ngầm, Chẩn đoán, Kịch bản, Terminal) -->
       <div class="canvas-bottom-pane" id="canvasBottomPane">
         <div class="pane-tabs">
+          <button class="tab-btn" data-tab="tabChallengeGrader" title="Bảng kết quả chấm điểm thử thách tự động">
+            <span class="tab-icon">🏆</span> Chấm Điểm (<span id="challengePassCount">0/0</span>)
+          </button>
+          <button class="tab-btn" data-tab="tabDebugger" title="Bảng theo dõi biến số Live Scope & Gỡ lỗi">
+            <span class="tab-icon">🐞</span> Biến Số Scope (<span id="debugVarCount">0</span>)
+          </button>
           <button class="tab-btn active" data-tab="tabTrace" title="Truy vết dòng chảy dữ liệu & E1">
             <span class="tab-icon">🌊</span> Mạch Nước Ngầm
           </button>
@@ -204,6 +317,42 @@
         </div>
 
         <div class="tab-contents">
+          <!-- Tab -1: Bảng Kết Quả Chấm Điểm Thử Thách (Challenge Auto-Grader) -->
+          <div class="tab-pane" id="tabChallengeGrader">
+            <div class="debug-scope-header">
+              <div class="scope-title-group">
+                <span class="scope-icon">🏆</span>
+                <span class="scope-title">KẾT QUẢ CHẤM ĐIỂM TEST CASES TỰ ĐỘNG</span>
+              </div>
+              <div class="scope-step-info" id="graderSummaryInfo">
+                <span class="scope-pill">Chưa có kết quả</span>
+              </div>
+            </div>
+            <div class="debug-scope-body" id="graderResultsBody">
+              <div class="trace-empty-hint">
+                <span>Chọn một thử thách từ <strong>"🏆 Thử Thách"</strong> và bấm <strong>"CHẤM ĐIỂM"</strong> để kiểm tra độ chính xác của bài làm.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 0: Bảng Theo Dõi Biến Số Live Scope (Visual Debugger Scope) -->
+          <div class="tab-pane" id="tabDebugger">
+            <div class="debug-scope-header">
+              <div class="scope-title-group">
+                <span class="scope-icon">📊</span>
+                <span class="scope-title">BỘ NHỚ BIẾN SỐ THỜI GIAN THỰC (LIVE SCOPE WATCHER)</span>
+              </div>
+              <div class="scope-step-info" id="scopeStepInfo">
+                <span class="scope-pill">Chưa bật gỡ lỗi</span>
+              </div>
+            </div>
+            <div class="debug-scope-body" id="debugScopeBody">
+              <div class="trace-empty-hint">
+                <span>Bấm nút <strong>"🐞 GỠ LỖI"</strong> trên thanh công cụ để theo dõi biến số và luồng thực thi từng bước.</span>
+              </div>
+            </div>
+          </div>
+
           <!-- Tab 1: Mạch Nước Ngầm Biến Số (Runtime Data Flow Trace) & E1 Định Vị Lỗi -->
           <div class="tab-pane active" id="tabTrace">
             <div class="trace-header">
@@ -250,13 +399,21 @@
             </div>
           </div>
 
-          <!-- Tab 2: Diagnostics Panel -->
+          <!-- Tab 2: Diagnostics & Bác Sĩ Logic Panel -->
           <div class="tab-pane" id="tabDiag">
             <div class="diag-header">
               <div class="diag-counters">
                 <span class="badge-do" id="badgeCountDo">0 ĐỎ (Lỗi)</span>
                 <span class="badge-vang" id="badgeCountVang">0 VÀNG (Cảnh báo)</span>
               </div>
+              <div class="diag-actions">
+                <button class="btn btn-secondary btn-sm" id="btnDoctorScan" title="Bác Sĩ AI quét kiểm tra toàn diện mã nguồn">
+                  🩺 Bác Sĩ Khám Bệnh
+                </button>
+              </div>
+            </div>
+            <div class="doctor-container" id="aiDoctorBox" style="display: none;">
+              <!-- AI Doctor diagnoses and 1-click Auto-Fix cards rendered here -->
             </div>
             <div class="diag-list" id="diagList">
               <!-- Diagnostics items rendered here -->
@@ -291,6 +448,23 @@
               </div>
             </div>
 
+            <!-- Banner Bác Sĩ AI Bắt Bệnh Nhanh Khi Gặp Lỗi -->
+            <div class="terminal-doctor-banner" id="terminalDoctorBanner" style="display: none;">
+              <div class="doctor-banner-left">
+                <span class="doctor-badge-icon">🩺</span>
+                <div class="doctor-banner-text">
+                  <span class="doctor-banner-title" id="terminalDoctorTitle">Phát hiện lỗi logic runtime!</span>
+                  <span class="doctor-banner-desc" id="terminalDoctorDesc">Bác sĩ AI đã tìm ra nguyên nhân và cách khắc phục.</span>
+                </div>
+              </div>
+              <div class="doctor-banner-actions">
+                <button class="btn btn-success btn-sm" id="btnTerminalAutoFix">
+                  ✨ Sửa Tự Động (Auto-Fix)
+                </button>
+                <button class="icon-btn-sm" id="btnCloseTerminalDoctor">✕</button>
+              </div>
+            </div>
+
             <div class="terminal-body" id="terminalBody">
               <div class="term-line term-dim">> Sẵn sàng chạy. Bấm nút "CHẠY THỬ" hoặc nhấn Ctrl+Enter.</div>
             </div>
@@ -305,16 +479,68 @@
       </div>
     </section>
 
-    <!-- Cột phải: ĐỂ TRỐNG, chờ thứ thật đứng sau.
-         24/08/2026 gỡ panel "Agent AURA" xuống. Nó KHÔNG gọi API nào: câu trả
-         lời là chuỗi cứng, kèm setTimeout 350ms để trông như đang suy nghĩ.
-         Đo thật: gõ "xoa het the di" -> cây 2 thẻ trước, 2 thẻ sau, 0 request.
-         Mà câu nó in ra là "Tôi đang kiểm tra cấu trúc thẻ và hỗ trợ thao tác
-         tự động..." — một khẳng định về việc nó đang làm, mà nó không làm.
-         Người mới học code sẽ tin và ngồi chờ.
-         Giữ lại <aside> rỗng để bố cục ba cột và nút thu gọn (Ctrl+J) không
-         vỡ; nối Agent thật vào đây khi có model đứng sau. -->
-    <aside class="sidebar-right" id="sidebarRight"></aside>
+    <!-- Cột phải: Trợ lý AURA Sidecar (AI Agent Chat) -->
+    <aside class="sidebar-right" id="sidebarRight">
+      <div class="ai-chat-header">
+        <div class="ai-chat-title-group">
+          <div class="ai-avatar-badge">✨</div>
+          <div class="ai-title-text">
+            <h3 class="ai-chat-title">Trợ Lý AURA</h3>
+            <span class="ai-status-tag" id="aiStatusTag">Sẵn sàng</span>
+          </div>
+        </div>
+        <div class="ai-header-actions">
+          <button class="icon-btn-sm" id="btnClearChat" title="Xoá lịch sử hội thoại">🗑️</button>
+          <button class="icon-btn-sm" id="btnCloseSidebarRight" title="Thu gọn bảng trợ lý (Ctrl+J)">✕</button>
+        </div>
+      </div>
+
+      <!-- Ngữ cảnh tự động đang theo dõi -->
+      <div class="ai-context-banner" id="aiContextBanner">
+        <span class="context-icon">🎯</span>
+        <span class="context-file" id="aiContextFile">1. Hàm cộng hai số</span>
+        <span class="context-pill" id="aiContextCardCount">2 thẻ</span>
+        <span class="context-pill ok" id="aiContextDiagCount">0 lỗi</span>
+      </div>
+
+      <!-- Gợi ý hành động nhanh -->
+      <div class="ai-quick-actions" id="aiQuickActions">
+        <button class="quick-chip" data-action="analyze-errors">🔍 Phân tích lỗi</button>
+        <button class="quick-chip" data-action="explain-logic">📖 Kịch bản luồng</button>
+        <button class="quick-chip" data-action="suggest-card">🧩 Gợi ý thẻ</button>
+        <button class="quick-chip" data-action="trace-help">🌊 Mạch nước ngầm</button>
+      </div>
+
+      <!-- Khung hiển thị tin nhắn -->
+      <div class="ai-messages-container" id="aiMessagesContainer">
+        <!-- Tin nhắn ban đầu -->
+        <div class="ai-message assistant">
+          <div class="msg-avatar">✨</div>
+          <div class="msg-content">
+            <p>Xin chào! Em là <strong>Trợ Lý AURA</strong>. Em luôn theo dõi cấu trúc thẻ trên màn hình để hỗ trợ Sếp:</p>
+            <ul>
+              <li><strong>Phân tích lỗi</strong> khi thẻ bị đỏ hoặc logic chưa khớp.</li>
+              <li><strong>Giải thích kịch bản</strong> chương trình theo ngôn ngữ tự nhiên.</li>
+              <li><strong>Gợi ý lắp ghép thẻ</strong> và giải thích Mạch Nước Ngầm.</li>
+            </ul>
+            <p class="msg-tip">💡 <em>Mẹo: Bấm các nút gợi ý phía trên hoặc gõ câu hỏi bên dưới nhé!</em></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Khung nhập tin nhắn -->
+      <div class="ai-input-wrapper">
+        <div class="ai-input-box">
+          <textarea id="aiChatInput" placeholder="Hỏi về thẻ, phân tích lỗi, hoặc gõ yêu cầu..." rows="1"></textarea>
+          <button class="btn-ai-send" id="btnSendAiChat" title="Gửi tin nhắn (Enter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
+        </div>
+        <div class="ai-input-footer">
+          <span class="ai-shortcut-hint">Enter gửi · Shift+Enter xuống dòng · Ctrl+J đóng/mở</span>
+        </div>
+      </div>
+    </aside>
   </main>
 
   <!-- THANH TRẠNG THÁI ĐÁY — thêm 26/08/2026.
@@ -347,15 +573,66 @@
     </div>
   </footer>
 
-  <!-- Modals -->
-  <!-- 1. Modal Mẫu Bài -->
+  <!-- 1. Modal Kho Workflow & Dự Án Thực Tế -->
   <div class="modal-overlay" id="samplesModal" style="display: none;">
-    <div class="modal-card">
+    <div class="modal-card modal-card-wide">
       <div class="modal-header">
-        <h3 class="modal-title">Chọn Bài Mẫu Có Sẵn</h3>
+        <div>
+          <h3 class="modal-title">🚀 Kho Workflow & Dự Án Mẫu</h3>
+          <p class="modal-subtitle">Các pipeline dự án thực tế chạy được ngay giúp bạn bắt đầu xây dựng sản phẩm dễ dàng</p>
+        </div>
         <button class="modal-close" id="btnCloseSamples">✕</button>
       </div>
-      <div class="modal-body" id="samplesListContainer">
+
+      <!-- Filter bar: Search + Category Tabs -->
+      <div class="workflow-filter-bar">
+        <div class="workflow-search-box">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="workflowSearchInput" placeholder="Tìm kiếm workflow, dự án...">
+        </div>
+        <div class="workflow-category-tabs" id="workflowCatTabs">
+          <button class="wf-tab-btn active" data-cat="all">Tất Cả</button>
+          <button class="wf-tab-btn" data-cat="du_lieu">📊 Dữ Liệu</button>
+          <button class="wf-tab-btn" data-cat="web_api">🌐 Web & API</button>
+          <button class="wf-tab-btn" data-cat="tu_dong_hoa">🤖 Tự Động Hóa</button>
+          <button class="wf-tab-btn" data-cat="co_ban">📚 Nhập Môn</button>
+        </div>
+      </div>
+
+      <div class="modal-body workflow-modal-body" id="samplesListContainer">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Cửa Hàng Extension & Gói Thẻ Chuyên Dụng -->
+  <div class="modal-overlay" id="extensionsModal" style="display: none;">
+    <div class="modal-card modal-card-wide">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">🧩 Cửa Hàng Extension & Gói Thẻ Chuyên Dụng</h3>
+          <p class="modal-subtitle">Cài đặt thêm các gói thẻ Pandas, Web Scraping, AI, Game để mở rộng sức mạnh cho Khay Thẻ</p>
+        </div>
+        <button class="modal-close" id="btnCloseExtensions">✕</button>
+      </div>
+
+      <!-- Filter bar: Search + Category Tabs -->
+      <div class="workflow-filter-bar">
+        <div class="workflow-search-box">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="extSearchInput" placeholder="Tìm kiếm extension, gói thẻ...">
+        </div>
+        <div class="workflow-category-tabs" id="extCatTabs">
+          <button class="wf-tab-btn active" data-extcat="all">Tất Cả</button>
+          <button class="wf-tab-btn" data-extcat="installed">✅ Đã Cài Đặt</button>
+          <button class="wf-tab-btn" data-extcat="du_lieu">📊 Dữ Liệu & Pandas</button>
+          <button class="wf-tab-btn" data-extcat="web">🌐 Web & Mạng</button>
+          <button class="wf-tab-btn" data-extcat="ai">🤖 Trí Tuệ Nhân Tạo</button>
+          <button class="wf-tab-btn" data-extcat="game">🎮 Lập Trình Game</button>
+        </div>
+      </div>
+
+      <div class="modal-body workflow-modal-body" id="extensionsListContainer">
         <!-- Rendered dynamically -->
       </div>
     </div>
@@ -428,6 +705,197 @@
         <button class="btn btn-secondary" id="btnCancelSaveFile">Hủy</button>
         <button class="btn btn-primary" id="btnConfirmSaveFile">Lưu Tệp</button>
       </div>
+    </div>
+  </div>
+
+  <!-- 4. Modal: Phòng Thử Thách Lập Trình (Challenge Hub Modal) -->
+  <div class="modal-overlay" id="challengesModal" style="display: none;">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-title-icon">🏆</span>
+          <div>
+            <h3 class="modal-title">Phòng Thử Thách Lập Trình & Auto-Grader</h3>
+            <p class="modal-subtitle">Luyện tập giải quyết bài toán thực tế và kiểm tra độ chính xác qua bộ Test Cases tự động.</p>
+          </div>
+        </div>
+        <button class="modal-close" id="btnCloseChallenges">✕</button>
+      </div>
+
+      <div class="wf-modal-controls">
+        <div class="wf-tabs" id="challengeCatTabs">
+          <button class="wf-tab-btn active" data-ccat="all">Tất Cả</button>
+          <button class="wf-tab-btn" data-ccat="co_ban">Cơ Bản</button>
+          <button class="wf-tab-btn" data-ccat="thuat_toan">Thuật Toán</button>
+          <button class="wf-tab-btn" data-ccat="chuoi">Xử Lý Chuỗi</button>
+          <button class="wf-tab-btn" data-ccat="thuc_te">Thực Chiến</button>
+        </div>
+        <div class="wf-search-box">
+          <input type="text" id="challengeSearchInput" placeholder="Tìm bài tập..." autocomplete="off">
+        </div>
+      </div>
+
+      <div class="modal-body workflow-modal-body" id="challengesListContainer">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Modal: Sơ Đồ Khối Thuật Toán (Flowchart Viewer & Exporter) -->
+  <div class="modal-overlay" id="flowchartModal" style="display: none;">
+    <div class="modal-card modal-xl">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-title-icon">📊</span>
+          <div>
+            <h3 class="modal-title">Sơ Đồ Khối Thuật Toán (Flowchart Generator)</h3>
+            <p class="modal-subtitle">Trực quan hóa cấu trúc logic luồng chạy chương trình dạng biểu đồ vector SVG chuẩn.</p>
+          </div>
+        </div>
+        <button class="modal-close" id="btnCloseFlowchart">✕</button>
+      </div>
+
+      <div class="flowchart-toolbar">
+        <div class="flowchart-zoom-actions">
+          <button class="btn btn-secondary btn-sm" id="btnFlowchartZoomIn" title="Phóng to (+)">🔍 +</button>
+          <button class="btn btn-secondary btn-sm" id="btnFlowchartZoomOut" title="Thu nhỏ (-)">🔍 -</button>
+          <button class="btn btn-secondary btn-sm" id="btnFlowchartZoomReset" title="Đặt lại cỡ 100%">100%</button>
+        </div>
+        <div class="flowchart-export-actions">
+          <button class="btn btn-secondary btn-sm" id="btnCopyMermaid" title="Sao chép mã Mermaid để chèn vào Markdown">
+            📋 Sao Chép Mermaid
+          </button>
+          <button class="btn btn-primary btn-sm" id="btnDownloadSVG" title="Tải file vector .svg sắc nét về máy">
+            📥 Tải File SVG
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-body flowchart-viewport" id="flowchartViewport">
+        <div class="flowchart-canvas-container" id="flowchartCanvasContainer">
+          <!-- Flowchart SVG rendered dynamically here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Modal: Đóng Gói Dự Án Zip (1-Click Project Packager) -->
+  <div class="modal-overlay" id="packageModal" style="display: none;">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-title-icon">📦</span>
+          <div>
+            <h3 class="modal-title">Đóng Gói Dự Án Hoàn Chỉnh (.zip)</h3>
+            <p class="modal-subtitle">Xuất toàn bộ mã nguồn, cây thẻ, sơ đồ khối SVG, cấu hình thư viện và script chạy 1-click.</p>
+          </div>
+        </div>
+        <button class="modal-close" id="btnClosePackage">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label for="pkgProjectName" style="font-size: 12px; font-weight: 600; color: #94A3B8; margin-bottom: 4px; display: block;">Tên dự án:</label>
+            <input type="text" id="pkgProjectName" class="form-input" placeholder="Ví dụ: my_aura_project">
+          </div>
+          <div class="form-group">
+            <label for="pkgAuthor" style="font-size: 12px; font-weight: 600; color: #94A3B8; margin-bottom: 4px; display: block;">Tác giả / Học viên:</label>
+            <input type="text" id="pkgAuthor" class="form-input" placeholder="Ví dụ: Nguyen Van A">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label for="pkgDescription" style="font-size: 12px; font-weight: 600; color: #94A3B8; margin-bottom: 4px; display: block;">Mô tả tóm tắt dự án:</label>
+          <input type="text" id="pkgDescription" class="form-input" placeholder="Ví dụ: Ứng dụng lọc danh sách và trực quan hoá dữ liệu...">
+        </div>
+
+        <div class="pkg-files-selection">
+          <label style="font-size: 12px; font-weight: 700; color: #94A3B8; margin-bottom: 8px; display: block;">Các tệp sẽ được đóng gói tự động vào file .zip:</label>
+          <div class="pkg-file-items">
+            <label class="pkg-file-checkbox">
+              <input type="checkbox" id="chkPkgMainPy" checked disabled>
+              <span class="pkg-file-badge py">PY</span>
+              <span class="pkg-file-name">main.py</span>
+              <span class="pkg-file-desc">Mã nguồn Python hoàn chỉnh có chú thích</span>
+            </label>
+            <label class="pkg-file-checkbox">
+              <input type="checkbox" id="chkPkgTreeJson" checked>
+              <span class="pkg-file-badge json">JSON</span>
+              <span class="pkg-file-name">project_tree.json</span>
+              <span class="pkg-file-desc">Cấu trúc cây thẻ gốc để mở lại trên App Thẻ</span>
+            </label>
+            <label class="pkg-file-checkbox">
+              <input type="checkbox" id="chkPkgSvg" checked>
+              <span class="pkg-file-badge svg">SVG</span>
+              <span class="pkg-file-name">flowchart.svg</span>
+              <span class="pkg-file-desc">Sơ đồ khối thuật toán dạng ảnh vector độ nét cao</span>
+            </label>
+            <label class="pkg-file-checkbox">
+              <input type="checkbox" id="chkPkgReqs" checked>
+              <span class="pkg-file-badge txt">TXT</span>
+              <span class="pkg-file-name">requirements.txt</span>
+              <span class="pkg-file-desc">Danh sách thư viện phụ thuộc nhận diện tự động</span>
+            </label>
+            <label class="pkg-file-checkbox">
+              <input type="checkbox" id="chkPkgReadme" checked>
+              <span class="pkg-file-badge md">MD</span>
+              <span class="pkg-file-name">README.md</span>
+              <span class="pkg-file-desc">Tài liệu hướng dẫn sử dụng và cài đặt môi trường</span>
+            </label>
+            <label class="pkg-file-checkbox">
+              <input type="checkbox" id="chkPkgScripts" checked>
+              <span class="pkg-file-badge bat">RUN</span>
+              <span class="pkg-file-name">run.bat & run.sh</span>
+              <span class="pkg-file-desc">Script khởi chạy 1-click cho Windows & Linux/Mac</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelPackage">Hủy</button>
+        <button class="btn btn-primary" id="btnConfirmPackage">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Tải File Zip Ngay
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Lớp Bút Vẽ Chú Thích & Thanh Điều Khiển Trình Chiếu -->
+  <canvas class="annotation-canvas-overlay" id="annotationCanvasOverlay" style="display: none;"></canvas>
+
+  <div class="presentation-floating-bar" id="presentationControlBar" style="display: none;">
+    <div class="pres-tools-left">
+      <span class="pres-badge">🖥️ TRÌNH CHIẾU</span>
+      <button class="pres-btn" id="btnPresRun" title="Chạy thử mã (Ctrl+Enter)">▶ Chạy</button>
+      <button class="pres-btn" id="btnPresStep" title="Tua 1 bước gỡ lỗi (F10)">⏭ Bước</button>
+    </div>
+
+    <div class="pres-divider"></div>
+
+    <div class="pres-tools-center">
+      <button class="pres-tool-btn active" id="btnPresMouse" title="Con trỏ chuột thông thường">🖱️</button>
+      <button class="pres-tool-btn" id="btnPresPen" title="Bút vẽ tự do (D)">✏️ Bút</button>
+      <button class="pres-tool-btn" id="btnPresHighlighter" title="Bút dạ quang tô sáng (H)">🖍️ Dạ Quang</button>
+      <button class="pres-tool-btn" id="btnPresLaser" title="Con trỏ Laser phát sáng (L)">🔴 Laser</button>
+      <button class="pres-tool-btn" id="btnPresEraser" title="Tẩy nét vẽ (E)">🧹 Tẩy</button>
+      
+      <div class="pres-color-palette" id="presColorPalette">
+        <span class="color-dot active" data-color="#EF4444" style="background: #EF4444;" title="Đỏ"></span>
+        <span class="color-dot" data-color="#F59E0B" style="background: #F59E0B;" title="Vàng"></span>
+        <span class="color-dot" data-color="#10B981" style="background: #10B981;" title="Xanh lá"></span>
+        <span class="color-dot" data-color="#3B82F6" style="background: #3B82F6;" title="Xanh dương"></span>
+      </div>
+
+      <button class="pres-btn-sm" id="btnPresClearDraw" title="Xóa toàn bộ nét vẽ (C)">🗑️ Xóa Nét</button>
+    </div>
+
+    <div class="pres-divider"></div>
+
+    <div class="pres-tools-right">
+      <button class="pres-btn pres-btn-exit" id="btnPresExit" title="Thoát chế độ trình chiếu (Esc)">✕ Thoát</button>
     </div>
   </div>
 

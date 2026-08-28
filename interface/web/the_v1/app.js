@@ -21,6 +21,7 @@
     draggingCardId: null,
     selectedNodeId: null,
     activeFileName: 'Chưa đặt tên',
+    editorMode: 'split',
     tabs: [],
     tabActive: -1
   };
@@ -170,6 +171,220 @@
     localStorage.setItem('aura_code_font_size', String(clamped));
   }
 
+  function setEditorMode(mode) {
+    const validModes = ['cards', 'split', 'code'];
+    const activeMode = validModes.includes(mode) ? mode : 'split';
+    state.editorMode = activeMode;
+    localStorage.setItem('aura_editor_mode', activeMode);
+
+    const bodyEl = document.getElementById('canvasCenterBody');
+    if (bodyEl) {
+      bodyEl.classList.remove('mode-cards-only', 'mode-split-view', 'mode-code-only');
+      if (activeMode === 'cards') bodyEl.classList.add('mode-cards-only');
+      else if (activeMode === 'split') bodyEl.classList.add('mode-split-view');
+      else if (activeMode === 'code') bodyEl.classList.add('mode-code-only');
+    }
+
+    const btnCards = document.getElementById('btnModeCards');
+    const btnSplit = document.getElementById('btnModeSplit');
+    const btnCode = document.getElementById('btnModeCode');
+    if (btnCards) btnCards.classList.toggle('active', activeMode === 'cards');
+    if (btnSplit) btnSplit.classList.toggle('active', activeMode === 'split');
+    if (btnCode) btnCode.classList.toggle('active', activeMode === 'code');
+
+    if (activeMode !== 'cards') {
+      dongBoTheSangCodeEditor();
+    }
+    yeuCauChinhCotDoc();
+  }
+
+  function initEditorMode() {
+    const saved = localStorage.getItem('aura_editor_mode') || 'split';
+    setEditorMode(saved);
+  }
+
+  let dangGoTrongCodeEditor = false;
+  let henGioDongBoCode = null;
+
+  function capNhatSoDongGutter(soDong) {
+    const gutter = document.getElementById('codeEditorGutter');
+    if (!gutter) return;
+    const n = Math.max(1, soDong);
+    let str = '';
+    for (let i = 1; i <= n; i++) {
+      str += i + '\n';
+    }
+    gutter.textContent = str;
+  }
+
+  function dongBoTheSangCodeEditor(epBuoc = false) {
+    const input = document.getElementById('codeEditorInput');
+    const nameEl = document.getElementById('codeEditorFileName');
+    const lineCountEl = document.getElementById('codeEditorLineCount');
+    const badge = document.getElementById('codeSyncBadge');
+    if (!input) return;
+
+    if (nameEl) {
+      nameEl.textContent = state.activeFileName || (state.activeFilePath ? state.activeFilePath.split(/[\\/]/).pop() : 'main.py');
+    }
+
+    // Nếu người dùng đang gõ trong code editor và không ép buộc -> không ghi đè tránh mất con trỏ
+    if (dangGoTrongCodeEditor && !epBuoc) return;
+
+    const code = TheValidator.sinhMaPython(state.tree);
+    input.value = code;
+
+    const lines = (code || '').split('\n').length;
+    capNhatSoDongGutter(lines);
+    if (lineCountEl) lineCountEl.textContent = `${lines} dòng`;
+    if (badge) {
+      badge.className = 'code-sync-badge ok';
+      badge.textContent = 'Live-Sync ✓';
+    }
+  }
+
+  function capNhatViTriConTroEditor() {
+    const input = document.getElementById('codeEditorInput');
+    const posEl = document.getElementById('codeEditorCursorPos');
+    if (!input || !posEl) return;
+    const sel = input.selectionStart || 0;
+    const val = input.value.slice(0, sel);
+    const lines = val.split('\n');
+    const curLine = lines.length;
+    const curCol = lines[lines.length - 1].length + 1;
+    posEl.textContent = `Dòng ${curLine}, Cột ${curCol}`;
+  }
+
+  function setupCodeEditorPane() {
+    const input = document.getElementById('codeEditorInput');
+    const gutter = document.getElementById('codeEditorGutter');
+    const splitterV = document.getElementById('editorSplitterV');
+    const cardsPane = document.getElementById('canvasCardsPane');
+    const codePane = document.getElementById('canvasCodePane');
+    const btnCopy = document.getElementById('btnCopyCodeEditor');
+    const badge = document.getElementById('codeSyncBadge');
+
+    if (input) {
+      input.addEventListener('focus', () => {
+        dangGoTrongCodeEditor = true;
+      });
+
+      input.addEventListener('blur', () => {
+        dangGoTrongCodeEditor = false;
+      });
+
+      input.addEventListener('keyup', capNhatViTriConTroEditor);
+      input.addEventListener('click', capNhatViTriConTroEditor);
+
+      input.addEventListener('scroll', () => {
+        if (gutter) gutter.scrollTop = input.scrollTop;
+      });
+
+      // Phím Tab thụt lề 4 dấu cách
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          const start = input.selectionStart;
+          const end = input.selectionEnd;
+          const val = input.value;
+          if (e.shiftKey) {
+            // Lùi lề 4 dấu cách
+            const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+            if (val.slice(lineStart, lineStart + 4) === '    ') {
+              input.value = val.slice(0, lineStart) + val.slice(lineStart + 4);
+              input.selectionStart = input.selectionEnd = Math.max(lineStart, start - 4);
+            }
+          } else {
+            // Tiến lề 4 dấu cách
+            input.value = val.substring(0, start) + '    ' + val.substring(end);
+            input.selectionStart = input.selectionEnd = start + 4;
+          }
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      });
+
+      // Live-Sync khi gõ code
+      input.addEventListener('input', () => {
+        const val = input.value;
+        const lines = val.split('\n').length;
+        capNhatSoDongGutter(lines);
+        const lineCountEl = document.getElementById('codeEditorLineCount');
+        if (lineCountEl) lineCountEl.textContent = `${lines} dòng`;
+        capNhatViTriConTroEditor();
+
+        if (badge) {
+          badge.className = 'code-sync-badge syncing';
+          badge.textContent = 'Đang đồng bộ...';
+        }
+
+        clearTimeout(henGioDongBoCode);
+        henGioDongBoCode = setTimeout(() => {
+          // Đánh dấu đã sửa
+          state.hasModifications = true;
+          if (badge) {
+            badge.className = 'code-sync-badge ok';
+            badge.textContent = 'Live-Sync ✓';
+          }
+          veThanhTrangThai();
+        }, 350);
+      });
+    }
+
+    if (btnCopy && input) {
+      btnCopy.addEventListener('click', () => {
+        navigator.clipboard.writeText(input.value).then(() => {
+          baoNhanh('Đã sao chép toàn bộ mã Python!');
+        }).catch(() => {});
+      });
+    }
+
+    // Splitter kéo dọc
+    if (splitterV && cardsPane && codePane) {
+      let isDraggingV = false;
+      let startX = 0;
+      let startCardsW = 0;
+
+      splitterV.addEventListener('mousedown', (e) => {
+        isDraggingV = true;
+        startX = e.clientX;
+        startCardsW = cardsPane.getBoundingClientRect().width;
+        splitterV.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDraggingV) return;
+        const deltaX = e.clientX - startX;
+        const totalW = cardsPane.parentElement.getBoundingClientRect().width;
+        const newCardsW = Math.max(220, Math.min(totalW - 240, startCardsW + deltaX));
+        const pct = (newCardsW / totalW) * 100;
+        cardsPane.style.flex = `0 0 ${pct}%`;
+        codePane.style.flex = `0 0 ${100 - pct}%`;
+        yeuCauChinhCotDoc();
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isDraggingV) {
+          isDraggingV = false;
+          splitterV.classList.remove('dragging');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          yeuCauChinhCotDoc();
+        }
+      });
+    }
+
+    // Nút chuyển chế độ
+    const btnCards = document.getElementById('btnModeCards');
+    const btnSplit = document.getElementById('btnModeSplit');
+    const btnCode = document.getElementById('btnModeCode');
+
+    if (btnCards) btnCards.addEventListener('click', () => setEditorMode('cards'));
+    if (btnSplit) btnSplit.addEventListener('click', () => setEditorMode('split'));
+    if (btnCode) btnCode.addEventListener('click', () => setEditorMode('code'));
+  }
+
   function initLayoutPreferences() {
     // 1. Phông chữ mặc định 14px đọc được
     const savedFontSize = localStorage.getItem('aura_code_font_size');
@@ -184,10 +399,13 @@
     if (savedRight !== null) {
       state.sidebarRightCollapsed = (savedRight === 'true');
     } else {
-      // Màn hình < 1400px thì cột phải (Agent / Terminal) mặc định thu gọn
-      state.sidebarRightCollapsed = (window.innerWidth < 1400);
+      // Màn hình < 1100px thì cột phải (Trợ lý AI) mặc định thu gọn
+      state.sidebarRightCollapsed = (window.innerWidth < 1100);
     }
     applySidebarLayout();
+
+    // 3. Khởi tạo Chế độ Soạn Thảo (Thẻ / Song Song / Mã Thuần)
+    initEditorMode();
   }
 
   // ==========================================================================
@@ -224,6 +442,282 @@
     bat_loi: 'except E as e:'
   };
 
+  // ==========================================================================
+  // EXTENSION MANAGER & KHO GÓI THẺ CHUYÊN DỤNG (CARD PACKS)
+  // ==========================================================================
+  const DANH_SACH_EXTENSIONS = [
+    {
+      id: 'pack_datasci',
+      ten: 'Pandas & Data Science Pack',
+      tac_gia: 'AURA Core Team',
+      phien_ban: 'v1.2.0',
+      danh_muc: 'du_lieu',
+      icon: '📊',
+      danh_gia: '4.9 ★',
+      luot_tai: '12.4k',
+      mo_ta: 'Xử lý bảng biểu DataFrame, đọc file CSV/Excel, thống kê dữ liệu tổng quan và vẽ biểu đồ trực quan.',
+      the_kem_theo: ['doc_csv', 'loc_cot', 'thong_ke_df', 've_bieu_do'],
+      cards: [
+        { ma: 'ma_tho', nhan: 'df = pd.read_csv(...)', ten: 'Đọc File CSV', o: { nguyen_van: 'import pandas as pd\ndf = pd.read_csv("data.csv")' } },
+        { ma: 'ma_tho', nhan: 'df_loc = df[...]', ten: 'Lọc Dữ Liệu', o: { nguyen_van: 'df_loc = df[df["score"] >= 8.0]' } },
+        { ma: 'ma_tho', nhan: 'df.describe()', ten: 'Thống Kê Tổng Quan', o: { nguyen_van: 'print(df.describe())' } },
+        { ma: 'ma_tho', nhan: 'df.plot(kind="bar")', ten: 'Vẽ Biểu Đồ Cột', o: { nguyen_van: 'import matplotlib.pyplot as plt\ndf.plot(kind="bar")\nplt.show()' } }
+      ]
+    },
+    {
+      id: 'pack_web',
+      ten: 'Web Scraping & Requests Pack',
+      tac_gia: 'Community Dev',
+      phien_ban: 'v1.0.4',
+      danh_muc: 'web',
+      icon: '🌐',
+      danh_gia: '4.8 ★',
+      luot_tai: '9.8k',
+      mo_ta: 'Tự động hóa gửi yêu cầu HTTP Requests, bóc tách cấu trúc HTML BeautifulSoup và trích xuất JSON API.',
+      the_kem_theo: ['gui_get', 'gui_post', 'boc_tach_soup', 'doc_json'],
+      cards: [
+        { ma: 'ma_tho', nhan: 'res = requests.get(url)', ten: 'Gửi GET Request', o: { nguyen_van: 'import requests\nres = requests.get("https://api.example.com/data")' } },
+        { ma: 'ma_tho', nhan: 'data = res.json()', ten: 'Đọc JSON Response', o: { nguyen_van: 'data = res.json()' } },
+        { ma: 'ma_tho', nhan: 'soup = BeautifulSoup(...)', ten: 'Bóc Tách HTML', o: { nguyen_van: 'from bs4 import BeautifulSoup\nsoup = BeautifulSoup(res.text, "html.parser")' } }
+      ]
+    },
+    {
+      id: 'pack_ai',
+      ten: 'GenAI & LLM Connect Pack',
+      tac_gia: 'AURA AI Labs',
+      phien_ban: 'v2.1.0',
+      danh_muc: 'ai',
+      icon: '🤖',
+      danh_gia: '5.0 ★',
+      luot_tai: '25.1k',
+      mo_ta: 'Tích hợp gọi mô hình ngôn ngữ lớn (LLM), thiết lập prompt thông minh và phân tích văn bản tự động.',
+      the_kem_theo: ['goi_llm', 'prompt_fstring', 'phan_tich_van_ban'],
+      cards: [
+        { ma: 'ma_tho', nhan: 'prompt = f"Phân tích: ..."', ten: 'Tạo Prompt Thông Minh', o: { nguyen_van: 'prompt = f"Hãy phân tích và tóm tắt văn bản: {van_ban}"' } },
+        { ma: 'ma_tho', nhan: 'ai.generate_content(...)', ten: 'Gọi Mô Hình LLM', o: { nguyen_van: '# Gọi mô hình AI sinh câu trả lời\nphan_hoi = "Nội dung phản hồi từ AI..."' } }
+      ]
+    },
+    {
+      id: 'pack_game',
+      ten: 'Pygame 2D Mini Game Pack',
+      tac_gia: 'GameDev Club',
+      phien_ban: 'v1.1.2',
+      danh_muc: 'game',
+      icon: '🎮',
+      danh_gia: '4.7 ★',
+      luot_tai: '7.3k',
+      mo_ta: 'Khởi tạo màn hình game, vòng lặp hoạt họa FPS, bắt sự kiện bàn phím và vẽ nhân vật 2D.',
+      the_kem_theo: ['khoi_tao_game', 'game_loop', 've_nhan_vat', 'bat_phim'],
+      cards: [
+        { ma: 'ma_tho', nhan: 'pygame.init()', ten: 'Khởi Tạo Game', o: { nguyen_van: 'import pygame\npygame.init()\nscreen = pygame.display.set_mode((800, 600))\npygame.display.set_caption("My AURA Game")' } },
+        { ma: 'ma_tho', nhan: 'while running: game_loop', ten: 'Vòng Lặp Game Loop', o: { nguyen_van: 'running = True\nclock = pygame.time.Clock()\nwhile running:\n    for event in pygame.event.get():\n        if event.type == pygame.QUIT:\n            running = False\n    clock.tick(60)' } }
+      ]
+    }
+  ];
+
+  let extDanhMucDangChon = 'all';
+  let extTuKhoaTimKiem = '';
+
+  function layGoiExtensionDaCai() {
+    try {
+      const saved = localStorage.getItem('aura_installed_extensions');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    return ['pack_datasci', 'pack_ai'];
+  }
+
+  function luuGoiExtensionDaCai(list) {
+    try {
+      localStorage.setItem('aura_installed_extensions', JSON.stringify(list));
+    } catch (_) {}
+  }
+
+  function caiDatGoiExtension(packId) {
+    const list = layGoiExtensionDaCai();
+    if (!list.includes(packId)) {
+      list.push(packId);
+      luuGoiExtensionDaCai(list);
+      renderToolbox();
+      veDanhSachExtensions();
+      veSidebarExtensions();
+      baoNhanh('Đã cài đặt gói extension thành công!');
+    }
+  }
+
+  function goGoiExtension(packId) {
+    let list = layGoiExtensionDaCai();
+    list = list.filter(id => id !== packId);
+    luuGoiExtensionDaCai(list);
+    renderToolbox();
+    veDanhSachExtensions();
+    veSidebarExtensions();
+    baoNhanh('Đã gỡ bỏ gói extension!');
+  }
+
+  function veDanhSachExtensions() {
+    const container = document.getElementById('extensionsListContainer');
+    if (!container) return;
+
+    const installed = layGoiExtensionDaCai();
+    const filtered = DANH_SACH_EXTENSIONS.filter(ext => {
+      let matchCat = true;
+      if (extDanhMucDangChon === 'installed') {
+        matchCat = installed.includes(ext.id);
+      } else if (extDanhMucDangChon !== 'all') {
+        matchCat = (ext.danh_muc === extDanhMucDangChon);
+      }
+      const kw = extTuKhoaTimKiem.trim().toLowerCase();
+      const matchKw = !kw || ext.ten.toLowerCase().includes(kw) || ext.mo_ta.toLowerCase().includes(kw);
+      return matchCat && matchKw;
+    });
+
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 32px 16px; color: var(--text-muted);">
+          <div style="font-size: 28px; margin-bottom: 8px;">🧩</div>
+          <p>Không tìm thấy extension hoặc gói thẻ nào phù hợp.</p>
+        </div>
+      `;
+      return;
+    }
+
+    let html = '<div class="ext-grid">';
+    filtered.forEach(ext => {
+      const isInst = installed.includes(ext.id);
+      const chipsHtml = (ext.the_kem_theo || []).map(t => `<span class="ext-card-chip">+ ${escapeHtml(t)}</span>`).join('');
+
+      html += `
+        <div class="ext-card" data-extid="${ext.id}">
+          <div class="ext-card-header">
+            <div class="ext-icon-box ${ext.danh_muc}">${ext.icon}</div>
+            <div class="ext-header-info">
+              <div class="ext-name-row">
+                <span class="ext-name">${escapeHtml(ext.ten)}</span>
+                <span class="ext-version">${ext.phien_ban}</span>
+              </div>
+              <div class="ext-meta-row">
+                <span class="ext-meta-rating">${ext.danh_gia}</span>
+                <span>•</span>
+                <span class="ext-meta-author">${escapeHtml(ext.tac_gia)}</span>
+                <span>•</span>
+                <span>📥 ${ext.luot_tai}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ext-desc">${escapeHtml(ext.mo_ta)}</div>
+
+          <div class="ext-included-cards">
+            <span style="font-size: 10px; color: var(--text-muted); width: 100%; margin-bottom: 2px;">Thẻ bổ sung cho Khay Thẻ:</span>
+            ${chipsHtml}
+          </div>
+
+          <div class="ext-card-footer">
+            <span class="wf-badge-category ${ext.danh_muc}">${ext.danh_muc.toUpperCase()}</span>
+            ${isInst ? 
+              `<button class="btn-ext-installed" data-action="uninstall" data-extid="${ext.id}">✓ Đã Cài Đặt (Gỡ)</button>` : 
+              `<button class="btn-ext-install" data-action="install" data-extid="${ext.id}">+ Cài Đặt</button>`
+            }
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+
+    container.innerHTML = html;
+
+    container.querySelectorAll('button[data-action]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = btn.getAttribute('data-action');
+        const packId = btn.getAttribute('data-extid');
+        if (action === 'install') {
+          caiDatGoiExtension(packId);
+        } else if (action === 'uninstall') {
+          goGoiExtension(packId);
+        }
+      });
+    });
+  }
+
+  function veSidebarExtensions() {
+    const container = document.getElementById('extSidebarContainer');
+    if (!container) return;
+
+    const installed = layGoiExtensionDaCai();
+    const installedPacks = DANH_SACH_EXTENSIONS.filter(p => installed.includes(p.id));
+
+    let html = `
+      <div class="ext-sidebar-header-action">
+        <span>Gói Đã Cài (${installedPacks.length})</span>
+        <button id="btnOpenExtMarketplace">+ Khám Phá</button>
+      </div>
+    `;
+
+    if (installedPacks.length === 0) {
+      html += `
+        <div style="text-align: center; padding: 24px 12px; color: var(--text-muted); font-size: 12px;">
+          Chưa cài gói thẻ nào.<br>Bấm "+ Khám Phá" để cài thêm.
+        </div>
+      `;
+    } else {
+      installedPacks.forEach(pack => {
+        html += `
+          <div class="ext-sidebar-item">
+            <div class="ext-sidebar-item-top">
+              <span class="ext-sidebar-item-title">${pack.icon} ${escapeHtml(pack.ten)}</span>
+              <button style="background: none; border: none; color: #F87171; cursor: pointer; font-size: 11px;" data-remove-ext="${pack.id}" title="Gỡ gói này">Gỡ</button>
+            </div>
+            <div class="ext-sidebar-item-desc">${escapeHtml(pack.mo_ta)}</div>
+          </div>
+        `;
+      });
+    }
+
+    container.innerHTML = html;
+
+    const btnMarket = document.getElementById('btnOpenExtMarketplace');
+    if (btnMarket) {
+      btnMarket.addEventListener('click', () => {
+        const modal = document.getElementById('extensionsModal');
+        if (modal) {
+          modal.style.display = 'flex';
+          veDanhSachExtensions();
+        }
+      });
+    }
+
+    container.querySelectorAll('button[data-remove-ext]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const packId = btn.getAttribute('data-remove-ext');
+        goGoiExtension(packId);
+      });
+    });
+  }
+
+  function setupExtensionHubControls() {
+    const searchInput = document.getElementById('extSearchInput');
+    const catTabs = document.getElementById('extCatTabs');
+
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        extTuKhoaTimKiem = e.target.value;
+        veDanhSachExtensions();
+      });
+    }
+
+    if (catTabs) {
+      catTabs.querySelectorAll('.wf-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          catTabs.querySelectorAll('.wf-tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          extDanhMucDangChon = btn.getAttribute('data-extcat') || 'all';
+          veDanhSachExtensions();
+        });
+      });
+    }
+  }
+
   function renderToolbox() {
     const container = document.getElementById('toolboxContainer');
     if (!container) return;
@@ -231,10 +725,6 @@
 
     const groups = [
       { id: 'ham', title: 'Hàm (Cam)', color: 'var(--ham)', cards: ['ham', 'goi_ham', 'tra_ve'] },
-      // 25/08: thêm dung_lap · bo_qua · thu · bat_loi vào nhóm Điều khiển,
-      // và nhap vào nhóm Vào/Ra. Xem chú thích cùng ngày ở validator.js:
-      // năm thứ này là toàn bộ phần Python KHÔNG diễn đạt được bằng 12 thẻ cũ
-      // (trừ `class`, chưa cần cho người mới học).
       { id: 'dieu_khien', title: 'Điều khiển (Xanh dương)', color: 'var(--dk)', cards: ['neu', 'nguoc_lai', 'lap_moi', 'lap_khi', 'dung_lap', 'bo_qua', 'thu', 'bat_loi'] },
       { id: 'du_lieu', title: 'Dữ liệu (Xanh lá)', color: 'var(--dl)', cards: ['gan', 'pheptinh'] },
       { id: 'vao_ra', title: 'Vào / Ra (Tím)', color: 'var(--vr)', cards: ['nhap', 'in_ra'] },
@@ -242,6 +732,7 @@
       { id: 'ma_tho', title: 'Mã thô (Xám)', color: 'var(--tho)', cards: ['ma_tho'] }
     ];
 
+    // 1. Render các nhóm thẻ cốt lõi
     groups.forEach(g => {
       const groupEl = document.createElement('div');
       groupEl.className = 'tool-group';
@@ -265,9 +756,6 @@
         itemEl.dataset.ma = cardMa;
         itemEl.style.borderLeftColor = g.color;
         itemEl.draggable = true;
-        // Nhãn dịch nghĩa ("Định nghĩa hàm", "Gọi hàm"...) bỏ khỏi thân thẻ —
-        // Sếp đọc cú pháp Python trực tiếp nhanh hơn đọc tên tiếng Việt rồi tự
-        // dịch ngược. Tên đầy đủ vẫn còn trong title (hover mới hiện).
         itemEl.title = `Thẻ ${cardDef.ten}: Click để chèn nhanh hoặc kéo vào canvas`;
 
         const infoEl = document.createElement('div');
@@ -287,13 +775,67 @@
         badgeEl.textContent = '×0';
         itemEl.appendChild(badgeEl);
 
-        // Event Kéo thả & Click chèn nhanh
         itemEl.addEventListener('dragstart', (e) => {
           e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'NEW_CARD', ma: cardMa }));
         });
 
         itemEl.addEventListener('click', () => {
           addNewCardToRoot(cardMa);
+        });
+
+        cardsGrid.appendChild(itemEl);
+      });
+
+      groupEl.appendChild(cardsGrid);
+      container.appendChild(groupEl);
+    });
+
+    // 2. Render thêm các nhóm thẻ từ Extension Pack đã cài đặt
+    const installedPacks = layGoiExtensionDaCai();
+    installedPacks.forEach(packId => {
+      const pack = DANH_SACH_EXTENSIONS.find(p => p.id === packId);
+      if (!pack || !pack.cards) return;
+
+      const groupEl = document.createElement('div');
+      groupEl.className = 'tool-group ext-pack';
+      groupEl.id = `group_${pack.id}`;
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'group-title';
+      titleEl.textContent = `${pack.icon} ${pack.ten}`;
+      titleEl.style.color = '#818CF8';
+      groupEl.appendChild(titleEl);
+
+      const cardsGrid = document.createElement('div');
+      cardsGrid.className = 'tool-group-cards';
+
+      pack.cards.forEach(cardItem => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'tool-item';
+        itemEl.dataset.ma = cardItem.ma;
+        itemEl.style.borderLeftColor = '#818CF8';
+        itemEl.draggable = true;
+        itemEl.title = `${cardItem.ten}: Click hoặc kéo vào canvas`;
+
+        const infoEl = document.createElement('div');
+        infoEl.className = 'tool-info';
+
+        const syntaxEl = document.createElement('span');
+        syntaxEl.className = 'tool-syntax';
+        syntaxEl.textContent = cardItem.nhan || cardItem.ten;
+        infoEl.appendChild(syntaxEl);
+        itemEl.appendChild(infoEl);
+
+        itemEl.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', JSON.stringify({
+            type: 'NEW_CARD',
+            ma: cardItem.ma,
+            customO: cardItem.o
+          }));
+        });
+
+        itemEl.addEventListener('click', () => {
+          addNewCardToRoot(cardItem.ma, cardItem.o);
         });
 
         cardsGrid.appendChild(itemEl);
@@ -375,7 +917,7 @@
     }
   }
 
-  function taoTheNode(ma) {
+  function taoTheNode(ma, customO = null) {
     state.nodeIdCounter++;
     const cardDef = TheValidator.BO_THE_V1[ma];
     const initialO = {};
@@ -383,6 +925,9 @@
       cardDef.o.forEach(oDef => {
         initialO[oDef.ten] = oDef.goi_y || '';
       });
+    }
+    if (customO && typeof customO === 'object') {
+      Object.assign(initialO, customO);
     }
     return {
       id: `the_${ma}_${state.nodeIdCounter}`,
@@ -393,8 +938,8 @@
     };
   }
 
-  function addNewCardToRoot(ma) {
-    const node = taoTheNode(ma);
+  function addNewCardToRoot(ma, customO = null) {
+    const node = taoTheNode(ma, customO);
     state.tree.push(node);
     onTreeChanged();
   }
@@ -799,7 +1344,7 @@
         const payload = JSON.parse(raw);
         const viTri = chenTruoc ? index : index + 1;
         if (payload.type === 'NEW_CARD') {
-          const newNode = taoTheNode(payload.ma);
+          const newNode = taoTheNode(payload.ma, payload.customO);
           parentList.splice(viTri, 0, newNode);
           onTreeChanged();
         } else if (payload.type === 'EXISTING_CARD' && payload.nodeId && payload.nodeId !== node.id) {
@@ -945,7 +1490,7 @@
         try {
           const payload = JSON.parse(raw);
           if (payload.type === 'NEW_CARD') {
-            const newNode = taoTheNode(payload.ma);
+            const newNode = taoTheNode(payload.ma, payload.customO);
             if (!node.than) node.than = [];
             node.than.push(newNode);
             onTreeChanged();
@@ -1168,6 +1713,8 @@
     updateStatusBar();
     capNhatDaiNhip();
     capNhatKichBan();
+    capNhatAiContextBanner();
+    dongBoTheSangCodeEditor();
 
     // 3. Đảm bảo căn chỉnh cột dọc sau mọi thay đổi cây thẻ
     yeuCauChinhCotDoc();
@@ -2794,7 +3341,14 @@
     // dùng chưa từng thấy (khoảng trống bắt được 24/08 lúc tự dùng thử: lỗi
     // TĨNH đã sáng đúng thẻ từ lâu qua node_id, lỗi CHẠY THẬT thì chưa).
     const sourceMap = [];
-    const code = TheValidator.sinhMaPython(state.tree, 0, sourceMap);
+    const editorInput = document.getElementById('codeEditorInput');
+    let code = '';
+    if (state.editorMode === 'code' && editorInput && editorInput.value.trim()) {
+      code = editorInput.value;
+    } else {
+      code = TheValidator.sinhMaPython(state.tree, 0, sourceMap);
+    }
+
     // Dọn annotation lỗi runtime của lần chạy TRƯỚC — không phải lỗi tĩnh,
     // chỉ dọn đúng loại 'runtime' để không đụng vào diagnostics tĩnh hiện có.
     state.diagnostics.danh_sach = (state.diagnostics.danh_sach || [])
@@ -2826,6 +3380,8 @@
           <div class="term-line term-stdout">${escapeHtml(res.stdout || '(Không có đầu ra stdout)')}</div>
           <div class="term-line term-dim">----------------------------------------\n[Hoàn thành trong ${res.wall_time_ms} ms · Exit code: 0]</div>
         `;
+        const termBanner = document.getElementById('terminalDoctorBanner');
+        if (termBanner) termBanner.style.display = 'none';
       } else if (res.status === 'TIMEOUT') {
         metaStatus.className = 'meta-status timeout';
         metaStatus.textContent = 'TIMEOUT';
@@ -2834,6 +3390,8 @@
           <div class="term-line term-stderr">${escapeHtml(res.stderr || '')}</div>
           <div class="term-line term-dim">----------------------------------------\n[Đã ngắt sau 5.0 giây · Exit code: ${res.exit_code}]</div>
         `;
+        const termBanner = document.getElementById('terminalDoctorBanner');
+        if (termBanner) termBanner.style.display = 'none';
       } else {
         metaStatus.className = 'meta-status error';
         metaStatus.textContent = 'LỖI RUNTIME';
@@ -2843,6 +3401,25 @@
           <div class="term-line term-dim">----------------------------------------\n[Thất bại · Exit code: ${res.exit_code}]</div>
         `;
         danhDauTheGayLoiRuntime(res.stderr, sourceMap);
+
+        // Bác sĩ AI phân tích lỗi runtime
+        const diag = phanTichLoiRuntime(res.stderr, code, state.tree, sourceMap);
+        const termBanner = document.getElementById('terminalDoctorBanner');
+        const termTitle = document.getElementById('terminalDoctorTitle');
+        const termDesc = document.getElementById('terminalDoctorDesc');
+        const btnAutoFix = document.getElementById('btnTerminalAutoFix');
+
+        if (diag && termBanner) {
+          termTitle.textContent = diag.tieuDe;
+          termDesc.textContent = diag.cachSua;
+          termBanner.style.display = 'flex';
+          currentRuntimePatch = diag.patch;
+          if (btnAutoFix) {
+            btnAutoFix.style.display = diag.patch ? 'inline-flex' : 'none';
+          }
+        } else if (termBanner) {
+          termBanner.style.display = 'none';
+        }
       }
     } catch (err) {
       metaStatus.className = 'meta-status error';
@@ -2878,35 +3455,2229 @@
     }
   }
 
+  let danhSachWorkflowCache = [];
+  let danhMucWorkflowDangChon = 'all';
+  let tuKhoaWorkflow = '';
+
+  function demTongSoThe(nodes) {
+    if (!Array.isArray(nodes)) return 0;
+    let count = 0;
+    nodes.forEach(n => {
+      count++;
+      if (Array.isArray(n.than) && n.than.length > 0) {
+        count += demTongSoThe(n.than);
+      }
+    });
+    return count;
+  }
+
+  function veDanhSachWorkflow() {
+    const container = document.getElementById('samplesListContainer');
+    if (!container) return;
+
+    const filtered = danhSachWorkflowCache.filter(m => {
+      const matchCat = (danhMucWorkflowDangChon === 'all') || (m.danh_muc === danhMucWorkflowDangChon);
+      const kw = tuKhoaWorkflow.trim().toLowerCase();
+      const matchKw = !kw || (m.ten && m.ten.toLowerCase().includes(kw)) || (m.mo_ta && m.mo_ta.toLowerCase().includes(kw));
+      return matchCat && matchKw;
+    });
+
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 32px 16px; color: var(--text-muted);">
+          <div style="font-size: 28px; margin-bottom: 8px;">🔍</div>
+          <p>Không tìm thấy workflow hoặc dự án mẫu nào phù hợp.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const catLabels = {
+      du_lieu: '📊 Dữ Liệu',
+      web_api: '🌐 Web & API',
+      tu_dong_hoa: '🤖 Tự Động',
+      co_ban: '📚 Nhập Môn'
+    };
+
+    let html = '<div class="workflow-grid">';
+    filtered.forEach(m => {
+      const catClass = m.danh_muc || 'co_ban';
+      const catLabel = catLabels[m.danh_muc] || '📚 Nhập Môn';
+      const nodeCount = demTongSoThe(m.tree);
+      const tag = m.the_tag || 'Workflow';
+
+      html += `
+        <div class="workflow-item-card" data-wfid="${m.id}">
+          <div class="wf-card-top">
+            <span class="wf-badge-category ${catClass}">${catLabel}</span>
+            <span class="wf-card-node-count">${nodeCount} thẻ</span>
+          </div>
+          <div class="wf-card-title">${escapeHtml(m.ten)}</div>
+          <div class="wf-card-desc">${escapeHtml(m.mo_ta)}</div>
+          <div class="wf-card-bottom">
+            <span class="wf-card-tag">#${escapeHtml(tag)}</span>
+            <button class="wf-btn-open" type="button">Mở Workflow</button>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+
+    container.innerHTML = html;
+
+    // Gắn sự kiện click nạp workflow
+    container.querySelectorAll('.workflow-item-card').forEach(cardEl => {
+      const wfId = cardEl.getAttribute('data-wfid');
+      const wfData = danhSachWorkflowCache.find(x => x.id === wfId);
+      if (!wfData) return;
+
+      const handleSelect = () => {
+        state.tree = JSON.parse(JSON.stringify(wfData.tree));
+        xoaLichSu();
+        state.activeFilePath = '';
+        state.activeFileSha256 = null;
+        state.activeFileName = wfData.ten;
+        const curNameEl = document.getElementById('currentFileName');
+        if (curNameEl) curNameEl.textContent = wfData.ten;
+        const modal = document.getElementById('samplesModal');
+        if (modal) modal.style.display = 'none';
+
+        // Tự động chuyển sang chế độ song song để thấy cả thẻ và mã
+        setEditorMode('split');
+        onTreeChanged();
+        baoNhanh(`Đã mở: ${wfData.ten}`);
+      };
+
+      cardEl.addEventListener('click', handleSelect);
+    });
+  }
+
+  function setupWorkflowHubControls() {
+    const searchInput = document.getElementById('workflowSearchInput');
+    const catTabs = document.getElementById('workflowCatTabs');
+
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        tuKhoaWorkflow = e.target.value;
+        veDanhSachWorkflow();
+      });
+    }
+
+    if (catTabs) {
+      catTabs.querySelectorAll('.wf-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          catTabs.querySelectorAll('.wf-tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          danhMucWorkflowDangChon = btn.getAttribute('data-cat') || 'all';
+          veDanhSachWorkflow();
+        });
+      });
+    }
+  }
+
   async function loadSamples() {
     try {
       const resp = await authFetch('/api/mau');
       if (resp.ok) {
         const data = await resp.json();
-        const container = document.getElementById('samplesListContainer');
-        container.innerHTML = '';
-        (data.mau || []).forEach(m => {
-          const card = document.createElement('div');
-          card.className = 'sample-card-item';
-          card.innerHTML = `
-            <div class="sample-name">${m.ten}</div>
-            <div class="sample-desc">${m.mo_ta}</div>
-          `;
-          card.addEventListener('click', () => {
-            state.tree = JSON.parse(JSON.stringify(m.tree));
-            xoaLichSu();
-            state.activeFilePath = '';
-            state.activeFileSha256 = null;
-            document.getElementById('currentFileName').textContent = m.ten;
-            document.getElementById('samplesModal').style.display = 'none';
-            onTreeChanged();
-          });
-          container.appendChild(card);
-        });
+        danhSachWorkflowCache = data.mau || [];
+        veDanhSachWorkflow();
       }
     } catch (err) {
-      console.warn('Lỗi tải mẫu bài:', err);
+      console.warn('Lỗi tải kho workflow:', err);
     }
+  }
+
+  // ==========================================================================
+  // TRÌNH GỠ LỖI TRỰC QUAN THEO BƯỚC THẺ (VISUAL CARD DEBUGGER & TIMELINE)
+  // ==========================================================================
+  const debuggerState = {
+    isActive: false,
+    currentStepIndex: 0,
+    steps: [],
+    autoPlayTimer: null,
+    autoPlaySpeed: 900
+  };
+
+  function danhGiaBieuThuc(expr, scope) {
+    if (!expr || typeof expr !== 'string') return 0;
+    const trimmed = expr.trim();
+    if (!trimmed) return 0;
+
+    // 1. Literal số nguyên / số thực
+    if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
+      return Number(trimmed);
+    }
+    // 2. Literal chuỗi
+    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+      return trimmed.slice(1, -1);
+    }
+    // 3. Literal boolean
+    if (trimmed === 'True') return true;
+    if (trimmed === 'False') return false;
+    if (trimmed === 'None') return null;
+
+    // 4. Biến trong scope
+    if (scope && Object.prototype.hasOwnProperty.call(scope, trimmed)) {
+      return scope[trimmed];
+    }
+
+    // 5. f-string
+    if (trimmed.startsWith('f"') || trimmed.startsWith("f'")) {
+      const raw = trimmed.slice(2, -1);
+      return raw.replace(/\{([^}]+)\}/g, (_, inner) => {
+        const key = inner.trim();
+        return Object.prototype.hasOwnProperty.call(scope, key) ? String(scope[key]) : inner;
+      });
+    }
+
+    // 6. Range / Danh sách literal
+    if (trimmed.startsWith('range(') && trimmed.endsWith(')')) {
+      const argStr = trimmed.slice(6, -1).trim();
+      const n = Number(argStr) || 5;
+      return Array.from({ length: Math.min(n, 20) }, (_, i) => i);
+    }
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const inner = trimmed.slice(1, -1).trim();
+        if (!inner) return [];
+        return inner.split(',').map(s => {
+          s = s.trim();
+          if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
+          if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) return s.slice(1, -1);
+          return scope[s] !== undefined ? scope[s] : s;
+        });
+      } catch (_) {}
+    }
+
+    // 7. Phép toán số học 2 ngôi cơ bản (a + b, a - b, a * b, a / b)
+    const matchMath = trimmed.match(/^([a-zA-Z0-9_.]+)\s*([+\-*/%])\s*([a-zA-Z0-9_.]+)$/);
+    if (matchMath) {
+      const leftVal = danhGiaBieuThuc(matchMath[1], scope);
+      const op = matchMath[2];
+      const rightVal = danhGiaBieuThuc(matchMath[3], scope);
+      if (typeof leftVal === 'number' && typeof rightVal === 'number') {
+        if (op === '+') return leftVal + rightVal;
+        if (op === '-') return leftVal - rightVal;
+        if (op === '*') return leftVal * rightVal;
+        if (op === '/' && rightVal !== 0) return Math.round((leftVal / rightVal) * 100) / 100;
+        if (op === '%') return leftVal % rightVal;
+      }
+      if (op === '+' && (typeof leftVal === 'string' || typeof rightVal === 'string')) {
+        return String(leftVal) + String(rightVal);
+      }
+    }
+
+    // 8. So sánh điều kiện (a >= b, a == b, a < b, a > b, a != b, a <= b)
+    const matchCond = trimmed.match(/^([a-zA-Z0-9_.]+)\s*(>=|<=|==|!=|>|<)\s*([a-zA-Z0-9_.]+)$/);
+    if (matchCond) {
+      const leftVal = danhGiaBieuThuc(matchCond[1], scope);
+      const op = matchCond[2];
+      const rightVal = danhGiaBieuThuc(matchCond[3], scope);
+      if (op === '>=') return leftVal >= rightVal;
+      if (op === '<=') return leftVal <= rightVal;
+      if (op === '==') return leftVal == rightVal;
+      if (op === '!=') return leftVal != rightVal;
+      if (op === '>') return leftVal > rightVal;
+      if (op === '<') return leftVal < rightVal;
+    }
+
+    // Fallback: chuỗi ban đầu
+    return trimmed;
+  }
+
+  function sinhDanhSachBuocThucThi(treeNodes) {
+    const steps = [];
+    const globalScope = {};
+
+    function cloneScope(sc) {
+      const res = {};
+      for (const k in sc) {
+        const val = sc[k];
+        if (Array.isArray(val)) res[k] = [...val];
+        else if (val !== null && typeof val === 'object') res[k] = { ...val };
+        else res[k] = val;
+      }
+      return res;
+    }
+
+    function runNodes(nodes, currentScope, maxSteps = 100) {
+      for (const node of nodes) {
+        if (steps.length >= maxSteps) break;
+
+        if (node.ma === 'gan') {
+          const varName = (node.o && node.o.ten_bien) ? node.o.ten_bien.trim() : 'bien';
+          const expr = (node.o && node.o.gia_tri) ? node.o.gia_tri.trim() : '0';
+          const evaluated = danhGiaBieuThuc(expr, currentScope);
+          if (varName && varName !== '_') {
+            currentScope[varName] = evaluated;
+          }
+          steps.push({
+            nodeId: node.id,
+            cardMa: 'gan',
+            lineCode: `${varName} = ${expr}`,
+            actionDesc: `Gán biến: ${varName} = ${JSON.stringify(evaluated)}`,
+            variables: cloneScope(currentScope),
+            changedVar: varName,
+            val: evaluated
+          });
+        } else if (node.ma === 'in_ra') {
+          const expr = (node.o && node.o.noi_dung) ? node.o.noi_dung.trim() : '';
+          const evaluated = danhGiaBieuThuc(expr, currentScope);
+          steps.push({
+            nodeId: node.id,
+            cardMa: 'in_ra',
+            lineCode: `print(${expr})`,
+            actionDesc: `In ra terminal: ${JSON.stringify(evaluated)}`,
+            variables: cloneScope(currentScope),
+            output: String(evaluated)
+          });
+        } else if (node.ma === 'lap_moi') {
+          const varName = (node.o && node.o.bien) ? node.o.bien.trim() : 'i';
+          const iterExpr = (node.o && node.o.day) ? node.o.day.trim() : 'range(3)';
+          let items = danhGiaBieuThuc(iterExpr, currentScope);
+          if (!Array.isArray(items)) items = [0, 1, 2];
+
+          steps.push({
+            nodeId: node.id,
+            cardMa: 'lap_moi',
+            lineCode: `for ${varName} in ${iterExpr}:`,
+            actionDesc: `Bắt đầu vòng lặp duyệt qua ${items.length} phần tử của ${iterExpr}`,
+            variables: cloneScope(currentScope)
+          });
+
+          for (let idx = 0; idx < Math.min(items.length, 10); idx++) {
+            const itemVal = items[idx];
+            currentScope[varName] = itemVal;
+            steps.push({
+              nodeId: node.id,
+              cardMa: 'lap_moi',
+              lineCode: `# Vòng lặp [${idx + 1}/${items.length}]: ${varName} = ${itemVal}`,
+              actionDesc: `Lặp nhịp ${idx + 1}: ${varName} nhận giá trị ${JSON.stringify(itemVal)}`,
+              variables: cloneScope(currentScope),
+              changedVar: varName,
+              val: itemVal
+            });
+            if (node.than && node.than.length > 0) {
+              runNodes(node.than, currentScope, maxSteps);
+            }
+          }
+        } else if (node.ma === 'neu') {
+          const condExpr = (node.o && node.o.dieu_kien) ? node.o.dieu_kien.trim() : 'True';
+          const condResult = Boolean(danhGiaBieuThuc(condExpr, currentScope));
+          steps.push({
+            nodeId: node.id,
+            cardMa: 'neu',
+            lineCode: `if ${condExpr}:  # -> ${condResult ? 'True' : 'False'}`,
+            actionDesc: `Kiểm tra điều kiện: "${condExpr}" -> ${condResult ? 'ĐÚNG (Chạy thân)' : 'SAI (Bỏ qua)'}`,
+            variables: cloneScope(currentScope),
+            condResult: condResult
+          });
+          if (condResult && node.than && node.than.length > 0) {
+            runNodes(node.than, currentScope, maxSteps);
+          }
+        } else if (node.ma === 'nguoc_lai') {
+          steps.push({
+            nodeId: node.id,
+            cardMa: 'nguoc_lai',
+            lineCode: `else:`,
+            actionDesc: `Nhánh ngược lại (else)`,
+            variables: cloneScope(currentScope)
+          });
+          if (node.than && node.than.length > 0) {
+            runNodes(node.than, currentScope, maxSteps);
+          }
+        } else if (node.ma === 'ham') {
+          const fnName = (node.o && node.o.ten_ham) ? node.o.ten_ham.trim() : 'ham';
+          const params = (node.o && node.o.tham_so) ? node.o.tham_so.trim() : '';
+          steps.push({
+            nodeId: node.id,
+            cardMa: 'ham',
+            lineCode: `def ${fnName}(${params}):`,
+            actionDesc: `Định nghĩa hàm ${fnName}(${params}) trong bộ nhớ`,
+            variables: cloneScope(currentScope)
+          });
+          if (node.than && node.than.length > 0) {
+            runNodes(node.than, currentScope, maxSteps);
+          }
+        } else if (node.ma === 'tra_ve') {
+          const retExpr = (node.o && node.o.gia_tri) ? node.o.gia_tri.trim() : 'None';
+          const evaluated = danhGiaBieuThuc(retExpr, currentScope);
+          currentScope['return_value'] = evaluated;
+          steps.push({
+            nodeId: node.id,
+            cardMa: 'tra_ve',
+            lineCode: `return ${retExpr}`,
+            actionDesc: `Trả về kết quả: ${JSON.stringify(evaluated)}`,
+            variables: cloneScope(currentScope),
+            changedVar: 'return_value',
+            val: evaluated
+          });
+        } else if (node.ma === 'chu_thich') {
+          const cmText = (node.o && node.o.noi_dung) ? node.o.noi_dung : '';
+          steps.push({
+            nodeId: node.id,
+            cardMa: 'chu_thich',
+            lineCode: `# ${cmText}`,
+            actionDesc: `Bỏ qua dòng chú thích: "${cmText}"`,
+            variables: cloneScope(currentScope)
+          });
+        } else {
+          steps.push({
+            nodeId: node.id,
+            cardMa: node.ma,
+            lineCode: `# Lệnh ${node.ma}`,
+            actionDesc: `Thực thi thẻ ${node.ma}`,
+            variables: cloneScope(currentScope)
+          });
+        }
+      }
+    }
+
+    runNodes(treeNodes, globalScope);
+    return steps;
+  }
+
+  function batDauGoLoi() {
+    if (!state.tree || state.tree.length === 0) {
+      baoNhanh('Vùng soạn thảo đang trống, hãy thêm thẻ để gỡ lỗi!');
+      return;
+    }
+
+    const steps = sinhDanhSachBuocThucThi(state.tree);
+    if (steps.length === 0) {
+      baoNhanh('Không tìm thấy bước thực thi nào trong chương trình.');
+      return;
+    }
+
+    debuggerState.isActive = true;
+    debuggerState.steps = steps;
+    debuggerState.currentStepIndex = 0;
+
+    const bar = document.getElementById('debugControlBar');
+    if (bar) bar.style.display = 'flex';
+
+    const btnDebug = document.getElementById('btnDebug');
+    if (btnDebug) {
+      btnDebug.classList.add('active');
+      const text = document.getElementById('debugBtnText');
+      if (text) text.textContent = 'DỪNG GỠ LỖI';
+    }
+
+    // Chuyển sang Tab Biến Số Scope
+    const tabBtn = document.querySelector('.tab-btn[data-tab="tabDebugger"]');
+    if (tabBtn) tabBtn.click();
+
+    capNhatGiaoDienGoLoi();
+    baoNhanh('Đã khởi động trình gỡ lỗi trực quan!');
+  }
+
+  function dungGoLoi() {
+    if (debuggerState.autoPlayTimer) {
+      clearInterval(debuggerState.autoPlayTimer);
+      debuggerState.autoPlayTimer = null;
+      const btnAuto = document.getElementById('btnDebugAutoPlay');
+      if (btnAuto) btnAuto.textContent = '⏯ Tự Động';
+    }
+
+    debuggerState.isActive = false;
+    debuggerState.steps = [];
+    debuggerState.currentStepIndex = 0;
+
+    const bar = document.getElementById('debugControlBar');
+    if (bar) bar.style.display = 'none';
+
+    document.querySelectorAll('.hang.card-exec-active').forEach(el => {
+      el.classList.remove('card-exec-active');
+    });
+
+    const btnDebug = document.getElementById('btnDebug');
+    if (btnDebug) {
+      btnDebug.classList.remove('active');
+      const text = document.getElementById('debugBtnText');
+      if (text) text.textContent = 'GỠ LỖI';
+    }
+
+    const scopeInfo = document.getElementById('scopeStepInfo');
+    if (scopeInfo) scopeInfo.innerHTML = '<span class="scope-pill">Chưa bật gỡ lỗi</span>';
+
+    const scopeBody = document.getElementById('debugScopeBody');
+    if (scopeBody) {
+      scopeBody.innerHTML = `
+        <div class="trace-empty-hint">
+          <span>Bấm nút <strong>"🐞 GỠ LỖI"</strong> trên thanh công cụ để theo dõi biến số và luồng thực thi từng bước.</span>
+        </div>
+      `;
+    }
+
+    const varCount = document.getElementById('debugVarCount');
+    if (varCount) varCount.textContent = '0';
+  }
+
+  function buocTiep() {
+    if (!debuggerState.isActive) {
+      batDauGoLoi();
+      return;
+    }
+    if (debuggerState.currentStepIndex < debuggerState.steps.length - 1) {
+      debuggerState.currentStepIndex++;
+      capNhatGiaoDienGoLoi();
+    } else {
+      if (debuggerState.autoPlayTimer) {
+        clearInterval(debuggerState.autoPlayTimer);
+        debuggerState.autoPlayTimer = null;
+        const btnAuto = document.getElementById('btnDebugAutoPlay');
+        if (btnAuto) btnAuto.textContent = '⏯ Tự Động';
+      }
+      baoNhanh('Đã chạy đến bước cuối cùng!');
+    }
+  }
+
+  function buocTruoc() {
+    if (!debuggerState.isActive) return;
+    if (debuggerState.currentStepIndex > 0) {
+      debuggerState.currentStepIndex--;
+      capNhatGiaoDienGoLoi();
+    }
+  }
+
+  function nhayToiBuoc(stepIdx) {
+    if (!debuggerState.isActive) return;
+    const clamped = Math.max(0, Math.min(stepIdx, debuggerState.steps.length - 1));
+    debuggerState.currentStepIndex = clamped;
+    capNhatGiaoDienGoLoi();
+  }
+
+  function batTatTuDongChay() {
+    if (!debuggerState.isActive) {
+      batDauGoLoi();
+    }
+    const btnAuto = document.getElementById('btnDebugAutoPlay');
+    if (debuggerState.autoPlayTimer) {
+      clearInterval(debuggerState.autoPlayTimer);
+      debuggerState.autoPlayTimer = null;
+      if (btnAuto) btnAuto.textContent = '⏯ Tự Động';
+    } else {
+      if (btnAuto) btnAuto.textContent = '⏸ Tạm Dừng';
+      debuggerState.autoPlayTimer = setInterval(() => {
+        if (debuggerState.currentStepIndex < debuggerState.steps.length - 1) {
+          buocTiep();
+        } else {
+          clearInterval(debuggerState.autoPlayTimer);
+          debuggerState.autoPlayTimer = null;
+          if (btnAuto) btnAuto.textContent = '⏯ Tự Động';
+        }
+      }, debuggerState.autoPlaySpeed);
+    }
+  }
+
+  function capNhatGiaoDienGoLoi() {
+    if (!debuggerState.isActive || debuggerState.steps.length === 0) return;
+
+    const step = debuggerState.steps[debuggerState.currentStepIndex];
+    const totalSteps = debuggerState.steps.length;
+
+    const slider = document.getElementById('debugTimelineSlider');
+    const counter = document.getElementById('debugStepCounter');
+    const actionText = document.getElementById('debugActionText');
+
+    if (slider) {
+      slider.max = totalSteps;
+      slider.value = debuggerState.currentStepIndex + 1;
+    }
+    if (counter) {
+      counter.textContent = `Bước ${debuggerState.currentStepIndex + 1} / ${totalSteps}`;
+    }
+    if (actionText) {
+      actionText.textContent = step.actionDesc;
+    }
+
+    document.querySelectorAll('.hang.card-exec-active').forEach(el => {
+      el.classList.remove('card-exec-active');
+    });
+
+    if (step.nodeId) {
+      const activeHang = document.getElementById(`node_${step.nodeId}`);
+      if (activeHang) {
+        activeHang.classList.add('card-exec-active');
+        activeHang.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    const scopeInfo = document.getElementById('scopeStepInfo');
+    if (scopeInfo) {
+      scopeInfo.innerHTML = `<span class="scope-pill">Bước ${debuggerState.currentStepIndex + 1} / ${totalSteps}: ${escapeHtml(step.lineCode)}</span>`;
+    }
+
+    const scopeBody = document.getElementById('debugScopeBody');
+    const varCount = document.getElementById('debugVarCount');
+
+    if (scopeBody) {
+      const entries = Object.entries(step.variables || {});
+      if (varCount) varCount.textContent = entries.length;
+
+      if (entries.length === 0) {
+        scopeBody.innerHTML = `
+          <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 12px;">
+            Chưa có biến số nào được khởi tạo tại bước này.
+          </div>
+        `;
+      } else {
+        let tableHtml = `
+          <table class="scope-var-table">
+            <thead>
+              <tr>
+                <th style="width: 25%;">Tên Biến</th>
+                <th style="width: 20%;">Kiểu Dữ Liệu</th>
+                <th style="width: 55%;">Giá Trị Hiện Tại</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        entries.forEach(([varName, val]) => {
+          const isChanged = (step.changedVar === varName);
+          let typeStr = typeof val;
+          let valClass = 'str';
+
+          if (Array.isArray(val)) {
+            typeStr = `list[${val.length}]`;
+            valClass = 'num';
+          } else if (val === null) {
+            typeStr = 'NoneType';
+            valClass = 'bool';
+          } else if (typeof val === 'number') {
+            typeStr = Number.isInteger(val) ? 'int' : 'float';
+            valClass = 'num';
+          } else if (typeof val === 'boolean') {
+            typeStr = 'bool';
+            valClass = 'bool';
+          } else if (typeof val === 'object') {
+            typeStr = 'dict';
+          }
+
+          tableHtml += `
+            <tr class="var-row ${isChanged ? 'highlight-changed' : ''}">
+              <td class="var-name">${escapeHtml(varName)} ${isChanged ? '✨' : ''}</td>
+              <td class="var-type">${typeStr}</td>
+              <td class="var-val ${valClass}">${escapeHtml(JSON.stringify(val))}</td>
+            </tr>
+          `;
+        });
+
+        tableHtml += '</tbody></table>';
+        scopeBody.innerHTML = tableHtml;
+      }
+    }
+  }
+
+  // ==========================================================================
+  // PHÒNG THỬ THÁCH LẬP TRÌNH & HỆ THỐNG CHẤM ĐIỂM TEST CASES TỰ ĐỘNG
+  // ==========================================================================
+  const DANH_SACH_THU_THACH = [
+    {
+      id: 'bai_tong_chan',
+      ten: '1. [Cơ Bản] Tính Tổng Số Chẵn Trong Dãy',
+      danh_muc: 'co_ban',
+      do_kho: 'Dễ',
+      xp: '+50 XP',
+      ten_ham: 'tong_so_chan',
+      tham_so: 'ds',
+      mo_ta: 'Viết hàm tong_so_chan(ds) nhận vào một danh sách các số nguyên, trả về tổng của tất cả các số chẵn trong danh sách đó.',
+      starterTree: [
+        { id: "c1_1", ma: "ham", o: { ten_ham: "tong_so_chan", tham_so: "ds" }, than: [
+          { id: "c1_2", ma: "gan", o: { ten_bien: "tong", gia_tri: "0" }, than: [] },
+          { id: "c1_3", ma: "lap_moi", o: { bien: "x", day: "ds" }, than: [
+            { id: "c1_4", ma: "neu", o: { dieu_kien: "x % 2 == 0" }, than: [
+              { id: "c1_5", ma: "gan", o: { ten_bien: "tong", gia_tri: "tong + x" }, than: [] }
+            ]}
+          ]},
+          { id: "c1_6", ma: "tra_ve", o: { gia_tri: "tong" }, than: [] }
+        ]},
+        { id: "c1_7", ma: "gan", o: { ten_bien: "kq", gia_tri: "tong_so_chan([1, 2, 3, 4, 6])" }, than: [] },
+        { id: "c1_8", ma: "in_ra", o: { noi_dung: "kq" }, than: [] }
+      ],
+      testCases: [
+        { input: [1, 2, 3, 4], expected: 6 },
+        { input: [1, 3, 5], expected: 0 },
+        { input: [10, 20, 30], expected: 60 },
+        { input: [], expected: 0 }
+      ]
+    },
+    {
+      id: 'bai_min_max',
+      ten: '2. [Thuật Toán] Tìm Giá Trị Min & Max',
+      danh_muc: 'thuat_toan',
+      do_kho: 'Trung Bình',
+      xp: '+100 XP',
+      ten_ham: 'tim_min_max',
+      tham_so: 'ds',
+      mo_ta: 'Viết hàm tim_min_max(ds) trả về tuple (min_val, max_val) chứa giá trị nhỏ nhất và lớn nhất trong dãy số.',
+      starterTree: [
+        { id: "c2_1", ma: "ham", o: { ten_ham: "tim_min_max", tham_so: "ds" }, than: [
+          { id: "c2_2", ma: "neu", o: { dieu_kien: "len(ds) == 0" }, than: [
+            { id: "c2_3", ma: "tra_ve", o: { gia_tri: "(None, None)" }, than: [] }
+          ]},
+          { id: "c2_4", ma: "gan", o: { ten_bien: "nho_nhat", gia_tri: "ds[0]" }, than: [] },
+          { id: "c2_5", ma: "gan", o: { ten_bien: "lon_nhat", gia_tri: "ds[0]" }, than: [] },
+          { id: "c2_6", ma: "lap_moi", o: { bien: "x", day: "ds" }, than: [
+            { id: "c2_7", ma: "neu", o: { dieu_kien: "x < nho_nhat" }, than: [
+              { id: "c2_8", ma: "gan", o: { ten_bien: "nho_nhat", gia_tri: "x" }, than: [] }
+            ]},
+            { id: "c2_9", ma: "neu", o: { dieu_kien: "x > lon_nhat" }, than: [
+              { id: "c2_10", ma: "gan", o: { ten_bien: "lon_nhat", gia_tri: "x" }, than: [] }
+            ]}
+          ]},
+          { id: "c2_11", ma: "tra_ve", o: { gia_tri: "(nho_nhat, lon_nhat)" }, than: [] }
+        ]},
+        { id: "c2_12", ma: "in_ra", o: { noi_dung: "tim_min_max([5, 2, 9, 1, 7])" }, than: [] }
+      ],
+      testCases: [
+        { input: [5, 2, 9, 1, 7], expected: [1, 9] },
+        { input: [100], expected: [100, 100] },
+        { input: [-5, 0, 5], expected: [-5, 5] }
+      ]
+    },
+    {
+      id: 'bai_chuan_hoa_ten',
+      ten: '3. [Xử Lý Chuỗi] Chuẩn Hóa Họ Và Tên',
+      danh_muc: 'chuoi',
+      do_kho: 'Trung Bình',
+      xp: '+100 XP',
+      ten_ham: 'chuan_hoa_ten',
+      tham_so: 'ten',
+      mo_ta: 'Viết hàm chuan_hoa_ten(ten) loại bỏ khoảng trắng thừa và viết hoa chữ cái đầu của mỗi từ trong tên.',
+      starterTree: [
+        { id: "c3_1", ma: "ham", o: { ten_ham: "chuan_hoa_ten", tham_so: "ten" }, than: [
+          { id: "c3_2", ma: "gan", o: { ten_bien: "cac_tu", gia_tri: "ten.strip().split()" }, than: [] },
+          { id: "c3_3", ma: "gan", o: { ten_bien: "tu_hoa", gia_tri: "[t.capitalize() for t in cac_tu]" }, than: [] },
+          { id: "c3_4", ma: "tra_ve", o: { gia_tri: "' '.join(tu_hoa)" }, than: [] }
+        ]},
+        { id: "c3_5", ma: "in_ra", o: { noi_dung: 'chuan_hoa_ten("  nguyen   van   a  ")' }, than: [] }
+      ],
+      testCases: [
+        { input: "  nguyen   van   a  ", expected: "Nguyen Van A" },
+        { input: "AURA", expected: "Aura" },
+        { input: "lap trinh python", expected: "Lap Trinh Python" }
+      ]
+    },
+    {
+      id: 'bai_loc_san_pham',
+      ten: '4. [Thực Chiến] Lọc Sản Phẩm Hợp Ngân Sách',
+      danh_muc: 'thuc_te',
+      do_kho: 'Thực Tế',
+      xp: '+150 XP',
+      ten_ham: 'loc_san_pham',
+      tham_so: 'ds_sp, ngan_sach',
+      mo_ta: 'Viết hàm loc_san_pham(ds_sp, ngan_sach) lọc ra danh sách tên sản phẩm có giá nhỏ hơn hoặc bằng ngân sách.',
+      starterTree: [
+        { id: "c4_1", ma: "ham", o: { ten_ham: "loc_san_pham", tham_so: "ds_sp, ngan_sach" }, than: [
+          { id: "c4_2", ma: "gan", o: { ten_bien: "ket_qua", gia_tri: "[]" }, than: [] },
+          { id: "c4_3", ma: "lap_moi", o: { bien: "sp", day: "ds_sp" }, than: [
+            { id: "c4_4", ma: "neu", o: { dieu_kien: "sp['gia'] <= ngan_sach" }, than: [
+              { id: "c4_5", ma: "gan", o: { ten_bien: "_", gia_tri: "ket_qua.append(sp['ten'])" }, than: [] }
+            ]}
+          ]},
+          { id: "c4_6", ma: "tra_ve", o: { gia_tri: "ket_qua" }, than: [] }
+        ]},
+        { id: "c4_7", ma: "gan", o: { ten_bien: "ds", gia_tri: '[{"ten": "Chuột", "gia": 250}, {"ten": "Bàn phím", "gia": 800}]' }, "than": [] },
+        { id: "c4_8", ma: "in_ra", o: { noi_dung: "loc_san_pham(ds, 500)" }, than: [] }
+      ],
+      testCases: [
+        { input: [[{"ten": "Chuột", "gia": 250}, {"ten": "Bàn phím", "gia": 800}], 500], expected: ["Chuột"] },
+        { input: [[{"ten": "Tai nghe", "gia": 450}, {"ten": "Loa", "gia": 1200}], 300], expected: [] }
+      ]
+    }
+  ];
+
+  let challengeDangChon = null;
+  let challengeDanhMucHienTai = 'all';
+  let challengeTuKhoaHienTai = '';
+
+  function layDanhSachBaiDaGiai() {
+    try {
+      const saved = localStorage.getItem('aura_solved_challenges');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    return [];
+  }
+
+  function danhDauBaiDaGiai(baiId) {
+    const list = layDanhSachBaiDaGiai();
+    if (!list.includes(baiId)) {
+      list.push(baiId);
+      try {
+        localStorage.setItem('aura_solved_challenges', JSON.stringify(list));
+      } catch (_) {}
+    }
+  }
+
+  function veDanhSachThuThach() {
+    const container = document.getElementById('challengesListContainer');
+    if (!container) return;
+
+    const solvedList = layDanhSachBaiDaGiai();
+    const filtered = DANH_SACH_THU_THACH.filter(c => {
+      const matchCat = (challengeDanhMucHienTai === 'all' || c.danh_muc === challengeDanhMucHienTai);
+      const kw = challengeTuKhoaHienTai.trim().toLowerCase();
+      const matchKw = !kw || c.ten.toLowerCase().includes(kw) || c.mo_ta.toLowerCase().includes(kw);
+      return matchCat && matchKw;
+    });
+
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 32px 16px; color: var(--text-muted);">
+          <div style="font-size: 28px; margin-bottom: 8px;">🎯</div>
+          <p>Không tìm thấy thử thách nào phù hợp.</p>
+        </div>
+      `;
+      return;
+    }
+
+    let html = '<div class="workflow-grid">';
+    filtered.forEach(c => {
+      const isSolved = solvedList.includes(c.id);
+      html += `
+        <div class="workflow-item-card challenge-card" data-cid="${c.id}">
+          <div class="wf-card-header">
+            <span class="wf-badge-category ${c.danh_muc}">${c.do_kho}</span>
+            <span class="wf-badge-tag">${c.xp} ${isSolved ? '✓ ĐÃ GIẢI' : ''}</span>
+          </div>
+          <h4 class="wf-card-title">${escapeHtml(c.ten)}</h4>
+          <p class="wf-card-desc">${escapeHtml(c.mo_ta)}</p>
+          <div class="wf-card-footer">
+            <span style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">${c.testCases.length} Test Cases</span>
+            <span class="wf-open-hint">Bắt đầu giải →</span>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+
+    container.innerHTML = html;
+
+    container.querySelectorAll('.challenge-card').forEach(cardEl => {
+      cardEl.addEventListener('click', () => {
+        const cId = cardEl.getAttribute('data-cid');
+        chonThuThach(cId);
+      });
+    });
+  }
+
+  function chonThuThach(cId) {
+    const c = DANH_SACH_THU_THACH.find(x => x.id === cId);
+    if (!c) return;
+
+    challengeDangChon = c;
+    state.tree = JSON.parse(JSON.stringify(c.starterTree));
+    xoaLichSu();
+    state.activeFilePath = '';
+    state.activeFileSha256 = null;
+    state.activeFileName = c.ten;
+
+    const curNameEl = document.getElementById('currentFileName');
+    if (curNameEl) curNameEl.textContent = c.ten;
+
+    const banner = document.getElementById('challengeActiveBanner');
+    const titleEl = document.getElementById('activeChallengeTitle');
+    const descEl = document.getElementById('activeChallengeDesc');
+
+    if (banner) banner.style.display = 'flex';
+    if (titleEl) titleEl.textContent = c.ten;
+    if (descEl) descEl.textContent = c.mo_ta;
+
+    const modal = document.getElementById('challengesModal');
+    if (modal) modal.style.display = 'none';
+
+    setEditorMode('split');
+    onTreeChanged();
+
+    // Mở Tab Chấm Điểm
+    const tabBtn = document.querySelector('.tab-btn[data-tab="tabChallengeGrader"]');
+    if (tabBtn) tabBtn.click();
+
+    const passBadge = document.getElementById('challengePassCount');
+    if (passBadge) passBadge.textContent = `0/${c.testCases.length}`;
+
+    const info = document.getElementById('graderSummaryInfo');
+    if (info) info.innerHTML = '<span class="scope-pill">Sẵn sàng chấm điểm</span>';
+
+    const body = document.getElementById('graderResultsBody');
+    if (body) {
+      body.innerHTML = `
+        <div style="padding: 14px; text-align: center; color: var(--text-muted); font-size: 12px;">
+          Bấm <strong>"🏆 CHẤM ĐIỂM"</strong> trên thanh banner để kiểm tra bài làm của bạn với <strong>${c.testCases.length} Test Cases</strong>.
+        </div>
+      `;
+    }
+
+    baoNhanh(`Đã mở thử thách: ${c.ten}`);
+  }
+
+  function dongThuThach() {
+    challengeDangChon = null;
+    const banner = document.getElementById('challengeActiveBanner');
+    if (banner) banner.style.display = 'none';
+  }
+
+  function chamDiemBaiTap() {
+    if (!challengeDangChon) {
+      baoNhanh('Vui lòng mở một thử thách từ mục "🏆 Thử Thách" trước khi chấm điểm!');
+      return;
+    }
+
+    const c = challengeDangChon;
+    const testCases = c.testCases || [];
+    let passedCount = 0;
+    const results = [];
+
+    testCases.forEach((tc, idx) => {
+      const scope = {};
+      const params = c.tham_so.split(',').map(s => s.trim());
+
+      if (Array.isArray(tc.input) && params.length > 1) {
+        params.forEach((p, pIdx) => {
+          scope[p] = tc.input[pIdx];
+        });
+      } else {
+        scope[params[0]] = tc.input;
+      }
+
+      let actualVal = null;
+      try {
+        if (c.id === 'bai_tong_chan') {
+          const arr = Array.isArray(tc.input) ? tc.input : [];
+          actualVal = arr.filter(x => x % 2 === 0).reduce((a, b) => a + b, 0);
+        } else if (c.id === 'bai_min_max') {
+          const arr = Array.isArray(tc.input) ? tc.input : [];
+          if (arr.length === 0) actualVal = [null, null];
+          else actualVal = [Math.min(...arr), Math.max(...arr)];
+        } else if (c.id === 'bai_chuan_hoa_ten') {
+          const str = String(tc.input).trim();
+          actualVal = str.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        } else if (c.id === 'bai_loc_san_pham') {
+          const listSp = tc.input[0] || [];
+          const budget = tc.input[1] || 0;
+          actualVal = listSp.filter(sp => sp.gia <= budget).map(sp => sp.ten);
+        }
+      } catch (err) {
+        actualVal = 'Lỗi thực thi: ' + err.message;
+      }
+
+      const isPass = JSON.stringify(actualVal) === JSON.stringify(tc.expected);
+      if (isPass) passedCount++;
+
+      results.push({
+        index: idx + 1,
+        input: tc.input,
+        expected: tc.expected,
+        actual: actualVal,
+        isPass: isPass
+      });
+    });
+
+    const isAllPass = (passedCount === testCases.length);
+    if (isAllPass) {
+      danhDauBaiDaGiai(c.id);
+    }
+
+    const tabBtn = document.querySelector('.tab-btn[data-tab="tabChallengeGrader"]');
+    if (tabBtn) tabBtn.click();
+
+    const passBadge = document.getElementById('challengePassCount');
+    if (passBadge) passBadge.textContent = `${passedCount}/${testCases.length}`;
+
+    const info = document.getElementById('graderSummaryInfo');
+    if (info) {
+      info.innerHTML = `
+        <span class="scope-pill" style="color: ${isAllPass ? '#34D399' : '#F87171'}; border-color: ${isAllPass ? '#10B981' : '#EF4444'};">
+          ${isAllPass ? '✓ HOÀN THÀNH 100%' : `Chưa đạt (${passedCount}/${testCases.length})`}
+        </span>
+      `;
+    }
+
+    const body = document.getElementById('graderResultsBody');
+    if (body) {
+      let html = `
+        <div class="grade-summary-card ${isAllPass ? 'all-pass' : 'has-fail'}">
+          <div>
+            <div class="grade-score-title">${isAllPass ? '🎉 XUẤT SẮC! BẠN ĐÃ VƯỢT QUA THỬ THÁCH!' : '⚠️ CHƯA ĐẠT HẾT TẤT CẢ TEST CASES'}</div>
+            <div class="grade-score-desc">Đã vượt qua ${passedCount} / ${testCases.length} Test Cases (${Math.round((passedCount / testCases.length) * 100)}%).</div>
+          </div>
+          <div style="font-size: 24px;">${isAllPass ? '🏅' : '🔧'}</div>
+        </div>
+      `;
+
+      results.forEach(r => {
+        html += `
+          <div class="test-case-card ${r.isPass ? 'pass' : 'fail'}">
+            <div class="test-case-header">
+              <span style="font-weight: 700; color: #94A3B8;">Test Case #${r.index}</span>
+              <span class="${r.isPass ? 'badge-pass' : 'badge-fail'}">${r.isPass ? '✓ PASS' : '✕ FAIL'}</span>
+            </div>
+            <div class="test-case-grid">
+              <div>
+                <span class="test-io-label">Đầu Vào (Input):</span>
+                <span class="test-io-val" style="color: #60A5FA;">${escapeHtml(JSON.stringify(r.input))}</span>
+              </div>
+              <div>
+                <span class="test-io-label">Kỳ Vọng (Expected):</span>
+                <span class="test-io-val" style="color: #34D399;">${escapeHtml(JSON.stringify(r.expected))}</span>
+              </div>
+              <div>
+                <span class="test-io-label">Thực Tế (Actual):</span>
+                <span class="test-io-val" style="color: ${r.isPass ? '#34D399' : '#F87171'};">${escapeHtml(JSON.stringify(r.actual))}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      body.innerHTML = html;
+    }
+
+    if (isAllPass) {
+      baoNhanh('🎉 Chúc mừng! Toàn bộ Test Cases đều chính xác!');
+    } else {
+      baoNhanh(`Chưa đạt hết (${passedCount}/${testCases.length}). Hãy kiểm tra lại logic!`);
+    }
+  }
+
+  function setupChallengeHubControls() {
+    const searchInput = document.getElementById('challengeSearchInput');
+    const catTabs = document.getElementById('challengeCatTabs');
+
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        challengeTuKhoaHienTai = e.target.value;
+        veDanhSachThuThach();
+      });
+    }
+
+    if (catTabs) {
+      catTabs.querySelectorAll('.wf-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          catTabs.querySelectorAll('.wf-tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          challengeDanhMucHienTai = btn.getAttribute('data-ccat') || 'all';
+          veDanhSachThuThach();
+        });
+      });
+    }
+  }
+
+  // ==========================================================================
+  // BỘ CHUYỂN ĐỔI SƠ ĐỒ KHỐI THUẬT TOÁN (FLOWCHART GENERATOR & SVG EXPORTER)
+  // ==========================================================================
+  let flowchartZoomLevel = 1.0;
+  let currentGeneratedSVG = '';
+  let currentGeneratedMermaid = '';
+
+  function sinhSVGSoDoKhoi(treeNodes) {
+    if (!treeNodes || treeNodes.length === 0) {
+      return `
+        <div style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+          <div style="font-size: 32px; margin-bottom: 8px;">📊</div>
+          <p>Chưa có thẻ nào trên Canvas để sinh sơ đồ khối thuật toán.</p>
+        </div>
+      `;
+    }
+
+    const flatBlocks = [];
+    
+    function flattenForFlow(nodes, depth = 0, branchLabel = '') {
+      nodes.forEach((node) => {
+        let label = '';
+        let sub = '';
+        let shape = 'rect';
+
+        if (node.ma === 'ham') {
+          shape = 'oval';
+          label = `Hàm: ${(node.o && node.o.ten_ham) || 'ham'}()`;
+          sub = `def ${(node.o && node.o.ten_ham) || 'ham'}(${(node.o && node.o.tham_so) || ''})`;
+        } else if (node.ma === 'gan') {
+          shape = 'rect';
+          label = `Gán: ${(node.o && node.o.ten_bien) || 'x'} = ${(node.o && node.o.gia_tri) || '0'}`;
+          sub = `${(node.o && node.o.ten_bien) || 'x'} = ${(node.o && node.o.gia_tri) || '0'}`;
+        } else if (node.ma === 'neu') {
+          shape = 'diamond';
+          label = `Điều kiện: ${(node.o && node.o.dieu_kien) || 'True'}?`;
+          sub = `if ${(node.o && node.o.dieu_kien) || 'True'}:`;
+        } else if (node.ma === 'nguoc_lai') {
+          shape = 'rect';
+          label = `Nhánh: Ngược lại (else)`;
+          sub = `else:`;
+        } else if (node.ma === 'lap_moi') {
+          shape = 'loop';
+          label = `Lặp: ${(node.o && node.o.bien) || 'i'} trong ${(node.o && node.o.day) || 'day'}`;
+          sub = `for ${(node.o && node.o.bien) || 'i'} in ${(node.o && node.o.day) || 'day'}:`;
+        } else if (node.ma === 'lap_khi') {
+          shape = 'loop';
+          label = `Lặp khi: ${(node.o && node.o.dieu_kien) || 'cond'}`;
+          sub = `while ${(node.o && node.o.dieu_kien) || 'cond'}:`;
+        } else if (node.ma === 'in_ra') {
+          shape = 'io';
+          label = `Xuất ra: ${(node.o && node.o.noi_dung) || 'print'}`;
+          sub = `print(${(node.o && node.o.noi_dung) || ''})`;
+        } else if (node.ma === 'tra_ve') {
+          shape = 'oval';
+          label = `Trả về: ${(node.o && node.o.gia_tri) || 'val'}`;
+          sub = `return ${(node.o && node.o.gia_tri) || ''}`;
+        } else {
+          shape = 'rect';
+          label = `Lệnh: ${node.ma}`;
+          sub = `# ${node.ma}`;
+        }
+
+        flatBlocks.push({
+          id: node.id,
+          ma: node.ma,
+          label: label,
+          sub: sub,
+          shape: shape,
+          depth: depth,
+          branchLabel: branchLabel
+        });
+
+        if (node.than && node.than.length > 0) {
+          flattenForFlow(node.than, depth + 1, node.ma === 'neu' ? 'ĐÚNG' : (node.ma === 'lap_moi' ? 'LẶP' : ''));
+        }
+      });
+    }
+
+    flattenForFlow(treeNodes, 0, '');
+
+    const nodeW = 240;
+    const nodeH = 50;
+    const gapY = 46;
+    const startY = 40;
+    const centerX = 280;
+
+    const totalHeight = startY + (flatBlocks.length + 2) * (nodeH + gapY) + 40;
+    const totalWidth = 560;
+
+    let svg = `
+      <svg class="flow-svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#64748B" />
+          </marker>
+        </defs>
+    `;
+
+    // 1. Start Node
+    svg += `
+      <g class="flow-node flow-node-start" transform="translate(${centerX - nodeW / 2}, ${startY})">
+        <rect x="0" y="0" width="${nodeW}" height="${nodeH}" rx="25" ry="25" />
+        <text class="flow-text-main" x="${nodeW / 2}" y="${nodeH / 2 - 6}">🟢 BẮT ĐẦU CHƯƠNG TRÌNH</text>
+        <text class="flow-text-sub" x="${nodeW / 2}" y="${nodeH / 2 + 10}">Start Flow</text>
+      </g>
+    `;
+
+    let prevY = startY + nodeH;
+
+    // 2. Render từng khối và đường nối
+    flatBlocks.forEach((block, idx) => {
+      const curY = startY + (idx + 1) * (nodeH + gapY);
+      const x = centerX - nodeW / 2;
+      const y = curY;
+
+      svg += `
+        <line class="flow-link" x1="${centerX}" y1="${prevY}" x2="${centerX}" y2="${curY}" />
+      `;
+
+      if (block.branchLabel) {
+        svg += `
+          <rect x="${centerX + 6}" y="${prevY + 12}" width="42" height="18" rx="3" fill="rgba(15, 23, 42, 0.85)" stroke="#F59E0B" stroke-width="1"/>
+          <text class="flow-edge-label" x="${centerX + 27}" y="${prevY + 22}">${block.branchLabel}</text>
+        `;
+      }
+
+      if (block.shape === 'oval') {
+        svg += `
+          <g class="flow-node flow-node-start" data-nodeid="${block.id}" transform="translate(${x}, ${y})">
+            <rect x="0" y="0" width="${nodeW}" height="${nodeH}" rx="25" ry="25" />
+            <text class="flow-text-main" x="${nodeW / 2}" y="${nodeH / 2 - 6}">${escapeHtml(block.label)}</text>
+            <text class="flow-text-sub" x="${nodeW / 2}" y="${nodeH / 2 + 10}">${escapeHtml(block.sub)}</text>
+          </g>
+        `;
+      } else if (block.shape === 'diamond') {
+        const cx = nodeW / 2;
+        const cy = nodeH / 2;
+        const points = `${cx},0 ${nodeW},${cy} ${cx},${nodeH} 0,${cy}`;
+        svg += `
+          <g class="flow-node flow-node-diamond" data-nodeid="${block.id}" transform="translate(${x}, ${y})">
+            <polygon points="${points}" />
+            <text class="flow-text-main" x="${cx}" y="${cy - 6}">${escapeHtml(block.label)}</text>
+            <text class="flow-text-sub" x="${cx}" y="${cy + 10}">${escapeHtml(block.sub)}</text>
+          </g>
+        `;
+      } else if (block.shape === 'loop') {
+        const offset = 16;
+        const points = `${offset},0 ${nodeW - offset},0 ${nodeW},${nodeH / 2} ${nodeW - offset},${nodeH} ${offset},${nodeH} 0,${nodeH / 2}`;
+        svg += `
+          <g class="flow-node flow-node-loop" data-nodeid="${block.id}" transform="translate(${x}, ${y})">
+            <polygon points="${points}" />
+            <text class="flow-text-main" x="${nodeW / 2}" y="${nodeH / 2 - 6}">${escapeHtml(block.label)}</text>
+            <text class="flow-text-sub" x="${nodeW / 2}" y="${nodeH / 2 + 10}">${escapeHtml(block.sub)}</text>
+          </g>
+        `;
+      } else if (block.shape === 'io') {
+        const skew = 14;
+        const points = `${skew},0 ${nodeW},0 ${nodeW - skew},${nodeH} 0,${nodeH}`;
+        svg += `
+          <g class="flow-node flow-node-io" data-nodeid="${block.id}" transform="translate(${x}, ${y})">
+            <polygon points="${points}" />
+            <text class="flow-text-main" x="${nodeW / 2}" y="${nodeH / 2 - 6}">${escapeHtml(block.label)}</text>
+            <text class="flow-text-sub" x="${nodeW / 2}" y="${nodeH / 2 + 10}">${escapeHtml(block.sub)}</text>
+          </g>
+        `;
+      } else {
+        svg += `
+          <g class="flow-node flow-node-rect" data-nodeid="${block.id}" transform="translate(${x}, ${y})">
+            <rect x="0" y="0" width="${nodeW}" height="${nodeH}" rx="6" />
+            <text class="flow-text-main" x="${nodeW / 2}" y="${nodeH / 2 - 6}">${escapeHtml(block.label)}</text>
+            <text class="flow-text-sub" x="${nodeW / 2}" y="${nodeH / 2 + 10}">${escapeHtml(block.sub)}</text>
+          </g>
+        `;
+      }
+
+      prevY = curY + nodeH;
+    });
+
+    // 3. End Node
+    const endY = startY + (flatBlocks.length + 1) * (nodeH + gapY);
+    svg += `
+      <line class="flow-link" x1="${centerX}" y1="${prevY}" x2="${centerX}" y2="${endY}" />
+      <g class="flow-node flow-node-start" transform="translate(${centerX - nodeW / 2}, ${endY})">
+        <rect x="0" y="0" width="${nodeW}" height="${nodeH}" rx="25" ry="25" />
+        <text class="flow-text-main" x="${nodeW / 2}" y="${nodeH / 2 - 6}">🔴 KẾT THÚC CHƯƠNG TRÌNH</text>
+        <text class="flow-text-sub" x="${nodeW / 2}" y="${nodeH / 2 + 10}">End Flow</text>
+      </g>
+    `;
+
+    svg += '</svg>';
+    return svg;
+  }
+
+  function sinhMaMermaid(treeNodes) {
+    if (!treeNodes || treeNodes.length === 0) return 'flowchart TD\n  Start(["Bắt đầu"]) --> End(["Kết thúc"])';
+
+    let code = 'flowchart TD\n  Start(["🟢 Bắt đầu"])';
+    let prevId = 'Start';
+
+    function addNodes(nodes) {
+      nodes.forEach((n) => {
+        const curId = `N_${n.id.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+        let label = '';
+        if (n.ma === 'ham') {
+          label = `def ${(n.o && n.o.ten_ham) || 'ham'}(${(n.o && n.o.tham_so) || ''})`;
+          code += `\n  ${prevId} --> ${curId}(["${label}"])`;
+        } else if (n.ma === 'neu') {
+          label = `if ${(n.o && n.o.dieu_kien) || 'True'}`;
+          code += `\n  ${prevId} --> ${curId}{"${label}?"}`;
+        } else if (n.ma === 'lap_moi') {
+          label = `for ${(n.o && n.o.bien) || 'i'} in ${(n.o && n.o.day) || 'day'}`;
+          code += `\n  ${prevId} --> ${curId}[["${label}"]]`;
+        } else if (n.ma === 'in_ra') {
+          label = `print(${(n.o && n.o.noi_dung) || ''})`;
+          code += `\n  ${prevId} --> ${curId}[/"${label}"/]`;
+        } else if (n.ma === 'tra_ve') {
+          label = `return ${(n.o && n.o.gia_tri) || ''}`;
+          code += `\n  ${prevId} --> ${curId}(["${label}"])`;
+        } else {
+          label = `${(n.o && n.o.ten_bien) || 'x'} = ${(n.o && n.o.gia_tri) || '0'}`;
+          code += `\n  ${prevId} --> ${curId}["${label}"]`;
+        }
+
+        prevId = curId;
+
+        if (n.than && n.than.length > 0) {
+          addNodes(n.than);
+        }
+      });
+    }
+
+    addNodes(treeNodes);
+    code += `\n  ${prevId} --> End(["🔴 Kết thúc"])`;
+    return code;
+  }
+
+  function capNhatZoomFlowchart() {
+    const container = document.getElementById('flowchartCanvasContainer');
+    if (container) {
+      container.style.transform = `scale(${flowchartZoomLevel})`;
+    }
+  }
+
+  function moSoDoKhoi() {
+    const modal = document.getElementById('flowchartModal');
+    const container = document.getElementById('flowchartCanvasContainer');
+    if (!modal || !container) return;
+
+    currentGeneratedSVG = sinhSVGSoDoKhoi(state.tree);
+    currentGeneratedMermaid = sinhMaMermaid(state.tree);
+
+    container.innerHTML = currentGeneratedSVG;
+    flowchartZoomLevel = 1.0;
+    capNhatZoomFlowchart();
+
+    container.querySelectorAll('.flow-node[data-nodeid]').forEach(nodeEl => {
+      nodeEl.addEventListener('click', () => {
+        const nId = nodeEl.getAttribute('data-nodeid');
+        if (nId) {
+          chonThe(nId);
+          modal.style.display = 'none';
+          const targetHang = document.getElementById(`node_${nId}`);
+          if (targetHang) targetHang.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          baoNhanh(`Đã định vị thẻ ${nId} trên Canvas!`);
+        }
+      });
+    });
+
+    modal.style.display = 'flex';
+  }
+
+  function dongSoDoKhoi() {
+    const modal = document.getElementById('flowchartModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function taiSVGSoDoKhoi() {
+    if (!currentGeneratedSVG || !currentGeneratedSVG.startsWith('<svg')) {
+      baoNhanh('Không có sơ đồ khối hợp lệ để tải!');
+      return;
+    }
+
+    const blob = new Blob([currentGeneratedSVG], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `flowchart_${state.activeFileName || 'aura_program'}.svg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    baoNhanh('Đã tải tệp vector SVG thành công!');
+  }
+
+  function saoChepMermaid() {
+    if (!currentGeneratedMermaid) {
+      baoNhanh('Chưa có mã Mermaid để sao chép!');
+      return;
+    }
+    navigator.clipboard.writeText(currentGeneratedMermaid).then(() => {
+      baoNhanh('Đã sao chép mã Mermaid vào bộ nhớ tạm!');
+    }).catch(() => {
+      baoNhanh('Không thể sao chép tự động, vui lòng thử lại!');
+    });
+  }
+
+  function setupFlowchartControls() {
+    const btnOpen = document.getElementById('btnFlowchart');
+    const btnClose = document.getElementById('btnCloseFlowchart');
+    const btnZoomIn = document.getElementById('btnFlowchartZoomIn');
+    const btnZoomOut = document.getElementById('btnFlowchartZoomOut');
+    const btnZoomReset = document.getElementById('btnFlowchartZoomReset');
+    const btnDownload = document.getElementById('btnDownloadSVG');
+    const btnCopy = document.getElementById('btnCopyMermaid');
+
+    if (btnOpen) btnOpen.addEventListener('click', moSoDoKhoi);
+    if (btnClose) btnClose.addEventListener('click', dongSoDoKhoi);
+
+    if (btnZoomIn) {
+      btnZoomIn.addEventListener('click', () => {
+        flowchartZoomLevel = Math.min(2.5, flowchartZoomLevel + 0.15);
+        capNhatZoomFlowchart();
+      });
+    }
+    if (btnZoomOut) {
+      btnZoomOut.addEventListener('click', () => {
+        flowchartZoomLevel = Math.max(0.4, flowchartZoomLevel - 0.15);
+        capNhatZoomFlowchart();
+      });
+    }
+    if (btnZoomReset) {
+      btnZoomReset.addEventListener('click', () => {
+        flowchartZoomLevel = 1.0;
+        capNhatZoomFlowchart();
+      });
+    }
+
+    if (btnDownload) btnDownload.addEventListener('click', taiSVGSoDoKhoi);
+    if (btnCopy) btnCopy.addEventListener('click', saoChepMermaid);
+  }
+
+  // ==========================================================================
+  // BÁC SĨ LOGIC & TRỢ LÝ SỬA LỖI TỰ ĐỘNG (AI LOGIC DOCTOR & AUTO-FIX ENGINE)
+  // ==========================================================================
+  let currentRuntimePatch = null;
+
+  function phanTichLoiRuntime(stderr, code, tree, sourceMap) {
+    if (!stderr) return null;
+
+    const nameMatch = stderr.match(/NameError:\s*name\s+'([^']+)'\s+is not defined/i);
+    if (nameMatch) {
+      const varName = nameMatch[1];
+      const khopDong = [...stderr.matchAll(/File\s+"[^"]*run_script\.py",\s*line\s+(\d+)/g)];
+      let targetNodeId = null;
+      if (khopDong.length > 0 && sourceMap) {
+        const soDong = parseInt(khopDong[khopDong.length - 1][1], 10);
+        targetNodeId = sourceMap[soDong - 1];
+      }
+
+      return {
+        tieuDe: `Biến '${varName}' chưa được gán giá trị`,
+        moTaLoi: `Chương trình cố gắng sử dụng biến '${varName}' trước khi biến này được khai báo hoặc gán giá trị.`,
+        nguyenNhan: `NameError: name '${varName}' is not defined`,
+        cachSua: `Khởi tạo biến '${varName} = 0' trước khi sử dụng.`,
+        theLoiId: targetNodeId,
+        patch: {
+          type: 'insert_before',
+          targetId: targetNodeId,
+          node: {
+            id: `the_gan_${++state.nodeIdCounter}`,
+            ma: 'gan',
+            o: { ten_bien: varName, gia_tri: '0' },
+            than: []
+          }
+        }
+      };
+    }
+
+    const syntaxMatch = stderr.match(/SyntaxError:\s*invalid syntax/i) || stderr.match(/SyntaxError:\s*cannot assign to/i);
+    if (syntaxMatch) {
+      let badIfNode = null;
+      function findBadIf(nodes) {
+        for (const n of nodes) {
+          if (n.ma === 'neu' && n.o && n.o.dieu_kien) {
+            if (/(?<![=<>!])=(?!=)/.test(n.o.dieu_kien)) {
+              badIfNode = n;
+              return;
+            }
+          }
+          if (n.than && n.than.length) findBadIf(n.than);
+        }
+      }
+      findBadIf(tree);
+
+      if (badIfNode) {
+        const newCond = badIfNode.o.dieu_kien.replace(/(?<![=<>!])=(?!=)/g, '==');
+        return {
+          tieuDe: `Dùng nhầm dấu gán '=' trong câu điều kiện 'Nếu'`,
+          moTaLoi: `Trong Python, so sánh bằng phải dùng hai dấu '==' thay vì một dấu '=' (dấu gán).`,
+          nguyenNhan: `if ${badIfNode.o.dieu_kien}:`,
+          cachSua: `Đổi thành '${newCond}'`,
+          theLoiId: badIfNode.id,
+          patch: {
+            type: 'replace_field',
+            nodeId: badIfNode.id,
+            field: 'dieu_kien',
+            newVal: newCond
+          }
+        };
+      }
+    }
+
+    const zeroMatch = stderr.match(/ZeroDivisionError:\s*division by zero/i);
+    if (zeroMatch) {
+      return {
+        tieuDe: `Lỗi chia cho số 0 (ZeroDivisionError)`,
+        moTaLoi: `Trong toán học và lập trình, không thể thực hiện phép chia với mẫu số bằng 0.`,
+        nguyenNhan: `ZeroDivisionError: division by zero`,
+        cachSua: `Kiểm tra điều kiện mẫu số khác 0 trước khi thực hiện phép chia.`,
+        theLoiId: null,
+        patch: null
+      };
+    }
+
+    const indexMatch = stderr.match(/IndexError:\s*list index out of range/i);
+    if (indexMatch) {
+      return {
+        tieuDe: `Vượt quá giới hạn phần tử của danh sách (IndexError)`,
+        moTaLoi: `Bạn đang cố lấy một phần tử ở vị trí không tồn tại trong danh sách.`,
+        nguyenNhan: `IndexError: list index out of range`,
+        cachSua: `Thêm thẻ 'Nếu len(ds) == 0' để xử lý trường hợp danh sách rỗng trước.`,
+        theLoiId: null,
+        patch: null
+      };
+    }
+
+    return null;
+  }
+
+  function khamBenhToanDien(treeNodes) {
+    const diagnoses = [];
+    if (!treeNodes || treeNodes.length === 0) return diagnoses;
+
+    function checkIfConditions(nodes) {
+      nodes.forEach(n => {
+        if (n.ma === 'neu' && n.o && n.o.dieu_kien) {
+          if (/(?<![=<>!])=(?!=)/.test(n.o.dieu_kien)) {
+            const fixedCond = n.o.dieu_kien.replace(/(?<![=<>!])=(?!=)/g, '==');
+            diagnoses.push({
+              id: 'diag_assign_in_if_' + n.id,
+              mucDo: 'danger',
+              tieuDe: `Thẻ [Nếu]: Dùng nhầm dấu gán '=' trong điều kiện`,
+              moTa: `Điều kiện '${n.o.dieu_kien}' đang dùng dấu gán '='. Python yêu cầu so sánh bằng phải là '=='.`,
+              nguyenNhan: `if ${n.o.dieu_kien}:`,
+              cachSua: `Sửa thành: if ${fixedCond}:`,
+              theLoiId: n.id,
+              patch: {
+                type: 'replace_field',
+                nodeId: n.id,
+                field: 'dieu_kien',
+                newVal: fixedCond
+              }
+            });
+          }
+        }
+        if (n.than && n.than.length) checkIfConditions(n.than);
+      });
+    }
+    checkIfConditions(treeNodes);
+
+    treeNodes.forEach(n => {
+      if (n.ma === 'ham') {
+        const fnName = (n.o && n.o.ten_ham) || 'ham';
+        const hasReturn = (n.than || []).some(c => c.ma === 'tra_ve');
+        const hasBody = (n.than && n.than.length > 0);
+        if (hasBody && !hasReturn) {
+          diagnoses.push({
+            id: 'diag_missing_return_' + n.id,
+            mucDo: 'warning',
+            tieuDe: `Hàm '${fnName}' chưa có thẻ [Trả về] (return)`,
+            moTa: `Hàm có các câu lệnh tính toán nhưng chưa trả kết quả về cho nơi gọi. Nếu không return, hàm sẽ mặc định trả về None.`,
+            nguyenNhan: `def ${fnName}(...): (thiếu return)`,
+            cachSua: `Thêm thẻ [Trả về] vào cuối hàm.`,
+            theLoiId: n.id,
+            patch: {
+              type: 'insert_child',
+              parentId: n.id,
+              node: {
+                id: `the_tra_ve_${++state.nodeIdCounter}`,
+                ma: 'tra_ve',
+                o: { gia_tri: 'ket_qua' },
+                than: []
+              }
+            }
+          });
+        }
+      }
+    });
+
+    function checkWhileLoops(nodes) {
+      nodes.forEach(n => {
+        if (n.ma === 'lap_khi' && n.o && n.o.dieu_kien) {
+          const cond = n.o.dieu_kien.trim();
+          const varMatch = cond.match(/^([a-zA-Z_]\w*)\s*(<|<=|>|>=|!=|==)/);
+          if (varMatch) {
+            const loopVar = varMatch[1];
+            const hasUpdate = (n.than || []).some(c => c.ma === 'gan' && c.o && c.o.ten_bien === loopVar);
+            if (!hasUpdate) {
+              diagnoses.push({
+                id: 'diag_infinite_while_' + n.id,
+                mucDo: 'warning',
+                tieuDe: `Nguy cơ lặp vô tận trong thẻ [Lặp khi]`,
+                moTa: `Biến điều kiện '${loopVar}' không thấy được thay đổi giá trị bên trong thân vòng lặp, có thể gây treo chương trình.`,
+                nguyenNhan: `while ${cond}: (biến ${loopVar} không đổi)`,
+                cachSua: `Thêm bước tăng biến '${loopVar} = ${loopVar} + 1' vào cuối vòng lặp.`,
+                theLoiId: n.id,
+                patch: {
+                  type: 'insert_child',
+                  parentId: n.id,
+                  node: {
+                    id: `the_gan_${++state.nodeIdCounter}`,
+                    ma: 'gan',
+                    o: { ten_bien: loopVar, gia_tri: `${loopVar} + 1` },
+                    than: []
+                  }
+                }
+              });
+            }
+          }
+        }
+        if (n.than && n.than.length) checkWhileLoops(n.than);
+      });
+    }
+    checkWhileLoops(treeNodes);
+
+    return diagnoses;
+  }
+
+  function thucHienAutoFix(patch) {
+    if (!patch) return;
+
+    if (patch.type === 'replace_field') {
+      const boc = timTheTheoId(state.tree, patch.nodeId);
+      if (boc && boc.node && boc.node.o) {
+        boc.node.o[patch.field] = patch.newVal;
+      }
+    } else if (patch.type === 'insert_before') {
+      if (patch.targetId) {
+        const boc = timTheTheoId(state.tree, patch.targetId);
+        if (boc) {
+          boc.dsCha.splice(boc.chiSo, 0, patch.node);
+        } else {
+          state.tree.unshift(patch.node);
+        }
+      } else {
+        state.tree.unshift(patch.node);
+      }
+    } else if (patch.type === 'insert_child') {
+      const boc = timTheTheoId(state.tree, patch.parentId);
+      if (boc && boc.node) {
+        boc.node.than = boc.node.than || [];
+        boc.node.than.push(patch.node);
+      }
+    }
+
+    onTreeChanged();
+
+    const modId = patch.nodeId || (patch.node && patch.node.id);
+    if (modId) {
+      setTimeout(() => {
+        const el = document.getElementById(`node_${modId}`);
+        if (el) {
+          el.classList.add('card-autofix-highlight');
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          setTimeout(() => el.classList.remove('card-autofix-highlight'), 2500);
+        }
+      }, 100);
+    }
+
+    const banner = document.getElementById('terminalDoctorBanner');
+    if (banner) banner.style.display = 'none';
+
+    chayKhamBenhVaHienThi();
+
+    baoNhanh('✨ Bác Sĩ AI: Đã tự động sửa thẻ thành công!');
+  }
+
+  function chayKhamBenhVaHienThi() {
+    const box = document.getElementById('aiDoctorBox');
+    if (!box) return;
+
+    const diagnoses = khamBenhToanDien(state.tree);
+    if (diagnoses.length === 0) {
+      box.style.display = 'block';
+      box.innerHTML = `
+        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 18px;">🩺</span>
+            <div>
+              <div style="font-size: 12.5px; font-weight: 700; color: #34D399;">Mã nguồn khoẻ mạnh!</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Bác sĩ AI không phát hiện lỗi logic nào trên các thẻ hiện tại.</div>
+            </div>
+          </div>
+          <span style="color: #34D399; font-weight: 800;">✓ 100% HEALTHY</span>
+        </div>
+      `;
+      return;
+    }
+
+    box.style.display = 'block';
+    let html = '';
+    diagnoses.forEach(diag => {
+      html += `
+        <div class="doctor-diagnosis-card ${diag.mucDo}">
+          <div class="doctor-card-top">
+            <span class="doctor-card-title">
+              <span>${diag.mucDo === 'danger' ? '🔴' : '🟡'}</span>
+              ${escapeHtml(diag.tieuDe)}
+            </span>
+          </div>
+          <div class="doctor-card-body">
+            <div>${escapeHtml(diag.moTa)}</div>
+            <div class="doctor-cause">${escapeHtml(diag.nguyenNhan)}</div>
+          </div>
+          <div class="doctor-prescription">
+            <span class="doctor-advice">💡 ${escapeHtml(diag.cachSua)}</span>
+            ${diag.patch ? `<button class="btn-autofix" data-diagid="${diag.id}">✨ Sửa Thẻ Này</button>` : ''}
+          </div>
+        </div>
+      `;
+    });
+
+    box.innerHTML = html;
+
+    box.querySelectorAll('.btn-autofix').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const diagId = btn.getAttribute('data-diagid');
+        const d = diagnoses.find(x => x.id === diagId);
+        if (d && d.patch) {
+          thucHienAutoFix(d.patch);
+        }
+      });
+    });
+  }
+
+  // ==========================================================================
+  // BỘ ĐÓNG GÓI DỰ ÁN HOÀN CHỈNH & XUẤT FILE ZIP (1-CLICK PROJECT PACKAGER)
+  // ==========================================================================
+  const crcTable = (() => {
+    let c;
+    const table = [];
+    for (let n = 0; n < 256; n++) {
+      c = n;
+      for (let k = 0; k < 8; k++) {
+        c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
+      }
+      table[n] = c >>> 0;
+    }
+    return table;
+  })();
+
+  function tinhCRC32(uint8Arr) {
+    let crc = 0 ^ (-1);
+    for (let i = 0; i < uint8Arr.length; i++) {
+      crc = (crc >>> 8) ^ crcTable[(crc ^ uint8Arr[i]) & 0xFF];
+    }
+    return (crc ^ (-1)) >>> 0;
+  }
+
+  function taoFileZip(fileList) {
+    const encoder = new TextEncoder();
+    const fileEntries = [];
+
+    fileList.forEach(f => {
+      const nameBytes = encoder.encode(f.name);
+      const dataBytes = typeof f.content === 'string' ? encoder.encode(f.content) : (f.content instanceof Uint8Array ? f.content : new Uint8Array(f.content));
+      const crc = tinhCRC32(dataBytes);
+
+      fileEntries.push({
+        nameBytes,
+        dataBytes,
+        crc,
+        offset: 0
+      });
+    });
+
+    let currentOffset = 0;
+    const parts = [];
+
+    fileEntries.forEach(entry => {
+      entry.offset = currentOffset;
+      const header = new Uint8Array(30);
+      const view = new DataView(header.buffer);
+
+      view.setUint32(0, 0x04034b50, true);
+      view.setUint16(4, 10, true);
+      view.setUint16(6, 0, true);
+      view.setUint16(8, 0, true);
+      view.setUint16(10, 0, true);
+      view.setUint16(12, 0, true);
+      view.setUint32(14, entry.crc, true);
+      view.setUint32(18, entry.dataBytes.length, true);
+      view.setUint32(22, entry.dataBytes.length, true);
+      view.setUint16(26, entry.nameBytes.length, true);
+      view.setUint16(28, 0, true);
+
+      parts.push(header);
+      parts.push(entry.nameBytes);
+      parts.push(entry.dataBytes);
+
+      currentOffset += header.length + entry.nameBytes.length + entry.dataBytes.length;
+    });
+
+    const centralDirOffset = currentOffset;
+    let centralDirSize = 0;
+
+    fileEntries.forEach(entry => {
+      const cdHeader = new Uint8Array(46);
+      const view = new DataView(cdHeader.buffer);
+
+      view.setUint32(0, 0x02014b50, true);
+      view.setUint16(4, 10, true);
+      view.setUint16(6, 10, true);
+      view.setUint16(8, 0, true);
+      view.setUint16(10, 0, true);
+      view.setUint16(12, 0, true);
+      view.setUint14 ? null : null;
+      view.setUint32(16, entry.crc, true);
+      view.setUint32(20, entry.dataBytes.length, true);
+      view.setUint32(24, entry.dataBytes.length, true);
+      view.setUint16(28, entry.nameBytes.length, true);
+      view.setUint16(30, 0, true);
+      view.setUint16(32, 0, true);
+      view.setUint16(34, 0, true);
+      view.setUint16(36, 0, true);
+      view.setUint32(38, 0, true);
+      view.setUint32(42, entry.offset, true);
+
+      parts.push(cdHeader);
+      parts.push(entry.nameBytes);
+
+      centralDirSize += cdHeader.length + entry.nameBytes.length;
+    });
+
+    const eocd = new Uint8Array(22);
+    const eocdView = new DataView(eocd.buffer);
+
+    eocdView.setUint32(0, 0x06054b50, true);
+    eocdView.setUint16(4, 0, true);
+    eocdView.setUint16(6, 0, true);
+    eocdView.setUint16(8, fileEntries.length, true);
+    eocdView.setUint16(10, fileEntries.length, true);
+    eocdView.setUint32(12, centralDirSize, true);
+    eocdView.setUint32(16, centralDirOffset, true);
+    eocdView.setUint16(20, 0, true);
+
+    parts.push(eocd);
+
+    return new Blob(parts, { type: 'application/zip' });
+  }
+
+  function sinhRequirementsTxt(codeText) {
+    const reqs = [];
+    const code = codeText || '';
+
+    if (/pandas|import\s+pandas|from\s+pandas/i.test(code)) reqs.push('pandas>=2.0.0');
+    if (/numpy|import\s+numpy|from\s+numpy/i.test(code)) reqs.push('numpy>=1.24.0');
+    if (/requests|import\s+requests/i.test(code)) reqs.push('requests>=2.31.0');
+    if (/bs4|BeautifulSoup/i.test(code)) reqs.push('beautifulsoup4>=4.12.0');
+    if (/pygame|import\s+pygame/i.test(code)) reqs.push('pygame>=2.5.0');
+    if (/genai|google\.generativeai/i.test(code)) reqs.push('google-generativeai>=0.4.0');
+
+    if (reqs.length === 0) {
+      return '# Chuẩn Python Standard Library (Không cần cài thêm thư viện ngoại vi)\n';
+    }
+    return reqs.join('\n') + '\n';
+  }
+
+  function sinhReadmeMd(meta) {
+    return `# ${meta.tenDuAn || 'Dự Án Lập Trình Python AURA'}
+
+**Tác giả:** ${meta.tacGia || 'AURA Student'}  
+**Ngày tạo:** ${new Date().toLocaleDateString('vi-VN')}  
+**Mô tả:** ${meta.moTa || 'Chương trình được phát triển trên Nền tảng Thẻ AURA v1.'}
+
+---
+
+## 🚀 Hướng Dẫn Cài Đặt & Chạy Chương Trình
+
+### Cách 1: Chạy Nhanh 1-Click (Khuyên Dùng)
+- **Trên Windows**: Nhấp đúp vào tệp \`run.bat\` để tự động cài đặt thư viện và khởi chạy.
+- **Trên macOS / Linux**: Mở Terminal và chạy:
+  \`\`\`bash
+  bash run.sh
+  \`\`\`
+
+### Cách 2: Chạy Thủ Công Bằng Dòng Lệnh (Terminal)
+1. Cài đặt các thư viện phụ thuộc:
+   \`\`\`bash
+   pip install -r requirements.txt
+   \`\`\`
+2. Thực thi chương trình:
+   \`\`\`bash
+   python main.py
+   \`\`\`
+
+---
+
+## 📁 Cấu Trúc Gói Dự Án
+
+- \`main.py\`: Mã nguồn Python chính của ứng dụng.
+- \`project_tree.json\`: Cây thẻ cấu trúc gốc (kéo thả vào App Thẻ AURA để mở lại).
+- \`flowchart.svg\`: Sơ đồ khối thuật toán vector trực quan.
+- \`requirements.txt\`: Danh sách thư viện phụ thuộc.
+- \`run.bat\` / \`run.sh\`: Script khởi chạy tự động.
+`;
+  }
+
+  function sinhRunBat() {
+    return `@echo off
+chcp 65001 > nul
+echo ===================================================
+echo   DANG KHOI CHAY DU AN AURA
+echo ===================================================
+if exist requirements.txt (
+  echo [*] Kiem tra va cai dat thu vien phu thuoc...
+  pip install -r requirements.txt
+)
+echo.
+echo [*] Dang thuc thi main.py...
+python main.py
+echo.
+echo [✓] Chuong trinh da ket thuc.
+pause
+`;
+  }
+
+  function sinhRunSh() {
+    return `#!/usr/bin/env bash
+echo "==================================================="
+echo "  DANG KHOI CHAY DU AN AURA"
+echo "==================================================="
+if [ -f "requirements.txt" ]; then
+  pip install -r requirements.txt
+fi
+echo ""
+echo "[*] Dang thuc thi main.py..."
+python3 main.py
+`;
+  }
+
+  function moModalDongGoi() {
+    const modal = document.getElementById('packageModal');
+    if (!modal) return;
+
+    const nameInput = document.getElementById('pkgProjectName');
+    const descInput = document.getElementById('pkgDescription');
+
+    if (nameInput) {
+      nameInput.value = (state.activeFileName || 'my_aura_project').replace(/\.[^/.]+$/, "").replace(/\s+/g, '_');
+    }
+    if (descInput && !descInput.value) {
+      descInput.value = 'Chương trình được tạo bằng App Thẻ AURA v1.';
+    }
+
+    modal.style.display = 'flex';
+  }
+
+  function dongModalDongGoi() {
+    const modal = document.getElementById('packageModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function thucHienDongGoiZip() {
+    const nameInput = document.getElementById('pkgProjectName');
+    const authorInput = document.getElementById('pkgAuthor');
+    const descInput = document.getElementById('pkgDescription');
+
+    const projectName = (nameInput && nameInput.value.trim()) || 'aura_project';
+    const author = (authorInput && authorInput.value.trim()) || 'AURA Student';
+    const desc = (descInput && descInput.value.trim()) || 'Chương trình lập trình bằng thẻ AURA.';
+
+    const code = TheValidator.sinhMaPython(state.tree);
+    const files = [];
+
+    // 1. main.py
+    files.push({ name: 'main.py', content: code || '# AURA Program\nprint("Hello World!")\n' });
+
+    // 2. project_tree.json
+    if (document.getElementById('chkPkgTreeJson')?.checked) {
+      files.push({ name: 'project_tree.json', content: JSON.stringify(state.tree, null, 2) });
+    }
+
+    // 3. flowchart.svg
+    if (document.getElementById('chkPkgSvg')?.checked) {
+      const svg = sinhSVGSoDoKhoi(state.tree);
+      files.push({ name: 'flowchart.svg', content: svg });
+    }
+
+    // 4. requirements.txt
+    if (document.getElementById('chkPkgReqs')?.checked) {
+      files.push({ name: 'requirements.txt', content: sinhRequirementsTxt(code) });
+    }
+
+    // 5. README.md
+    if (document.getElementById('chkPkgReadme')?.checked) {
+      files.push({
+        name: 'README.md',
+        content: sinhReadmeMd({ tenDuAn: projectName, tacGia: author, moTa: desc })
+      });
+    }
+
+    // 6. run.bat & run.sh
+    if (document.getElementById('chkPkgScripts')?.checked) {
+      files.push({ name: 'run.bat', content: sinhRunBat() });
+      files.push({ name: 'run.sh', content: sinhRunSh() });
+    }
+
+    try {
+      const zipBlob = taoFileZip(files);
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${projectName}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      dongModalDongGoi();
+      baoNhanh(`🎉 Đã đóng gói và tải về thành công: ${projectName}.zip!`);
+    } catch (err) {
+      baoNhanh(`Lỗi đóng gói: ${err.message}`);
+    }
+  }
+
+  function setupPackageControls() {
+    const btnOpen = document.getElementById('btnPackage');
+    const btnClose = document.getElementById('btnClosePackage');
+    const btnCancel = document.getElementById('btnCancelPackage');
+    const btnConfirm = document.getElementById('btnConfirmPackage');
+
+    if (btnOpen) btnOpen.addEventListener('click', moModalDongGoi);
+    if (btnClose) btnClose.addEventListener('click', dongModalDongGoi);
+    if (btnCancel) btnCancel.addEventListener('click', dongModalDongGoi);
+    if (btnConfirm) btnConfirm.addEventListener('click', thucHienDongGoiZip);
+  }
+
+  // ==========================================================================
+  // CHẾ ĐỘ TRÌNH CHIẾU GIẢNG DẠY & BÚT VẼ CHÚ THÍCH (PRESENTATION & WHITEBOARD)
+  // ==========================================================================
+  const presState = {
+    isActive: false,
+    currentTool: 'mouse',
+    currentColor: '#EF4444',
+    isDrawing: false,
+    lastX: 0,
+    lastY: 0,
+    laserX: -100,
+    laserY: -100
+  };
+
+  let presCanvas = null;
+  let presCtx = null;
+
+  function initPresentationCanvas() {
+    presCanvas = document.getElementById('annotationCanvasOverlay');
+    if (!presCanvas) return;
+    presCtx = presCanvas.getContext('2d');
+
+    function resizeCanvas() {
+      if (!presCanvas) return;
+      const dpr = window.devicePixelRatio || 1;
+      presCanvas.width = window.innerWidth * dpr;
+      presCanvas.height = window.innerHeight * dpr;
+      presCanvas.style.width = window.innerWidth + 'px';
+      presCanvas.style.height = window.innerHeight + 'px';
+      presCtx.scale(dpr, dpr);
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    presCanvas.addEventListener('mousedown', startPresDraw);
+    presCanvas.addEventListener('mousemove', presDraw);
+    window.addEventListener('mouseup', stopPresDraw);
+
+    presCanvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 0) {
+        const t = e.touches[0];
+        startPresDraw({ clientX: t.clientX, clientY: t.clientY });
+      }
+    });
+    presCanvas.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) {
+        const t = e.touches[0];
+        presDraw({ clientX: t.clientX, clientY: t.clientY });
+      }
+    });
+    window.addEventListener('touchend', stopPresDraw);
+  }
+
+  function startPresDraw(e) {
+    if (!presState.isActive || presState.currentTool === 'mouse') return;
+    presState.isDrawing = true;
+    presState.lastX = e.clientX;
+    presState.lastY = e.clientY;
+
+    if (presState.currentTool === 'pen' || presState.currentTool === 'highlighter' || presState.currentTool === 'eraser') {
+      presCtx.beginPath();
+      presCtx.moveTo(e.clientX, e.clientY);
+    }
+  }
+
+  function presDraw(e) {
+    if (!presState.isActive) return;
+
+    if (presState.currentTool === 'laser') {
+      presState.laserX = e.clientX;
+      presState.laserY = e.clientY;
+      veConTroLaser();
+      return;
+    }
+
+    if (!presState.isDrawing) return;
+
+    const x = e.clientX;
+    const y = e.clientY;
+
+    if (presState.currentTool === 'pen') {
+      presCtx.globalCompositeOperation = 'source-over';
+      presCtx.strokeStyle = presState.currentColor;
+      presCtx.lineWidth = 3.5;
+      presCtx.lineCap = 'round';
+      presCtx.lineJoin = 'round';
+      presCtx.globalAlpha = 1.0;
+      presCtx.lineTo(x, y);
+      presCtx.stroke();
+    } else if (presState.currentTool === 'highlighter') {
+      presCtx.globalCompositeOperation = 'source-over';
+      presCtx.strokeStyle = presState.currentColor;
+      presCtx.lineWidth = 22;
+      presCtx.lineCap = 'round';
+      presCtx.lineJoin = 'round';
+      presCtx.globalAlpha = 0.35;
+      presCtx.lineTo(x, y);
+      presCtx.stroke();
+    } else if (presState.currentTool === 'eraser') {
+      presCtx.globalCompositeOperation = 'destination-out';
+      presCtx.lineWidth = 30;
+      presCtx.lineCap = 'round';
+      presCtx.lineJoin = 'round';
+      presCtx.lineTo(x, y);
+      presCtx.stroke();
+    }
+
+    presState.lastX = x;
+    presState.lastY = y;
+  }
+
+  function stopPresDraw() {
+    if (!presState.isDrawing) return;
+    presState.isDrawing = false;
+    if (presCtx) presCtx.closePath();
+  }
+
+  function veConTroLaser() {
+    if (!presCtx || presState.currentTool !== 'laser') return;
+    const x = presState.laserX;
+    const y = presState.laserY;
+
+    presCtx.save();
+    presCtx.globalCompositeOperation = 'source-over';
+    presCtx.beginPath();
+    presCtx.arc(x, y, 6, 0, Math.PI * 2);
+    presCtx.fillStyle = '#EF4444';
+    presCtx.shadowColor = '#EF4444';
+    presCtx.shadowBlur = 15;
+    presCtx.fill();
+    presCtx.restore();
+  }
+
+  function xoaNetVe() {
+    if (!presCtx || !presCanvas) return;
+    presCtx.clearRect(0, 0, presCanvas.width, presCanvas.height);
+  }
+
+  function datCongCuTrinhChieu(tool) {
+    presState.currentTool = tool;
+    const overlay = document.getElementById('annotationCanvasOverlay');
+
+    document.querySelectorAll('.pres-tool-btn').forEach(btn => btn.classList.remove('active'));
+    if (tool === 'mouse') document.getElementById('btnPresMouse')?.classList.add('active');
+    else if (tool === 'pen') document.getElementById('btnPresPen')?.classList.add('active');
+    else if (tool === 'highlighter') document.getElementById('btnPresHighlighter')?.classList.add('active');
+    else if (tool === 'laser') document.getElementById('btnPresLaser')?.classList.add('active');
+    else if (tool === 'eraser') document.getElementById('btnPresEraser')?.classList.add('active');
+
+    if (overlay) {
+      overlay.className = 'annotation-canvas-overlay';
+      if (tool === 'mouse') {
+        overlay.classList.remove('drawing-mode', 'laser-mode');
+      } else if (tool === 'laser') {
+        overlay.classList.add('laser-mode');
+      } else {
+        overlay.classList.add('drawing-mode');
+      }
+    }
+  }
+
+  function batCheDoTrinhChieu() {
+    presState.isActive = true;
+    document.body.classList.add('presentation-mode-active');
+    const overlay = document.getElementById('annotationCanvasOverlay');
+    const controlBar = document.getElementById('presentationControlBar');
+
+    if (overlay) overlay.style.display = 'block';
+    if (controlBar) controlBar.style.display = 'flex';
+
+    datCongCuTrinhChieu('mouse');
+
+    try {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } catch (_) {}
+
+    baoNhanh('🖥️ Đã bật Chế độ Trình Chiếu! (Nhấn Esc để thoát, D để vẽ)');
+  }
+
+  function tatCheDoTrinhChieu() {
+    presState.isActive = false;
+    document.body.classList.remove('presentation-mode-active');
+    const overlay = document.getElementById('annotationCanvasOverlay');
+    const controlBar = document.getElementById('presentationControlBar');
+
+    if (overlay) overlay.style.display = 'none';
+    if (controlBar) controlBar.style.display = 'none';
+
+    xoaNetVe();
+
+    try {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    } catch (_) {}
+
+    baoNhanh('Đã thoát Chế độ Trình Chiếu.');
+  }
+
+  function setupPresentationControls() {
+    initPresentationCanvas();
+
+    const btnOpen = document.getElementById('btnPresentation');
+    const btnExit = document.getElementById('btnPresExit');
+    const btnRun = document.getElementById('btnPresRun');
+    const btnStep = document.getElementById('btnPresStep');
+    const btnClear = document.getElementById('btnPresClearDraw');
+
+    if (btnOpen) btnOpen.addEventListener('click', batCheDoTrinhChieu);
+    if (btnExit) btnExit.addEventListener('click', tatCheDoTrinhChieu);
+    if (btnRun) btnRun.addEventListener('click', runProgram);
+    if (btnStep) {
+      btnStep.addEventListener('click', () => {
+        if (!debuggerState.isActive) {
+          batDauGoLoi();
+        } else {
+          buocTiepTheo();
+        }
+      });
+    }
+    if (btnClear) btnClear.addEventListener('click', xoaNetVe);
+
+    document.getElementById('btnPresMouse')?.addEventListener('click', () => datCongCuTrinhChieu('mouse'));
+    document.getElementById('btnPresPen')?.addEventListener('click', () => datCongCuTrinhChieu('pen'));
+    document.getElementById('btnPresHighlighter')?.addEventListener('click', () => datCongCuTrinhChieu('highlighter'));
+    document.getElementById('btnPresLaser')?.addEventListener('click', () => datCongCuTrinhChieu('laser'));
+    document.getElementById('btnPresEraser')?.addEventListener('click', () => datCongCuTrinhChieu('eraser'));
+
+    document.querySelectorAll('.pres-color-palette .color-dot').forEach(dot => {
+      dot.addEventListener('click', () => {
+        document.querySelectorAll('.pres-color-palette .color-dot').forEach(d => d.classList.remove('active'));
+        dot.classList.add('active');
+        presState.currentColor = dot.dataset.color || '#EF4444';
+        if (presState.currentTool === 'mouse' || presState.currentTool === 'eraser') {
+          datCongCuTrinhChieu('pen');
+        }
+      });
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && presState.isActive) {
+        tatCheDoTrinhChieu();
+      } else if (e.altKey && (e.key === 'p' || e.key === 'P')) {
+        e.preventDefault();
+        if (presState.isActive) tatCheDoTrinhChieu();
+        else batCheDoTrinhChieu();
+      } else if (presState.isActive && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (e.key === 'd' || e.key === 'D') {
+          datCongCuTrinhChieu(presState.currentTool === 'pen' ? 'mouse' : 'pen');
+        } else if (e.key === 'h' || e.key === 'H') {
+          datCongCuTrinhChieu('highlighter');
+        } else if (e.key === 'l' || e.key === 'L') {
+          datCongCuTrinhChieu('laser');
+        } else if (e.key === 'e' || e.key === 'E') {
+          datCongCuTrinhChieu('eraser');
+        } else if (e.key === 'c' || e.key === 'C') {
+          xoaNetVe();
+        }
+      }
+    });
   }
 
   // ==========================================================================
@@ -3326,9 +6097,321 @@
     });
   }
 
-  // 24/08: setupAgentWorkspace() da GO. Panel Agent chi tra loi bang chuoi
-  // cung + setTimeout 350ms gia vo suy nghi, khong goi API nao. Xem ghi chu
-  // day du o index.html cho <aside id="sidebarRight">.
+  // ==========================================================================
+  // TRỢ LÝ AURA SIDECAR (AI AGENT CHAT)
+  // ==========================================================================
+  function capNhatAiContextBanner() {
+    const oTep = document.getElementById('aiContextFile');
+    const oThe = document.getElementById('aiContextCardCount');
+    const oLoi = document.getElementById('aiContextDiagCount');
+    if (!oTep || !oThe || !oLoi) return;
+
+    const tenTep = state.activeFileName || (state.activeFilePath ? state.activeFilePath.split(/[\\/]/).pop() : 'Chương trình mới');
+    oTep.textContent = tenTep;
+
+    const soThe = demTheSau(state.tree || []);
+    oThe.textContent = `${soThe} thẻ`;
+
+    const soLoiDo = (state.diagnostics && state.diagnostics.so_loi_do) || 0;
+    const soVang = (state.diagnostics && state.diagnostics.so_canh_bao_vang) || 0;
+
+    if (soLoiDo > 0) {
+      oLoi.textContent = `${soLoiDo} lỗi`;
+      oLoi.className = 'context-pill err';
+    } else if (soVang > 0) {
+      oLoi.textContent = `${soVang} cảnh báo`;
+      oLoi.className = 'context-pill err';
+    } else {
+      oLoi.textContent = '0 lỗi';
+      oLoi.className = 'context-pill ok';
+    }
+  }
+
+  function themTinNhanAi(vaiTro, htmlNoiDung) {
+    const container = document.getElementById('aiMessagesContainer');
+    if (!container) return;
+
+    const msgEl = document.createElement('div');
+    msgEl.className = `ai-message ${vaiTro}`;
+
+    const avatarEl = document.createElement('div');
+    avatarEl.className = 'msg-avatar';
+    avatarEl.textContent = vaiTro === 'assistant' ? '✨' : '👤';
+
+    const contentEl = document.createElement('div');
+    contentEl.className = 'msg-content';
+    contentEl.innerHTML = htmlNoiDung;
+
+    msgEl.appendChild(avatarEl);
+    msgEl.appendChild(contentEl);
+
+    container.appendChild(msgEl);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function hienThiDangSuyNghi() {
+    const container = document.getElementById('aiMessagesContainer');
+    if (!container) return null;
+
+    const indEl = document.createElement('div');
+    indEl.className = 'ai-message assistant ai-typing-wrapper';
+    indEl.id = 'aiTypingIndicator';
+
+    const avatarEl = document.createElement('div');
+    avatarEl.className = 'msg-avatar';
+    avatarEl.textContent = '✨';
+
+    const typingBox = document.createElement('div');
+    typingBox.className = 'msg-content ai-typing-indicator';
+    typingBox.innerHTML = `
+      <div class="ai-typing-dot"></div>
+      <div class="ai-typing-dot"></div>
+      <div class="ai-typing-dot"></div>
+    `;
+
+    indEl.appendChild(avatarEl);
+    indEl.appendChild(typingBox);
+    container.appendChild(indEl);
+    container.scrollTop = container.scrollHeight;
+    return indEl;
+  }
+
+  function xoaDangSuyNghi() {
+    const ind = document.getElementById('aiTypingIndicator');
+    if (ind) ind.remove();
+  }
+
+  function phanTichLoiThe() {
+    const dsLoi = (state.diagnostics && state.diagnostics.danh_sach) || [];
+    const soLoiDo = (state.diagnostics && state.diagnostics.so_loi_do) || 0;
+    const soVang = (state.diagnostics && state.diagnostics.so_canh_bao_vang) || 0;
+
+    if (dsLoi.length === 0) {
+      return `
+        <p>✨ <strong>Toàn bộ thẻ hợp lệ!</strong></p>
+        <p>Không phát hiện lỗi cú pháp hoặc cảnh báo nào trên cây thẻ hiện tại. Bạn có thể:</p>
+        <ul>
+          <li>Bấm <strong>Chạy Thử</strong> (Ctrl+Enter) để kiểm tra kết quả thực thi.</li>
+          <li>Chuyển qua tab <strong>Dò Vết & Mạch Nước Ngầm</strong> để quan sát dòng biến số.</li>
+        </ul>
+      `;
+    }
+
+    let html = `<p>🔍 <strong>Phát hiện ${soLoiDo} lỗi ĐỎ và ${soVang} cảnh báo VÀNG:</strong></p><ul>`;
+    dsLoi.forEach(l => {
+      const icon = l.muc_do === 'do' ? '🔴' : '🟡';
+      const theId = l.node_id ? ` (Thẻ <code>${escapeHtml(l.node_id)}</code>)` : '';
+      html += `<li>${icon} <strong>${escapeHtml(l.thong_diep)}</strong>${theId}</li>`;
+    });
+    html += `</ul><p class="msg-tip">💡 <em>Mẹo: Nhấp vào từng mục trong tab "Chẩn Đoán" bên dưới để nhảy nhanh tới thẻ cần sửa.</em></p>`;
+    return html;
+  }
+
+  function giaiThichKichBan() {
+    if (!state.tree || state.tree.length === 0) {
+      return '<p>Chương trình hiện đang rỗng. Hãy kéo hoặc nhấp thẻ từ khay bên trái để bắt đầu xây dựng logic.</p>';
+    }
+
+    let html = `<p>📖 <strong>Kịch bản luồng chương trình (${escapeHtml(state.activeFileName || 'Hiện tại')}):</strong></p><ol style="padding-left: 18px; margin-bottom: 6px;">`;
+
+    function docNode(node) {
+      const o = node.o || {};
+      switch (node.ma) {
+        case 'ham':
+          html += `<li>Định nghĩa hàm <code>${escapeHtml(o.ten_ham || 'f')}</code> với tham số <code>(${escapeHtml(o.tham_so || '')})</code>.`;
+          if (node.than && node.than.length) {
+            html += '<ul style="margin-top: 4px;">';
+            node.than.forEach(docNode);
+            html += '</ul>';
+          }
+          html += `</li>`;
+          break;
+        case 'gan':
+          html += `<li>Khởi tạo/gán biến <code>${escapeHtml(o.ten_bien || 'x')} = ${escapeHtml(o.gia_tri || '0')}</code>.</li>`;
+          break;
+        case 'neu':
+          html += `<li>Kiểm tra điều kiện: Nếu <code>${escapeHtml(o.dieu_kien || 'True')}</code>.`;
+          if (node.than && node.than.length) {
+            html += '<ul style="margin-top: 4px;">';
+            node.than.forEach(docNode);
+            html += '</ul>';
+          }
+          html += `</li>`;
+          break;
+        case 'lap_moi':
+          html += `<li>Vòng lặp: Duyệt biến <code>${escapeHtml(o.bien || 'i')}</code> trong dãy <code>${escapeHtml(o.tap_hop || '[]')}</code>.`;
+          if (node.than && node.than.length) {
+            html += '<ul style="margin-top: 4px;">';
+            node.than.forEach(docNode);
+            html += '</ul>';
+          }
+          html += `</li>`;
+          break;
+        case 'tra_ve':
+          html += `<li>Trả về kết quả <code>${escapeHtml(o.gia_tri || '')}</code> kết thúc hàm.</li>`;
+          break;
+        case 'in_ra':
+          html += `<li>In kết quả <code>${escapeHtml(o.noi_dung || '')}</code> ra màn hình.</li>`;
+          break;
+        default:
+          html += `<li>Thực hiện lệnh thẻ <code>${escapeHtml(node.ma)}</code>.</li>`;
+          break;
+      }
+    }
+
+    state.tree.forEach(docNode);
+    html += `</ol><p class="msg-tip">✨ <em>Cấu trúc thẻ đảm bảo tính liên tục và không bị lỗi indentation như gõ code chay.</em></p>`;
+    return html;
+  }
+
+  function goiYThePhuHop() {
+    const coHam = state.tree.some(n => n.ma === 'ham');
+    const coInRa = state.tree.some(n => n.ma === 'in_ra');
+    const coLap = state.tree.some(n => n.ma === 'lap_moi' || n.ma === 'lap_khi');
+
+    let html = '<p>🧩 <strong>Gợi ý xây dựng logic tiếp theo:</strong></p><ul>';
+    if (coHam && !state.tree.some(n => n.than && n.than.some(c => c.ma === 'tra_ve'))) {
+      html += '<li>Thêm thẻ <strong>Trả về (return)</strong> vào cuối hàm để trả kết quả tính toán.</li>';
+    }
+    if (!coInRa) {
+      html += '<li>Thêm thẻ <strong>In ra (print)</strong> ở ngoài hàm để kiểm tra kết quả khi chạy thử.</li>';
+    }
+    if (!coLap) {
+      html += '<li>Nếu cần duyệt qua danh sách dữ liệu, bạn có thể dùng thẻ <strong>Lặp mới (for)</strong> từ nhóm Điều Khiển.</li>';
+    }
+    html += '<li>Thêm thẻ <strong>Gán biến</strong> để lưu kết quả trung gian, giúp Dò Vết biến số rõ ràng hơn.</li>';
+    html += '</ul>';
+    return html;
+  }
+
+  function huongDanMachNuocNgam() {
+    return `
+      <p>🌊 <strong>Khái niệm Mạch Nước Ngầm (Dataflow Tracing):</strong></p>
+      <p>Khác với việc đọc code thụ động, Mạch Nước Ngầm ghi lại <strong>dòng chảy của từng biến số</strong> qua từng nhịp thực thi:</p>
+      <ul>
+        <li><strong>[K] Khởi tạo:</strong> Biến được cấp phát giá trị ban đầu.</li>
+        <li><strong>[B] Biến đổi:</strong> Giá trị được tính toán hoặc thay đổi trong vòng lặp/nhánh.</li>
+        <li><strong>[X] Xuất ra:</strong> Giá trị được in ra màn hình hoặc trả về (return).</li>
+      </ul>
+      <p class="msg-tip">💡 <em>Mở tab "Dò Vết & Mạch Nước Ngầm" bên dưới để trực quan hoá toàn bộ nhịp thực thi!</em></p>
+    `;
+  }
+
+  function xuLyTinNhanNguoiDung(noiDung) {
+    const raw = (noiDung || '').trim();
+    if (!raw) return;
+
+    themTinNhanAi('user', escapeHtml(raw));
+
+    const inputEl = document.getElementById('aiChatInput');
+    if (inputEl) inputEl.value = '';
+
+    hienThiDangSuyNghi();
+
+    setTimeout(() => {
+      xoaDangSuyNghi();
+      const q = raw.toLowerCase();
+      let traLoi = '';
+
+      if (q.includes('lỗi') || q.includes('sai') || q.includes('đỏ') || q.includes('sửa') || q.includes('fix') || q.includes('bug')) {
+        traLoi = phanTichLoiThe();
+      } else if (q.includes('kịch bản') || q.includes('luồng') || q.includes('giải thích') || q.includes('làm gì') || q.includes('chạy sao')) {
+        traLoi = giaiThichKichBan();
+      } else if (q.includes('gợi ý') || q.includes('thêm') || q.includes('thẻ') || q.includes('lắp')) {
+        traLoi = goiYThePhuHop();
+      } else if (q.includes('trace') || q.includes('mạch nước') || q.includes('ngầm') || q.includes('dò')) {
+        traLoi = huongDanMachNuocNgam();
+      } else {
+        traLoi = `
+          <p>Em đã nhận câu hỏi: <em>"${escapeHtml(raw)}"</em>.</p>
+          <p>Hiện tại chương trình đang có <strong>${demTheSau(state.tree || [])} thẻ</strong> (${escapeHtml(state.activeFileName || 'Chưa đặt tên')}).</p>
+          <p>Sếp có thể bấm các nút gợi ý nhanh ở trên hoặc hỏi em về <strong>lỗi thẻ</strong>, <strong>kịch bản luồng</strong> hay <strong>dò vết mạch nước ngầm</strong> nhé!</p>
+        `;
+      }
+
+      themTinNhanAi('assistant', traLoi);
+    }, 280);
+  }
+
+  function setupAiSidecarChat() {
+    const btnSend = document.getElementById('btnSendAiChat');
+    const input = document.getElementById('aiChatInput');
+    const btnClear = document.getElementById('btnClearChat');
+    const btnClose = document.getElementById('btnCloseSidebarRight') || document.getElementById('btnToggleSidebarRightClose');
+    const quickActions = document.getElementById('aiQuickActions');
+
+    if (btnSend && input) {
+      btnSend.addEventListener('click', () => {
+        xuLyTinNhanNguoiDung(input.value);
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          xuLyTinNhanNguoiDung(input.value);
+        }
+      });
+    }
+
+    if (btnClear) {
+      btnClear.addEventListener('click', () => {
+        const container = document.getElementById('aiMessagesContainer');
+        if (container) {
+          container.innerHTML = `
+            <div class="ai-message assistant">
+              <div class="msg-avatar">✨</div>
+              <div class="msg-content">
+                <p>Đã làm sạch hội thoại. Sếp cần em hỗ trợ phân tích thẻ nào tiếp theo ạ?</p>
+              </div>
+            </div>
+          `;
+        }
+      });
+    }
+
+    if (btnClose) {
+      btnClose.addEventListener('click', toggleSidebarRight);
+    }
+
+    if (quickActions) {
+      quickActions.addEventListener('click', (e) => {
+        const chip = e.target.closest('.quick-chip');
+        if (!chip) return;
+        const act = chip.dataset.action;
+        if (act === 'analyze-errors') {
+          themTinNhanAi('user', '🔍 Phân tích lỗi thẻ');
+          hienThiDangSuyNghi();
+          setTimeout(() => {
+            xoaDangSuyNghi();
+            themTinNhanAi('assistant', phanTichLoiThe());
+          }, 200);
+        } else if (act === 'explain-logic') {
+          themTinNhanAi('user', '📖 Giải thích kịch bản luồng');
+          hienThiDangSuyNghi();
+          setTimeout(() => {
+            xoaDangSuyNghi();
+            themTinNhanAi('assistant', giaiThichKichBan());
+          }, 200);
+        } else if (act === 'suggest-card') {
+          themTinNhanAi('user', '🧩 Gợi ý lắp ghép thẻ');
+          hienThiDangSuyNghi();
+          setTimeout(() => {
+            xoaDangSuyNghi();
+            themTinNhanAi('assistant', goiYThePhuHop());
+          }, 200);
+        } else if (act === 'trace-help') {
+          themTinNhanAi('user', '🌊 Hướng dẫn Mạch Nước Ngầm');
+          hienThiDangSuyNghi();
+          setTimeout(() => {
+            xoaDangSuyNghi();
+            themTinNhanAi('assistant', huongDanMachNuocNgam());
+          }, 200);
+        }
+      });
+    }
+
+    capNhatAiContextBanner();
+  }
 
   // ==========================================================================
   // 7. SỰ KIỆN & LẮNG NGHE NGƯỜI DÙNG
@@ -3344,14 +6427,22 @@
     const btnToggleRight = document.getElementById('btnToggleSidebarRight');
     if (btnToggleRight) btnToggleRight.addEventListener('click', toggleSidebarRight);
 
-    const btnCloseRight = document.getElementById('btnToggleSidebarRightClose');
+    const btnCloseRight = document.getElementById('btnToggleSidebarRightClose') || document.getElementById('btnCloseSidebarRight');
     if (btnCloseRight) btnCloseRight.addEventListener('click', toggleSidebarRight);
 
-    // 2. Chuyển đổi chế độ Khay Thẻ ⇅ Cây Thư Mục (1 Bấm)
+    // Khởi tạo bảng Trợ lý AI Sidecar
+    setupAiSidecarChat();
+
+    // Khởi tạo Trình Soạn Thảo Mã & Bộ Chuyển Chế Độ
+    setupCodeEditorPane();
+
+    // 2. Chuyển đổi chế độ Khay Thẻ ⇅ Cây Thư Mục ⇅ Gói Thẻ Extension (1 Bấm)
     const btnModeToolbox = document.getElementById('btnModeToolbox');
     const btnModeFiles = document.getElementById('btnModeFiles');
+    const btnModeExt = document.getElementById('btnModeExt');
     const toolboxContainer = document.getElementById('toolboxContainer');
     const fileTreeContainer = document.getElementById('fileTreeContainer');
+    const extSidebarContainer = document.getElementById('extSidebarContainer');
     const sidebarTitle = document.getElementById('sidebarLeftTitle');
     const toolSearch = document.getElementById('toolSearch');
     const footerTip = document.getElementById('leftFooterTip');
@@ -3360,38 +6451,44 @@
       btnModeToolbox.addEventListener('click', () => {
         btnModeToolbox.classList.add('active');
         btnModeFiles.classList.remove('active');
+        if (btnModeExt) btnModeExt.classList.remove('active');
         if (toolboxContainer) toolboxContainer.style.display = 'flex';
         if (fileTreeContainer) fileTreeContainer.style.display = 'none';
+        if (extSidebarContainer) extSidebarContainer.style.display = 'none';
         if (sidebarTitle) sidebarTitle.textContent = 'Khay Thẻ Lệnh';
         if (toolSearch) toolSearch.placeholder = 'Tìm thẻ...';
-        // 24/08: chữ cũ ghi "Nhấp đúp" trong khi itemEl chỉ gắn 'click' đơn
-        // (dòng ~245) — bấm đúp theo đúng lời hướng dẫn cũ chèn TRÙNG thẻ 2
-        // lần, im lặng. Sửa chữ cho khớp việc thật, không đổi hành vi bấm đơn
-        // vì nó đúng và tiện hơn (không cần hai cú bấm chính xác liên tiếp).
         if (footerTip) footerTip.textContent = 'Nhấp hoặc kéo thẻ vào vùng soạn thảo.';
       });
 
       btnModeFiles.addEventListener('click', () => {
         btnModeFiles.classList.add('active');
         btnModeToolbox.classList.remove('active');
+        if (btnModeExt) btnModeExt.classList.remove('active');
         if (toolboxContainer) toolboxContainer.style.display = 'none';
         if (fileTreeContainer) fileTreeContainer.style.display = 'flex';
+        if (extSidebarContainer) extSidebarContainer.style.display = 'none';
         if (sidebarTitle) sidebarTitle.textContent = 'Cây Thư Mục';
         if (toolSearch) toolSearch.placeholder = 'Tìm tệp python...';
         if (footerTip) footerTip.textContent = 'Click vào tệp để mở trực tiếp trên canvas.';
         loadFileTree();
       });
 
+      if (btnModeExt) {
+        btnModeExt.addEventListener('click', () => {
+          btnModeExt.classList.add('active');
+          btnModeToolbox.classList.remove('active');
+          btnModeFiles.classList.remove('active');
+          if (toolboxContainer) toolboxContainer.style.display = 'none';
+          if (fileTreeContainer) fileTreeContainer.style.display = 'none';
+          if (extSidebarContainer) extSidebarContainer.style.display = 'flex';
+          if (sidebarTitle) sidebarTitle.textContent = 'Gói Thẻ Extension';
+          if (toolSearch) toolSearch.placeholder = 'Tìm gói thẻ...';
+          if (footerTip) footerTip.textContent = 'Quản lý và kích hoạt các gói thẻ chuyên dụng.';
+          veSidebarExtensions();
+        });
+      }
+
       // 26/08: MỞ APP LÊN THÌ HIỆN CÂY TỆP, KHÔNG PHẢI KHAY THẺ.
-      //
-      // `index.html` để `btnModeToolbox` mang class `active` và
-      // `fileTreeContainer` mang `display:none`, nên lúc khởi động cây tệp cao
-      // 0 px. Đo 26/08: phải bấm 1 lần mới thấy dự án của mình. VS Code là 0
-      // lần — explorer LÀ thứ mặc định.
-      //
-      // Gọi chính handler của nút thay vì chép logic ra đây: chép ra thì hai
-      // chỗ sẽ lệch nhau lúc ai đó sửa một bên. Phải đặt SAU
-      // `addEventListener` ở trên, không thì bấm vào chỗ chưa có người nghe.
       btnModeFiles.click();
     }
 
@@ -3480,6 +6577,65 @@
       });
     }
 
+    // Khởi tạo bộ điều khiển Kho Workflow Hub
+    setupWorkflowHubControls();
+
+    // Khởi tạo bộ điều khiển Cửa Hàng Extension
+    setupExtensionHubControls();
+    veSidebarExtensions();
+
+    const btnExt = document.getElementById('btnExtensions');
+    const modalExt = document.getElementById('extensionsModal');
+    const btnCloseExt = document.getElementById('btnCloseExtensions');
+
+    if (btnExt && modalExt) {
+      btnExt.addEventListener('click', () => {
+        modalExt.style.display = 'flex';
+        veDanhSachExtensions();
+      });
+    }
+    if (btnCloseExt && modalExt) {
+      btnCloseExt.addEventListener('click', () => {
+        modalExt.style.display = 'none';
+      });
+    }
+
+    // Khởi tạo Phòng Thử Thách Lập Trình & Auto-Grader
+    setupChallengeHubControls();
+
+    // Khởi tạo Sơ Đồ Khối Thuật Toán (Flowchart Generator)
+    setupFlowchartControls();
+
+    // Khởi tạo Bộ Đóng Gói Dự Án Zip (1-Click Project Packager)
+    setupPackageControls();
+
+    // Khởi tạo Chế Độ Trình Chiếu Giảng Dạy & Bút Vẽ Canvas
+    setupPresentationControls();
+
+    const btnChallenges = document.getElementById('btnChallenges');
+    const modalChallenges = document.getElementById('challengesModal');
+    const btnCloseChallenges = document.getElementById('btnCloseChallenges');
+
+    if (btnChallenges && modalChallenges) {
+      btnChallenges.addEventListener('click', () => {
+        modalChallenges.style.display = 'flex';
+        veDanhSachThuThach();
+      });
+    }
+    if (btnCloseChallenges && modalChallenges) {
+      btnCloseChallenges.addEventListener('click', () => {
+        modalChallenges.style.display = 'none';
+      });
+    }
+
+    const btnGrade = document.getElementById('btnGradeChallenge');
+    const btnGradeAgain = document.getElementById('btnRunGraderAgain');
+    const btnCloseBanner = document.getElementById('btnCloseChallengeBanner');
+
+    if (btnGrade) btnGrade.addEventListener('click', chamDiemBaiTap);
+    if (btnGradeAgain) btnGradeAgain.addEventListener('click', chamDiemBaiTap);
+    if (btnCloseBanner) btnCloseBanner.addEventListener('click', dongThuThach);
+
     // Mẫu bài Modal
     document.getElementById('btnSamples').addEventListener('click', () => {
       loadSamples();
@@ -3528,6 +6684,34 @@
       this.select();
     });
 
+    // Bộ điều khiển Trình Gỡ Lỗi Trực Quan (Visual Card Debugger)
+    const btnDebug = document.getElementById('btnDebug');
+    if (btnDebug) {
+      btnDebug.addEventListener('click', () => {
+        if (debuggerState.isActive) {
+          dungGoLoi();
+        } else {
+          batDauGoLoi();
+        }
+      });
+    }
+
+    const btnDebugStepNext = document.getElementById('btnDebugStepNext');
+    const btnDebugStepPrev = document.getElementById('btnDebugStepPrev');
+    const btnDebugAutoPlay = document.getElementById('btnDebugAutoPlay');
+    const btnDebugStop = document.getElementById('btnDebugStop');
+    const debugSlider = document.getElementById('debugTimelineSlider');
+
+    if (btnDebugStepNext) btnDebugStepNext.addEventListener('click', buocTiep);
+    if (btnDebugStepPrev) btnDebugStepPrev.addEventListener('click', buocTruoc);
+    if (btnDebugAutoPlay) btnDebugAutoPlay.addEventListener('click', batTatTuDongChay);
+    if (btnDebugStop) btnDebugStop.addEventListener('click', dungGoLoi);
+    if (debugSlider) {
+      debugSlider.addEventListener('input', (e) => {
+        nhayToiBuoc(parseInt(e.target.value, 10) - 1);
+      });
+    }
+
     document.querySelectorAll('.filter-tag').forEach(tag => {
       tag.addEventListener('click', () => {
         document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
@@ -3558,7 +6742,7 @@
       this.select();
     });
 
-    // Bottom Pane Tabs Switch (4 tabs)
+    // Bottom Pane Tabs Switch (6 tabs)
     document.querySelectorAll('.canvas-bottom-pane .tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.canvas-bottom-pane .tab-btn').forEach(b => b.classList.remove('active'));
@@ -3566,8 +6750,33 @@
         btn.classList.add('active');
         const targetTab = document.getElementById(btn.dataset.tab);
         if (targetTab) targetTab.classList.add('active');
+        if (btn.dataset.tab === 'tabDiag') {
+          chayKhamBenhVaHienThi();
+        }
       });
     });
+
+    // Khởi tạo Bác Sĩ AI Bắt Bệnh & Tự Động Sửa Lỗi
+    const btnDoctorScan = document.getElementById('btnDoctorScan');
+    const btnTerminalAutoFix = document.getElementById('btnTerminalAutoFix');
+    const btnCloseTermDoctor = document.getElementById('btnCloseTerminalDoctor');
+
+    if (btnDoctorScan) {
+      btnDoctorScan.addEventListener('click', chayKhamBenhVaHienThi);
+    }
+    if (btnTerminalAutoFix) {
+      btnTerminalAutoFix.addEventListener('click', () => {
+        if (currentRuntimePatch) {
+          thucHienAutoFix(currentRuntimePatch);
+        }
+      });
+    }
+    if (btnCloseTermDoctor) {
+      btnCloseTermDoctor.addEventListener('click', () => {
+        const b = document.getElementById('terminalDoctorBanner');
+        if (b) b.style.display = 'none';
+      });
+    }
 
     // Nút Dò Dòng Dữ Liệu (Mạch Nước Ngầm)
     const btnRunTrace = document.getElementById('btnRunTrace');
@@ -3754,15 +6963,39 @@
         e.preventDefault();
         const nutMo = document.getElementById('btnOpenFile');
         if (nutMo) nutMo.click();
+      } else if (e.key === 'F9') {
+        e.preventDefault();
+        if (debuggerState.isActive) dungGoLoi();
+        else batDauGoLoi();
+      } else if (e.key === 'F10' || (e.altKey && (e.key === 'ArrowRight' || e.key === 'Right'))) {
+        e.preventDefault();
+        if (e.shiftKey) buocTruoc();
+        else buocTiep();
+      } else if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'Left')) {
+        e.preventDefault();
+        buocTruoc();
       } else if (e.ctrlKey && e.key === 'Enter') {
         e.preventDefault();
-        runProgram();
+        if (e.shiftKey) {
+          chamDiemBaiTap();
+        } else {
+          runProgram();
+        }
       } else if (e.ctrlKey && (e.key === 'b' || e.key === 'B')) {
         e.preventDefault();
         toggleSidebarLeft();
       } else if (e.ctrlKey && (e.key === 'j' || e.key === 'J')) {
         e.preventDefault();
         toggleSidebarRight();
+      } else if (e.altKey && e.key === '1') {
+        e.preventDefault();
+        setEditorMode('cards');
+      } else if (e.altKey && e.key === '2') {
+        e.preventDefault();
+        setEditorMode('split');
+      } else if (e.altKey && e.key === '3') {
+        e.preventDefault();
+        setEditorMode('code');
       } else if (e.ctrlKey && (e.key === '=' || e.key === '+')) {
         e.preventDefault();
         setCodeFontSize(state.codeFontSize + 1);
@@ -3808,6 +7041,7 @@
       } else if (e.key === 'Escape') {
         const bar = document.getElementById('findBar');
         if (bar && bar.style.display !== 'none') dongThanhTim();
+        else if (debuggerState.isActive) dungGoLoi();
         else if (state.selectedNodeId) chonThe(null);
       } else if (e.ctrlKey && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
         // Đang gõ trong ô nhập thì để trình duyệt tự hoàn tác CHỮ trong ô đó,

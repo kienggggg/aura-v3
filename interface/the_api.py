@@ -860,12 +860,14 @@ async def api_luu_tep(request: web.Request) -> web.Response:
 
 
 async def api_mau_chuong_trinh(request: web.Request) -> web.Response:
-    """GET /api/mau — Cung cấp danh sách các chương trình mẫu tích hợp sẵn."""
+    """GET /api/mau — Cung cấp danh sách các Workflow & chương trình mẫu thực tế."""
     mau_list = [
         {
             "id": "mau_cong_hai_so",
-            "ten": "1. Hàm cộng hai số",
-            "mo_ta": "Mẫu nhập môn: Định nghĩa hàm cộng 2 số và in kết quả ra màn hình",
+            "ten": "1. [Nhập Môn] Hàm cộng hai số",
+            "mo_ta": "Định nghĩa hàm cộng 2 số cơ bản và in kết quả ra màn hình",
+            "danh_muc": "co_ban",
+            "the_tag": "Cú Pháp",
             "tree": [
                 { "id": "m1_1", "ma": "ham", "o": { "ten_ham": "cong", "tham_so": "a, b" }, "than": [
                     { "id": "m1_2", "ma": "tra_ve", "o": { "gia_tri": "a + b" }, "than": [] }
@@ -875,8 +877,10 @@ async def api_mau_chuong_trinh(request: web.Request) -> web.Response:
         },
         {
             "id": "mau_chan_le",
-            "ten": "2. Kiểm tra số chẵn / lẻ",
-            "mo_ta": "Cấu trúc điều khiển: Lệnh Nếu và Ngược lại phân loại số",
+            "ten": "2. [Nhập Môn] Kiểm tra số chẵn / lẻ",
+            "mo_ta": "Cấu trúc điều khiển phân nhánh: Lệnh Nếu và Ngược lại",
+            "danh_muc": "co_ban",
+            "the_tag": "Điều Khiển",
             "tree": [
                 { "id": "m2_1", "ma": "gan", "o": { "ten_bien": "n", "gia_tri": "42" }, "than": [] },
                 { "id": "m2_2", "ma": "neu", "o": { "dieu_kien": "n % 2 == 0" }, "than": [
@@ -889,8 +893,10 @@ async def api_mau_chuong_trinh(request: web.Request) -> web.Response:
         },
         {
             "id": "mau_tinh_tong_day_so",
-            "ten": "3. Tính tổng dãy số 1 đến N",
-            "mo_ta": "Vòng lặp: Lặp mỗi phần tử và tính tổng tích luỹ",
+            "ten": "3. [Nhập Môn] Tính tổng dãy số 1 đến N",
+            "mo_ta": "Vòng lặp for: Duyệt dãy số và tính tổng tích luỹ",
+            "danh_muc": "co_ban",
+            "the_tag": "Vòng Lặp",
             "tree": [
                 { "id": "m3_1", "ma": "gan", "o": { "ten_bien": "tong", "gia_tri": "0" }, "than": [] },
                 { "id": "m3_2", "ma": "lap_moi", "o": { "bien": "i", "day": "range(1, 11)" }, "than": [
@@ -900,9 +906,125 @@ async def api_mau_chuong_trinh(request: web.Request) -> web.Response:
             ]
         },
         {
+            "id": "workflow_du_lieu_diem",
+            "ten": "4. [Dữ Liệu] Lọc & Thống kê điểm số sinh viên",
+            "mo_ta": "Pipeline xử lý mảng dữ liệu sinh viên, lọc sinh viên đạt loại Giỏi (>= 8.0) và tính điểm trung bình",
+            "danh_muc": "du_lieu",
+            "the_tag": "Data Pipeline",
+            "tree": [
+                { "id": "wf1_1", "ma": "ham", "o": { "ten_ham": "thong_ke_diem", "tham_so": "ds_diem" }, "than": [
+                    { "id": "wf1_2", "ma": "gan", "o": { "ten_bien": "gioi", "gia_tri": "[]" }, "than": [] },
+                    { "id": "wf1_3", "ma": "gan", "o": { "ten_bien": "tong", "gia_tri": "0" }, "than": [] },
+                    { "id": "wf1_4", "ma": "lap_moi", "o": { "bien": "diem", "day": "ds_diem" }, "than": [
+                        { "id": "wf1_5", "ma": "gan", "o": { "ten_bien": "tong", "gia_tri": "tong + diem" }, "than": [] },
+                        { "id": "wf1_6", "ma": "neu", "o": { "dieu_kien": "diem >= 8.0" }, "than": [
+                            { "id": "wf1_7", "ma": "gan", "o": { "ten_bien": "_", "gia_tri": "gioi.append(diem)" }, "than": [] }
+                        ]}
+                    ]},
+                    { "id": "wf1_8", "ma": "gan", "o": { "ten_bien": "dtb", "gia_tri": "round(tong / len(ds_diem), 2)" }, "than": [] },
+                    { "id": "wf1_9", "ma": "tra_ve", "o": { "gia_tri": "(gioi, dtb)" }, "than": [] }
+                ]},
+                { "id": "wf1_10", "ma": "gan", "o": { "ten_bien": "bang_diem", "gia_tri": "[7.5, 8.5, 9.0, 6.0, 8.0, 9.5]" }, "than": [] },
+                { "id": "wf1_11", "ma": "gan", "o": { "ten_bien": "ket_qua", "gia_tri": "thong_ke_diem(bang_diem)" }, "than": [] },
+                { "id": "wf1_12", "ma": "in_ra", "o": { "noi_dung": 'f"Giỏi: {ket_qua[0]} | ĐTB: {ket_qua[1]}"' }, "than": [] }
+            ]
+        },
+        {
+            "id": "workflow_cao_web",
+            "ten": "5. [Web] Trích xuất & Lọc sản phẩm từ dữ liệu",
+            "mo_ta": "Bóc tách danh sách sản phẩm, lọc các sản phẩm có giá dưới ngân sách và định dạng báo cáo",
+            "danh_muc": "web_api",
+            "the_tag": "Web Scraper",
+            "tree": [
+                { "id": "wf2_1", "ma": "ham", "o": { "ten_ham": "loc_san_pham", "tham_so": "ds_sp, ngan_sach" }, "than": [
+                    { "id": "wf2_2", "ma": "gan", "o": { "ten_bien": "phu_hop", "gia_tri": "[]" }, "than": [] },
+                    { "id": "wf2_3", "ma": "lap_moi", "o": { "bien": "sp", "day": "ds_sp" }, "than": [
+                        { "id": "wf2_4", "ma": "neu", "o": { "dieu_kien": 'sp["gia"] <= ngan_sach' }, "than": [
+                            { "id": "wf2_5", "ma": "gan", "o": { "ten_bien": "_", "gia_tri": 'phu_hop.append(sp["ten"])' }, "than": [] }
+                        ]}
+                    ]},
+                    { "id": "wf2_6", "ma": "tra_ve", "o": { "gia_tri": "phu_hop" }, "than": [] }
+                ]},
+                { "id": "wf2_7", "ma": "gan", "o": { "ten_bien": "san_pham", "gia_tri": '[{"ten": "Chuột", "gia": 250}, {"ten": "Bàn phím", "gia": 800}, {"ten": "Tai nghe", "gia": 450}]' }, "than": [] },
+                { "id": "wf2_8", "ma": "gan", "o": { "ten_bien": "chon", "gia_tri": "loc_san_pham(san_pham, 500)" }, "than": [] },
+                { "id": "wf2_9", "ma": "in_ra", "o": { "noi_dung": 'f"Sản phẩm trong ngân sách: {chon}"' }, "than": [] }
+            ]
+        },
+        {
+            "id": "workflow_canh_bao_iot",
+            "ten": "6. [Tự Động Hóa] Giám sát nhiệt độ cảm biến & Cảnh báo",
+            "mo_ta": "Phân tích nhật ký cảm biến IoT, phát hiện các mốc nhiệt độ vượt ngưỡng an toàn (> 80°C)",
+            "danh_muc": "tu_dong_hoa",
+            "the_tag": "Automation Bot",
+            "tree": [
+                { "id": "wf3_1", "ma": "ham", "o": { "ten_ham": "kiem_tra_nhiet_do", "tham_so": "ds_log, nguong" }, "than": [
+                    { "id": "wf3_2", "ma": "gan", "o": { "ten_bien": "so_loi", "gia_tri": "0" }, "than": [] },
+                    { "id": "wf3_3", "ma": "lap_moi", "o": { "bien": "t", "day": "ds_log" }, "than": [
+                        { "id": "wf3_4", "ma": "neu", "o": { "dieu_kien": "t > nguong" }, "than": [
+                            { "id": "wf3_5", "ma": "in_ra", "o": { "noi_dung": 'f"⚠️ CẢNH BÁO: Nhiệt độ vượt ngưỡng {t}°C!"' }, "than": [] },
+                            { "id": "wf3_6", "ma": "gan", "o": { "ten_bien": "so_loi", "gia_tri": "so_loi + 1" }, "than": [] }
+                        ]}
+                    ]},
+                    { "id": "wf3_7", "ma": "tra_ve", "o": { "gia_tri": "so_loi" }, "than": [] }
+                ]},
+                { "id": "wf3_8", "ma": "gan", "o": { "ten_bien": "nhiet_do_log", "gia_tri": "[72, 78, 85, 91, 74, 88]" }, "than": [] },
+                { "id": "wf3_9", "ma": "gan", "o": { "ten_bien": "tong_canh_bao", "gia_tri": "kiem_tra_nhiet_do(nhiet_do_log, 80)" }, "than": [] },
+                { "id": "wf3_10", "ma": "in_ra", "o": { "noi_dung": 'f"Tổng số lần cảnh báo: {tong_canh_bao}"' }, "than": [] }
+            ]
+        },
+        {
+            "id": "workflow_xac_thuc_api",
+            "ten": "7. [API] Xác thực người dùng & Phân quyền truy cập",
+            "mo_ta": "Xác minh tài khoản người dùng, phân quyền truy cập Admin / User và trả về mã phản hồi",
+            "danh_muc": "web_api",
+            "the_tag": "REST API",
+            "tree": [
+                { "id": "wf4_1", "ma": "ham", "o": { "ten_ham": "xac_thuc_nguoi_dung", "tham_so": "user, pwd" }, "than": [
+                    { "id": "wf4_2", "ma": "neu", "o": { "dieu_kien": 'user == "admin" and pwd == "secret123"' }, "than": [
+                        { "id": "wf4_3", "ma": "tra_ve", "o": { "gia_tri": '{"status": 200, "role": "admin", "token": "tok_admin_999"}' }, "than": [] }
+                    ]},
+                    { "id": "wf4_4", "ma": "neu", "o": { "dieu_kien": 'user == "member" and pwd == "pass456"' }, "than": [
+                        { "id": "wf4_5", "ma": "tra_ve", "o": { "gia_tri": '{"status": 200, "role": "user", "token": "tok_user_111"}' }, "than": [] }
+                    ]},
+                    { "id": "wf4_6", "ma": "tra_ve", "o": { "gia_tri": '{"status": 401, "error": "Sai tài khoản hoặc mật khẩu"}' }, "than": [] }
+                ]},
+                { "id": "wf4_7", "ma": "gan", "o": { "ten_bien": "res1", "gia_tri": 'xac_thuc_nguoi_dung("admin", "secret123")' }, "than": [] },
+                { "id": "wf4_8", "ma": "gan", "o": { "ten_bien": "res2", "gia_tri": 'xac_thuc_nguoi_dung("guest", "wrong")' }, "than": [] },
+                { "id": "wf4_9", "ma": "in_ra", "o": { "noi_dung": 'f"Admin: {res1}"' }, "than": [] },
+                { "id": "wf4_10", "ma": "in_ra", "o": { "noi_dung": 'f"Khách: {res2}"' }, "than": [] }
+            ]
+        },
+        {
+            "id": "workflow_dem_tu_khoa",
+            "ten": "8. [Dữ Liệu] Chuẩn hóa văn bản & Thống kê tần suất từ",
+            "mo_ta": "Xử lý văn bản tự nhiên, tách từ và thống kê số lần xuất hiện của các từ khóa",
+            "danh_muc": "du_lieu",
+            "the_tag": "NLP Analysis",
+            "tree": [
+                { "id": "wf5_1", "ma": "ham", "o": { "ten_ham": "dem_tan_suat_tu", "tham_so": "van_ban" }, "than": [
+                    { "id": "wf5_2", "ma": "gan", "o": { "ten_bien": "tu_dien", "gia_tri": "{}" }, "than": [] },
+                    { "id": "wf5_3", "ma": "gan", "o": { "ten_bien": "danh_sach_tu", "gia_tri": "van_ban.lower().split()" }, "than": [] },
+                    { "id": "wf5_4", "ma": "lap_moi", "o": { "bien": "tu", "day": "danh_sach_tu" }, "than": [
+                        { "id": "wf5_5", "ma": "neu", "o": { "dieu_kien": "tu in tu_dien" }, "than": [
+                            { "id": "wf5_6", "ma": "gan", "o": { "ten_bien": "tu_dien[tu]", "gia_tri": "tu_dien[tu] + 1" }, "than": [] }
+                        ]},
+                        { "id": "wf5_7", "ma": "nguoc_lai", "o": {}, "than": [
+                            { "id": "wf5_8", "ma": "gan", "o": { "ten_bien": "tu_dien[tu]", "gia_tri": "1" }, "than": [] }
+                        ]}
+                    ]},
+                    { "id": "wf5_9", "ma": "tra_ve", "o": { "gia_tri": "tu_dien" }, "than": [] }
+                ]},
+                { "id": "wf5_10", "ma": "gan", "o": { "ten_bien": "doan_van", "gia_tri": '"học lập trình với thẻ aura giúp học nhanh hơn"' }, "than": [] },
+                { "id": "wf5_11", "ma": "gan", "o": { "ten_bien": "ket_qua_dem", "gia_tri": "dem_tan_suat_tu(doan_van)" }, "than": [] },
+                { "id": "wf5_12", "ma": "in_ra", "o": { "noi_dung": 'f"Thống kê từ: {ket_qua_dem}"' }, "than": [] }
+            ]
+        },
+        {
             "id": "mau_phong_thi_nghiem_loi",
-            "ten": "4. Phòng thử nghiệm Lỗi Đỏ & Cảnh báo Vàng",
+            "ten": "9. [Thử Nghiệm] Phòng kiểm tra Lỗi Đỏ & Cảnh báo Vàng",
             "mo_ta": "Mẫu vi phạm để quan sát phản hồi trực quan Đỏ/Vàng tức thì",
+            "danh_muc": "co_ban",
+            "the_tag": "Kiểm Lỗi",
             "tree": [
                 { "id": "m4_1", "ma": "gan", "o": { "ten_bien": "", "gia_tri": "100" }, "than": [] },
                 { "id": "m4_2", "ma": "nguoc_lai", "o": {}, "than": [] },

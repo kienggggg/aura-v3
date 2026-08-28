@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="auraGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.8"/>
+      <stop offset="50%" stop-color="#8B5CF6" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="cardGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60A5FA"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+    <linearGradient id="cardGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A78BFA"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="cardGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="cardGrad4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+    <filter id="shadowGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#3B82F6" flood-opacity="0.45"/>
+    </filter>
+    <filter id="coreGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="24" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Background Aura Ring -->
+  <circle cx="256" cy="256" r="230" fill="none" stroke="url(#auraGlow)" stroke-width="8" stroke-dasharray="16 12" opacity="0.6"/>
+  <circle cx="256" cy="256" r="200" fill="#0B1120" stroke="rgba(255, 255, 255, 0.08)" stroke-width="2" filter="url(#shadowGlow)"/>
+
+  <!-- Core Dynamic Hexagonal / Interlocking Cards Matrix -->
+  <!-- Top Left Card: Blue (Hàm / Khởi tạo) -->
+  <rect x="120" y="120" width="115" height="115" rx="28" fill="url(#cardGrad1)" filter="url(#shadowGlow)"/>
+  <circle cx="155" cy="155" r="10" fill="#FFFFFF" opacity="0.9"/>
+  <rect x="150" y="180" width="55" height="12" rx="6" fill="#FFFFFF" opacity="0.75"/>
+  <rect x="150" y="200" width="35" height="8" rx="4" fill="#FFFFFF" opacity="0.5"/>
+
+  <!-- Top Right Card: Purple (Vòng lặp / Xử lý) -->
+  <rect x="277" y="120" width="115" height="115" rx="28" fill="url(#cardGrad2)" filter="url(#shadowGlow)"/>
+  <path d="M 334 150 A 24 24 0 1 1 310 174" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
+  <polyline points="334,140 334,155 319,155" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="307" y="200" width="55" height="8" rx="4" fill="#FFFFFF" opacity="0.6"/>
+
+  <!-- Bottom Left Card: Amber (Điều kiện / Rẽ nhánh) -->
+  <rect x="120" y="277" width="115" height="115" rx="28" fill="url(#cardGrad4)" filter="url(#shadowGlow)"/>
+  <polygon points="177.5,302 205,334.5 177.5,367 150,334.5" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round"/>
+  <circle cx="177.5" cy="334.5" r="6" fill="#FFFFFF"/>
+
+  <!-- Bottom Right Card: Emerald (Vào/Ra & AI Doctor) -->
+  <rect x="277" y="277" width="115" height="115" rx="28" fill="url(#cardGrad3)" filter="url(#shadowGlow)"/>
+  <polyline points="307,335 325,353 362,315" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Center AURA Energy Core Symbol -->
+  <circle cx="256" cy="256" r="38" fill="#0F172A" stroke="url(#auraGlow)" stroke-width="5" filter="url(#coreGlow)"/>
+  <!-- Energy Spark -->
+  <path d="M 256 230 L 264 250 L 284 256 L 264 262 L 256 282 L 248 262 L 228 256 L 248 250 Z" fill="#FFFFFF"/>
+</svg>

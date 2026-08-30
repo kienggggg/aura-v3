@@ -1740,8 +1740,20 @@ def chay_ma_tien_trinh_rieng(code: str, timeout: float = 5.0) -> ExecutionResult
         script_file.write_text(code, encoding="utf-8")
         
         try:
+            # -X utf8 — 30/08/2026. Cha giai ma bang encoding="utf-8" (duoi day)
+            # nhung CON van ghi bang codec mac dinh cua Windows. Do that qua dung
+            # ham nay:
+            #     print("Chuot")  -> status=PASS   stdout 'Chuot'
+            #     print("Chuột")  -> status=ERROR  UnicodeEncodeError: 'charmap'
+            #                        codec can't encode character '\u1ed9'
+            # Tuc la moi nguoi hoc Viet Nam in ra mot chu co dau deu nhan loi —
+            # ca o nut CHAY lan o bo cham thu thach. Bai 4 "Loc San Pham" in ra
+            # ['Chuot'] co dau nen 0/2 truong hop do duoc, trong khi bai 3 in
+            # "Nguyen Van A" thuan ASCII thi 3/3.
+            # Cung ho voi luat o CLAUDE.md muc 4 (do tieng Viet bang Python, dung
+            # qua PowerShell): duong ong nao khong ep UTF-8 thi duong ong do nuot dau.
             proc = subprocess.Popen(
-                [sys.executable, str(script_file)],
+                [sys.executable, "-X", "utf8", str(script_file)],
                 cwd=tmpdir,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,

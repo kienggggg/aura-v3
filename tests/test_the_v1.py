@@ -827,6 +827,40 @@ def test_sandbox_chay_ma_loi_cu_phap_hoac_runtime():
     assert "ZeroDivisionError" in res.stderr
 
 
+def test_chay_ma_in_duoc_tieng_viet_co_dau():
+    """In chữ có dấu phải CHẠY ĐƯỢC, không nổ UnicodeEncodeError.
+
+    Đo thật 30/08/2026, qua đúng hàm này, TRƯỚC khi vá:
+
+        print("Chuot")  -> PASS,  stdout 'Chuot'
+        print("Chuột")  -> ERROR, UnicodeEncodeError: 'charmap' codec can't
+                           encode character '\u1ed9'
+
+    Cha giải mã bằng encoding="utf-8" nhưng CON vẫn ghi bằng codec mặc định
+    của Windows (cp1252). Nghĩa là mọi người học Việt Nam in một chữ có dấu
+    đều nhận lỗi — ở nút CHẠY lẫn ở bộ chấm thử thách. Lộ ra khi bấm tay bài
+    4 "Lọc Sản Phẩm": nó in ['Chuột'] nên 0/2 trường hợp đo được, trong khi
+    bài 3 in "Nguyen Van A" thuần ASCII thì 3/3.
+
+    Cửa này CHẠY THẬT chứ không dò chuỗi `-X utf8` trong mã: gỡ cờ ấy ra thì
+    nó phải đỏ vì hành vi, không vì thiếu một chuỗi.
+    """
+    res = chay_ma_tien_trinh_rieng('print("Chuột")\n', timeout=5.0)
+    assert res.status == "PASS", f"stderr: {res.stderr[-300:]}"
+    assert res.exit_code == 0
+    assert res.stdout.strip() == "Chuột"
+    assert "UnicodeEncodeError" not in res.stderr
+
+
+def test_chay_ma_in_duoc_ca_danh_sach_chuoi_co_dau():
+    """Đúng ca đã làm bài 4 gãy: in một list chứa chữ có dấu."""
+    code = 'ds = ["Chuột", "Bàn phím"]\nprint(ds)\n'
+    res = chay_ma_tien_trinh_rieng(code, timeout=5.0)
+    assert res.status == "PASS", f"stderr: {res.stderr[-300:]}"
+    assert "Chuột" in res.stdout
+    assert "Bàn phím" in res.stdout
+
+
 def test_sandbox_chong_lap_vo_han_timeout_5s():
     """Chạy vòng lặp vô hạn -> Kill sau timeout (thử với timeout=1.0s trong test để chạy nhanh)."""
     code = 'while True:\n    pass\n'
@@ -835,3 +869,40 @@ def test_sandbox_chong_lap_vo_han_timeout_5s():
     assert res.timed_out
     assert res.exit_code == 124
     assert "[TIMEOUT]" in res.stderr
+
+
+# ==============================================================================
+# TEST ĐƠN VỊ CẤU TRÚC DỮ LIỆU THENODE & FILESOURCERECORD
+# ==============================================================================
+
+def test_the_node_to_dict_va_from_dict():
+    """Kiểm tra tuần tự hóa hai chiều của TheNode to_dict và from_dict."""
+    con = TheNode(id="sub1", ma="in_ra", o={"noi_dung": '"hello"'})
+    node = TheNode(
+        id="root1",
+        ma="neu",
+        o={"dieu_kien": "x > 0"},
+        than=[con],
+        line_start=1,
+        line_end=2,
+        indent=0,
+        duoi_dong="# check x",
+        da_sua=True
+    )
+
+    d = node.to_dict()
+    assert d["id"] == "root1"
+    assert d["ma"] == "neu"
+    assert d["o"]["dieu_kien"] == "x > 0"
+    assert len(d["than"]) == 1
+    assert d["than"][0]["ma"] == "in_ra"
+    assert d["duoi_dong"] == "# check x"
+    assert d["da_sua"] is True
+
+    phuc_hoi = TheNode.from_dict(d)
+    assert phuc_hoi.id == "root1"
+    assert phuc_hoi.ma == "neu"
+    assert len(phuc_hoi.than) == 1
+    assert phuc_hoi.than[0].o["noi_dung"] == '"hello"'
+    assert phuc_hoi.da_sua is True
+

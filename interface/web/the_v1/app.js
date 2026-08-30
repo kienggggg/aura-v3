@@ -442,6 +442,35 @@
     bat_loi: 'except E as e:'
   };
 
+  // Từ khoá Python mà mỗi loại thẻ SINH RA. Ô Tìm (Ctrl+F) gom cả bảng này vào
+  // chữ của thẻ, vì `chuTrenThe` trước đây chỉ gom GIÁ TRỊ người dùng gõ.
+  //
+  // Đo 30/08/2026, chương trình đang hiện trên màn hình ở chế độ Mã Thuần là
+  // `def chào(tên): ... print(chào(người))`, gõ vào ô Tìm:
+  //     chào 1/3 · người 1/2 · danh_sách 1/2 · Sếp 1/1   <- tìm được
+  //     def 0/0 · print 0/0 · return 0/0                 <- KHÔNG, dù nhìn thấy
+  // Nhãn ô ghi "Tìm trong chương trình…", nên 0/0 đọc như là "chương trình
+  // không có chữ def" — sai. Cùng họ với nhãn nói sai việc ở CLAUDE.md mục 4.
+  //
+  // KHÔNG dùng lại NHAN_CU_PHAP: nhãn ấy kèm chỗ giữ chỗ (`x = 10`,
+  // `for i in day:`), nhét vào thì tìm `10` sẽ khớp MỌI thẻ gán, tìm `day` khớp
+  // MỌI vòng lặp. Bảng này chỉ chứa từ khoá thật sự xuất hiện trong mã sinh ra.
+  const TU_KHOA_PYTHON_CUA_THE = {
+    in_ra: 'print',
+    neu: 'if',
+    nguoc_lai: 'else',
+    lap_moi: 'for in',
+    lap_khi: 'while',
+    tra_ve: 'return',
+    ham: 'def',
+    chu_thich: '#',
+    nhap: 'import',
+    dung_lap: 'break',
+    bo_qua: 'continue',
+    thu: 'try',
+    bat_loi: 'except as'
+  };
+
   // ==========================================================================
   // EXTENSION MANAGER & KHO GÓI THẺ CHUYÊN DỤNG (CARD PACKS)
   // ==========================================================================
@@ -3052,6 +3081,10 @@
   // nội bộ, người dùng không thấy — tìm theo chúng sẽ ra kết quả khó hiểu.
   function chuTrenThe(node) {
     const phan = [];
+    // Từ khoá Python của loại thẻ này — xem chú thích ở TU_KHOA_PYTHON_CUA_THE.
+    if (node.ma && TU_KHOA_PYTHON_CUA_THE[node.ma]) {
+      phan.push(TU_KHOA_PYTHON_CUA_THE[node.ma]);
+    }
     if (node.o) {
       for (const k in node.o) {
         const v = node.o[k];

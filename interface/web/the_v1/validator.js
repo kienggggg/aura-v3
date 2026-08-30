@@ -2,12 +2,35 @@
 // Thiết kế theo đúng đặc tả kiểm tra của AURA v3 và đối chiếu 1:1 với core/the_v1.py.
 
 (function (root, factory) {
+
   if (typeof module === 'object' && module.exports) {
     module.exports = factory();
   } else {
     root.TheValidator = factory();
   }
 }(typeof self !== 'undefined' ? self : this, function () {
+
+  // ---------------------------------------------------------------------------
+  // Định danh Python 3 CHO PHÉP chữ Unicode: `tổng`, `lời_chào`, `số` đều hợp lệ.
+  // Mẫu cũ `[a-zA-Z_][a-zA-Z0-9_]*` chỉ nhận ASCII nên tên tiếng Việt không bao
+  // giờ vào được `bienDaGan`, rồi chính nó bị báo "chưa từng được gán" — lỗi ĐỎ,
+  // mà lỗi đỏ CHẶN CỨNG nút CHẠY. Đo 30/08/2026, hai cây thẻ y hệt, khác mỗi tên:
+  //     "loi_chao"  -> hợp lệ, 0 lỗi        "lời_chào"  -> 1 lỗi ĐỎ
+  //
+  // Ở JS không thể chỉ đổi lớp ký tự như bên Python: `\w` và `\b` của JS CHỈ hiểu
+  // ASCII. `\bsố\b` không khớp, vì `ố` không phải ký tự từ theo JS nên không có
+  // ranh giới sau nó. Phải dùng \p{...} với cờ `u`, và thay `\b` bằng lookaround
+  // trên chính lớp ký tự định danh.
+  //
+  // Lớp này RỘNG hơn luật thật của Python một chút (\p{N} gồm cả chữ số của mọi
+  // hệ chữ). Rộng là hướng sai an toàn ở đây: rộng thì bỏ sót một lỗi thật, hẹp
+  // thì VU OAN người dùng rồi chặn không cho chạy.
+  const KY_TU_DD = '\\p{L}\\p{N}\\p{M}_';
+  const MAU_DD = `[\\p{L}_][${KY_TU_DD}]*`;
+  const RE_DD_DON = new RegExp(`^${MAU_DD}$`, 'u');                       // khớp trọn một tên
+  const RE_DD_MOI = new RegExp(`(?<![${KY_TU_DD}])${MAU_DD}`, 'gu');      // mọi tên trong chuỗi
+  const RE_DD_THUOC_TINH = new RegExp(`\\.${MAU_DD}`, 'gu');              // `.ten` sau dấu chấm
+  // ---------------------------------------------------------------------------
 
   const BUILTIN_SYMBOLS = new Set([
     "True", "False", "None", "range", "len", "int", "str", "float", "list",
@@ -241,7 +264,8 @@
 
     // Thu thập biến cục bộ sinh từ comprehension: for <var> in ...
     const compVars = new Set();
-    const compMatches = str.matchAll(/\bfor\s+([a-zA-Z_][a-zA-Z0-9_]*(?:\s*,\s*[a-zA-Z_][a-zA-Z0-9_]*)*)\s+in\b/g);
+    const compMatches = str.matchAll(
+      new RegExp(`(?<![${KY_TU_DD}])for\\s+(${MAU_DD}(?:\\s*,\\s*${MAU_DD})*)\\s+in(?![${KY_TU_DD}])`, 'gu'));
     for (const m of compMatches) {
       const vars = m[1].split(",");
       for (const v of vars) {
@@ -251,9 +275,9 @@
     }
 
     // Xóa các thuộc tính / phương thức .attr để không bắt nhầm attr là biến
-    str = str.replace(/\.[a-zA-Z_][a-zA-Z0-9_]*/g, " ");
+    str = str.replace(RE_DD_THUOC_TINH, " ");
 
-    const tokens = str.match(/\b[a-zA-Z_][a-zA-Z0-9_]*\b/g) || [];
+    const tokens = str.match(RE_DD_MOI) || [];
     const res = new Set();
     for (const t of tokens) {
       if (!BUILTIN_SYMBOLS.has(t) && !compVars.has(t)) {
@@ -303,9 +327,9 @@
     if (!code || typeof code !== "string") return names;
     const lines = code.split("\n");
     for (let line of lines) {
-      const m = line.match(/^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*=/);
+      const m = line.match(new RegExp(`^\\s*(${MAU_DD})\\s*=`, 'u'));
       if (m) names.add(m[1]);
-      const defM = line.match(/^\s*(?:def|class)\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
+      const defM = line.match(new RegExp(`^\\s*(?:def|class)\\s+(${MAU_DD})`, 'u'));
       if (defM) names.add(defM[1]);
     }
     return names;
@@ -339,7 +363,7 @@
       if (p === "*") continue;
       let namePart = p.split(/[:=]/)[0].trim();
       namePart = namePart.replace(/^\*+/, "").trim();
-      if (namePart && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(namePart)) {
+      if (namePart && RE_DD_DON.test(namePart)) {
         result.push(namePart);
       }
     }
@@ -379,7 +403,7 @@
           } else {
             ph.split(",").forEach(x => {
               const t = x.trim();
-              if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(t)) globalSymbols.add(t);
+              if (RE_DD_DON.test(t)) globalSymbols.add(t);
             });
           }
         } else if (tk) {
@@ -387,7 +411,7 @@
         } else if (tv) {
           // `import a.b.c` chi dua ten `a` vao tam nhin.
           const goc = tv.split(".")[0].trim();
-          if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(goc)) globalSymbols.add(goc);
+          if (RE_DD_DON.test(goc)) globalSymbols.add(goc);
         }
       }
       if (node.than && node.than.length > 0) {
@@ -564,7 +588,7 @@
               });
             }
           });
-          if (tenBien && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(tenBien)) {
+          if (tenBien && RE_DD_DON.test(tenBien)) {
             cacBienDaGan.add(tenBien);
             scopeVars.add(tenBien);
           }
@@ -700,7 +724,7 @@
             });
           } else if (ma === "lap_moi") {
             const b = (node.o && node.o.bien) ? String(node.o.bien).trim() : "";
-            const loopVars = b.match(/\b[a-zA-Z_][a-zA-Z0-9_]*\b/g) || [];
+            const loopVars = b.match(RE_DD_MOI) || [];
             loopVars.forEach(v => {
               childScope.add(v);
               cacBienDaGan.add(v);
@@ -712,7 +736,7 @@
             // chinh no. Bat duoc bang cach DUNG THU tren app, khong phai bang
             // test: ma sinh ra van dung Python, chi co bang chan doan la sai.
             const tb = (node.o && node.o.ten_bien) ? String(node.o.ten_bien).trim() : "";
-            if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(tb)) {
+            if (RE_DD_DON.test(tb)) {
               childScope.add(tb);
               cacBienDaGan.add(tb);
             }

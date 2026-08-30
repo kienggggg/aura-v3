@@ -2919,7 +2919,7 @@
       case 'bat_loi': return [lay('ten_bien')].filter(Boolean);
       case 'lap_moi':
         // `for a, b in ...` khai HAI tên. Tách như validator vẫn tách.
-        return (lay('bien').match(/\b[a-zA-Z_][a-zA-Z0-9_]*\b/g) || []);
+        return (lay('bien').match(new RegExp(`(?<![\\p{L}\\p{N}\\p{M}_])[\\p{L}_][\\p{L}\\p{N}\\p{M}_]*`, 'gu')) || []);
       case 'nhap': {
         const ph = lay('phan'), tk = lay('ten_khac'), tv = lay('thu_vien');
         if (ph) {
@@ -3035,7 +3035,7 @@
     const o = boc.node.o || {};
     // `goi_ham` là ca chính. `tra_ve`/`in_ra` thì lấy tên đầu trong biểu thức.
     const ten = String(o.ten_ham || o.gia_tri || o.noi_dung || '').trim();
-    const dau = (ten.match(/\b[a-zA-Z_][a-zA-Z0-9_]*\b/) || [])[0];
+    const dau = (ten.match(new RegExp(`(?<![\\p{L}\\p{N}\\p{M}_])[\\p{L}_][\\p{L}\\p{N}\\p{M}_]*`, 'u')) || [])[0];
     return nhayToiDinhNghia(dau);
   }
 
@@ -5096,7 +5096,7 @@
       nodes.forEach(n => {
         if (n.ma === 'lap_khi' && n.o && n.o.dieu_kien) {
           const cond = n.o.dieu_kien.trim();
-          const varMatch = cond.match(/^([a-zA-Z_]\w*)\s*(<|<=|>|>=|!=|==)/);
+          const varMatch = cond.match(new RegExp(`^([\\p{L}_][\\p{L}\\p{N}\\p{M}_]*)\\s*(<|<=|>|>=|!=|==)`, 'u'));
           if (varMatch) {
             const loopVar = varMatch[1];
             const hasUpdate = (n.than || []).some(c => c.ma === 'gan' && c.o && c.o.ten_bien === loopVar);

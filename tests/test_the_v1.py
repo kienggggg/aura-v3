@@ -827,6 +827,36 @@ def test_sandbox_chay_ma_loi_cu_phap_hoac_runtime():
     assert "ZeroDivisionError" in res.stderr
 
 
+@pytest.mark.parametrize("ten", ["lời_chào", "tổng", "số", "biến_đếm", "_riêng", "dữ_liệu"])
+def test_bo_kiem_khong_vu_oan_ten_bien_tieng_viet(ten):
+    """Tên biến tiếng Việt KHÔNG được bị coi là chưa từng gán.
+
+    Đo 30/08/2026 qua /api/kiem, hai cây thẻ y hệt, chỉ khác cái tên:
+        ten_bien "loi_chao"  -> hop_le true,  0 lỗi
+        ten_bien "lời_chào"  -> hop_le false, 1 lỗi ĐỎ "chưa từng được gán"
+    Lỗi đỏ chặn cứng nút CHẠY, nên người học đặt tên tiếng Việt vừa bị vu oan
+    vừa không chạy nổi chương trình. 23 chỗ dùng mẫu chỉ-ASCII
+    `[a-zA-Z_][a-zA-Z0-9_]*`; Python 3 cho phép định danh Unicode.
+    """
+    cay = [
+        TheNode.from_dict({"id": "n1", "ma": "gan",
+                           "o": {"ten_bien": ten, "gia_tri": '"Chào Sếp"'}, "than": []}),
+        TheNode.from_dict({"id": "n2", "ma": "in_ra",
+                           "o": {"noi_dung": ten}, "than": []}),
+    ]
+    kq = kiem_tra_cay_the(cay)
+    assert kq.so_loi_do == 0, [d.thong_diep for d in kq.danh_sach]
+
+
+def test_bo_kiem_van_bat_bien_tieng_viet_that_su_chua_gan():
+    """Chiều ngược lại: bản vá không được biến thành 'tắt luật'."""
+    cay = [TheNode.from_dict({"id": "n2", "ma": "in_ra",
+                              "o": {"noi_dung": "chưa_gán_bao_giờ"}, "than": []})]
+    kq = kiem_tra_cay_the(cay)
+    assert kq.so_loi_do == 1
+    assert any(d.ma_loi == "undefined_variable" for d in kq.danh_sach)
+
+
 def test_chay_ma_in_duoc_tieng_viet_co_dau():
     """In chữ có dấu phải CHẠY ĐƯỢC, không nổ UnicodeEncodeError.
 

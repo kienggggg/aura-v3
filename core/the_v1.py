@@ -1146,6 +1146,21 @@ class DiagnosticResult:
     so_lan_dung_the: Dict[str, int]    # Bộ đếm ×N
 
 
+# Định danh Python 3 CHO PHÉP chữ Unicode: `tổng`, `lời_chào`, `cộng`, `số` đều
+# là tên biến hợp lệ. Mẫu cũ `[^\W\d]\w*` chỉ nhận ASCII, nên tên
+# tiếng Việt không bao giờ được ghi vào `cac_bien_da_gan` (dòng ~1499), và rồi
+# chính nó bị báo là "chưa từng được gán".
+#
+# Đo thật 30/08/2026 qua /api/kiem, hai cây thẻ y hệt nhau, chỉ khác cái tên:
+#     ten_bien "loi_chao"  -> hop_le true,  0 lỗi
+#     ten_bien "lời_chào"  -> hop_le false, 1 lỗi ĐỎ "chưa từng được gán"
+# Lỗi ĐỎ chặn cứng nút CHẠY (xem runProgram trong app.js), nên người học đặt tên
+# biến bằng tiếng Việt vừa bị vu oan vừa không chạy nổi chương trình.
+#
+# `\w` trong `re` của Python đã hiểu Unicode sẵn cho chuỗi str, nên `[^\W\d]\w*`
+# đọc là "ký tự từ nhưng không phải chữ số, rồi ký tự từ" — xấp xỉ XID_Start /
+# XID_Continue. Nó RỘNG hơn luật thật của Python một chút, và rộng là hướng sai
+# an toàn ở đây: rộng thì bỏ sót một lỗi thật, hẹp thì VU OAN rồi chặn người dùng.
 def _trich_xuat_bien_trong_bieu_thuc(bieu_thuc: str) -> Set[str]:
     """Phân tích AST biểu thức để lấy danh sách tên biến được đọc từ phạm vi ngoài."""
     if not bieu_thuc or not bieu_thuc.strip():
@@ -1173,8 +1188,8 @@ def _trich_xuat_bien_trong_bieu_thuc(bieu_thuc: str) -> Set[str]:
     except Exception:
         clean = re.sub(r'"(?:[^"\\]|\\.)*"', ' ', bieu_thuc)
         clean = re.sub(r"'(?:[^'\\]|\\.)*'", ' ', clean)
-        clean = re.sub(r'\.[a-zA-Z_][a-zA-Z0-9_]*', ' ', clean)
-        tokens = set(re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]*\b", clean))
+        clean = re.sub(r'\.[^\W\d]\w*', ' ', clean)
+        tokens = set(re.findall(r"\b[^\W\d]\w*\b", clean))
         return {t for t in tokens if t not in BUILTIN_SYMBOLS}
 
 
@@ -1224,9 +1239,9 @@ def _trich_xuat_bien_gan_trong_ma_tho(code: str) -> Set[str]:
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 names.add(node.name)
     except Exception:
-        for m in re.finditer(r"^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*=", code, re.MULTILINE):
+        for m in re.finditer(r"^\s*([^\W\d]\w*)\s*=", code, re.MULTILINE):
             names.add(m.group(1))
-        for m in re.finditer(r"^\s*(?:def|class)\s+([a-zA-Z_][a-zA-Z0-9_]*)", code, re.MULTILINE):
+        for m in re.finditer(r"^\s*(?:def|class)\s+([^\W\d]\w*)", code, re.MULTILINE):
             names.add(m.group(1))
     return names
 
@@ -1270,7 +1285,7 @@ def _trich_xuat_ten_tham_so(tham_so_str: str) -> List[str]:
             if chunk == "*":
                 continue
             part = re.split(r"[:=]", chunk)[0].strip().lstrip("*")
-            if part and re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", part):
+            if part and re.match(r"^[^\W\d]\w*$", part):
                 res.append(part)
         return res
 
@@ -1307,14 +1322,14 @@ def _thu_thap_bieu_tuong_toan_cuc(nodes: List[TheNode], global_symbols: Set[str]
                 else:
                     for x in ph.split(","):
                         t = x.strip()
-                        if re.fullmatch(r"[a-zA-Z_][a-zA-Z0-9_]*", t):
+                        if re.fullmatch(r"[^\W\d]\w*", t):
                             global_symbols.add(t)
             elif tk:
                 global_symbols.add(tk)
             elif tv:
                 # `import a.b.c` chỉ đưa tên `a` vào tầm nhìn.
                 goc = tv.split(".")[0].strip()
-                if re.fullmatch(r"[a-zA-Z_][a-zA-Z0-9_]*", goc):
+                if re.fullmatch(r"[^\W\d]\w*", goc):
                     global_symbols.add(goc)
         if node.than:
             _thu_thap_bieu_tuong_toan_cuc(node.than, global_symbols)
@@ -1496,7 +1511,7 @@ def kiem_tra_cay_the(nodes: List[TheNode]) -> DiagnosticResult:
                                 line=node.line_start,
                             )
                         )
-                if ten_bien and re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", ten_bien):
+                if ten_bien and re.match(r"^[^\W\d]\w*$", ten_bien):
                     cac_bien_da_gan.add(ten_bien)
                     scope_vars.add(ten_bien)
 
@@ -1627,7 +1642,7 @@ def kiem_tra_cay_the(nodes: List[TheNode]) -> DiagnosticResult:
                     cac_bien_da_gan.update(params)
                 elif ma == "lap_moi":
                     b_str = node.o.get("bien", "").strip()
-                    loop_vars = re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]*\b", b_str)
+                    loop_vars = re.findall(r"\b[^\W\d]\w*\b", b_str)
                     for b in loop_vars:
                         child_scope.add(b)
                         cac_bien_da_gan.add(b)
@@ -1635,7 +1650,7 @@ def kiem_tra_cay_the(nodes: List[TheNode]) -> DiagnosticResult:
                     # `except ValueError as e:` GÁN biến `e` cho thân khối.
                     # Xem chú thích cùng ngày ở validator.js.
                     tb = node.o.get("ten_bien", "").strip()
-                    if re.fullmatch("[a-zA-Z_][a-zA-Z0-9_]*", tb):
+                    if re.fullmatch(r"[^\W\d]\w*", tb):
                         child_scope.add(tb)
                         cac_bien_da_gan.add(tb)
 

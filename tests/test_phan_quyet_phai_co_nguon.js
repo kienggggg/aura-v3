@@ -51,7 +51,7 @@ const GOC = fs.readFileSync(DUONG, 'utf8');
 // --- cac cum tu la LOI KHANG DINH ve bai lam / suc khoe ma / chat luong goi -----
 const CUM_PHAN_QUYET = [
   'PASS', 'FAIL', 'HEALTHY', 'XUẤT SẮC', 'VƯỢT QUA',
-  'HOÀN THÀNH 100', '★', 'AN TOÀN', 'Hợp lệ',
+  'HOÀN THÀNH 100', '★', 'AN TOÀN', 'Hợp lệ', 'ĐẠT',
 ];
 
 // --- BANG KHAI BAO: cho nao duoc in phan quyet, va lay so tu dau --------------
@@ -74,6 +74,18 @@ const DUOC_PHEP = [
     cum: 'Hợp lệ',
     nguon: 'state.diagnostics',
     vi_sao: 'thanh trang thai dem thang tu danh sach chan doan, khong tu ket luan lay',
+  },
+  {
+    ham: 'chamDiemBaiTap',
+    cum: 'ĐẠT',
+    nguon: '/api/chay',
+    vi_sao: 'ghep ma nguoi hoc voi bo do roi day sang /api/chay, doc lai ket qua tung truong hop tu stdout theo dau __AURA_DO__',
+  },
+  {
+    ham: 'veTheTestCase',
+    cum: 'ĐẠT',
+    quyet_dinh_o: 'chamDiemBaiTap',
+    vi_sao: 'chi la ham VE mot the ket qua; nhan dat/truot/chua_do do chamDiemBaiTap quyet dinh sau khi chay that, khong tu ket luan gi',
   },
 ];
 
@@ -145,12 +157,33 @@ test('moi chu phan quyet trong app.js deu phai co ten trong bang khai bao', () =
     'them vao bang PHAI kem nguon that, dung them cho het do');
 });
 
-test('nguon do da khai phai con nam trong chinh ham do', () => {
+// Mot muc phai co MOT trong hai:
+//   nguon        — chuoi phai that su con nam trong than ham (vi du '/api/chay')
+//   quyet_dinh_o — ten mot ham KHAC, va ham do phai co mat trong bang nay VOI
+//                  mot `nguon` that. Danh cho ham chi VE, khong tu ket luan.
+// Khong co luat hai chang nay thi ai cung khai bua mot bien dia phuong lam
+// "nguon" va cua thanh hinh thuc.
+test('moi muc phai co nguon that, hoac tro ve mot muc khac CO nguon that', () => {
   for (const d of DUOC_PHEP) {
     const than = thanCuaHam(d.ham);
     assert.ok(than !== null, 'khong con ham ' + d.ham + ' — bang khai bao da cu');
-    assert.ok(than.includes(d.nguon),
-      d.ham + ' van in "' + d.cum + '" nhung nguon do "' + d.nguon + '" da bien mat khoi ham');
+
+    if (d.nguon) {
+      assert.ok(than.includes(d.nguon),
+        d.ham + ' van in "' + d.cum + '" nhung nguon do "' + d.nguon + '" da bien mat khoi ham');
+      continue;
+    }
+
+    assert.ok(d.quyet_dinh_o,
+      d.ham + ' khong khai nguon, cung khong khai quyet_dinh_o — khong ai biet so o dau ra');
+    const cha = DUOC_PHEP.find(x => x.ham === d.quyet_dinh_o && x.nguon);
+    assert.ok(cha,
+      d.ham + ' tro ve "' + d.quyet_dinh_o + '" nhung cho do khong co trong bang, hoac cung khong co nguon that');
+    const thanCha = thanCuaHam(cha.ham);
+    assert.ok(thanCha && thanCha.includes(cha.nguon),
+      'noi quyet dinh "' + cha.ham + '" da mat nguon do "' + cha.nguon + '"');
+    assert.ok(thanCha.includes(d.ham),
+      cha.ham + ' khong con goi ' + d.ham + ' — day chuyen khai bao da dut');
   }
 });
 

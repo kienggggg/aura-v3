@@ -4319,7 +4319,80 @@
   // KHONG DO DUOC, ma khong do duoc thi khong co quyen phan quyet — tach ba trang
   // thai: dat · do duoc ma khong dat · KHONG DO DUOC. De bai (Input/Expected) van
   // hien vi do la du kien that; chi bo phan bia va bo viec cong XP.
-  function chamDiemBaiTap() {
+  // Vẽ một thẻ kết quả cho MỘT trường hợp thử.
+  // Ba trạng thái, không được gộp: đạt · đo được mà không đạt · KHÔNG ĐO ĐƯỢC.
+  function veTheTestCase(soThuTu, dauVao, kyVong, thucTe, trangThai, ghiChu) {
+    const mau = { dat: '#34D399', truot: '#F87171', chua_do: '#FBBF24' }[trangThai];
+    const nhan = { dat: '✓ ĐẠT', truot: '✕ SAI', chua_do: '⏳ KHÔNG ĐO ĐƯỢC' }[trangThai];
+    const lop = { dat: 'pass', truot: 'fail', chua_do: '' }[trangThai];
+    return `
+      <div class="test-case-card ${lop}">
+        <div class="test-case-header">
+          <span style="font-weight: 700; color: #94A3B8;">Test Case #${soThuTu}</span>
+          <span style="font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; color: ${mau}; border: 1px solid ${mau};">${nhan}</span>
+        </div>
+        <div class="test-case-grid">
+          <div>
+            <span class="test-io-label">Đầu Vào (Input):</span>
+            <span class="test-io-val" style="color: #60A5FA;">${escapeHtml(JSON.stringify(dauVao))}</span>
+          </div>
+          <div>
+            <span class="test-io-label">Kỳ Vọng (Expected):</span>
+            <span class="test-io-val" style="color: #34D399;">${escapeHtml(JSON.stringify(kyVong))}</span>
+          </div>
+          <div>
+            <span class="test-io-label">Thực Tế (Actual):</span>
+            <span class="test-io-val" style="color: ${mau};">${escapeHtml(thucTe)}</span>
+          </div>
+        </div>
+        ${ghiChu ? `<div style="margin-top: 6px; font-size: 11px; color: var(--text-muted);">${escapeHtml(ghiChu)}</div>` : ''}
+      </div>
+    `;
+  }
+
+  // Trạng thái KHÔNG ĐO ĐƯỢC: không phải "sai", cũng không phải "đúng".
+  function veKhongDoDuoc(c, testCases, viSao) {
+    const passBadge = document.getElementById('challengePassCount');
+    if (passBadge) passBadge.textContent = `—/${testCases.length}`;
+
+    const info = document.getElementById('graderSummaryInfo');
+    if (info) {
+      info.innerHTML = `<span class="scope-pill" style="color: #FBBF24; border-color: #F59E0B;">CHƯA CHẤM ĐƯỢC</span>`;
+    }
+
+    const body = document.getElementById('graderResultsBody');
+    if (!body) return;
+    let html = `
+      <div class="grade-summary-card has-fail">
+        <div>
+          <div class="grade-score-title">CHƯA CHẤM ĐƯỢC — không phải "sai", cũng không phải "đúng"</div>
+          <div class="grade-score-desc">${escapeHtml(viSao)}</div>
+        </div>
+        <div style="font-size: 24px;">⏳</div>
+      </div>
+    `;
+    testCases.forEach((tc, idx) => {
+      html += veTheTestCase(idx + 1, tc.input, tc.expected, 'chưa chạy', 'chua_do', '');
+    });
+    body.innerHTML = html;
+  }
+
+  // 30/08/2026 — bản đầu của hàm này TỰ VIẾT LỜI GIẢI bằng JS theo c.id rồi so với
+  // `expected` do chính app.js khai; thẻ của người học không bao giờ được đọc.
+  // Đo tay: canvas 0 thẻ, 0 request, vẫn ra 4/4 · 100% · "XUẤT SẮC", và còn ghi
+  // vào localStorage aura_solved_challenges. Cột "Thực Tế" là số bịa.
+  //
+  // Nay chấm thật: ghép mã của người học với một bộ đo sinh tại chỗ, đẩy sang
+  // /api/chay (tiến trình Python riêng, trần 5s của backend), rồi đọc lại kết quả
+  // từng trường hợp từ stdout theo dấu __AURA_DO__.
+  //
+  // GIỚI HẠN, phải nói cùng lúc: /api/chay CHƯA cô lập toàn diện. the_api.py trả
+  // về execution_notice "vẫn có quyền ghi tệp của tài khoản Windows", và hôm
+  // 19/08 đo được `cwd` ở thư mục tạm KHÔNG chặn được ghi bằng đường dẫn tuyệt
+  // đối. Bộ chấm này chạy mã NGƯỜI DÙNG tự gõ trên máy của chính họ, không phải
+  // mã người lạ gửi đến — nhưng câu chữ đó phải hiện trên màn hình, không được
+  // giấu, nên execution_notice được in thẳng vào thẻ tổng kết bên dưới.
+  async function chamDiemBaiTap() {
     if (!challengeDangChon) {
       baoNhanh('Vui lòng mở một thử thách từ mục "🏆 Thử Thách" trước khi chấm điểm!');
       return;
@@ -4331,59 +4404,169 @@
     const tabBtn = document.querySelector('.tab-btn[data-tab="tabChallengeGrader"]');
     if (tabBtn) tabBtn.click();
 
-    const passBadge = document.getElementById('challengePassCount');
-    if (passBadge) passBadge.textContent = `—/${testCases.length}`;
+    // Lấy mã đúng y hệt runProgram: ưu tiên ô soạn thảo nếu đang ở chế độ mã thuần.
+    const editorInput = document.getElementById('codeEditorInput');
+    let code = '';
+    if (state.editorMode === 'code' && editorInput && editorInput.value.trim()) {
+      code = editorInput.value;
+    } else {
+      code = TheValidator.sinhMaPython(state.tree, 0, []);
+    }
+
+    if (!state.codeExecutionEnabled) {
+      veKhongDoDuoc(c, testCases,
+        'Cổng chạy mã (/api/chay) đang TẮT nên không chạy được bài của bạn. Không chạy thì không có quyền phán quyết. Bật bằng cờ --allow-exec khi khởi động app.');
+      baoNhanh('Chưa chấm được: cổng chạy mã đang tắt.');
+      return;
+    }
+    if (!code.trim()) {
+      veKhongDoDuoc(c, testCases, 'Trên canvas chưa có thẻ nào, không có gì để chạy.');
+      baoNhanh('Chưa chấm được: chưa có mã nào.');
+      return;
+    }
+
+    // Bộ đo: ghép sau mã của người học. In mỗi trường hợp một dòng có dấu riêng
+    // để không lẫn với print() của chính người học.
+    const thamSo = String(c.tham_so || '').split(',').map(s => s.trim()).filter(Boolean);
+    const cacDoiSo = testCases.map(tc =>
+      (thamSo.length > 1 && Array.isArray(tc.input)) ? tc.input : [tc.input]);
+    const boDo = [
+      '',
+      '# ===== bo do do trinh cham sinh ra, khong phai ma cua nguoi hoc =====',
+      'import json as _aura_json',
+      '_aura_cases = _aura_json.loads(' + JSON.stringify(JSON.stringify(cacDoiSo)) + ')',
+      '_aura_ten = ' + JSON.stringify(String(c.ten_ham || '')),
+      'for _aura_i, _aura_args in enumerate(_aura_cases):',
+      '    _aura_fn = globals().get(_aura_ten)',
+      '    if _aura_fn is None:',
+      '        _aura_out = {"i": _aura_i, "trang_thai": "thieu_ham"}',
+      '    else:',
+      '        try:',
+      '            _aura_out = {"i": _aura_i, "trang_thai": "chay_xong", "kq": _aura_fn(*_aura_args)}',
+      '        except Exception as _aura_e:',
+      '            _aura_out = {"i": _aura_i, "trang_thai": "no_loi",',
+      '                         "loi": type(_aura_e).__name__ + ": " + str(_aura_e)}',
+      '    print("__AURA_DO__" + _aura_json.dumps(_aura_out, ensure_ascii=False, default=str))',
+      ''
+    ].join('\n');
 
     const info = document.getElementById('graderSummaryInfo');
-    if (info) {
-      info.innerHTML = `
-        <span class="scope-pill" style="color: #FBBF24; border-color: #F59E0B;">
-          CHƯA CHẤM ĐƯỢC
-        </span>
-      `;
+    if (info) info.innerHTML = `<span class="scope-pill">Đang chạy bài của bạn…</span>`;
+
+    // Khong bao try/catch quanh ca doan ve: mot loi khi VE se bi bao cao thanh
+    // "khong goi duoc cong chay ma" — nhan sai viec, dung ho loi CLAUDE.md muc 4.
+    // Va cua tests/test_hop_dong_api.js phai thay `const res = await resp.json()`
+    // gan TRUC TIEP moi noi duoc binding sang handler Python de doi chieu tung
+    // truong; gan vao mot bien khai bao san thi no khong chung minh duoc, va no
+    // bao dung: luc do khong con bang chung tinh nao rang res la than cua route ay.
+    const resp = await authFetch('/api/chay', {
+      method: 'POST',
+      body: JSON.stringify({ code: code + '\n' + boDo })
+    }).catch(() => null);
+    if (!resp) {
+      veKhongDoDuoc(c, testCases, 'Không gọi được cổng chạy mã (/api/chay).');
+      baoNhanh('Chưa chấm được: không gọi được cổng chạy mã.');
+      return;
     }
+    const res = await resp.json().catch(() => null);
+    if (!res) {
+      veKhongDoDuoc(c, testCases, `Cổng chạy mã trả về ${resp.status} nhưng nội dung không đọc được.`);
+      baoNhanh('Chưa chấm được: phản hồi không đọc được.');
+      return;
+    }
+    if (!resp.ok) {
+      veKhongDoDuoc(c, testCases,
+        `Cổng chạy mã trả về ${resp.status}: ${res.error || res.trang_thai || 'không rõ'}.`);
+      baoNhanh('Chưa chấm được: cổng chạy mã từ chối.');
+      return;
+    }
+
+    // Đọc lại kết quả từng trường hợp. Thiếu dòng nào thì trường hợp đó KHÔNG ĐO
+    // ĐƯỢC — không được quy thành "sai". Quá giờ cũng vậy: 12/08 đã trả giá một
+    // lần vì nhãn timeout đọc y hệt một phán quyết về hành vi.
+    const doDuoc = {};
+    for (const dong of String(res.stdout || '').split('\n')) {
+      const k = dong.indexOf('__AURA_DO__');
+      if (k === -1) continue;
+      try {
+        const o = JSON.parse(dong.slice(k + '__AURA_DO__'.length));
+        doDuoc[o.i] = o;
+      } catch (e) { /* dòng hỏng thì coi như không đo được */ }
+    }
+
+    let soDat = 0, soChuaDo = 0;
+    let html = '';
+    testCases.forEach((tc, idx) => {
+      const o = doDuoc[idx];
+      if (!o) {
+        soChuaDo += 1;
+        const viSao = res.timed_out
+          ? 'Chương trình chạy quá trần thời gian nên bị cắt trước khi đo tới trường hợp này.'
+          : (String(res.stderr || '').trim()
+              ? 'Chương trình dừng vì lỗi trước khi đo tới trường hợp này.'
+              : 'Không nhận được kết quả đo cho trường hợp này.');
+        html += veTheTestCase(idx + 1, tc.input, tc.expected, 'không đo được', 'chua_do', viSao);
+        return;
+      }
+      if (o.trang_thai === 'thieu_ham') {
+        soChuaDo += 1;
+        html += veTheTestCase(idx + 1, tc.input, tc.expected, 'không đo được', 'chua_do',
+          `Chưa tìm thấy hàm ${c.ten_ham}(...) trong bài của bạn.`);
+        return;
+      }
+      if (o.trang_thai === 'no_loi') {
+        html += veTheTestCase(idx + 1, tc.input, tc.expected, o.loi, 'truot',
+          'Hàm của bạn chạy nhưng nổ lỗi với đầu vào này.');
+        return;
+      }
+      const dat = JSON.stringify(o.kq) === JSON.stringify(tc.expected);
+      if (dat) soDat += 1;
+      html += veTheTestCase(idx + 1, tc.input, tc.expected, JSON.stringify(o.kq),
+        dat ? 'dat' : 'truot', '');
+    });
+
+    const doHet = (soChuaDo === 0);
+    const datHet = doHet && (soDat === testCases.length);
+
+    const passBadge = document.getElementById('challengePassCount');
+    if (passBadge) passBadge.textContent = doHet ? `${soDat}/${testCases.length}` : `—/${testCases.length}`;
+
+    if (info) {
+      const mau = datHet ? '#34D399' : (doHet ? '#F87171' : '#FBBF24');
+      const chu = datHet ? '✓ ĐẠT TẤT CẢ'
+                         : (doHet ? `Chưa đạt (${soDat}/${testCases.length})`
+                                  : `CHƯA CHẤM ĐƯỢC ĐỦ (${soChuaDo}/${testCases.length} chưa đo được)`);
+      info.innerHTML = `<span class="scope-pill" style="color: ${mau}; border-color: ${mau};">${chu}</span>`;
+    }
+
+    const tieuDe = datHet
+      ? `Đã chạy thật ${testCases.length}/${testCases.length} trường hợp và tất cả đều khớp.`
+      : (doHet
+          ? `Đã chạy thật ${testCases.length} trường hợp: ${soDat} khớp, ${testCases.length - soDat} chưa khớp.`
+          : `Chỉ đo được ${testCases.length - soChuaDo}/${testCases.length} trường hợp — phần còn lại KHÔNG ĐO ĐƯỢC, không kết luận.`);
 
     const body = document.getElementById('graderResultsBody');
     if (body) {
-      let html = `
-        <div class="grade-summary-card has-fail">
+      body.innerHTML = `
+        <div class="grade-summary-card ${datHet ? 'all-pass' : 'has-fail'}">
           <div>
-            <div class="grade-score-title">CHƯA CHẤM ĐƯỢC — không phải "sai", cũng không phải "đúng"</div>
-            <div class="grade-score-desc">Bộ chấm chưa nối vào cổng chạy mã thật (<code>/api/chay</code>) nên nó KHÔNG chạy bài của bạn, và không chạy thì không có quyền phán quyết. Dưới đây là đề bài sẽ được kiểm khi cổng đó được nối.</div>
+            <div class="grade-score-title">${escapeHtml(tieuDe)}</div>
+            <div class="grade-score-desc">Chạy trong ${res.wall_time_ms || 0} ms. ${escapeHtml(res.execution_notice || '')}</div>
           </div>
-          <div style="font-size: 24px;">⏳</div>
+          <div style="font-size: 24px;">${datHet ? '🏅' : (doHet ? '🔧' : '⏳')}</div>
         </div>
-      `;
-
-      testCases.forEach((tc, idx) => {
-        html += `
-          <div class="test-case-card">
-            <div class="test-case-header">
-              <span style="font-weight: 700; color: #94A3B8;">Test Case #${idx + 1}</span>
-              <span style="font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; color: #FBBF24; border: 1px solid #F59E0B;">CHƯA ĐO</span>
-            </div>
-            <div class="test-case-grid">
-              <div>
-                <span class="test-io-label">Đầu Vào (Input):</span>
-                <span class="test-io-val" style="color: #60A5FA;">${escapeHtml(JSON.stringify(tc.input))}</span>
-              </div>
-              <div>
-                <span class="test-io-label">Kỳ Vọng (Expected):</span>
-                <span class="test-io-val" style="color: #34D399;">${escapeHtml(JSON.stringify(tc.expected))}</span>
-              </div>
-              <div>
-                <span class="test-io-label">Thực Tế (Actual):</span>
-                <span class="test-io-val" style="color: #94A3B8;">chưa chạy</span>
-              </div>
-            </div>
-          </div>
-        `;
-      });
-
-      body.innerHTML = html;
+      ` + html;
     }
 
-    baoNhanh(`Chưa chấm được ${testCases.length} test case: bộ chấm chưa nối vào cổng chạy mã thật.`);
+    // Chỉ ghi "đã giải" khi ĐO ĐƯỢC HẾT và ĐẠT HẾT. Đo không hết thì không cộng gì.
+    if (datHet) {
+      danhDauBaiDaGiai(c.id);
+      baoNhanh(`Đã chạy thật ${testCases.length} trường hợp, tất cả đều khớp.`);
+    } else if (doHet) {
+      baoNhanh(`Đã chạy thật: ${soDat}/${testCases.length} trường hợp khớp.`);
+    } else {
+      baoNhanh(`Chưa chấm được đủ: ${soChuaDo}/${testCases.length} trường hợp không đo được.`);
+    }
   }
 
   function setupChallengeHubControls() {

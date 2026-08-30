@@ -8,7 +8,8 @@
         "-m",
         "interface.the_app",
         "--port",
-        "8088"
+        "8088",
+        "--allow-exec"
       ],
       "port": 8088
     }

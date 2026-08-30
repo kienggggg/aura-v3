@@ -8,10 +8,21 @@
         "-m",
         "interface.the_app",
         "--port",
-        "8088",
-        "--allow-exec"
+        "8088"
       ],
       "port": 8088
+    },
+    {
+      "name": "the-app-chay-ma",
+      "runtimeExecutable": "venv/Scripts/python.exe",
+      "runtimeArgs": [
+        "-m",
+        "interface.the_app",
+        "--port",
+        "8089",
+        "--allow-exec"
+      ],
+      "port": 8089
     }
   ]
 }

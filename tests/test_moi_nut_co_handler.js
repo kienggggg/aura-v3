@@ -60,15 +60,35 @@ function docCacNut(html) {
  * được đọc để đổi `.disabled` cũng lọt qua. Phải có bằng chứng
  * addEventListener, theo đúng hai lối viết đang dùng trong app.js:
  *
- *   document.getElementById('x').addEventListener(...)     // trực tiếp
+ *   document.getElementById('x').addEventListener(...)      // trực tiếp
+ *   document.getElementById('x')?.addEventListener(...)     // optional chaining
  *   const b = document.getElementById('x'); b.addEventListener(...)  // qua biến
+ *
+ * PHẢI CHẤP NHẬN `?.` — sửa 30/08/2026.
+ *
+ * Bản đầu chỉ khớp `)` rồi `.addEventListener`. Ngày 28/08 mã mới nối năm nút
+ * trình chiếu bằng optional chaining:
+ *
+ *     document.getElementById('btnPresPen')?.addEventListener('click', ...)
+ *
+ * Cửa báo ĐỎ "Nút CÓ trên giao diện nhưng KHÔNG ai nghe: btnPresMouse,
+ * btnPresPen, btnPresHighlighter, btnPresLaser, btnPresEraser" — trong khi cả
+ * năm nút ĐỀU có người nghe. Đọc mã ra ngay: `?.` chứ không phải `.`.
+ *
+ * Đây là CỬA SAI, không phải mã sai — và là lần thứ tư trong bốn ngày tôi để
+ * một cửa khớp hụt. Ba lần trước: dò trúng chú thích chứa `returnValue`, dò
+ * trúng dòng khai biến `btnModeFiles`, neo `indexOf` vào khối `keydown` đầu
+ * tiên khi có nhiều khối.
+ *
+ * Một cửa báo đỏ oan cũng nguy như một cửa báo xanh oan: lần sau người ta sẽ
+ * bỏ qua nó.
  */
 function coNguoiNghe(id, js) {
   const idEsc = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-  // Lối 1: nối thẳng, cho phép xuống dòng giữa chuỗi
+  // Lối 1: nối thẳng, cho phép xuống dòng và cả `?.`
   const thang = new RegExp(
-    `getElementById\\(\\s*['"\`]${idEsc}['"\`]\\s*\\)\\s*\\.addEventListener`
+    `getElementById\\(\\s*['"\`]${idEsc}['"\`]\\s*\\)\\s*\\??\\.\\s*addEventListener`
   );
   if (thang.test(js)) return true;
 
@@ -80,16 +100,39 @@ function coNguoiNghe(id, js) {
   let g;
   while ((g = ganBien.exec(js)) !== null) {
     const bien = g[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    if (new RegExp(`\\b${bien}\\s*\\.addEventListener`).test(js)) return true;
+    if (new RegExp(`\\b${bien}\\s*\\??\\.\\s*addEventListener`).test(js)) return true;
   }
   return false;
 }
 
-/** Nút không có id thì phải được nối qua querySelectorAll trên một class của nó. */
+/** Nút không có id thì phải được nối qua MỘT trong ba lối, trên class của nó.
+ *
+ * Ba lối đang dùng thật trong `app.js`:
+ *
+ *     container.querySelectorAll('.x').forEach(b => b.addEventListener(...))
+ *     e.target.closest('.x')      // uỷ quyền sự kiện
+ *     e.target.matches('.x')      // uỷ quyền sự kiện, lối khác
+ *
+ * PHẢI CHẤP NHẬN `closest` / `matches` — sửa 30/08/2026.
+ *
+ * Bản đầu chỉ nhận `querySelectorAll`. Ngày 28/08 bốn nút
+ * `<button class="quick-chip" data-action="...">` được nối bằng UỶ QUYỀN:
+ *
+ *     const chip = e.target.closest('.quick-chip');
+ *
+ * Cửa báo bốn nút ấy "không ai nghe" — sai. Uỷ quyền sự kiện là lối nối hợp lệ
+ * và còn bền hơn: nút sinh động sau khi trang tải vẫn chạy, trong khi
+ * `querySelectorAll` chạy một lần thì không.
+ *
+ * Đây là lỗ thứ hai trong cùng một cửa, phát hiện cùng ngày với lỗ `?.` ở
+ * `coNguoiNghe`. Cả hai đều là CỬA HẸP chứ không phải mã hỏng.
+ */
 function coNguoiNgheQuaClass(cls, js) {
   return cls.some((c) => {
     const cEsc = c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp(`querySelectorAll\\([^)]*\\.${cEsc}\\b`).test(js);
+    return new RegExp(
+      `(?:querySelectorAll|querySelector|closest|matches)\\([^)]*\\.${cEsc}\\b`
+    ).test(js);
   });
 }
 

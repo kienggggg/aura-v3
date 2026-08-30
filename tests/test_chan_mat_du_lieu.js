@@ -100,12 +100,40 @@ describe('chặn mất thẻ chưa lưu', () => {
   });
 });
 
+/** Gộp thân của MỌI khối `window.addEventListener('keydown', ...)`.
+ *
+ * NEO CŨ DÙNG `indexOf` — LẤY KHỐI ĐẦU TIÊN, VÀ NÓ HỎNG NGÀY 28/08/2026.
+ *
+ * Hôm ấy mã mới thêm một khối `keydown` nữa ở dòng 5660 cho các phím của tính
+ * năng trình chiếu (`e.altKey && e.key === 'p'`). Khối chứa Ctrl+S / Ctrl+P /
+ * Ctrl+O của tôi bị đẩy xuống dòng 6901.
+ *
+ * `indexOf` tìm thấy khối 5660, cắt 6000 ký tự từ đó, và KHÔNG BAO GIỜ chạm
+ * tới dòng 6901 — nên cửa báo "Ctrl+S không được bắt" trong khi Ctrl+S vẫn
+ * nằm nguyên trong mã và vẫn chạy.
+ *
+ * Bốn phép đỏ oan liền. Nếu tin cửa mà đi sửa `app.js` thì đã sửa một thứ
+ * không hỏng — và đó là cách người ta làm hỏng mã đang chạy.
+ *
+ * Gộp mọi khối lại thì phép so không còn phụ thuộc vào việc khối nào đứng
+ * trước. Đây là lần thứ tư trong bốn ngày một cửa của tôi khớp hụt vì neo vào
+ * "lần xuất hiện đầu tiên" của một chuỗi không còn duy nhất.
+ */
+function moiKhoiKeydown(soKyTu) {
+  const neo = "window.addEventListener('keydown'";
+  const cac = [];
+  let i = APP_JS.indexOf(neo);
+  while (i !== -1) {
+    cac.push(APP_JS.slice(i, i + soKyTu));
+    i = APP_JS.indexOf(neo, i + neo.length);
+  }
+  assert.ok(cac.length > 0, 'không tìm thấy khối phím tắt nào');
+  return cac.join('\n/*—hết một khối—*/\n');
+}
+
 describe('phím tắt theo thói quen IDE', () => {
-  /** Thân khối `window.addEventListener('keydown', ...)` chính. */
   function khoiPhimTat() {
-    const i = APP_JS.indexOf("window.addEventListener('keydown'");
-    assert.ok(i !== -1, 'không tìm thấy khối phím tắt');
-    return APP_JS.slice(i, i + 6000);
+    return moiKhoiKeydown(6000);
   }
 
   test('Ctrl+S được app bắt, không rơi xuống trình duyệt', () => {
@@ -132,11 +160,8 @@ describe('phím tắt theo thói quen IDE', () => {
 });
 
 describe('phím tắt mở tệp — thêm 27/08/2026', () => {
-  /** Thân khối `window.addEventListener('keydown', ...)` chính. */
   function khoiPhim() {
-    const i = APP_JS.indexOf("window.addEventListener('keydown'");
-    assert.ok(i !== -1, 'không tìm thấy khối phím tắt');
-    return APP_JS.slice(i, i + 9000);
+    return moiKhoiKeydown(9000);
   }
 
   test('Ctrl+P và Ctrl+O được app bắt', () => {

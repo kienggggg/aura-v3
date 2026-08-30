@@ -4320,6 +4320,16 @@
     if (banner) banner.style.display = 'none';
   }
 
+  // 30/08/2026 — ban cu TU VIET LOI GIAI bang JS theo c.id roi so voi `expected`
+  // do chinh tep nay khai; the cua nguoi hoc KHONG BAO GIO duoc doc (bien `scope`
+  // dung o day la ma chet). Do tay: canvas 0 the, 0 request, van ra 4/4 · 100% ·
+  // "XUAT SAC", va con ghi bai do vao localStorage aura_solved_challenges.
+  // Cot "Thuc Te (Actual)" la so bia.
+  //
+  // Nay fail-closed. Bo cham chua noi vao cong chay ma that (/api/chay) thi no
+  // KHONG DO DUOC, ma khong do duoc thi khong co quyen phan quyet — tach ba trang
+  // thai: dat · do duoc ma khong dat · KHONG DO DUOC. De bai (Input/Expected) van
+  // hien vi do la du kien that; chi bo phan bia va bo viec cong XP.
   function chamDiemBaiTap() {
     if (!challengeDangChon) {
       baoNhanh('Vui lòng mở một thử thách từ mục "🏆 Thử Thách" trước khi chấm điểm!');
@@ -4328,70 +4338,18 @@
 
     const c = challengeDangChon;
     const testCases = c.testCases || [];
-    let passedCount = 0;
-    const results = [];
-
-    testCases.forEach((tc, idx) => {
-      const scope = {};
-      const params = c.tham_so.split(',').map(s => s.trim());
-
-      if (Array.isArray(tc.input) && params.length > 1) {
-        params.forEach((p, pIdx) => {
-          scope[p] = tc.input[pIdx];
-        });
-      } else {
-        scope[params[0]] = tc.input;
-      }
-
-      let actualVal = null;
-      try {
-        if (c.id === 'bai_tong_chan') {
-          const arr = Array.isArray(tc.input) ? tc.input : [];
-          actualVal = arr.filter(x => x % 2 === 0).reduce((a, b) => a + b, 0);
-        } else if (c.id === 'bai_min_max') {
-          const arr = Array.isArray(tc.input) ? tc.input : [];
-          if (arr.length === 0) actualVal = [null, null];
-          else actualVal = [Math.min(...arr), Math.max(...arr)];
-        } else if (c.id === 'bai_chuan_hoa_ten') {
-          const str = String(tc.input).trim();
-          actualVal = str.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-        } else if (c.id === 'bai_loc_san_pham') {
-          const listSp = tc.input[0] || [];
-          const budget = tc.input[1] || 0;
-          actualVal = listSp.filter(sp => sp.gia <= budget).map(sp => sp.ten);
-        }
-      } catch (err) {
-        actualVal = 'Lỗi thực thi: ' + err.message;
-      }
-
-      const isPass = JSON.stringify(actualVal) === JSON.stringify(tc.expected);
-      if (isPass) passedCount++;
-
-      results.push({
-        index: idx + 1,
-        input: tc.input,
-        expected: tc.expected,
-        actual: actualVal,
-        isPass: isPass
-      });
-    });
-
-    const isAllPass = (passedCount === testCases.length);
-    if (isAllPass) {
-      danhDauBaiDaGiai(c.id);
-    }
 
     const tabBtn = document.querySelector('.tab-btn[data-tab="tabChallengeGrader"]');
     if (tabBtn) tabBtn.click();
 
     const passBadge = document.getElementById('challengePassCount');
-    if (passBadge) passBadge.textContent = `${passedCount}/${testCases.length}`;
+    if (passBadge) passBadge.textContent = `—/${testCases.length}`;
 
     const info = document.getElementById('graderSummaryInfo');
     if (info) {
       info.innerHTML = `
-        <span class="scope-pill" style="color: ${isAllPass ? '#34D399' : '#F87171'}; border-color: ${isAllPass ? '#10B981' : '#EF4444'};">
-          ${isAllPass ? '✓ HOÀN THÀNH 100%' : `Chưa đạt (${passedCount}/${testCases.length})`}
+        <span class="scope-pill" style="color: #FBBF24; border-color: #F59E0B;">
+          CHƯA CHẤM ĐƯỢC
         </span>
       `;
     }
@@ -4399,34 +4357,34 @@
     const body = document.getElementById('graderResultsBody');
     if (body) {
       let html = `
-        <div class="grade-summary-card ${isAllPass ? 'all-pass' : 'has-fail'}">
+        <div class="grade-summary-card has-fail">
           <div>
-            <div class="grade-score-title">${isAllPass ? '🎉 XUẤT SẮC! BẠN ĐÃ VƯỢT QUA THỬ THÁCH!' : '⚠️ CHƯA ĐẠT HẾT TẤT CẢ TEST CASES'}</div>
-            <div class="grade-score-desc">Đã vượt qua ${passedCount} / ${testCases.length} Test Cases (${Math.round((passedCount / testCases.length) * 100)}%).</div>
+            <div class="grade-score-title">CHƯA CHẤM ĐƯỢC — không phải "sai", cũng không phải "đúng"</div>
+            <div class="grade-score-desc">Bộ chấm chưa nối vào cổng chạy mã thật (<code>/api/chay</code>) nên nó KHÔNG chạy bài của bạn, và không chạy thì không có quyền phán quyết. Dưới đây là đề bài sẽ được kiểm khi cổng đó được nối.</div>
           </div>
-          <div style="font-size: 24px;">${isAllPass ? '🏅' : '🔧'}</div>
+          <div style="font-size: 24px;">⏳</div>
         </div>
       `;
 
-      results.forEach(r => {
+      testCases.forEach((tc, idx) => {
         html += `
-          <div class="test-case-card ${r.isPass ? 'pass' : 'fail'}">
+          <div class="test-case-card">
             <div class="test-case-header">
-              <span style="font-weight: 700; color: #94A3B8;">Test Case #${r.index}</span>
-              <span class="${r.isPass ? 'badge-pass' : 'badge-fail'}">${r.isPass ? '✓ PASS' : '✕ FAIL'}</span>
+              <span style="font-weight: 700; color: #94A3B8;">Test Case #${idx + 1}</span>
+              <span style="font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; color: #FBBF24; border: 1px solid #F59E0B;">CHƯA ĐO</span>
             </div>
             <div class="test-case-grid">
               <div>
                 <span class="test-io-label">Đầu Vào (Input):</span>
-                <span class="test-io-val" style="color: #60A5FA;">${escapeHtml(JSON.stringify(r.input))}</span>
+                <span class="test-io-val" style="color: #60A5FA;">${escapeHtml(JSON.stringify(tc.input))}</span>
               </div>
               <div>
                 <span class="test-io-label">Kỳ Vọng (Expected):</span>
-                <span class="test-io-val" style="color: #34D399;">${escapeHtml(JSON.stringify(r.expected))}</span>
+                <span class="test-io-val" style="color: #34D399;">${escapeHtml(JSON.stringify(tc.expected))}</span>
               </div>
               <div>
                 <span class="test-io-label">Thực Tế (Actual):</span>
-                <span class="test-io-val" style="color: ${r.isPass ? '#34D399' : '#F87171'};">${escapeHtml(JSON.stringify(r.actual))}</span>
+                <span class="test-io-val" style="color: #94A3B8;">chưa chạy</span>
               </div>
             </div>
           </div>
@@ -4436,11 +4394,7 @@
       body.innerHTML = html;
     }
 
-    if (isAllPass) {
-      baoNhanh('🎉 Chúc mừng! Toàn bộ Test Cases đều chính xác!');
-    } else {
-      baoNhanh(`Chưa đạt hết (${passedCount}/${testCases.length}). Hãy kiểm tra lại logic!`);
-    }
+    baoNhanh(`Chưa chấm được ${testCases.length} test case: bộ chấm chưa nối vào cổng chạy mã thật.`);
   }
 
   function setupChallengeHubControls() {
@@ -5558,6 +5512,13 @@ python3 main.py
       presCtx.stroke();
     } else if (presState.currentTool === 'eraser') {
       presCtx.globalCompositeOperation = 'destination-out';
+      // 30/08/2026 — nhanh nay TUNG khong dat lai globalAlpha nen no thua ke 0.35
+      // cua da quang. Do (tong alpha vung net but 448.795):
+      //   but -> tay              448.795 -> 0        (1 luot, sach)
+      //   but -> da quang -> tay  448.795 -> 25.192   (con 5,6% sau 1 luot)
+      //                                    -> 1.978   (sau 5 luot)
+      // Tren may chieu no hien ra thanh vet mo chui khong het.
+      presCtx.globalAlpha = 1.0;
       presCtx.lineWidth = 30;
       presCtx.lineCap = 'round';
       presCtx.lineJoin = 'round';

@@ -1883,7 +1883,6 @@ body {
   color: var(--text-muted);
   margin-top: 2px;
 }
-.ext-meta-rating { color: #FBBF24; font-weight: 600; }
 .ext-meta-author { color: var(--text-secondary); }
 
 .ext-desc {

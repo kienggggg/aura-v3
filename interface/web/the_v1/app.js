@@ -449,14 +449,10 @@
     {
       id: 'pack_datasci',
       ten: 'Pandas & Data Science Pack',
-      tac_gia: 'AURA Core Team',
       phien_ban: 'v1.2.0',
       danh_muc: 'du_lieu',
       icon: '📊',
-      danh_gia: '4.9 ★',
-      luot_tai: '12.4k',
       mo_ta: 'Xử lý bảng biểu DataFrame, đọc file CSV/Excel, thống kê dữ liệu tổng quan và vẽ biểu đồ trực quan.',
-      the_kem_theo: ['doc_csv', 'loc_cot', 'thong_ke_df', 've_bieu_do'],
       cards: [
         { ma: 'ma_tho', nhan: 'df = pd.read_csv(...)', ten: 'Đọc File CSV', o: { nguyen_van: 'import pandas as pd\ndf = pd.read_csv("data.csv")' } },
         { ma: 'ma_tho', nhan: 'df_loc = df[...]', ten: 'Lọc Dữ Liệu', o: { nguyen_van: 'df_loc = df[df["score"] >= 8.0]' } },
@@ -467,14 +463,10 @@
     {
       id: 'pack_web',
       ten: 'Web Scraping & Requests Pack',
-      tac_gia: 'Community Dev',
       phien_ban: 'v1.0.4',
       danh_muc: 'web',
       icon: '🌐',
-      danh_gia: '4.8 ★',
-      luot_tai: '9.8k',
       mo_ta: 'Tự động hóa gửi yêu cầu HTTP Requests, bóc tách cấu trúc HTML BeautifulSoup và trích xuất JSON API.',
-      the_kem_theo: ['gui_get', 'gui_post', 'boc_tach_soup', 'doc_json'],
       cards: [
         { ma: 'ma_tho', nhan: 'res = requests.get(url)', ten: 'Gửi GET Request', o: { nguyen_van: 'import requests\nres = requests.get("https://api.example.com/data")' } },
         { ma: 'ma_tho', nhan: 'data = res.json()', ten: 'Đọc JSON Response', o: { nguyen_van: 'data = res.json()' } },
@@ -484,14 +476,10 @@
     {
       id: 'pack_ai',
       ten: 'GenAI & LLM Connect Pack',
-      tac_gia: 'AURA AI Labs',
       phien_ban: 'v2.1.0',
       danh_muc: 'ai',
       icon: '🤖',
-      danh_gia: '5.0 ★',
-      luot_tai: '25.1k',
       mo_ta: 'Tích hợp gọi mô hình ngôn ngữ lớn (LLM), thiết lập prompt thông minh và phân tích văn bản tự động.',
-      the_kem_theo: ['goi_llm', 'prompt_fstring', 'phan_tich_van_ban'],
       cards: [
         { ma: 'ma_tho', nhan: 'prompt = f"Phân tích: ..."', ten: 'Tạo Prompt Thông Minh', o: { nguyen_van: 'prompt = f"Hãy phân tích và tóm tắt văn bản: {van_ban}"' } },
         { ma: 'ma_tho', nhan: 'ai.generate_content(...)', ten: 'Gọi Mô Hình LLM', o: { nguyen_van: '# Gọi mô hình AI sinh câu trả lời\nphan_hoi = "Nội dung phản hồi từ AI..."' } }
@@ -500,14 +488,10 @@
     {
       id: 'pack_game',
       ten: 'Pygame 2D Mini Game Pack',
-      tac_gia: 'GameDev Club',
       phien_ban: 'v1.1.2',
       danh_muc: 'game',
       icon: '🎮',
-      danh_gia: '4.7 ★',
-      luot_tai: '7.3k',
       mo_ta: 'Khởi tạo màn hình game, vòng lặp hoạt họa FPS, bắt sự kiện bàn phím và vẽ nhân vật 2D.',
-      the_kem_theo: ['khoi_tao_game', 'game_loop', 've_nhan_vat', 'bat_phim'],
       cards: [
         { ma: 'ma_tho', nhan: 'pygame.init()', ten: 'Khởi Tạo Game', o: { nguyen_van: 'import pygame\npygame.init()\nscreen = pygame.display.set_mode((800, 600))\npygame.display.set_caption("My AURA Game")' } },
         { ma: 'ma_tho', nhan: 'while running: game_loop', ten: 'Vòng Lặp Game Loop', o: { nguyen_van: 'running = True\nclock = pygame.time.Clock()\nwhile running:\n    for event in pygame.event.get():\n        if event.type == pygame.QUIT:\n            running = False\n    clock.tick(60)' } }
@@ -584,7 +568,14 @@
     let html = '<div class="ext-grid">';
     filtered.forEach(ext => {
       const isInst = installed.includes(ext.id);
-      const chipsHtml = (ext.the_kem_theo || []).map(t => `<span class="ext-card-chip">+ ${escapeHtml(t)}</span>`).join('');
+      // 30/08/2026 — chip TUNG lay tu ext.the_kem_theo, mot danh sach ten viet tay
+      // tach roi khoi ext.cards la thu thuc su duoc cai vao Khay The. Do doi chieu:
+      //   pack_datasci  quang cao 4 · thuc co 4   khop
+      //   pack_web      quang cao 4 · thuc co 3   lech
+      //   pack_ai       quang cao 3 · thuc co 2   lech
+      //   pack_game     quang cao 4 · thuc co 2   lech
+      // Nay dung chip TU chinh ext.cards, nen quang cao khong the vuot qua hang.
+      const chipsHtml = (ext.cards || []).map(c => `<span class="ext-card-chip">+ ${escapeHtml(c.ten || c.nhan)}</span>`).join('');
 
       html += `
         <div class="ext-card" data-extid="${ext.id}">
@@ -596,11 +587,9 @@
                 <span class="ext-version">${ext.phien_ban}</span>
               </div>
               <div class="ext-meta-row">
-                <span class="ext-meta-rating">${ext.danh_gia}</span>
+                <span class="ext-meta-author">${ext.cards.length} thẻ</span>
                 <span>•</span>
-                <span class="ext-meta-author">${escapeHtml(ext.tac_gia)}</span>
-                <span>•</span>
-                <span>📥 ${ext.luot_tai}</span>
+                <span class="ext-meta-author">Gói dựng sẵn trong app</span>
               </div>
             </div>
           </div>

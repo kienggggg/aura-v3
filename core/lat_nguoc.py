@@ -439,6 +439,9 @@ def chay_e1_dinh_vi(
                     [
                         PY, "-X", "utf8", "-m", "pytest", test_do_duoc_chon,
                         "-q", "--no-header", "--tb=line", "-p", "no:cacheprovider",
+                        # 30/08/2026 — xem chú thích _bo_mau ở core/trace_runtime.py:
+                        # FORCE_COLOR=1 làm pytest tô màu cả khi ghi ra pipe.
+                        "--color=no",
                     ],
                     capture_output=True,
                     text=True,
@@ -505,7 +508,8 @@ def chay_e1_dinh_vi(
                             PY, "-X", "utf8", "-m", "pytest", "tests",
                             "-m", "not e1_control",
                             "-q", "--no-header", "-p", "no:cacheprovider",
-                        ],
+                        "--color=no",
+                    ],
                         capture_output=True,
                         text=True,
                         encoding="utf-8",

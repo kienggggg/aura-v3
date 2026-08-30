@@ -19,6 +19,7 @@ from __future__ import annotations
 import ast
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -60,10 +61,36 @@ class TraceResult:
         return asdict(self)
 
 
+# Bóc mã màu ANSI trước khi so chuỗi trên đầu ra pytest.
+#
+# 30/08/2026. Tiến trình app chạy dưới một môi trường có FORCE_COLOR=1 (thừa kế
+# từ nơi khởi chạy). pytest thấy cờ đó thì tô màu KỂ CẢ khi ghi ra pipe, nên dòng
+# tóm tắt không còn bắt đầu bằng "FAILED " nữa mà bằng "\x1b[31mFAILED\x1b[0m".
+# `line.startswith("FAILED ")` trượt sạch -> danh sách test đỏ RỖNG -> /api/trace
+# trả về "Không có test nào bị đỏ trong tệp test này".
+#
+# Đo thật 30/08, cùng một tệp test, cùng một máy:
+#     pytest gọi thẳng            -> "1 failed"          (đúng)
+#     /api/trace                  -> "không có test đỏ"  (SAI), 0,5 giây
+#     gọi hàm này từ script riêng -> tìm thấy 1 test đỏ  (đúng)
+# Ba kết quả khác nhau cho cùng một sự thật; cái khác nhau là biến môi trường.
+#
+# Câu "Không có test nào bị đỏ" là một PHÁN QUYẾT tự tin về mã của người dùng,
+# phát ra trong khi phép đo đã hỏng — đúng thứ CLAUDE.md mục 4 cấm.
+#
+# Hai lớp: `--color=no` trên mọi lệnh pytest (gốc), và hàm này (phòng khi có
+# công cụ khác tô màu, hoặc cờ ấy bị bỏ qua).
+_ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
+
+
+def _bo_mau(chuoi: str) -> str:
+    return _ANSI.sub("", chuoi or "")
+
+
 def _chay_pytest_lay_danh_sach_test(tep_test: str, cwd: Optional[Path] = None) -> list[str]:
     """Thu thập danh sách tất cả các test case theo thứ tự pytest collection."""
     root = cwd or PROJECT_ROOT
-    cmd = [PY, "-X", "utf8", "-m", "pytest", tep_test, "--collect-only", "-q"]
+    cmd = [PY, "-X", "utf8", "-m", "pytest", tep_test, "--collect-only", "-q", "--color=no"]
     try:
         res = subprocess.run(
             cmd,
@@ -75,7 +102,7 @@ def _chay_pytest_lay_danh_sach_test(tep_test: str, cwd: Optional[Path] = None) -
             timeout=30,
         )
         tests = []
-        for line in res.stdout.splitlines():
+        for line in _bo_mau(res.stdout).splitlines():
             line = line.strip()
             if line and "::" in line and not line.startswith("="):
                 # VD: tests/test_may_tinh.py::test_dem_ngay
@@ -90,7 +117,7 @@ def _chay_pytest_tim_test_do_phan_loai(tep_test: str, cwd: Optional[Path] = None
     root = cwd or PROJECT_ROOT
     cmd = [
         PY, "-X", "utf8", "-m", "pytest", tep_test,
-        "-q", "--no-header", "--tb=line", "-p", "no:cacheprovider",
+        "-q", "--no-header", "--tb=line", "-p", "no:cacheprovider", "--color=no",
     ]
     try:
         res = subprocess.run(
@@ -104,7 +131,7 @@ def _chay_pytest_tim_test_do_phan_loai(tep_test: str, cwd: Optional[Path] = None
         )
         failing_tests = []
         import_errors = []
-        for line in res.stdout.splitlines():
+        for line in _bo_mau(res.stdout).splitlines():
             line = line.strip()
             if line.startswith("FAILED "):
                 part = line[len("FAILED "):].split(" - ")[0].split(" : ")[0].strip()

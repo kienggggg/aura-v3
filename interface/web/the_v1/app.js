@@ -5060,17 +5060,59 @@
 
     const diagnoses = khamBenhToanDien(state.tree);
     if (diagnoses.length === 0) {
+      // KHÔNG ĐƯỢC TUYÊN BỐ "100% HEALTHY" KHI BỘ KIỂM KIA ĐANG BÁO LỖI.
+      //
+      // 30/08/2026. Đo bằng cách tự bấm: thêm một thẻ `Nếu` điều kiện rỗng,
+      // rồi bấm "Bác Sĩ Khám Bệnh". Màn hình hiện ĐỒNG THỜI:
+      //
+      //     2 ĐỎ (Lỗi)                          <- ô đếm, ĐÚNG
+      //     🔴 Thẻ 'Nếu' có thân nhưng chưa chứa lệnh nào bên trong
+      //     🔴 Biến 'x' trong điều kiện 'Nếu' chưa được gán
+      //     "Mã nguồn khoẻ mạnh! ... không phát hiện lỗi logic nào"
+      //     "✓ 100% HEALTHY"                    <- SAI, ngay dưới ô đếm
+      //
+      // Nguyên nhân KHÔNG phải bảng cũ hay chuỗi cứng. Có HAI bộ chẩn đoán:
+      //
+      //     TheValidator.kiemTraCayThe   18 luật  -> ô đếm và danh sách đỏ
+      //     khamBenhToanDien             nhỏ hơn  -> ô "Bác Sĩ AI"
+      //
+      // Hai phạm vi khác nhau là thiết kế hợp lý — bộ nhỏ chuyên bắt `=` thay
+      // vì `==` và biết TỰ SỬA. Lỗi nằm ở CÂU CHỮ: "không phát hiện lỗi logic
+      // nào" và "100% HEALTHY" là lời khẳng định về CẢ chương trình, trong khi
+      // hàm này chỉ khám được một góc.
+      //
+      // Đúng họ bệnh "nhãn nói sai việc" (CLAUDE.md §4) — loại mà máy khó bắt
+      // và phải tự bấm mới thấy. Nay câu chữ nói đúng phạm vi của nó, và khi
+      // bộ kia có lỗi thì ô này KHÔNG được sơn xanh.
+      const cd = state.diagnostics || {};
+      const soDoKia = cd.so_loi_do || 0;
+      const soVangKia = cd.so_canh_bao_vang || 0;
+      const sach = soDoKia === 0 && soVangKia === 0;
+
+      const mau = sach ? '#34D399' : 'var(--color-warn-vang)';
+      const nen = sach ? 'rgba(16, 185, 129, 0.1)' : 'rgba(234, 179, 8, 0.10)';
+      const vien = sach ? 'rgba(16, 185, 129, 0.3)' : 'rgba(234, 179, 8, 0.35)';
+      const tieuDe = sach
+        ? 'Mã nguồn khoẻ mạnh!'
+        : 'Bác sĩ không tìm thấy lỗi NÓ KHÁM ĐƯỢC';
+      const phu = sach
+        ? 'Bác sĩ AI không phát hiện lỗi logic nào trên các thẻ hiện tại.'
+        : `Nhưng bộ kiểm tra thẻ đang báo ${soDoKia} lỗi và ${soVangKia} cảnh `
+          + 'báo — xem danh sách bên dưới. Bác sĩ chỉ khám một số lỗi logic '
+          + 'quen thuộc, không thay cho bộ kiểm tra.';
+      const nhan = sach ? '✓ 100% HEALTHY' : `⚠ CÒN ${soDoKia + soVangKia} MỤC`;
+
       box.style.display = 'block';
       box.innerHTML = `
-        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="background: ${nen}; border: 1px solid ${vien}; border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between;">
           <div style="display: flex; align-items: center; gap: 8px;">
             <span style="font-size: 18px;">🩺</span>
             <div>
-              <div style="font-size: 12.5px; font-weight: 700; color: #34D399;">Mã nguồn khoẻ mạnh!</div>
-              <div style="font-size: 11px; color: var(--text-secondary);">Bác sĩ AI không phát hiện lỗi logic nào trên các thẻ hiện tại.</div>
+              <div style="font-size: 12.5px; font-weight: 700; color: ${mau};">${tieuDe}</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">${phu}</div>
             </div>
           </div>
-          <span style="color: #34D399; font-weight: 800;">✓ 100% HEALTHY</span>
+          <span style="color: ${mau}; font-weight: 800;">${nhan}</span>
         </div>
       `;
       return;

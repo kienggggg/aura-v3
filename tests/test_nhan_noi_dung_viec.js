@@ -166,3 +166,46 @@ describe('dự án hiện mặc định', () => {
       'không lấy ten_du_an từ /api/status');
   });
 });
+
+describe('Bác Sĩ AI không được tuyên bố quá phạm vi — thêm 30/08/2026', () => {
+  /** Thân nhánh "không tìm thấy gì" của `chayKhamBenhVaHienThi`. */
+  function nhanhKhongThayGi() {
+    const i = APP_JS.indexOf('const diagnoses = khamBenhToanDien(state.tree);');
+    assert.ok(i !== -1, 'không tìm thấy chayKhamBenhVaHienThi');
+    return APP_JS.slice(i, i + 3200);
+  }
+
+  test('nhánh "khoẻ mạnh" phải hỏi bộ kiểm tra kia trước', () => {
+    // 30/08: đo bằng cách tự bấm. Thêm một thẻ `Nếu` điều kiện rỗng rồi bấm
+    // "Bác Sĩ Khám Bệnh". Màn hình hiện ĐỒNG THỜI:
+    //
+    //     2 ĐỎ (Lỗi)                                  <- ô đếm, ĐÚNG
+    //     "Mã nguồn khoẻ mạnh! ... không phát hiện lỗi logic nào"
+    //     "✓ 100% HEALTHY"                            <- SAI
+    //
+    // Nguyên nhân không phải bảng cũ hay chuỗi cứng: có HAI bộ chẩn đoán
+    // khác phạm vi — `TheValidator.kiemTraCayThe` (18 luật) và
+    // `khamBenhToanDien` (nhỏ hơn, biết tự sửa `=` thành `==`). Lỗi ở CÂU
+    // CHỮ: bộ nhỏ tuyên bố về CẢ chương trình.
+    const nhanh = nhanhKhongThayGi();
+    const chiMa = nhanh.replace(/\/\/[^\n]*/g, '');
+    assert.ok(/state\.diagnostics/.test(chiMa),
+      'nhánh "không thấy gì" không hỏi state.diagnostics — nó sẽ tuyên bố ' +
+      '"khoẻ mạnh" trong khi bộ kiểm tra kia đang báo lỗi');
+    assert.ok(/so_loi_do/.test(chiMa) && /so_canh_bao_vang/.test(chiMa),
+      'không đọc số lỗi/cảnh báo của bộ kiểm tra');
+  });
+
+  test('"100% HEALTHY" chỉ được in khi bộ kiểm tra kia SẠCH', () => {
+    // Chốt bằng cách chạy thật logic quyết định, không dò chuỗi: bóc biểu
+    // thức `sach` ra và thử bốn trạng thái.
+    const nhanh = nhanhKhongThayGi();
+    const m = nhanh.match(/const sach = ([^;]+);/);
+    assert.ok(m, 'không tìm thấy biểu thức quyết định `sach`');
+    const sach = new Function('soDoKia', 'soVangKia', `return (${m[1]});`);
+    assert.equal(sach(0, 0), true, 'sạch mà lại không nhận là sạch');
+    assert.equal(sach(2, 0), false, 'có 2 lỗi mà vẫn nhận là sạch');
+    assert.equal(sach(0, 3), false, 'có 3 cảnh báo mà vẫn nhận là sạch');
+    assert.equal(sach(1, 1), false, 'có cả lỗi lẫn cảnh báo mà vẫn nhận là sạch');
+  });
+});

@@ -442,7 +442,19 @@ body {
   grid-template-columns: var(--sidebar-left-width) 1fr var(--sidebar-right-width);
   height: calc(100vh - 56px - 24px);
   overflow: hidden;
-  transition: grid-template-columns 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* 30/08/2026 — BỎ `transition: grid-template-columns 200ms`.
+     Hai nút mở/đóng panel CHƯA TỪNG hoạt động vì dòng ấy. Đo tay:
+         bấm btnToggleSidebarLeft
+         lớp     app-main  ->  app-main left-collapsed        ĐÚNG
+         biến    240px     ->  0px                            ĐÚNG
+         LƯỚI    240px 786.4px 340px -> 240px 786.4px 340px   KHÔNG ĐỔI
+     Chờ 900ms (transition chỉ 200ms) vẫn y nguyên. Tách biến bằng cách tắt
+     transition ngay tại chỗ: lưới lập tức nhảy đúng `0px 1366.4px 0px`.
+     Tức `grid-template-columns` lấy giá trị từ `var()` mà bị transition thì
+     KẸT lại ở giá trị cũ, không bao giờ tới đích.
+     Panel vẫn có hiệu ứng: `.sidebar-left`/`.sidebar-right` giữ
+     `transition: opacity 180ms`, nên nó mờ dần rồi thu — chỉ bề rộng là nhảy.
+     Đổi lấy một hiệu ứng mượt mà nút không chạy là đổi hỏng. */
 }
 
 .app-main.left-collapsed {

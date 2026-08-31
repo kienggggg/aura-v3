@@ -344,6 +344,12 @@ def chay_e1_dinh_vi(
                 "executed_lines": [],
                 "candidate_count_before": 0,
                 "candidate_count_after": 0,
+                # Hai chỗ trả về này nằm TRƯỚC vòng lật, nên chưa bỏ qua ứng viên
+                # nào. Vẫn khai đủ ba số để bên đọc luôn có cùng một hợp đồng,
+                # không phải đoán xem trường có mặt hay không.
+                "candidate_skipped_count": 0,
+                "candidate_skipped": [],
+                "candidate_tried_count": 0,
                 "scope_operations": PHAM_VI_PHEP,
                 "elapsed_filter_mutate_s": 0.0,
                 "elapsed_full_suite_s": 0.0,
@@ -407,6 +413,12 @@ def chay_e1_dinh_vi(
                 "executed_lines": [],
                 "candidate_count_before": so_cho_truoc_loc,
                 "candidate_count_after": 0,
+                # Hai chỗ trả về này nằm TRƯỚC vòng lật, nên chưa bỏ qua ứng viên
+                # nào. Vẫn khai đủ ba số để bên đọc luôn có cùng một hợp đồng,
+                # không phải đoán xem trường có mặt hay không.
+                "candidate_skipped_count": 0,
+                "candidate_skipped": [],
+                "candidate_tried_count": 0,
                 "scope_operations": PHAM_VI_PHEP,
                 "elapsed_filter_mutate_s": giay_loc,
                 "elapsed_full_suite_s": 0.0,
@@ -432,6 +444,15 @@ def chay_e1_dinh_vi(
 
         # Bước 3: Thử lật từng ứng viên
         xanh_selected: list[dict] = []
+        # 30/08/2026 — hai chỗ `continue` bên dưới TỪNG bỏ qua ứng viên mà không
+        # ai đếm. Báo cáo thì ghi `candidate_count_after` = số ứng viên ĐỊNH thử,
+        # nên "sau lọc 10, tìm ra 0" đọc thành "đã thử 10 phép, không phép nào
+        # xanh" — trong khi có thể chỉ thử được 6, còn 4 nổ lỗi rồi biến mất.
+        #
+        # Tệp này đã chữa đúng bệnh ấy một lần rồi: xem `CHO_BO_QUA` ở dòng ~179
+        # ("bọc TỪNG chỗ, và ghi chỗ bị bỏ vào CHO_BO_QUA để đếm được"). Hai chỗ
+        # dưới bị sót. Nay đếm và báo ra ngoài thành `candidate_skipped_count`.
+        cho_bo_qua_khi_lat: list[tuple[int, int, str]] = []
         qua_gio = False
 
         for chi_so, dong, mo_ta in cho_sau_loc:
@@ -441,7 +462,8 @@ def chay_e1_dinh_vi(
                 break
             try:
                 moi_text, phep_ten = _ma_sau_lat(nguon_text, chi_so)
-            except Exception:
+            except Exception as loi:                                 # noqa: BLE001
+                cho_bo_qua_khi_lat.append((chi_so, dong, f"sinh_ma:{type(loi).__name__}"))
                 continue
             if moi_text == nguon_text:
                 continue
@@ -475,7 +497,8 @@ def chay_e1_dinh_vi(
             except subprocess.TimeoutExpired:
                 qua_gio = True
                 break
-            except Exception:
+            except Exception as loi:                                 # noqa: BLE001
+                cho_bo_qua_khi_lat.append((chi_so, dong, f"chay_test:{type(loi).__name__}"))
                 continue
 
         giay_loc_va_lat = round(time.monotonic() - t0_loc, 1)
@@ -492,6 +515,11 @@ def chay_e1_dinh_vi(
                 "executed_lines": sorted(dong_da_chay),
                 "candidate_count_before": so_cho_truoc_loc,
                 "candidate_count_after": so_cho_sau_loc,
+                "candidate_skipped_count": len(cho_bo_qua_khi_lat),
+                "candidate_skipped": [
+                    {"index": i, "line": d, "reason": r} for i, d, r in cho_bo_qua_khi_lat
+                ],
+                "candidate_tried_count": so_cho_sau_loc - len(cho_bo_qua_khi_lat),
                 "scope_operations": PHAM_VI_PHEP,
                 "elapsed_filter_mutate_s": giay_loc_va_lat,
                 "elapsed_full_suite_s": 0.0,
@@ -618,6 +646,11 @@ def chay_e1_dinh_vi(
             "executed_lines": sorted(dong_da_chay),
             "candidate_count_before": so_cho_truoc_loc,
             "candidate_count_after": so_cho_sau_loc,
+            "candidate_skipped_count": len(cho_bo_qua_khi_lat),
+            "candidate_skipped": [
+                {"index": i, "line": d, "reason": r} for i, d, r in cho_bo_qua_khi_lat
+            ],
+            "candidate_tried_count": so_cho_sau_loc - len(cho_bo_qua_khi_lat),
             "scope_operations": PHAM_VI_PHEP,
             "elapsed_filter_mutate_s": giay_loc_va_lat,
             "elapsed_full_suite_s": giay_suite,

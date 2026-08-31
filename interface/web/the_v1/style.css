@@ -155,10 +155,45 @@ body {
   border-radius: var(--radius-full);
 }
 
+/* 30/08/2026 — thanh công cụ TRÀN NGANG cả trang, và nút CHẠY nằm ngoài màn hình.
+   Đo ở 1366x768 (độ phân giải laptop phổ biến nhất):
+       .header-actions rộng 1336px, mép phải ở 2051 trong khung 1366
+       btnRun  mép phải 2011  ->  ngoài màn hình 645px
+       trang tràn ngang       ->  685px, 6/6 tab dưới vỡ dòng (28px -> 42px)
+   Nguyên nhân: `.header-actions` là flex item nhưng thiếu `min-width: 0`. Mặc
+   định của flex item là `min-width: auto`, tức TỪ CHỐI co xuống dưới bề rộng nội
+   dung — nên nó đẩy tràn cả trang thay vì tự thu lại.
+   Sửa: nhóm phụ (Mới · Kho Workflow · … · Trình Chiếu, 985px) cuộn được trong
+   chính nó; nhóm chính (GỠ LỖI · CHẠY · nút panel phải, 246px) ghim cứng bằng
+   `flex-shrink: 0` để không bao giờ bị đẩy ra ngoài. Người dùng luôn với tới
+   được nút CHẠY, dù màn hình hẹp tới đâu. */
 .header-actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+}
+
+.header-actions-scroll {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.header-actions-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+/* Nhóm sau divider là hai hành động chính — không được co, không được đẩy đi. */
+.header-actions > .divider-v,
+.header-actions > #btnDebug,
+.header-actions > #btnRun,
+.header-actions > #btnToggleSidebarRight {
+  flex-shrink: 0;
 }
 
 .icon-btn-header {
@@ -1290,6 +1325,13 @@ body {
   flex-shrink: 0;
 }
 
+/* 30/08/2026 — 6/6 tab vỡ dòng ở 1366x768, cao 42px thay vì 28. Chữ bị bẻ GIỮA
+   cụm: "🏆⏎Chấm Điểm (⏎0/0⏎)", "🔍⏎Chẩn đoán (⏎0⏎)" — dấu ngoặc rơi xuống dòng
+   riêng, đọc như lỗi hiển thị.
+   Đo: thanh rộng 786px; nếu không cho bẻ thì các tab cần 855px — THIẾU THẬT 69px.
+   Nên chỉ đặt `nowrap` là tràn. Phải đủ ba thứ: chữ không bẻ · tab giữ nguyên
+   kích thước · thanh tự cuộn ngang khi hẹp. Cuộn một thanh tab thì người dùng
+   hiểu ngay; một nhãn bị bẻ làm đôi thì trông như hỏng. */
 .pane-tabs {
   height: 38px;
   background: var(--bg-surface);
@@ -1299,12 +1341,22 @@ body {
   padding: 0 8px;
   gap: 4px;
   flex-shrink: 0;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.pane-tabs::-webkit-scrollbar {
+  height: 4px;
 }
 
 .tab-btn {
   background: transparent;
   border: none;
   color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
   padding: 6px 12px;
   border-radius: var(--radius-sm);
   font-family: var(--font-sans);

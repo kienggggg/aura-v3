@@ -269,6 +269,30 @@ bằng đọc lại: bản ASCII cạnh bản tiếng Việt · bài xanh cạnh
 máy đo đọc sớm? Chỉ ca đối chứng trả lời được. Số đơn độc thì người đo tự điền
 lời giải thích mình thích nhất.
 
+Và một dạng riêng của nó, gặp **năm lần trong ngày 30/08** khi đi tìm nút nào
+bấm không có tác dụng: **"không đổi gì" thường là điều kiện đã đúng sẵn, không
+phải nút hỏng.**
+
+```
+btnZoomReset    bấm khi cỡ chữ ĐÃ là 14px           -> tưởng nút chết
+btnClearChat    bấm khi hội thoại ĐÃ sạch            -> tưởng nút chết
+btnPackage      bấm khi nút ĐANG BỊ ẨN               -> tưởng nút chết
+btnDebugStop    bấm khi thanh gỡ lỗi ĐÃ đóng         -> tưởng nút chết
+btnPresMouse    bấm khi chuột ĐÃ là công cụ đang chọn -> tưởng nút chết
+```
+
+Cả năm đều là nút **chạy đúng**. Đặt lại điều kiện — phóng chữ ba lần rồi mới
+bấm reset, nạp lại trang cho hội thoại có lời chào, chuyển sang bút rồi mới bấm
+chuột — thì cả năm đều đổi. **Trước khi kết luận "bấm không có tác dụng", phải
+chứng minh trạng thái TRƯỚC khi bấm khác trạng thái nút hứa tạo ra.**
+
+Cùng ngày ấy còn một bài học về hình dạng của phép quét: quét rẻ kiểu "bấm hết
+mọi nút rồi băm DOM xem có đổi không" **tự nhiễm bẩn**. Một nút đưa app vào chế
+độ Trình Chiếu, sau đó 11 nút bị báo "ẩn" và cả bảng thành rác; hai "ứng viên"
+nó nêu đều là dương tính giả. Cách dùng được là đo **từng nút theo đúng việc nó
+hứa**, trên trạng thái biết trước — chậm hơn, nhưng nó là thứ duy nhất bắt được
+`btnDownloadSVG` và `btnPresStep`.
+
 **Ba thứ bắt buộc đi kèm mọi phép đo:**
 
 1. **Một ca đối chứng**, chạy cùng lúc, khác đúng một biến.

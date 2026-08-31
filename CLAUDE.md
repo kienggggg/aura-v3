@@ -170,6 +170,46 @@ Repo 385K sao trả lời sai ba lần liên tiếp trên máy này. Đã đo v�
 MinerU (247s so với docling 8,2s) · speculative decoding (11,61 → 11,38 tok/s) ·
 AirLLM (60,6 giây/token cho 70B) · Hermes (698s) · OpenClaw (101/113/96s).
 
+30/08/2026, soi mã `nousresearch/hermes-agent` (clone nông 250 MB, **đọc, không
+chạy**). Hỏi: khung agent làm model "thông minh hơn" bằng cách nào. Đo được:
+
+**Vòng tự cải thiện của Hermes** (`agent/background_review.py`, 1.829 dòng): sau
+mỗi lượt, fork agent, phát lại hội thoại, *"asks itself"* có gì đáng lưu thành
+skill không, rồi ghi thẳng vào kho. Nó **không đo** xem bản cập nhật ấy có làm gì
+tốt lên. Và prompt đè tay lên cân: *"A pass that does nothing is a missed learning
+opportunity"*, *"'Nothing to save.' should NOT be the default"*. Cùng hình dạng
+với Auto-Grader ta vừa sửa — áp lực hướng về một phán quyết dương, không có gì
+nói *không*.
+
+Hai điểm họ làm ĐÚNG, đáng học: `read-before-write` được **cưỡng chế trong mã**
+(`tools/skill_manager_tool.py:458`) chứ không chỉ nằm trong prompt; và họ ghi sự
+cố kèm số — *"~142 denials + ~204 read-before-write refusals over 2 days"* làm
+vòng lặp chết đói.
+
+**Hàm chấm của skill DSPy** (`optional-skills/mlops/research/dspy/`) — 22.000 sao
+in ngay trong tệp làm luận cứ. Nguyên lý thì đúng: bắt người dùng đưa `trainset`
+có đáp án thật, thử nhiều biến thể prompt, giữ cái điểm cao. Nhưng hàm chấm mẫu
+quyết định bằng `example.answer in pred.answer`. Chạy thử đúng năm dòng ấy:
+
+```
+"Definitely not Paris"       -> 1.0  cho đáp án "Paris"
+"Không phải Nguyễn Huệ"      -> 1.0  cho đáp án "Nguyễn Huệ"
+"the planet is not mercury"  -> 1.0  cho đáp án "mercury"
+"thứ hai"                    -> 1.0  cho đáp án "ai"
+                                8/11 ca chấm sai
+```
+
+Đây là bệnh dò chuỗi con ở quy mô khác: ở ta nó làm sai **một** phán quyết; ở đây
+mỗi ca chấm sai là một biến thể prompt **được giữ lại**, nên sau vài vòng thứ được
+tối ưu không còn là "trả lời đúng" mà là "tạo ra chuỗi có chứa đáp án", kể cả khi
+phủ định nó. Quét 364 tệp skill: 8 hàm chấm dùng `x in y`, trong đó 4 hỏng thật
+(đều ở DSPy), 4 còn lại là kiểm khoá dict / phần tử danh sách nên hợp lệ.
+
+Rút ra: không repo nào trong đó làm model thông minh hơn. Hermes cho model một
+**trí nhớ** — đỡ suy lại, nhưng không có gì nói *không*. DSPy cho model một
+**cái cân** — đó mới là thứ thật, nhưng cân sai thì càng tối ưu càng lệch. Phần
+khó chưa bao giờ là vòng lặp; phần khó là cái cân.
+
 ### Test xanh không có nghĩa là app dùng được
 
 Ngày 24-25/08/2026, **tám lỗi trong hai ngày, tất cả cùng một họ**: giao diện

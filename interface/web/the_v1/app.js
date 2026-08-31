@@ -5853,7 +5853,15 @@ python3 main.py
         if (!debuggerState.isActive) {
           batDauGoLoi();
         } else {
-          buocTiepTheo();
+          // 30/08/2026 — TỪNG gọi `buocTiepTheo()`, một cái tên KHÔNG TỒN TẠI
+          // ở đâu trong tệp này. Hàm thật tên `buocTiep` (không có "Theo"), và
+          // btnDebugStepNext ở thanh gỡ lỗi thường vẫn gọi đúng tên ấy.
+          // Đo: vào Trình Chiếu, bấm "⏭ Bước" lần đầu -> mở gỡ lỗi (đúng);
+          // bấm lần hai -> "Uncaught ReferenceError: buocTiepTheo is not
+          // defined", bộ đếm đứng yên ở "Bước 1 / 3".
+          // Không test nào bắt được: nút CÓ handler, và lỗi chỉ nổ ở NHÁNH
+          // else — nhánh chỉ chạy sau khi gỡ lỗi đã bật.
+          buocTiep();
         }
       });
     }

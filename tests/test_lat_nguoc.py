@@ -353,20 +353,59 @@ def test_chon_test_va_dong_deadline_con_du_thoi_gian():
     with patch("core.lat_nguoc.chot_test_can_trace") as mock_chot:
         mock_chot.return_value = ("", 0, [])
         res = _chon_test_va_dong(Path("."), "core/x.py", "tests/test_x.py", deadline=time.monotonic() + 0.5)
-        assert res["vi_sao"] == "không có test nào bị đỏ trong tệp test"
+        assert res["ma_ly_do"] == "khong_co_test_do"
 
 
 def test_chon_test_va_dong_khong_co_test_do():
-    """Khi không có test đỏ nào trong tệp test, trả về khong_chay và so_test_do == 0."""
+    """ĐO ĐƯỢC mà không có test đỏ: khong_chay, so_test_do == 0.
+
+    30/08/2026 — hai khẳng định dưới TỪNG đóng đinh đúng chuỗi
+    "không có test nào bị đỏ trong tệp test". Chuỗi ấy phát ra cho CẢ trường hợp
+    chưa đo được (tệp test không import nổi, pytest sập, quá giờ), nên nó là một
+    phán quyết sai. Nay đổi câu chữ, và test này chuyển sang canh `ma_ly_do` —
+    canh Ý NGHĨA chứ không canh câu chữ, để lần sau sửa lời thì test không đỏ oan.
+    """
     with patch("core.lat_nguoc.chot_test_can_trace") as mock_chot:
         mock_chot.return_value = ("", 0, [])
         res = _chon_test_va_dong(Path("."), "core/x.py", "tests/test_x.py", deadline=time.monotonic() + 60.0)
         assert res["trang_thai"] == "khong_chay"
-        assert res["vi_sao"] == "không có test nào bị đỏ trong tệp test"
+        assert res["ma_ly_do"] == "khong_co_test_do"
+        assert "đã chạy" in res["vi_sao"].lower(), (
+            "câu này phải nói rõ là ĐÃ CHẠY rồi mới không thấy test đỏ: "
+            + res["vi_sao"]
+        )
         assert res["test"] == ""
         assert res["so_test_do"] == 0
         assert res["so_test_do_khac"] == 0
         assert res["dong_da_chay"] == []
+
+
+def test_chon_test_va_dong_chua_do_duoc_thi_noi_khac_han():
+    """Chiều còn lại — chỗ lỗi gốc nằm.
+
+    Khi chot_test_can_trace trả về một TraceResult `khong_chay` (chưa đo được),
+    câu trả lời phải KHÁC HẲN với "đã chạy: không có test đỏ", và phải mang theo
+    lý do. Không có khẳng định này thì hai trường hợp lại gộp về một câu.
+    """
+    with patch("core.lat_nguoc.chot_test_can_trace") as mock_chot:
+        mock_chot.return_value = ("", 0, [TraceResult(
+            trang_thai="khong_chay",
+            thong_diep="KHÔNG ĐO ĐƯỢC: chạy tệp test không xong — "
+                       "tests/test_x.py (ModuleNotFoundError: No module named 'abc')",
+            tong_buoc=0,
+            ten_test="",
+            so_test_do_khac=0,
+        )])
+        res = _chon_test_va_dong(Path("."), "core/x.py", "tests/test_x.py",
+                                 deadline=time.monotonic() + 60.0)
+        assert res["trang_thai"] == "khong_chay"
+        assert res["ma_ly_do"] == "khong_do_duoc", (
+            "chưa đo được mà lại bị dán nhãn 'khong_co_test_do'"
+        )
+        assert "KHÔNG ĐO ĐƯỢC" in res["vi_sao"]
+        assert "ModuleNotFoundError" in res["vi_sao"], (
+            "mất lý do thật, người dùng vẫn phải tự đoán: " + res["vi_sao"]
+        )
 
 
 def test_chon_test_va_dong_chot_test_thieu_ten_chot_hoac_danh_sach():

@@ -131,6 +131,7 @@ def _chay_pytest_tim_test_do_phan_loai(tep_test: str, cwd: Optional[Path] = None
         )
         failing_tests = []
         import_errors = []
+        chi_tiet_loi: list[str] = []
         for line in _bo_mau(res.stdout).splitlines():
             line = line.strip()
             if line.startswith("FAILED "):
@@ -141,9 +142,23 @@ def _chay_pytest_tim_test_do_phan_loai(tep_test: str, cwd: Optional[Path] = None
                 if "::" in part:
                     failing_tests.append(part)
                 else:
-                    import_errors.append(part)
+                    # Với lỗi NẠP thì giữ nguyên cả dòng: phần sau dấu " - " chính
+                    # là lý do (ModuleNotFoundError, SyntaxError…). Cắt nó đi thì
+                    # thông điệp chỉ còn tên tệp, người đọc vẫn phải tự đoán —
+                    # mà đoán là thứ cả tệp luật này sinh ra để chống.
+                    import_errors.append(line[len("ERROR "):].strip())
             elif line.startswith("INTERNALERROR"):
                 import_errors.append(line)
+            elif line.startswith("E   ") and len(chi_tiet_loi) < 2:
+                # Dòng tóm tắt của pytest chỉ ghi "ERROR tests/x.py" — không kèm
+                # lý do. Lý do thật nằm trong THÂN, ở dòng bắt đầu bằng "E   ":
+                #     E   ModuleNotFoundError: No module named 'abc'
+                # Không gom dòng này thì thông điệp gửi lên màn hình chỉ có tên
+                # tệp, và người dùng vẫn phải tự đoán hỏng ở đâu.
+                chi_tiet_loi.append(line[len("E   "):].strip())
+
+        if import_errors and chi_tiet_loi:
+            import_errors = [f"{import_errors[0]} ({'; '.join(chi_tiet_loi)})"] + import_errors[1:]
 
         if res.returncode == 2 and not failing_tests and not import_errors:
             import_errors.append(f"Lỗi thu thập/nạp module (mã thoát 2): {res.stderr.strip()[:200]}")
@@ -481,8 +496,31 @@ def chot_test_can_trace(
     Trả về: (ten_test_chot, so_test_do_khac, danh_sach_ket_qua_trace_ung_vien)
     """
     root = cwd or PROJECT_ROOT
-    ds_test_do = _chay_pytest_tim_test_do(tep_test, cwd=root)
+    # 30/08/2026 — TRUOC ĐÂY gọi `_chay_pytest_tim_test_do`, tức là bản đã VỨT
+    # `import_errors` đi ngay dòng sau khi tính ra nó. Hậu quả: tệp test không
+    # import nổi, pytest sập, hay quá giờ — cả ba đều ra `[]`, và cả ba nơi gọi
+    # hàm này đều dịch `[]` thành cùng một câu: "không có test nào bị đỏ".
+    #
+    # Đó là một PHÁN QUYẾT về mã của người dùng, phát ra trong khi chưa đo được
+    # gì. Người đọc nó sẽ tin là mã mình xanh. CLAUDE.md mục 4: phép đo không
+    # chạy phải NÓI LÀ KHÔNG CHẠY — ba trạng thái, không được gộp thành hai.
+    #
+    # Người viết trước đã dựng sẵn `import_errors` để phân biệt; nó chỉ bị đánh
+    # rơi một tầng. Nay giữ lại và trả về thành một TraceResult `khong_chay`.
+    ds_test_do, loi_nap = _chay_pytest_tim_test_do_phan_loai(tep_test, cwd=root)
     if not ds_test_do:
+        if loi_nap:
+            return None, 0, [TraceResult(
+                trang_thai="khong_chay",
+                thong_diep="KHÔNG ĐO ĐƯỢC: chạy tệp test không xong — "
+                           + "; ".join(str(x) for x in loi_nap)[:300],
+                tong_buoc=0,
+                ten_test="",
+                so_test_do_khac=0,
+                cac_su_kien=[],
+                tep_nguon=str(tep_nguon),
+                thoi_gian_giay=0.0,
+            )]
         return None, 0, []
 
     tong_so_do = len(ds_test_do)

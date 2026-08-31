@@ -78,7 +78,12 @@ def _chon_test_va_dong(
         cwd=tam,
     )
     if not ten_chot or not danh_sach:
-        return {"trang_thai": "khong_chay", "vi_sao": "Không có test nào bị đỏ trong tệp test", "test": "", "so_test_do": 0, "so_test_do_khac": 0, "dong_da_chay": []}
+        # Xem chú thích cùng ngày ở core/trace_runtime.py: "không có test đỏ" và
+        # "chưa đo được" là hai chuyện, không được nói bằng cùng một câu.
+        vi_sao = (danh_sach[0].thong_diep
+                  if danh_sach and danh_sach[0].trang_thai == "khong_chay"
+                  else "Đã chạy tệp test: không có test nào bị đỏ")
+        return {"trang_thai": "khong_chay", "vi_sao": vi_sao, "test": "", "so_test_do": 0, "so_test_do_khac": 0, "dong_da_chay": []}
 
     chot_res = danh_sach[0]
     return {

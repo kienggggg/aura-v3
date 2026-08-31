@@ -1127,9 +1127,14 @@ async def api_trace(request: web.Request) -> web.Response:
             cwd=project_root,
         )
         if not ten_chot or not danh_sach:
+            # Xem chú thích cùng ngày ở core/trace_runtime.py. Câu cũ phát ra cho
+            # MỌI nguyên nhân, kể cả khi pytest chưa chạy xong — người dùng đọc
+            # nó thành "mã của tôi không có test nào đỏ".
+            if danh_sach and danh_sach[0].trang_thai == "khong_chay":
+                return web.json_response(danh_sach[0].to_dict())
             return web.json_response({
                 "trang_thai": "khong_chay",
-                "thong_diep": "Không có test nào bị đỏ trong tệp test này",
+                "thong_diep": "Đã chạy tệp test: không có test nào bị đỏ",
                 "tong_buoc": 0,
                 "ten_test": "",
                 "so_test_do_khac": 0,

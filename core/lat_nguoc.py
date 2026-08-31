@@ -258,10 +258,23 @@ def _chon_test_va_dong(
         cwd=tam,
     )
     if not ten_chot or not danh_sach:
+        # Hai chuyện khác nhau, đừng gộp: ĐO RỒI mà không có test đỏ, và CHƯA ĐO
+        # ĐƯỢC. Khi chưa đo được thì chot_test_can_trace trả về một TraceResult
+        # `khong_chay` mang lý do thật — dùng nó thay vì đoán.
+        if danh_sach and danh_sach[0].trang_thai == "khong_chay":
+            return {
+                "trang_thai": "khong_chay",
+                "ma_ly_do": "khong_do_duoc",
+                "vi_sao": danh_sach[0].thong_diep,
+                "test": "",
+                "so_test_do": 0,
+                "so_test_do_khac": 0,
+                "dong_da_chay": [],
+            }
         return {
             "trang_thai": "khong_chay",
             "ma_ly_do": "khong_co_test_do",
-            "vi_sao": "không có test nào bị đỏ trong tệp test",
+            "vi_sao": "đã chạy tệp test: không có test nào bị đỏ",
             "test": "",
             "so_test_do": 0,
             "so_test_do_khac": 0,

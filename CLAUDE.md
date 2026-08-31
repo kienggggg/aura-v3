@@ -204,6 +204,48 @@ vẫn phải bắt bằng tay. Đừng tưởng có cửa ấy là che hết.
 **Dựng xong một tính năng thì phải tự bấm nó như người dùng, trước khi báo
 xong.** Không phải chạy test rồi báo xanh.
 
+### Một con số đứng một mình không nói được gì
+
+Ngày 30/08/2026 máy đo của tôi sai **chín lần trong một ngày**. Không lần nào vì
+nghĩ sai hướng — tất cả đều vì chưa chạy thử cái sinh ra con số:
+
+```
+đọc ô đếm NGAY sau khi gõ          -> 0/0, tưởng ô Tìm hỏng; thật ra chưa kịp cập nhật
+bắt nhầm `toolSearch` thay `findInput` -> `def` cũng 0/0, suýt báo là lỗi tiếng Việt
+đo thẻ sáng khi app ở chế độ Mã Thuần  -> 0 thẻ, vì không có thẻ nào được vẽ
+viết test XANH rồi tưởng vòng lật chạy -> không có test đỏ thì bộ lọc bỏ hết ứng viên
+URL không mã hoá                    -> UnicodeEncodeError, suýt ghi thành lỗi của app
+neo bằng `\n` trên tệp CRLF thuần    -> "gieo không vào", tưởng cửa mù
+cửa sổ 260 ký tự đặt tay            -> tưởng nhánh quá giờ dẫn sai trạng thái
+quên padding 12+12 khi tính chiều cao -> 293 vs 269, tưởng bản vá sai
+`.pyc` cũ vì phép gieo cùng độ dài   -> lệnh vẫn xanh, công cụ đổ cho cửa là "mù"
+```
+
+Cả chín đều bị bắt bởi **một ca đối chứng chạy cùng lúc**, không lần nào bắt được
+bằng đọc lại: bản ASCII cạnh bản tiếng Việt · bài xanh cạnh bài đỏ · `def` cạnh
+`chào` · gỡ riêng từng lớp của bản vá hai lớp.
+
+`403` là do dấu hay do danh mục thư mục? `0/0` là do mã không có chữ ấy hay do
+máy đo đọc sớm? Chỉ ca đối chứng trả lời được. Số đơn độc thì người đo tự điền
+lời giải thích mình thích nhất.
+
+**Ba thứ bắt buộc đi kèm mọi phép đo:**
+
+1. **Một ca đối chứng**, chạy cùng lúc, khác đúng một biến.
+2. **Một lần gieo lại lỗi**, để chứng minh cửa biết đỏ. Cửa chưa từng đỏ thì chưa
+   chứng minh được gì — xem `tools/gieo.py`, nó lo sẵn CRLF, UTF-8, `.pyc` cũ, và
+   so byte khi trả mã về.
+3. **Trả mã về rồi so từng byte.** Không tin vào việc mình vừa ghi; so SHA-256.
+
+Và ba trạng thái phải tách rời, không được gộp thành hai: **đạt** · **đo được mà
+không đạt** · **KHÔNG ĐO ĐƯỢC**. Gộp lại thì "chưa đo được" đội lốt "đã đo, không
+sao" — đúng chỗ `/api/trace` nói "không có test nào bị đỏ" trong khi pytest chưa
+chạy xong.
+
+> Ràng buộc đặt lên **đầu ra**, không đặt lên cách nghĩ. Bắt model đi theo một lối
+> nghĩ vạch sẵn thì khi lối ấy sai, không ai phát hiện được. Ràng buộc đầu ra thì
+> nghĩ kiểu gì cũng được, nhưng không thoát được ca đối chứng.
+
 ### Phép đo lấy giờ thật là phép đo xanh theo lịch
 
 `test_luat_chon_test_tat_dinh_tren_de_loi_don_dong_ho` **xanh 3/7 ngày trong

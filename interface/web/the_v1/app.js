@@ -4816,7 +4816,18 @@
     `;
 
     svg += '</svg>';
-    return svg;
+    // 30/08/2026 — TRIM. Chuỗi này dựng bằng template literal mở đầu bằng
+    // xuống dòng + 6 dấu cách, nên nó bắt đầu bằng khoảng trắng chứ không phải
+    // '<svg'. Hệ quả: chốt chặn `currentGeneratedSVG.startsWith('<svg')` trong
+    // taiSVGSoDoKhoi() LUÔN LUÔN sai với mọi cây thẻ không rỗng, nên nút
+    // "Tải File SVG" CHƯA TỪNG hoạt động — nó báo "Không có sơ đồ khối hợp lệ
+    // để tải!" trong khi người dùng đang nhìn thẳng vào sơ đồ.
+    // Đo tay: modal mở, `#flowchartModal svg` có thật, click -> 0 blob, 0 thẻ <a>
+    // được bấm, và #nhanNhanh hiện đúng câu chối trên.
+    // Sửa ở NGUỒN chứ không nới chốt chặn: chốt ấy đúng, chuỗi mới là thứ bẩn.
+    // Trim ở đây thì cả nút tải, cả tệp flowchart.svg trong gói zip đều sạch
+    // (gói hôm nay nhúng SVG mở đầu bằng 6 dấu cách — xem base64 đã giải).
+    return svg.trim();
   }
 
   function sinhMaMermaid(treeNodes) {

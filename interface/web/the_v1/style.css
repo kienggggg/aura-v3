@@ -997,7 +997,16 @@ body {
   border: 1px solid var(--border-color);
 }
 
-.code-editor-body {
+/* 30/08/2026 — luật này TỪNG mang tên `.code-editor-body`, mà index.html:281
+   lại dùng `.code-editor-wrapper`. Không lớp nào trong HTML mang tên `body`,
+   nên luật ngồi mồ côi và thẻ bọc thật thì không có luật nào — rơi về
+   `display: block` mặc định của một `div`.
+   Hậu quả nhìn thấy được: ô số dòng (một `div`) và ô soạn thảo (`textarea`)
+   XẾP CHỒNG thay vì đứng cạnh nhau. Đo ở bề rộng 1550px: đỉnh ô số y=197,
+   đỉnh ô mã y=490 — cách nhau 293px, đúng bằng chiều cao ô số.
+   Luật viết đúng từ đầu; chỉ gắn sai tên. Nay đổi tên cho khớp HTML thay vì
+   thêm một luật thứ hai, để không để lại luật chết. */
+.code-editor-wrapper {
   flex: 1;
   display: flex;
   position: relative;
@@ -1018,6 +1027,12 @@ body {
   user-select: none;
   overflow: hidden;
   flex-shrink: 0;
+  /* 30/08/2026 — ô số dòng được nhồi bằng chuỗi "1\n2\n3\n…",
+     mà HTML thì GỘP \n thành dấu cách. Thiếu dòng này, 12 dòng mã cho ra
+     "1 2 3 … 12" nằm ngang, chỉ tình cờ bị bẻ vì ô rộng 40px. Đo được: ô số
+     cao 203px trong khi phải là 269px (12 × 22,4) — số dòng LỆCH khỏi dòng
+     mã, càng nhiều dòng càng lệch. */
+  white-space: pre;
 }
 
 .code-editor-input {

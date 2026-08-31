@@ -3392,7 +3392,33 @@
         body: JSON.stringify({ code: code, tree: state.tree })
       });
 
-      const res = await resp.json();
+      const res = await resp.json().catch(() => null);
+
+      // 30/08/2026 — TRƯỚC ĐÂY không kiểm `resp.ok`, nên MỌI phản hồi không phải
+      // PASS/TIMEOUT rơi hết vào nhánh cuối và bị dán nhãn "LỖI RUNTIME". Đo:
+      // giả lập máy chủ trả 500 với thân {"error":"noi bo"} -> app hiện
+      //     trạng thái  "LỖI RUNTIME"
+      //     terminal    "Lỗi không xác định … [Thất bại · Exit code: undefined]"
+      // Máy chủ hỏng, nhưng người mới học đọc thành "mã của tôi có lỗi khi chạy"
+      // rồi đi tìm một con bọ không tồn tại. Cùng họ với nhãn nói sai việc ở
+      // CLAUDE.md mục 4, và cùng họ với "không có test nào bị đỏ" đã sửa sáng nay:
+      // ba trạng thái phải tách — chạy xong và ĐẠT · chạy xong và SAI · KHÔNG
+      // CHẠY ĐƯỢC. Đường /api/trace đã kiểm resp.ok từ đầu; đường này bị sót.
+      if (!resp.ok || !res || !res.status) {
+        const lyDo = (res && (res.error || res.trang_thai))
+          || (resp.status === 403 ? 'Chạy mã đang tắt' : `HTTP ${resp.status}`);
+        metaStatus.className = 'meta-status error';
+        metaStatus.textContent = 'KHÔNG CHẠY ĐƯỢC';
+        metaTime.textContent = '—';
+        termBody.innerHTML = `
+          <div class="term-line term-stderr">KHÔNG CHẠY ĐƯỢC — đây là lỗi của máy chủ, không phải của mã bạn viết.</div>
+          <div class="term-line term-dim">${escapeHtml(String(lyDo))}</div>
+        `;
+        runText.textContent = 'CHẠY THỬ';
+        btnRun.disabled = false;
+        return;
+      }
+
       metaTime.textContent = `${res.wall_time_ms || 0} ms`;
 
       if (res.status === 'PASS') {

@@ -26,8 +26,14 @@ const { test } = require('node:test');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const APP_JS = fs.readFileSync(
-  path.join(__dirname, '..', 'interface', 'web', 'the_v1', 'app.js'), 'utf8');
+// 30/08/2026 — bọc qua bocChuThich(). Gieo thử chứng minh cửa này TỪNG bị
+// lừa: xoá dòng mã thật và để lại một chú thích mang đúng chữ cửa tìm thì nó
+// VẪN XANH. 5/6 cửa dò chuỗi dính bệnh này; cái duy nhất thoát là cái CHẠY mã.
+// Xem tools/boc_chu_thich.js.
+const { bocChuThich } = require('../tools/boc_chu_thich.js');
+
+const APP_JS = bocChuThich(fs.readFileSync(
+  path.join(__dirname, '..', 'interface', 'web', 'the_v1', 'app.js'), 'utf8'));
 
 // Than ham lay bang DEM NGOAC tu ten ham, khong neo bang indexOf mot doan —
 // hai lan truoc neo kieu do deu truot khi ma doi (xem test_chan_mat_du_lieu.js).

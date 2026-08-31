@@ -42,9 +42,15 @@ const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
 
+// 30/08/2026 — bọc qua bocChuThich(). Gieo thử chứng minh cửa này TỪNG bị
+// lừa: xoá dòng mã thật và để lại một chú thích mang đúng chữ cửa tìm thì nó
+// VẪN XANH. 5/6 cửa dò chuỗi dính bệnh này; cái duy nhất thoát là cái CHẠY mã.
+// Xem tools/boc_chu_thich.js.
+const { bocChuThich } = require('../tools/boc_chu_thich.js');
+
 const THU_MUC = path.join(__dirname, '..', 'interface', 'web', 'the_v1');
-const HTML = fs.readFileSync(path.join(THU_MUC, 'index.html'), 'utf-8');
-const APP_JS = fs.readFileSync(path.join(THU_MUC, 'app.js'), 'utf-8');
+const HTML = bocChuThich(fs.readFileSync(path.join(THU_MUC, 'index.html'), 'utf-8'));
+const APP_JS = bocChuThich(fs.readFileSync(path.join(THU_MUC, 'app.js'), 'utf-8'));
 
 /** Mọi phím mà app.js có nhắc tới trong một phép so `e.key === '...'`. */
 function cacPhimDuocGan() {

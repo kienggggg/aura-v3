@@ -27,9 +27,15 @@ const { test } = require('node:test');
 const fs = require('node:fs');
 const path = require('node:path');
 
+// 30/08/2026 — bọc qua bocChuThich(). Gieo thử chứng minh cửa này TỪNG bị
+// lừa: xoá dòng mã thật và để lại một chú thích mang đúng chữ cửa tìm thì nó
+// VẪN XANH. 5/6 cửa dò chuỗi dính bệnh này; cái duy nhất thoát là cái CHẠY mã.
+// Xem tools/boc_chu_thich.js.
+const { bocChuThich, bocMoiChuThich } = require('../tools/boc_chu_thich.js');
+
 const W = path.join(__dirname, '..', 'interface', 'web', 'the_v1');
-const HTML = fs.readFileSync(path.join(W, 'index.html'), 'utf8');
-const APP_JS = fs.readFileSync(path.join(W, 'app.js'), 'utf8');
+const HTML = bocChuThich(fs.readFileSync(path.join(W, 'index.html'), 'utf8'));
+const APP_JS = bocMoiChuThich(fs.readFileSync(path.join(W, 'app.js'), 'utf8'));
 
 const RE_PHIM = /\b((?:Ctrl|Alt|Shift)\s*\+\s*(?:Shift\s*\+\s*)?[A-Za-z0-9]+|F\d{1,2})\b/g;
 

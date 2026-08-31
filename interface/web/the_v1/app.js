@@ -5887,7 +5887,16 @@ python3 main.py
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && presState.isActive) {
         tatCheDoTrinhChieu();
-      } else if (e.altKey && (e.key === 'p' || e.key === 'P')) {
+      } else if ((e.altKey && (e.key === 'p' || e.key === 'P')) || e.key === 'F11') {
+        // 30/08/2026 — F11 được thêm vào đây. Tooltip của btnPresentation ghi
+        // "(Alt+P / F11)" từ đầu, nhưng chuỗi 'F11' KHÔNG xuất hiện một lần nào
+        // trong app.js. Đo: bấm Alt+P -> vào Trình Chiếu, defaultPrevented=true;
+        // bấm F11 -> không đổi gì, defaultPrevented=FALSE — không handler nào
+        // chạm tới. Một lời hứa trên tooltip mà mã không giữ.
+        //
+        // Cướp F11 ở đây là mạch lạc chứ không mất gì: batCheDoTrinhChieu() đã
+        // gọi requestFullscreen(), nên người dùng vẫn được toàn màn hình, CỘNG
+        // thêm bút vẽ — nhiều hơn F11 thường của trình duyệt.
         e.preventDefault();
         if (presState.isActive) tatCheDoTrinhChieu();
         else batCheDoTrinhChieu();

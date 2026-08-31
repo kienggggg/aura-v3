@@ -286,6 +286,17 @@ bấm reset, nạp lại trang cho hội thoại có lời chào, chuyển sang 
 chuột — thì cả năm đều đổi. **Trước khi kết luận "bấm không có tác dụng", phải
 chứng minh trạng thái TRƯỚC khi bấm khác trạng thái nút hứa tạo ra.**
 
+Và một biến thể tinh hơn: **bắn sự kiện sai phần tử thì guard nổ im lặng.**
+Nhánh `Ctrl+Z` có rào `if (e.target.closest('input, textarea')) return;` — để
+người đang gõ trong ô nhập không bị cướp phím. Tôi bắn `keydown` vào `window`,
+nên `e.target` là `window`, mà `window` không có `.closest`. Nhánh ném
+`TypeError` rồi chết lặng; tôi đọc thành "Ctrl+Z không có tác dụng". Bắn vào
+`document.body` thì nó chạy đúng ngay: 0 → 2 → 0 thẻ.
+
+Không phải mọi phím đều lộ ra chuyện này. `Alt+1`, `Ctrl+F`, `Ctrl+B` bắn vào
+`window` vẫn chạy, vì nhánh của chúng không sờ tới `e.target`. **Một phép đo
+chạy được ở vài ca không chứng minh nó đúng ở ca thứ ba.**
+
 Cùng ngày ấy còn một bài học về hình dạng của phép quét: quét rẻ kiểu "bấm hết
 mọi nút rồi băm DOM xem có đổi không" **tự nhiễm bẩn**. Một nút đưa app vào chế
 độ Trình Chiếu, sau đó 11 nút bị báo "ẩn" và cả bảng thành rác; hai "ứng viên"

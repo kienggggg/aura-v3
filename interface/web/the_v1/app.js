@@ -2863,6 +2863,10 @@
         `"${t.ten_tep}" có thay đổi chưa lưu. Đóng và bỏ thay đổi?`);
       if (!ok) return;
     }
+    // Đang đóng CHÍNH tab mình xem, hay một tab khác? Phải hỏi TRƯỚC khi
+    // `splice`, vì sau đó `state.tabActive` không còn trỏ đúng chỗ nữa.
+    const dongTabDangXem = (i === state.tabActive);
+
     state.tabs.splice(i, 1);
     if (state.tabs.length === 0) {
       // Đóng tab cuối -> về trạng thái nháp, KHÔNG để màn hình trống trơn.
@@ -2875,7 +2879,32 @@
       xoaLichSu();
       return;
     }
-    napTab(Math.min(i, state.tabs.length - 1));
+
+    if (dongTabDangXem) {
+      // Tệp đang xem vừa bị đóng nên buộc phải sang tệp khác. Lấy tệp đã
+      // trượt vào đúng chỗ vừa trống — mọi trình soạn thảo đều làm vậy.
+      napTab(Math.min(i, state.tabs.length - 1));
+      return;
+    }
+
+    // 01/09/2026 — TRƯỚC ĐÂY dòng `napTab(Math.min(i, ...))` chạy cho MỌI
+    // trường hợp, không hỏi tab nào đang mở. Hậu quả đo được, cùng thao tác
+    // trên cả hai khung nên không phải chuyện bố cục:
+    //     mobile 375   đang ở tab 0 "1. Hàm cộng hai số", bấm ✕ của tab 2
+    //                  -> màn hình nhảy sang dong_ho.py
+    //     desktop 1476 active 0 -> 1, tên "1. Hàm cộng hai số" -> paths.py
+    // Tức là dọn một tệp không liên quan thì mất chỗ mình đang làm.
+    //
+    // Việc đã làm KHÔNG mất — đo rồi: quay lại tab 0 thì sửa chưa lưu vẫn còn
+    // (`state.tree` là cùng một tham chiếu với bản trong `state.tabs`). Nên
+    // đây là mất CHỖ ĐANG XEM, không phải mất dữ liệu. Vẫn phải sửa: người
+    // đang gõ dở bị ném sang tệp khác không hiểu vì sao.
+    //
+    // Ở nguyên tệp đang xem. Chỉ số của nó tụt một bậc nếu tab vừa đóng nằm
+    // TRƯỚC nó; nằm sau thì giữ nguyên. Không gọi `napTab` — màn hình đã đúng
+    // rồi, nạp lại chỉ tổ dựng lại DOM và mất vị trí con trỏ.
+    if (i < state.tabActive) state.tabActive -= 1;
+    veThanhTab();
   }
 
   /** Mở tệp: đã có tab thì chuyển sang, chưa có thì thêm tab mới. */

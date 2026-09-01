@@ -278,9 +278,9 @@ def chay_gieo(
         if not im_lang:
             if kq.khong_tra_duoc:
                 for x in kq.khong_tra_duoc:
-                    print(f"\n  *** KHÔNG TRẢ MÃ VỀ ĐƯỢC: {x}")
+                    _in(f"\n  *** KHÔNG TRẢ MÃ VỀ ĐƯỢC: {x}")
             else:
-                print(f"\n  {len(duong)} tệp: giống hệt TỪNG BYTE trước khi gieo")
+                _in(f"\n  {len(duong)} tệp: giống hệt TỪNG BYTE trước khi gieo")
 
     return kq
 

@@ -140,6 +140,61 @@ def _cong_dung_duoc(host: str, port: int) -> bool:
 
 
 def main():
+    # NHÁNH ĐÓNG VAI THÔNG DỊCH — phải nằm TRƯỚC argparse.
+    #
+    # 31/08/2026: bản `.exe` bấm CHẠY THỬ ra `unrecognized arguments: -X utf8`,
+    # vì argparse ở dưới thấy đối số nó không biết. Nên nhánh này chặn ở trên,
+    # không đi qua parser.
+    #
+    # Chỉ mở khi ĐÃ đóng băng. Bản chạy từ mã nguồn không cần — ở đó
+    # `sys.executable` vốn đã là `python.exe` thật, và mở thêm một đường chạy
+    # tệp tuỳ ý là tự thêm một cửa không ai canh.
+    if getattr(sys, "frozen", False) and len(sys.argv) >= 3 and sys.argv[1] == "--chay-tep-python":
+        import runpy
+
+        for _l in (sys.stdout, sys.stderr):
+            if hasattr(_l, "reconfigure"):
+                _l.reconfigure(encoding="utf-8", errors="replace")
+        _tep = sys.argv[2]
+        sys.argv = [_tep] + sys.argv[3:]
+        try:
+            runpy.run_path(_tep, run_name="__main__")
+        except SystemExit:
+            raise
+        except BaseException as _loi:  # noqa: BLE001 — mã người học, mọi thứ đều có thể
+            # CẮT KHUNG NỘI BỘ khỏi traceback.
+            #
+            # 31/08/2026, đo trên bản .exe vừa vá: `print(chia(1, 0))` trả về
+            # đúng ZeroDivisionError, nhưng phía trên nó có NĂM dòng người học
+            # không viết và không hiểu:
+            #     File "the_app.py", line 333, in <module>
+            #     File "the_app.py", line 160, in main
+            #     File "<frozen runpy>", line 294, in run_path
+            #     File "<frozen runpy>", line 98,  in _run_module_code
+            #     File "<frozen runpy>", line 88,  in _run_code
+            # và ở CUỐI một dòng còn tệ hơn:
+            #     [PYI-...:ERROR] Failed to execute script 'the_app' due to
+            #     unhandled exception!
+            # Dòng ấy đọc như AURA vừa sập, trong khi thứ hỏng là phép chia của
+            # người học. Cùng họ với lỗi 30/08 (máy chủ hỏng bị dán nhãn "LỖI
+            # RUNTIME"): đừng để người học đi sửa thứ họ không gây ra, và cũng
+            # đừng bắt họ đọc ruột của app.
+            #
+            # Bản chạy bằng `python.exe` không có hai thứ này, nên đây là giá
+            # phải trả riêng của bản đóng băng — trả ở đây, một chỗ.
+            import traceback
+
+            _tb = _loi.__traceback__
+            while _tb is not None and _tb.tb_frame.f_code.co_filename != _tep:
+                _tb = _tb.tb_next
+            traceback.print_exception(type(_loi), _loi, _tb, file=sys.stderr)
+            sys.stderr.flush()
+            sys.stdout.flush()
+            # `sys.exit` chứ không để lỗi bay lên: bay lên là bootloader của
+            # PyInstaller in dòng "Failed to execute script" nói trên.
+            sys.exit(1)
+        return
+
     # Chỉnh CẢ HAI: `stdout` và `stderr`.
     #
     # 25/08: bản đầu chỉ chỉnh `stdout`. Chạy bản đã cài thì `--help` ra đúng,

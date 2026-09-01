@@ -161,7 +161,27 @@ def _chay_pytest_tim_test_do_phan_loai(tep_test: str, cwd: Optional[Path] = None
             import_errors = [f"{import_errors[0]} ({'; '.join(chi_tiet_loi)})"] + import_errors[1:]
 
         if res.returncode == 2 and not failing_tests and not import_errors:
-            import_errors.append(f"Lỗi thu thập/nạp module (mã thoát 2): {res.stderr.strip()[:200]}")
+            # 31/08/2026 — bản đóng gói `.exe` rơi vào đúng nhánh này, và câu
+            # nó nói ra là câu KHÔNG AI ĐỌC ĐƯỢC. Đo trên bản dựng bằng
+            # PyInstaller, bấm TÌM LỖI:
+            #     "KHÔNG ĐO ĐƯỢC: chạy tệp test không xong — Lỗi thu thập/nạp
+            #      module (mã thoát 2): usage: AURA_The.exe [-h] [--host HOST]
+            #      ... unrecognized arguments: -X utf8 -m pytest ..."
+            # Trạng thái thì ĐÚNG (`khong_chay`, không giả vờ "không có test
+            # nào đỏ"), nhưng người thử đọc xong vẫn không biết phải làm gì.
+            #
+            # Nguyên nhân thật, nói thẳng: bản đóng gói không kèm `pytest`, và
+            # trong bản đóng băng `sys.executable` là chính cái .exe nên
+            # `-m pytest` rơi vào argparse của app.
+            if getattr(sys, "frozen", False):
+                import_errors.append(
+                    "Bản đóng gói (.exe) KHÔNG kèm pytest, nên TÌM LỖI và DÒ "
+                    "DÒNG DỮ LIỆU không chạy được ở đây. Hai nút này dành cho "
+                    "bản chạy từ mã nguồn. Nút CHẠY THỬ thì vẫn dùng bình thường."
+                )
+            else:
+                import_errors.append(
+                    f"Lỗi thu thập/nạp module (mã thoát 2): {res.stderr.strip()[:200]}")
 
         return failing_tests, import_errors
     except Exception as e:

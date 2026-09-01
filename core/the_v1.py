@@ -346,6 +346,37 @@ def _la_dong_ma_thuat(line: str, line_no: int) -> bool:
     return False
 
 
+# Cờ để chạy MỘT TỆP .py bằng chính cái .exe đã đóng băng.
+#
+# 31/08/2026 — đo trên bản `.exe` dựng bằng PyInstaller: bấm CHẠY THỬ thì máy
+# chủ gọi `[sys.executable, "-X", "utf8", run_script.py]`, mà trong bản đóng
+# băng `sys.executable` LÀ CHÍNH CÁI EXE, không phải `python.exe`. Kết quả đo
+# được, không đoán:
+#
+#     AURA_The.exe: error: unrecognized arguments: -X utf8 ...\run_script.py
+#     exit_code 2 · nhãn trên màn hình: "LỖI RUNTIME"
+#
+# Tức là bản gửi cho người thử có nút chính CHẾT, và nhãn còn đổ lỗi cho mã của
+# người học. Cách chữa: cho cái exe biết đóng vai thông dịch khi thấy cờ này.
+# Xem `interface/the_app.py` — nhánh nhận cờ nằm ở dòng ĐẦU của `main()`, trước
+# argparse, vì argparse chính là thứ đã từ chối.
+CO_CHAY_TEP = "--chay-tep-python"
+
+
+def lenh_chay_tep_python(script: Path | str) -> List[str]:
+    """Câu lệnh chạy một tệp .py — đúng cả khi app đã bị đóng băng thành .exe.
+
+    Bản thường  ->  [python.exe, -X, utf8, script]
+    Bản .exe    ->  [AURA_The.exe, --chay-tep-python, script]
+
+    `-X utf8` không truyền được cho bản đóng băng (bootloader không nhận cờ của
+    CPython), nên nhánh kia tự ép UTF-8 trong `main()` thay vì qua dòng lệnh.
+    """
+    if getattr(sys, "frozen", False):
+        return [sys.executable, CO_CHAY_TEP, str(script)]
+    return [sys.executable, "-X", "utf8", str(script)]
+
+
 def _tao_id(prefix: str, idx: int) -> str:
     return f"{prefix}_{idx}_{int(time.time() * 1000) % 1000000}"
 
@@ -1768,7 +1799,7 @@ def chay_ma_tien_trinh_rieng(code: str, timeout: float = 5.0) -> ExecutionResult
             # Cung ho voi luat o CLAUDE.md muc 4 (do tieng Viet bang Python, dung
             # qua PowerShell): duong ong nao khong ep UTF-8 thi duong ong do nuot dau.
             proc = subprocess.Popen(
-                [sys.executable, "-X", "utf8", str(script_file)],
+                lenh_chay_tep_python(script_file),
                 cwd=tmpdir,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,

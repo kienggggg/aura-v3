@@ -4219,3 +4219,44 @@ body.presentation-mode-active .the {
 
 
 
+
+/* ==========================================================================
+   NÚT CHỈ CÒN BIỂU TƯỢNG  +  Ô CHÚ THÍCH KHI DI CHUỘT VÀO
+   ==========================================================================
+   01/09/2026 — Sếp: "các nút cảm giác hơi to, làm cái biểu tượng là được rồi".
+   Đo trước khi sửa: 18 nút trên thanh đầu cộng lại 1.536px bề ngang, riêng
+   nhóm phụ (Mới · Kho Workflow · Thử Thách · Sơ Đồ Khối · Extensions · Mở Tệp
+   · Lưu Tệp · Đóng Gói · Trình Chiếu) đã 991px.
+
+   KIỂM TRƯỚC KHI GIẤU CHỮ, hai điều — giấu bừa là để lại ô trống vô nghĩa:
+     18/18 nút đã có `title` sẵn      -> không nút nào mất tên gọi
+     9/9 nút nhóm phụ đều có <svg>    -> không nút nào thành ô rỗng
+
+   `font-size: 0` chứ không `display:none` cho nhãn: nhãn là TEXT NODE TRẦN
+   (`<svg/> + "Kho Workflow"`), CSS không có bộ chọn nào trỏ tới nó được. */
+.nut-chi-icon {
+  font-size: 0;
+  gap: 0;
+  padding: 0 9px;
+}
+
+.nut-chi-icon > svg {
+  flex-shrink: 0;
+}
+
+/* Ô chú thích nằm ở gốc <body> và dùng `position: fixed` — xem chú thích
+   trong index.html về việc `::after` bị hộp cuộn cắt mất 18px. */
+.chu-thich-noi {
+  position: fixed;
+  z-index: 300;
+  padding: 5px 9px;
+  font-size: 12px;
+  line-height: 1.35;
+  max-width: 280px;
+  border-radius: 6px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}

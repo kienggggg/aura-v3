@@ -148,6 +148,84 @@
     return window.matchMedia(`(max-width: ${NGUONG_DIEN_THOAI}px)`).matches;
   }
 
+
+  // ==========================================================================
+  // NÚT CHỈ CÒN BIỂU TƯỢNG  +  Ô CHÚ THÍCH
+  // ==========================================================================
+  //
+  // 01/09/2026 — Sếp: "các nút cảm giác hơi to, làm cái biểu tượng là được
+  // rồi, khi di chuột vào là có chú thích". Đo: 18 nút trên thanh đầu cộng lại
+  // 1.536px, riêng chín nút nhóm phụ đã 991px.
+  //
+  // `btnRun` KHÔNG nằm trong danh sách này, có chủ đích. Nó là nút mà người
+  // mới học phải tìm thấy ngay lần đầu mở app; một tam giác ▶ không nói được
+  // "CHẠY THỬ". Thu nhỏ mọi thứ quanh nó thì tự khắc nó nổi lên.
+
+  const NUT_CHI_ICON = '.header-actions-scroll button, #btnDebug';
+
+  function dungNutChiIcon() {
+    const o = document.getElementById('chuThichNoi');
+    document.querySelectorAll(NUT_CHI_ICON).forEach((b) => {
+      const chu = (b.getAttribute('title') || b.getAttribute('aria-label') || '').trim();
+      // KHÔNG giấu chữ của một nút không có tên gọi thay thế — làm thế là
+      // biến nó thành ô vuông câm. Thà để nút to còn hơn nút vô danh.
+      if (!chu) return;
+      b.setAttribute('aria-label', chu);
+      // Bỏ `title` để trình duyệt không hiện thêm ô chú thích thứ hai của
+      // chính nó, chậm hơn và khác kiểu. Tên gọi vẫn còn ở `aria-label` nên
+      // trình đọc màn hình không mất gì.
+      b.removeAttribute('title');
+      b.classList.add('nut-chi-icon');
+    });
+    if (!o) return;
+
+    let hen = null;
+    const an = () => { if (hen) { clearTimeout(hen); hen = null; } o.hidden = true; };
+
+    const hien = (b) => {
+      o.textContent = b.getAttribute('aria-label') || '';
+      o.hidden = false;
+      // Đo SAU khi đã hiện: lúc còn `hidden` thì bề rộng bằng 0 và mọi phép
+      // kẹp mép dưới đây đều tính trên số rác.
+      const rb = b.getBoundingClientRect();
+      const ro = o.getBoundingClientRect();
+      const le = 8;
+      let trai = rb.left + rb.width / 2 - ro.width / 2;
+      trai = Math.max(le, Math.min(trai, document.documentElement.clientWidth - ro.width - le));
+      let tren = rb.bottom + 6;
+      // Không đủ chỗ bên dưới thì lật lên trên, không để nó thò khỏi màn hình.
+      if (tren + ro.height > document.documentElement.clientHeight - le) {
+        tren = rb.top - ro.height - 6;
+      }
+      o.style.left = `${Math.round(trai)}px`;
+      o.style.top = `${Math.round(tren)}px`;
+    };
+
+    document.addEventListener('mouseover', (e) => {
+      const b = e.target && e.target.closest && e.target.closest('.nut-chi-icon');
+      if (!b) return;
+      if (hen) clearTimeout(hen);
+      // Trễ 220ms: lướt chuột ngang qua chín nút mà hiện ngay thì thành một
+      // dải chớp nháy.
+      hen = setTimeout(() => hien(b), 220);
+    });
+    document.addEventListener('mouseout', (e) => {
+      if (e.target && e.target.closest && e.target.closest('.nut-chi-icon')) an();
+    });
+    // Bàn phím cũng phải thấy được chú thích — Tab tới nút là hiện ngay,
+    // không trễ, vì người dùng đã cố ý đi tới đó.
+    document.addEventListener('focusin', (e) => {
+      const b = e.target && e.target.closest && e.target.closest('.nut-chi-icon');
+      if (b) hien(b);
+    });
+    document.addEventListener('focusout', an);
+    // Bấm vào nút là mở một hộp thoại hay đổi chế độ — giữ ô chú thích lại
+    // thì nó nằm đè lên thứ vừa mở ra.
+    document.addEventListener('click', an, true);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') an(); });
+    window.addEventListener('scroll', an, true);
+  }
+
   // Quản lý Bố Cục IDE & Phông Chữ (Zoom)
   function applySidebarLayout() {
     const mainEl = document.getElementById('appMain');
@@ -6767,6 +6845,8 @@ python3 main.py
         applySidebarLayout();
       });
     }
+
+    dungNutChiIcon();
 
     const btnToggleLeft = document.getElementById('btnToggleSidebarLeft');
     if (btnToggleLeft) btnToggleLeft.addEventListener('click', toggleSidebarLeft);

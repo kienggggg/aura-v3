@@ -123,6 +123,13 @@
        tìm đúng nút nhỏ trên thanh đầu. -->
   <div class="mobile-backdrop" id="mobileBackdrop" hidden></div>
 
+  <!-- Ô chú thích dùng chung cho các nút chỉ-còn-biểu-tượng.
+       Đặt ở gốc <body> chứ KHÔNG vẽ bằng `::after` trên chính nút: đo
+       01/09/2026 thì `.header-actions-scroll` có `overflow-y: hidden`
+       (nó cần `overflow-x: auto` để cuộn), nên ô chú thích vẽ dưới nút
+       bị CẮT MẤT 18px — đáy ô ở y=67 còn hộp cuộn kết thúc ở y=49. -->
+  <div class="chu-thich-noi" id="chuThichNoi" role="tooltip" hidden></div>
+
   <main class="app-main" id="appMain">
     <!-- Left Column: KHAY THẺ (Toolbox) ⇅ CÂY THƯ MỤC (File Tree) ⇅ GÓI THẺ (Extensions) -->
     <aside class="sidebar-left" id="sidebarLeft">

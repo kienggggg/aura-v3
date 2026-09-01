@@ -2916,6 +2916,12 @@
     //
     // Mọi trình soạn thảo đều giữ thanh tab kể cả khi mở một tệp.
     thanh.style.display = state.tabs.length === 0 ? 'none' : 'flex';
+    // 01/09/2026 — trên điện thoại thanh này là `position: fixed` một hàng
+    // riêng, và `.app-main` phải tự chừa 40px cho nó. Chừa cứng thì lúc
+    // KHÔNG có tab nào (thanh bị giấu ngay dòng trên) sẽ hở một dải trống
+    // 40px. CSS không hỏi được `display` của phần tử khác, nên đánh dấu ở
+    // đây — chỗ duy nhất biết có bao nhiêu tab.
+    document.body.classList.toggle('khong-co-tab', state.tabs.length === 0);
 
     state.tabs.forEach((t, i) => {
       const el = document.createElement('div');

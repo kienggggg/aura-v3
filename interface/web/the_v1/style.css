@@ -2884,6 +2884,14 @@ body {
   cursor: pointer;
   white-space: nowrap;
   opacity: .65;
+  /* 01/09/2026 — `.tab-bar` có `overflow-x: auto` để cuộn, nhưng cửa cuộn ấy
+     chỉ mở khi nội dung THẬT SỰ vượt bề ngang. Mặc định flex item co được, nên
+     thay vì vượt, các tab tự bóp lại. Đo ở 375 với 5 tệp mở:
+         nội dung cần 375 = đúng bề ngang thanh -> KHÔNG cuộn
+         tên tab còn "1. …" · "" · "d" · "r" · "k."  (1-2 ký tự)
+     Một tab không đọc được tên thì không dùng để chọn tệp được nữa. Ghim lại
+     để nội dung tràn thật và thanh cuộn mới có việc để làm. */
+  flex-shrink: 0;
 }
 .tab-item:hover { opacity: .9; }
 .tab-item.dang-mo {

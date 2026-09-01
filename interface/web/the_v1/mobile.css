@@ -37,6 +37,18 @@
        sửa đúng hai biến ấy. Không đè ở đây thì khay đóng/mở làm cột co giãn
        trong khi nó đã là lớp phủ — canvas nhảy ngang mỗi lần bấm. */
     grid-template-columns: 1fr !important;
+    /* 48 thanh đầu + 40 thanh tab + 44 thanh chế độ ở đáy = 132px.
+       Thanh tab là `position: fixed` nên nó KHÔNG tự đẩy `.app-main` xuống —
+       phải chừa chỗ bằng tay, không thì nó phủ lên 40px đầu của canvas và che
+       mất hàng thẻ trên cùng. */
+    margin-top: 40px;
+    height: calc(100dvh - 48px - 40px - 44px);
+  }
+
+  /* Không có tab nào thì `veThanhTab()` giấu thanh — lấy lại 40px, không
+     thì màn hình hở một dải trống không ai hiểu là gì. */
+  body.khong-co-tab .app-main {
+    margin-top: 0;
     height: calc(100dvh - 48px - 44px);
   }
 
@@ -144,15 +156,51 @@
     display: none;
   }
 
-  /* `!important` ở ĐÚNG MỘT CHỖ này, và có lý do đo được: `veThanhTab()` gắn
-     `style="display: flex"` THẲNG vào phần tử, mà style gắn thẳng thì luật
-     trong tệp css không đè nổi dù xếp sau. Đo: luật `display:none` của
-     mobile.css khớp đúng phần tử, nhưng `getComputedStyle` vẫn trả `flex`.
-     GIỚI HẠN CÒN LẠI: giấu thanh tab nghĩa là mở hai tệp thì trên điện thoại
-     không có cách chuyển qua lại. Chưa chữa. Tên tệp đang mở vẫn hiện ở thanh
-     tròn cạnh nút khay, nên ít nhất người dùng biết mình đang ở tệp nào. */
+  /* THANH TAB: một hàng riêng ngay dưới thanh đầu, không tranh chỗ với nó.
+     Lượt đầu tôi GIẤU nó đi cho đỡ chật, và đó là mất mát thật — mở hai tệp
+     thì không còn cách nào chuyển qua lại trên điện thoại.
+     Nay đưa ra khỏi dòng của `.app-header` bằng `position: fixed`, nên bề
+     ngang thanh đầu KHÔNG đổi (đã đo: brand 74 + tên 120 + hành động 153, y
+     nguyên như khi thanh tab bị giấu) và thanh tab được trọn 375px để cuộn.
+     Giá phải trả là 40px chiều dọc — trừ vào `.app-main` ngay dưới đây.
+     KHÔNG đặt `display` ở đây: `veThanhTab()` gắn thẳng `display: none` khi
+     chưa mở tệp nào và `flex` khi có — để nguyên cho nó quyết, vì css không
+     biết có bao nhiêu tab. */
   .tab-bar {
-    display: none !important;
+    position: fixed;
+    top: 48px;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    height: 40px;
+    align-items: stretch;
+    gap: 4px;
+    padding: 0 8px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  /* Ngưỡng chạm: tab cũ cao 25px, và nút ✕ bên trong chỉ rộng ~11px — trên
+     điện thoại bấm chuyển tab rất dễ trúng ✕ và mất tệp đang mở. */
+  .tab-bar .tab-item {
+    min-height: 40px;
+    padding: 0 10px;
+    font-size: 14px;
+    border-radius: 0;
+    max-width: 45vw;
+    overflow: hidden;
+  }
+
+  .tab-bar .tab-ten {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tab-bar .tab-dong {
+    min-width: 32px;
+    min-height: 32px;
+    font-size: 14px;
+    flex-shrink: 0;
   }
 
   /* Đo ở 375 sau khi đã giấu thanh tab và nhóm cuộn, ba thứ còn lại vẫn thừa:

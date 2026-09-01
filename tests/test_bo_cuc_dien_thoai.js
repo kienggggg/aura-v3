@@ -174,3 +174,61 @@ test('câu báo lỗi bị cắt thì phải còn đường đọc đủ', () =>
       'cắt bằng `…`. Không có title là giấu mất câu người dùng cần đọc');
   }
 });
+
+test('thanh tab CÓ MẶT trên điện thoại, một hàng riêng dưới thanh đầu', () => {
+  // Lượt đầu tôi giấu nó đi cho đỡ chật. Đó là mất mát thật: mở hai tệp thì
+  // không còn cách nào chuyển qua lại. Sếp bảo mở lại.
+  const kb = khaiBaoCua('.tab-bar');
+  assert.notStrictEqual(kb.get('display'), 'none',
+    'giấu thanh tab là bỏ luôn đường chuyển tệp trên điện thoại');
+  assert.strictEqual(kb.get('position'), 'fixed',
+    'phải ra khỏi dòng của .app-header, không thì nó tranh bề ngang với ' +
+    'tên tệp và nút CHẠY THỬ — thanh đầu ở 375 vốn đã hết chỗ');
+
+  // Ba con số này phải khớp nhau, nếu không thanh tab hoặc che mất đầu canvas
+  // hoặc để hở một dải trống.
+  const caoThanhDau = parseInt(khaiBaoCua('.app-header').get('height'), 10);
+  const dinhThanhTab = parseInt(kb.get('top'), 10);
+  const caoThanhTab = parseInt(kb.get('height'), 10);
+  assert.strictEqual(dinhThanhTab, caoThanhDau,
+    `thanh tab đặt ở top ${dinhThanhTab} trong khi thanh đầu cao ${caoThanhDau}` +
+    ' — lệch là chồng lên nhau hoặc hở');
+
+  const am = khaiBaoCua('.app-main');
+  assert.strictEqual(parseInt(am.get('margin-top'), 10), caoThanhTab,
+    'thanh tab là `fixed` nên KHÔNG tự đẩy .app-main xuống. Không chừa đúng ' +
+    `${caoThanhTab}px thì nó phủ lên hàng thẻ trên cùng`);
+  assert.ok(am.get('height').includes(`${caoThanhTab}px`),
+    'chiều cao .app-main phải trừ cả thanh tab');
+});
+
+test('không còn tab nào thì lấy lại chỗ, không để hở dải trống', () => {
+  const kb = khaiBaoCua('body.khong-co-tab .app-main');
+  assert.strictEqual(kb.get('margin-top'), '0');
+  assert.ok(/classList\.toggle\('khong-co-tab'/.test(APP_JS),
+    'app.js không gắn lớp — CSS không hỏi được `display` của phần tử khác, ' +
+    'nên chỗ duy nhất biết có bao nhiêu tab là veThanhTab()');
+});
+
+test('tab phải CUỘN, không được tự bóp cho vừa', () => {
+  // Đo ở 375 với 5 tệp mở, trước khi ghim: nội dung cần đúng 375 = bề ngang
+  // thanh, nên `overflow-x: auto` không bao giờ kích hoạt, và tên tab bị
+  // nghiền còn "1. …" · "" · "d" · "r" · "k." — 1-2 ký tự, vô dụng.
+  const style = bocChuThich(doc('style.css'));
+  assert.strictEqual(khaiBaoCua('.tab-item', style).get('flex-shrink'), '0',
+    'không ghim thì flex bóp tab thay vì để tràn, và thanh cuộn thành đồ trang trí');
+  assert.strictEqual(khaiBaoCua('.tab-bar', style).get('overflow-x'), 'auto');
+});
+
+test('chạm được vào tab và vào nút đóng của nó', () => {
+  const it = khaiBaoCua('.tab-bar .tab-item');
+  assert.ok(parseInt(it.get('min-height'), 10) >= 40,
+    `tab cao ${it.get('min-height')} — bản desktop là 25px, quá nhỏ để chạm`);
+  const x = khaiBaoCua('.tab-bar .tab-dong');
+  assert.ok(parseInt(x.get('min-width'), 10) >= 32 &&
+            parseInt(x.get('min-height'), 10) >= 32,
+    'nút ✕ bản desktop chỉ rộng ~11px và nằm sát tên tab — trên điện thoại ' +
+    'bấm chuyển tab rất dễ trúng nó và đóng mất tệp đang mở');
+  assert.strictEqual(x.get('flex-shrink'), '0',
+    'nút ✕ co lại là mất luôn ngưỡng chạm vừa đặt ở trên');
+});

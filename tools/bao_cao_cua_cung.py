@@ -80,8 +80,14 @@ def in_bang(so: dict) -> None:
                 if v["sai"]:
                     print("      %-22s %4d thẻ, %4d tả SAI" % (_ten(k), v["tong"], v["sai"]))
     print("\n" + "=" * 68)
+    # 01/09/2026 — câu này TỪNG đóng cứng "bao_cao.html", nhưng `do_cua_cung_the`
+    # ghi ra `bao_cao_cst.html`. Người đọc mở đúng tệp được chỉ thì thấy một bản
+    # báo cáo từ 23/08 và tưởng đó là kết quả vừa chạy. Suy tên từ `bo_doc` đang
+    # có trong sổ, không chép tay.
+    ten_trang = ("bao_cao_cst.html" if "the_cst" in str(so.get("bo_doc", ""))
+                 else "bao_cao.html")
     print("  TỔNG: %s" % ("ĐẠT CẢ BỐN CỬA" if so["dat_het"]
-                          else "CHƯA ĐẠT — xem data/the_v1/bao_cao.html"))
+                          else f"CHƯA ĐẠT — xem data/the_v1/{ten_trang}"))
     print("=" * 68)
 
 

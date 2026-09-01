@@ -90,11 +90,16 @@ class TestNoiBoApp(AioHTTPTestCase):
 
     @unittest_run_loop
     async def test_api_danh_sach_the_quy_trinh(self):
-        """API /api/pipeline/presets phải trả về 4 thẻ quy trình thông minh."""
+        """API /api/pipeline/presets phải trả về 8 thẻ quy trình thông minh."""
         resp = await self.client.get("/api/pipeline/presets")
         assert resp.status == 200
         data = await resp.json()
         assert data["status"] == "PASS"
-        assert len(data["presets"]) == 4
+        assert len(data["presets"]) == 8
         ids = {p["id"] for p in data["presets"]}
-        assert ids == {"card_video_shorts", "card_code_doctor", "card_novel_writer", "card_system_audit"}
+        ky_vong = {
+            "card_video_shorts", "card_code_doctor", "card_polyglot_transpiler",
+            "card_deep_scout", "card_novel_writer", "card_fullstack_builder",
+            "card_security_guard", "card_system_audit"
+        }
+        assert ids == ky_vong

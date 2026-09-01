@@ -8,7 +8,10 @@
     activeAgentId: 'aura',
     rooms: [],
     vitals: {},
-    chatHistories: {} // Keyed by agentId
+    chatHistories: {}, // Keyed by agentId
+    polyglotSourceLang: 'python',
+    polyglotTargetLang: 'javascript',
+    languages: []
   };
 
   // ==========================================================================
@@ -21,13 +24,14 @@
     veWarRoomGrid();
     chonAgent('aura');
     taiLedgerVaEvidence();
+    await initPolyglotStudio();
 
     // Tự động làm mới Vitals mỗi 4 giây
     setInterval(capNhatTrangThaiHeThong, 4000);
   }
 
   // ==========================================================================
-  // 2. ĐIỀU HƯỚNG VIEW (WAR ROOM / CONSOLE / PIPELINE / LEDGER)
+  // 2. ĐIỀU HƯỚNG VIEW (WAR ROOM / CONSOLE / POLYGLOT / PIPELINE / LEDGER)
   // ==========================================================================
   function setupNavigation() {
     document.querySelectorAll('.nav-tab').forEach(tab => {
@@ -53,11 +57,15 @@
     document.getElementById('btnReloadLedgerFull')?.addEventListener('click', taiLedgerVaEvidence);
     document.getElementById('btnRefreshLedgerPreview')?.addEventListener('click', taiLedgerVaEvidence);
 
-    // Xử lý 4 Thẻ Quy Trình 1-Click
+    // Xử lý 8 Thẻ Quy Trình 1-Click
     const presetPrompts = {
       card_video_shorts: 'Sản xuất video ngắn 60s về Lập trình Thẻ AURA v3 và Xuất bản tự động',
       card_code_doctor: 'Khám bệnh mã nguồn Python, định vị lỗi AST và sinh bản vá tự động',
+      card_polyglot_transpiler: 'Chuyển đổi logic Python AST sang JavaScript/Go/Rust/C++ và kiểm tra cú pháp',
+      card_deep_scout: 'Tra cứu đa nguồn Internet về xu hướng AI 2026 và kiểm chứng sự thật',
       card_novel_writer: 'Sáng tác chương truyện đời thường Quán Cà Phê Cuối Ngõ và chấm điểm TTR',
+      card_fullstack_builder: 'Tạo giao diện web tương tác HTML5/JS và API backend aiohttp',
+      card_security_guard: 'Kiểm toán bảo mật AST, quét rò rỉ secret key và kiểm tra đường dẫn an toàn',
       card_system_audit: 'Kiểm toán toàn diện sinh tồn hệ thống, RAM/CPU và quét 714 test cases'
     };
 
@@ -69,7 +77,7 @@
           const input = document.getElementById('pipelineTopicInput');
           if (input) input.value = presetPrompts[presetId];
           chuyenView('viewPipeline');
-          kichHoatPipeline();
+          kichHoatPipeline(presetId);
         }
       });
     });
@@ -409,6 +417,242 @@
         }
       }
     } catch (_) {}
+  }
+
+  // ==========================================================================
+  // 8. STUDIO ĐA NGÔN NGỮ (POLYGLOT STUDIO)
+  // ==========================================================================
+  async function initPolyglotStudio() {
+    try {
+      const resp = await fetch('/api/polyglot/languages');
+      const data = await resp.json();
+      if (data.status === 'PASS') {
+        state.languages = data.languages || [];
+      }
+    } catch (_) {}
+
+    // Gắn sự kiện chọn ngôn ngữ nguồn
+    document.querySelectorAll('#polyglotSourcePills .lang-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.polyglotSourceLang = btn.dataset.lang;
+        document.querySelectorAll('#polyglotSourcePills .lang-pill').forEach(b => {
+          b.classList.toggle('active', b.dataset.lang === state.polyglotSourceLang);
+        });
+        capNhatPolyglotUI();
+        taiMauChuanPolyglot();
+      });
+    });
+
+    // Gắn sự kiện chọn ngôn ngữ đích
+    document.querySelectorAll('#polyglotTargetPills .lang-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.polyglotTargetLang = btn.dataset.lang;
+        document.querySelectorAll('#polyglotTargetPills .lang-pill').forEach(b => {
+          b.classList.toggle('active', b.dataset.lang === state.polyglotTargetLang);
+        });
+        capNhatPolyglotUI();
+      });
+    });
+
+    // Gắn sự kiện các nút hành động
+    document.getElementById('btnPolyglotTemplate')?.addEventListener('click', taiMauChuanPolyglot);
+    document.getElementById('btnPolyglotTranslate')?.addEventListener('click', dichMaPolyglot);
+    document.getElementById('btnPolyglotValidate')?.addEventListener('click', kiemTraCuPhapPolyglot);
+    document.getElementById('btnPolyglotRun')?.addEventListener('click', chaySandboxPolyglot);
+
+    document.getElementById('btnCopySource')?.addEventListener('click', () => saoChepCode('polyglotSourceEditor', 'btnCopySource'));
+    document.getElementById('btnCopyTarget')?.addEventListener('click', () => saoChepCode('polyglotTargetEditor', 'btnCopyTarget'));
+
+    capNhatPolyglotUI();
+    taiMauChuanPolyglot();
+  }
+
+  function capNhatPolyglotUI() {
+    const srcInfo = state.languages.find(l => l.id === state.polyglotSourceLang);
+    const tgtInfo = state.languages.find(l => l.id === state.polyglotTargetLang);
+
+    const srcBadge = document.getElementById('sourceLangBadge');
+    const tgtBadge = document.getElementById('targetLangBadge');
+
+    if (srcBadge && srcInfo) {
+      srcBadge.textContent = `${srcInfo.bieu_tuong} ${srcInfo.ten}`;
+      srcBadge.style.color = srcInfo.mau_sac;
+      srcBadge.style.background = `${srcInfo.mau_sac}20`;
+      srcBadge.style.borderColor = `${srcInfo.mau_sac}40`;
+    }
+    if (tgtBadge && tgtInfo) {
+      tgtBadge.textContent = `${tgtInfo.bieu_tuong} ${tgtInfo.ten}`;
+      tgtBadge.style.color = tgtInfo.mau_sac;
+      tgtBadge.style.background = `${tgtInfo.mau_sac}20`;
+      tgtBadge.style.borderColor = `${tgtInfo.mau_sac}40`;
+    }
+  }
+
+  function taiMauChuanPolyglot() {
+    const srcInfo = state.languages.find(l => l.id === state.polyglotSourceLang);
+    const srcEditor = document.getElementById('polyglotSourceEditor');
+    if (srcEditor && srcInfo && srcInfo.ma_mau) {
+      srcEditor.value = srcInfo.ma_mau;
+      inConsolePolyglot(`Đã nạp mã mẫu chuẩn cho ${srcInfo.ten} (${srcInfo.duoi_tep})`, 'SẴN SÀNG', 'info');
+    }
+  }
+
+  async function dichMaPolyglot() {
+    const srcEditor = document.getElementById('polyglotSourceEditor');
+    const tgtEditor = document.getElementById('polyglotTargetEditor');
+    const ma = srcEditor ? srcEditor.value.trim() : '';
+
+    if (!ma) {
+      inConsolePolyglot('Vui lòng nhập mã nguồn trước khi chuyển đổi!', 'LỖI', 'error');
+      return;
+    }
+
+    inConsolePolyglot(`Đang phân tích AST và dịch từ ${state.polyglotSourceLang.toUpperCase()} sang ${state.polyglotTargetLang.toUpperCase()}...`, 'ĐANG XỬ LÝ...', 'info');
+
+    try {
+      const resp = await fetch('/api/polyglot/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ma: ma,
+          lang_nguon: state.polyglotSourceLang,
+          lang_dich: state.polyglotTargetLang
+        })
+      });
+      const data = await resp.json();
+
+      if (data.status === 'PASS') {
+        if (tgtEditor) tgtEditor.value = data.ma_dich || '';
+        const notes = (data.notes || []).join('; ');
+        inConsolePolyglot(
+          `✓ Chuyển đổi thành công!\n` +
+          `• Ngôn ngữ: ${data.source_lang} ➔ ${data.target_lang}\n` +
+          `• Số nodes AST đã chuyển: ${data.nodes_translated || 0}\n` +
+          (notes ? `• Ghi chú: ${notes}\n` : '') +
+          `• Trạng thái: Mã đích đạt chuẩn cấu trúc.`,
+          'HOÀN TẤT ✓',
+          'success'
+        );
+      } else {
+        inConsolePolyglot(`✕ Lỗi chuyển đổi mã:\n${data.error || 'Không xác định'}`, 'LỖI BIÊN DỊCH', 'error');
+      }
+    } catch (err) {
+      inConsolePolyglot(`✕ Lỗi kết nối máy chủ: ${err.message}`, 'LỖI MẠNG', 'error');
+    }
+  }
+
+  async function kiemTraCuPhapPolyglot() {
+    const srcEditor = document.getElementById('polyglotSourceEditor');
+    const ma = srcEditor ? srcEditor.value.trim() : '';
+
+    if (!ma) {
+      inConsolePolyglot('Mã nguồn rỗng, không có gì để kiểm tra.', 'LỖI', 'error');
+      return;
+    }
+
+    inConsolePolyglot(`Đang kiểm định cú pháp ${state.polyglotSourceLang.toUpperCase()}...`, 'ĐANG QUÉT...', 'info');
+
+    try {
+      const resp = await fetch('/api/polyglot/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ma: ma,
+          lang: state.polyglotSourceLang
+        })
+      });
+      const data = await resp.json();
+
+      if (data.valid) {
+        inConsolePolyglot(
+          `✅ CÚ PHÁP CHUẨN XÁC (Syntax Valid)\n` +
+          `• Ngôn ngữ: ${data.language || state.polyglotSourceLang}\n` +
+          `• Đánh giá: ${data.message || 'Mã hợp lệ không có lỗi cú pháp.'}`,
+          'PASS 100%',
+          'success'
+        );
+      } else {
+        const details = (data.details || []).join('\n');
+        inConsolePolyglot(
+          `❌ PHÁT HIỆN LỖI CÚ PHÁP (Syntax Error)\n` +
+          `• Chi tiết lỗi: ${data.error || 'Lỗi cú pháp'}\n` +
+          (details ? `• Vị trí:\n${details}` : ''),
+          'SYNTAX ERROR',
+          'error'
+        );
+      }
+    } catch (err) {
+      inConsolePolyglot(`✕ Lỗi kiểm tra cú pháp: ${err.message}`, 'LỖI', 'error');
+    }
+  }
+
+  async function chaySandboxPolyglot() {
+    const srcEditor = document.getElementById('polyglotSourceEditor');
+    const ma = srcEditor ? srcEditor.value.trim() : '';
+
+    if (!ma) {
+      inConsolePolyglot('Vui lòng nhập mã trước khi chạy thử!', 'LỖI', 'error');
+      return;
+    }
+
+    inConsolePolyglot(`Đang khởi tạo môi trường cô lập để chạy mã ${state.polyglotSourceLang.toUpperCase()} (Timeout: 5.0s)...`, 'RUNNING...', 'info');
+
+    try {
+      const resp = await fetch('/api/polyglot/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ma: ma,
+          lang: state.polyglotSourceLang,
+          timeout_s: 5.0
+        })
+      });
+      const data = await resp.json();
+
+      const out = data.stdout ? `--- STDOUT ---\n${data.stdout}\n` : '';
+      const err = data.stderr ? `--- STDERR ---\n${data.stderr}\n` : '';
+
+      inConsolePolyglot(
+        `[KẾT QUẢ THỰC THI SANDBOX]\n` +
+        `• Ngôn ngữ: ${data.language || state.polyglotSourceLang}\n` +
+        `• Exit Code: ${data.exit_code}\n` +
+        `• Thời gian thực thi: ${data.latency_ms || 0} ms\n` +
+        `• Trạng thái: ${data.status}\n\n` +
+        (out || err || '(Chương trình chạy xong mà không in kết quả ra terminal)'),
+        data.status === 'PASS' ? 'EXIT CODE 0' : 'EXIT ERROR',
+        data.status === 'PASS' ? 'success' : 'error'
+      );
+    } catch (err) {
+      inConsolePolyglot(`✕ Lỗi thực thi sandbox: ${err.message}`, 'CRASH', 'error');
+    }
+  }
+
+  function inConsolePolyglot(noiDung, trangThaiText, loai = 'info') {
+    const outBox = document.getElementById('polyglotConsoleOutput');
+    const metaTag = document.querySelector('#polyglotConsoleMeta .meta-tag');
+
+    if (metaTag) {
+      metaTag.textContent = `Trạng thái: ${trangThaiText}`;
+      metaTag.className = `meta-tag ${loai === 'error' ? 'fail' : loai === 'success' ? 'pass' : ''}`;
+    }
+
+    if (outBox) {
+      outBox.innerHTML = `<pre class="console-text ${loai}">${escapeHtml(noiDung)}</pre>`;
+    }
+  }
+
+  function saoChepCode(editorId, btnId) {
+    const editor = document.getElementById(editorId);
+    if (!editor || !editor.value) return;
+
+    navigator.clipboard.writeText(editor.value).then(() => {
+      const btn = document.getElementById(btnId);
+      if (btn) {
+        const oldText = btn.textContent;
+        btn.textContent = '✓ Đã Chép!';
+        setTimeout(() => { btn.textContent = oldText; }, 1800);
+      }
+    });
   }
 
   function escapeHtml(str) {

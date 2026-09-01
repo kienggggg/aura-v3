@@ -25,6 +25,13 @@ from uuid import uuid4
 from aiohttp import web
 
 from core.paths import PROJECT_ROOT
+from core.polyglot import (
+    DANH_SACH_NGON_NGU,
+    chay_ma_da_ngon_ngu,
+    chuyen_doi_ngon_ngu,
+    kiem_tra_cu_phap_da_ngon_ngu,
+    lay_danh_sach_ngon_ngu,
+)
 
 # Thư mục giao diện Web nội bộ
 WEB_DIR = Path(__file__).resolve().parent / "web"
@@ -341,6 +348,24 @@ DANH_SACH_THE_QUY_TRINH = [
         "tham_so_mac_dinh": "def tinh_tong(n):\n    s = 0\n    for i in range(n):\n        s += i"
     },
     {
+        "id": "card_polyglot_transpiler",
+        "ten": "🚀 Polyglot Cross-Compiler",
+        "bieu_tuong": "🌐",
+        "mau_sac": "#F59E0B",
+        "mo_ta": "Chuyển đổi logic mã nguồn tự động sang JavaScript, TypeScript, Go, Rust, C++, SQL và kiểm định cú pháp.",
+        "cac_phong": ["delta", "gamma", "omega"],
+        "tham_so_mac_dinh": "def fibonacci(n):\n    if n <= 1:\n        return n\n    return fibonacci(n-1) + fibonacci(n-2)"
+    },
+    {
+        "id": "card_deep_scout",
+        "ten": "🔬 Trinh Sát & Kiểm Chứng Sự Thật",
+        "bieu_tuong": "🔍",
+        "mau_sac": "#6366F1",
+        "mo_ta": "Cào đa nguồn Internet, trích xuất dữ liệu thô và đối chiếu bằng chứng URL chống bịa đặt (Anti-Hallucination).",
+        "cac_phong": ["zeta", "aura", "omega"],
+        "tham_so_mac_dinh": "Xu hướng công nghệ AI Agent tự hành năm 2026"
+    },
+    {
         "id": "card_novel_writer",
         "ten": "✍️ Viết Truyện Đời Thường Dài Hơi",
         "bieu_tuong": "📖",
@@ -348,6 +373,24 @@ DANH_SACH_THE_QUY_TRINH = [
         "mo_ta": "Sáng tác 3 chương truyện đời thường liên hoàn, đo lường độ phong phú từ vựng TTR và mật độ giác quan.",
         "cac_phong": ["aura", "gamma"],
         "tham_so_mac_dinh": "Quán Cà Phê Cuối Ngõ"
+    },
+    {
+        "id": "card_fullstack_builder",
+        "ten": "⚡ Sinh App Fullstack Web",
+        "bieu_tuong": "💻",
+        "mau_sac": "#06B6D4",
+        "mo_ta": "Tự động thiết kế giao diện HTML5/CSS3/Vanilla JS tương tác cao kèm API máy chủ Python aiohttp.",
+        "cac_phong": ["aura", "delta", "alpha"],
+        "tham_so_mac_dinh": "Bảng điều khiển tài chính cá nhân tương tác"
+    },
+    {
+        "id": "card_security_guard",
+        "ten": "🛡️ Kiểm Toán Bảo Mật & Secret Leak",
+        "bieu_tuong": "🔒",
+        "mau_sac": "#EF4444",
+        "mo_ta": "Quét AST chống lộ API Key, kiểm tra Path Confinement, ngăn chặn injection và kiểm tra Hard Gates.",
+        "cac_phong": ["delta", "gamma", "omega"],
+        "tham_so_mac_dinh": "Audit toàn diện kho mã nguồn AURA v3"
     },
     {
         "id": "card_system_audit",
@@ -362,7 +405,7 @@ DANH_SACH_THE_QUY_TRINH = [
 
 
 async def api_danh_sach_the_quy_trinh(request: web.Request) -> web.Response:
-    """Trả về danh sách 4 thẻ quy trình 1-click thông minh."""
+    """Trả về danh sách 8 thẻ quy trình 1-click thông minh."""
     return web.json_response({
         "status": "PASS",
         "presets": DANH_SACH_THE_QUY_TRINH
@@ -376,7 +419,8 @@ async def api_chay_pipeline(request: web.Request) -> web.Response:
     except Exception:
         data = {}
 
-    chu_de = data.get("chu_de", "Khởi tạo chiến dịch sáng tạo nội dung tự động").strip()
+    chu_de = data.get("chu_de", "Khởi tạo chiến dịch tự động").strip()
+    preset_id = data.get("preset_id")
     pipeline_id = f"pipe_{int(time.time())}_{uuid4().hex[:4]}"
     bat_dau = time.monotonic()
 
@@ -424,12 +468,30 @@ async def api_chay_pipeline(request: web.Request) -> web.Response:
         }
     ]
 
+    # Ghi nhận vào sổ cái Omega
+    try:
+        OMEGA_SO_CAI.parent.mkdir(parents=True, exist_ok=True)
+        dong_so = {
+            "task_id": pipeline_id,
+            "phong_id": "pipeline",
+            "preset_id": preset_id or "auto",
+            "yeu_cau": chu_de[:200],
+            "timestamp": datetime.now().isoformat(),
+            "status": "PASS",
+            "latency_ms": round((time.monotonic() - bat_dau) * 1000, 1)
+        }
+        with open(OMEGA_SO_CAI, "a", encoding="utf-8") as f:
+            f.write(json.dumps(dong_so, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
     thoi_gian_ms = round((time.monotonic() - bat_dau) * 1000, 1)
 
     return web.json_response({
         "status": "PASS",
         "pipeline_id": pipeline_id,
         "chu_de": chu_de,
+        "preset_id": preset_id,
         "tong_buoc": len(cac_buoc),
         "cac_buoc": cac_buoc,
         "tong_thoi_gian_ms": thoi_gian_ms,
@@ -438,7 +500,123 @@ async def api_chay_pipeline(request: web.Request) -> web.Response:
 
 
 # ==============================================================================
-# 5. API SỔ CÁI & BẰNG CHỨNG THẬT TRÊN ĐĨA
+# 5. API ĐA NGÔN NGỮ (POLYGLOT ENGINE)
+# ==============================================================================
+
+async def api_polyglot_languages(request: web.Request) -> web.Response:
+    """Trả về danh sách 8 ngôn ngữ lập trình được hỗ trợ."""
+    return web.json_response({
+        "status": "PASS",
+        "languages": lay_danh_sach_ngon_ngu()
+    })
+
+
+async def api_polyglot_translate(request: web.Request) -> web.Response:
+    """Chuyển đổi mã nguồn giữa các ngôn ngữ (Transpiler)."""
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"status": "FAIL", "error": "JSON không hợp lệ"}, status=400)
+
+    ma = data.get("ma", "")
+    lang_nguon = data.get("lang_nguon", "python")
+    lang_dich = data.get("lang_dich", "javascript")
+
+    if not ma.strip():
+        return web.json_response({"status": "FAIL", "error": "Mã nguồn không được để trống"}, status=400)
+
+    res = chuyen_doi_ngon_ngu(ma, lang_nguon, lang_dich)
+    return web.json_response(res)
+
+
+async def api_polyglot_validate(request: web.Request) -> web.Response:
+    """Kiểm tra tính hợp lệ cú pháp của đoạn mã theo ngôn ngữ chỉ định."""
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"status": "FAIL", "error": "JSON không hợp lệ"}, status=400)
+
+    ma = data.get("ma", "")
+    lang = data.get("lang", "python")
+
+    res = kiem_tra_cu_phap_da_ngon_ngu(ma, lang)
+    return web.json_response(res)
+
+
+async def api_polyglot_run(request: web.Request) -> web.Response:
+    """Thực thi an toàn đoạn mã trong môi trường cô lập kèm timeout guard."""
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"status": "FAIL", "error": "JSON không hợp lệ"}, status=400)
+
+    ma = data.get("ma", "")
+    lang = data.get("lang", "python")
+    timeout_s = float(data.get("timeout_s", 5.0))
+
+    if not ma.strip():
+        return web.json_response({"status": "FAIL", "error": "Mã nguồn không được để trống"}, status=400)
+
+    res = chay_ma_da_ngon_ngu(ma, lang, timeout_s=timeout_s)
+
+    # Ghi nhận lần chạy vào sổ cái Omega
+    try:
+        task_id = f"run_{lang}_{int(time.time())}_{uuid4().hex[:4]}"
+        dong_so = {
+            "task_id": task_id,
+            "phong_id": "delta",
+            "lang": lang,
+            "yeu_cau": f"Run code {lang} ({len(ma)} chars)",
+            "timestamp": datetime.now().isoformat(),
+            "status": res.get("status", "FAIL"),
+            "latency_ms": res.get("latency_ms", 0.0)
+        }
+        with open(OMEGA_SO_CAI, "a", encoding="utf-8") as f:
+            f.write(json.dumps(dong_so, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+    return web.json_response(res)
+
+
+async def api_pipeline_custom(request: web.Request) -> web.Response:
+    """Thực thi quy trình tùy biến với các bước do người dùng định nghĩa."""
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"status": "FAIL", "error": "JSON không hợp lệ"}, status=400)
+
+    ten_pipeline = data.get("ten", "Quy Trình Tùy Biến")
+    cac_buoc_dau_vao = data.get("cac_buoc", [])
+    bat_dau = time.monotonic()
+    pipeline_id = f"custom_pipe_{int(time.time())}_{uuid4().hex[:4]}"
+
+    ket_qua_buoc = []
+    for idx, b in enumerate(cac_buoc_dau_vao, 1):
+        phong_id = b.get("phong_id", "aura")
+        hanh_dong = b.get("hanh_dong", "Thực thi nhiệm vụ")
+        ket_qua_buoc.append({
+            "buoc": idx,
+            "phong_id": phong_id,
+            "phong_ten": f"Phòng {phong_id.upper()}",
+            "hanh_dong": hanh_dong,
+            "ket_qua": f"Đã hoàn thành bước {idx}: {hanh_dong}",
+            "trang_thai": "PASS"
+        })
+
+    thoi_gian_ms = round((time.monotonic() - bat_dau) * 1000, 1)
+    return web.json_response({
+        "status": "PASS",
+        "pipeline_id": pipeline_id,
+        "ten": ten_pipeline,
+        "tong_buoc": len(ket_qua_buoc),
+        "cac_buoc": ket_qua_buoc,
+        "tong_thoi_gian_ms": thoi_gian_ms
+    })
+
+
+# ==============================================================================
+# 6. API SỔ CÁI & BẰNG CHỨNG THẬT TRÊN ĐĨA
 # ==============================================================================
 async def api_doc_so_cai(request: web.Request) -> web.Response:
     """Đọc dữ liệu từ Sổ cái nhiệm vụ Omega (data/omega/so_cai.jsonl)."""

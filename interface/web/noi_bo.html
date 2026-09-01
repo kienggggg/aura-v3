@@ -47,6 +47,7 @@
     <nav class="cmd-nav">
       <button class="nav-tab active" data-view="viewWarRoom">🎛️ Tổng Quan</button>
       <button class="nav-tab" data-view="viewConsole">💬 Bàn Làm Việc</button>
+      <button class="nav-tab" data-view="viewPolyglot">🌐 Đa Ngôn Ngữ</button>
       <button class="nav-tab" data-view="viewPipeline">⚡ Quy Trình Tự Động</button>
       <button class="nav-tab" data-view="viewLedger">📜 Sổ Cái & Bằng Chứng</button>
     </nav>
@@ -151,16 +152,110 @@
         </div>
       </section>
 
-      <!-- 3. VIEW: PIPELINE AUTOMATOR (Quy trình tự động) -->
+      <!-- 3. VIEW: POLYGLOT STUDIO (Studio Đa Ngôn Ngữ) -->
+      <section class="view-pane" id="viewPolyglot">
+        <div class="pane-header">
+          <div>
+            <h2 class="pane-title">🌐 Studio Đa Ngôn Ngữ (Polyglot Multi-Language Studio)</h2>
+            <p class="pane-subtitle">Chuyển đổi logic AST, kiểm tra cú pháp và chạy sandbox an toàn giữa 8 ngôn ngữ lập trình.</p>
+          </div>
+          <div class="polyglot-actions-bar">
+            <button class="btn btn-secondary btn-sm" id="btnPolyglotTemplate">⚡ Mẫu Chuẩn</button>
+            <button class="btn btn-secondary btn-sm" id="btnPolyglotValidate">🔍 Kiểm Tra Cú Pháp</button>
+            <button class="btn btn-primary btn-sm" id="btnPolyglotTranslate">🔄 Dịch Mã Nguồn</button>
+            <button class="btn btn-emerald btn-sm" id="btnPolyglotRun">▶️ Chạy Thử (Sandbox)</button>
+          </div>
+        </div>
+
+        <!-- Language Switcher Bar -->
+        <div class="polyglot-lang-bar">
+          <div class="lang-group">
+            <span class="lang-label">Nguồn:</span>
+            <div class="lang-pills" id="polyglotSourcePills">
+              <button class="lang-pill active" data-lang="python">🐍 Python</button>
+              <button class="lang-pill" data-lang="javascript">🟨 JavaScript</button>
+              <button class="lang-pill" data-lang="typescript">🔷 TypeScript</button>
+              <button class="lang-pill" data-lang="go">🐹 Go</button>
+              <button class="lang-pill" data-lang="rust">🦀 Rust</button>
+              <button class="lang-pill" data-lang="cpp">⚡ C++</button>
+              <button class="lang-pill" data-lang="sql">🗄️ SQL</button>
+              <button class="lang-pill" data-lang="bash">🐚 Bash</button>
+            </div>
+          </div>
+
+          <div class="lang-arrow">➔</div>
+
+          <div class="lang-group">
+            <span class="lang-label">Đích:</span>
+            <div class="lang-pills" id="polyglotTargetPills">
+              <button class="lang-pill" data-lang="python">🐍 Python</button>
+              <button class="lang-pill active" data-lang="javascript">🟨 JavaScript</button>
+              <button class="lang-pill" data-lang="typescript">🔷 TypeScript</button>
+              <button class="lang-pill" data-lang="go">🐹 Go</button>
+              <button class="lang-pill" data-lang="rust">🦀 Rust</button>
+              <button class="lang-pill" data-lang="cpp">⚡ C++</button>
+              <button class="lang-pill" data-lang="sql">🗄️ SQL</button>
+              <button class="lang-pill" data-lang="bash">🐚 Bash</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dual Code Editor Canvas -->
+        <div class="polyglot-editors-grid">
+          <div class="code-editor-card">
+            <div class="editor-header">
+              <div class="editor-title-group">
+                <span class="lang-badge" id="sourceLangBadge">🐍 Python</span>
+                <span class="editor-file-name">source_code.py</span>
+              </div>
+              <button class="btn-copy-code" id="btnCopySource" title="Sao chép">📋 Sao Chép</button>
+            </div>
+            <div class="editor-body">
+              <textarea id="polyglotSourceEditor" class="code-textarea" spellcheck="false" placeholder="Nhập mã nguồn hoặc tải mẫu chuẩn..."></textarea>
+            </div>
+          </div>
+
+          <div class="code-editor-card">
+            <div class="editor-header">
+              <div class="editor-title-group">
+                <span class="lang-badge" id="targetLangBadge">🟨 JavaScript</span>
+                <span class="editor-file-name">transpiled_code.js</span>
+              </div>
+              <button class="btn-copy-code" id="btnCopyTarget" title="Sao chép">📋 Sao Chép</button>
+            </div>
+            <div class="editor-body">
+              <textarea id="polyglotTargetEditor" class="code-textarea" spellcheck="false" placeholder="Kết quả chuyển đổi mã sẽ xuất hiện ở đây..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Polyglot Execution Console & AST Diagnostics -->
+        <div class="polyglot-console-card">
+          <div class="console-header">
+            <div class="console-title-group">
+              <span class="console-dot online"></span>
+              <span class="console-title">🖥️ Bảng Chẩn Đoán & Kết Quả Thực Thi (Execution Console)</span>
+            </div>
+            <div class="console-meta" id="polyglotConsoleMeta">
+              <span class="meta-tag">Trạng thái: SẴN SÀNG</span>
+            </div>
+          </div>
+          <div class="console-output-box" id="polyglotConsoleOutput">
+            <pre class="console-text">[AURA Polyglot Engine v3.0 sẵn sàng. Chọn ngôn ngữ và bấm Dịch mã, Kiểm tra cú pháp hoặc Chạy thử.]</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. VIEW: PIPELINE AUTOMATOR (Quy trình tự động) -->
       <section class="view-pane" id="viewPipeline">
           <div class="pane-header">
             <div>
               <h2 class="pane-title">⚡ Quy Trình Tự Động Hóa (Pipeline Automator)</h2>
-              <p class="pane-subtitle">Kích hoạt chuỗi phối hợp tác chiến liên phòng ban với các Thẻ Kịch Bản 1-Click</p>
+              <p class="pane-subtitle">Kích hoạt chuỗi phối hợp tác chiến liên phòng ban với 8 Thẻ Kịch Bản 1-Click</p>
             </div>
           </div>
 
-        <!-- 4 THẺ QUY TRÌNH 1-CLICK THÔNG MINH -->
+        <!-- 8 THẺ QUY TRÌNH 1-CLICK THÔNG MINH -->
         <div class="pipeline-presets-grid" id="pipelinePresetsGrid">
           <div class="preset-card" data-preset="card_video_shorts" style="border-left: 4px solid #EC4899;">
             <div class="preset-badge" style="background: rgba(236,72,153,0.15); color: #EC4899;">🎬 VIDEO 60S</div>
@@ -182,6 +277,26 @@
             </div>
           </div>
 
+          <div class="preset-card" data-preset="card_polyglot_transpiler" style="border-left: 4px solid #F59E0B;">
+            <div class="preset-badge" style="background: rgba(245,158,11,0.15); color: #FBBF24;">🌐 POLYGLOT</div>
+            <h4 class="preset-name">Polyglot Cross-Compiler</h4>
+            <p class="preset-desc">Delta dịch AST đa ngôn ngữ ➔ Gamma đo đạc AST nodes ➔ Omega ghi sổ cái.</p>
+            <div class="preset-footer">
+              <span class="preset-agents">🔧 📊 🎵</span>
+              <button class="btn-preset-run" data-preset="card_polyglot_transpiler">Nạp Thẻ ➔</button>
+            </div>
+          </div>
+
+          <div class="preset-card" data-preset="card_deep_scout" style="border-left: 4px solid #6366F1;">
+            <div class="preset-badge" style="background: rgba(99,102,241,0.15); color: #818CF8;">🔬 FACT-CHECKER</div>
+            <h4 class="preset-name">Kiểm Chứng Sự Thật</h4>
+            <p class="preset-desc">Zeta cào đa nguồn tin ➔ AURA đối chiếu bằng chứng ➔ Omega lưu sổ kiểm chứng.</p>
+            <div class="preset-footer">
+              <span class="preset-agents">🔍 ⚡ 🎵</span>
+              <button class="btn-preset-run" data-preset="card_deep_scout">Nạp Thẻ ➔</button>
+            </div>
+          </div>
+
           <div class="preset-card" data-preset="card_novel_writer" style="border-left: 4px solid #3B82F6;">
             <div class="preset-badge" style="background: rgba(59,130,246,0.15); color: #60A5FA;">📖 NOVEL BUILDER</div>
             <h4 class="preset-name">Viết Truyện Đời Thường</h4>
@@ -189,6 +304,26 @@
             <div class="preset-footer">
               <span class="preset-agents">⚡ 📊 📜</span>
               <button class="btn-preset-run" data-preset="card_novel_writer">Nạp Thẻ ➔</button>
+            </div>
+          </div>
+
+          <div class="preset-card" data-preset="card_fullstack_builder" style="border-left: 4px solid #06B6D4;">
+            <div class="preset-badge" style="background: rgba(6,182,212,0.15); color: #22D3EE;">⚡ FULLSTACK WEB</div>
+            <h4 class="preset-name">Sinh App Fullstack</h4>
+            <p class="preset-desc">AURA dựng layout HTML5/JS ➔ Delta viết API backend ➔ Alpha tạo visual assets.</p>
+            <div class="preset-footer">
+              <span class="preset-agents">⚡ 🔧 🎬</span>
+              <button class="btn-preset-run" data-preset="card_fullstack_builder">Nạp Thẻ ➔</button>
+            </div>
+          </div>
+
+          <div class="preset-card" data-preset="card_security_guard" style="border-left: 4px solid #EF4444;">
+            <div class="preset-badge" style="background: rgba(239,68,68,0.15); color: #F87171;">🔒 SECURITY AUDIT</div>
+            <h4 class="preset-name">Kiểm Toán Bảo Mật</h4>
+            <p class="preset-desc">Delta quét AST chống rò rỉ API Key ➔ Gamma đo Hard Gates ➔ Omega niêm phong sổ cái.</p>
+            <div class="preset-footer">
+              <span class="preset-agents">🔧 📊 🎵</span>
+              <button class="btn-preset-run" data-preset="card_security_guard">Nạp Thẻ ➔</button>
             </div>
           </div>
 

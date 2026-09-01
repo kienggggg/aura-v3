@@ -104,6 +104,8 @@ def tao_app(
     
     # API endpoints
     app.router.add_get("/api/status", the_api.api_status)
+    app.router.add_get("/api/model", the_api.api_model)
+    app.router.add_post("/api/hoi_model", the_api.api_hoi_model)
     app.router.add_get("/api/mau", the_api.api_mau_chuong_trinh)
     app.router.add_get("/api/tep_tin", the_api.api_danh_sach_tep)
     app.router.add_post("/api/kiem", the_api.api_kiem_tra)

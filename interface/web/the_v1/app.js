@@ -6744,6 +6744,134 @@ python3 main.py
     trace: '🌊 mạch nước ngầm',
   };
 
+
+  // ==========================================================================
+  // MODEL LOCAL — TUỲ CHỌN, MẶC ĐỊNH TẮT
+  // ==========================================================================
+  //
+  // Bảng "Soi Chương Trình" trả lời theo luật và không cần model nào. Đoạn này
+  // chỉ mở thêm một lối cho những câu nằm NGOÀI bốn việc ấy, và chỉ khi người
+  // dùng tự cài Ollama trên máy mình.
+  //
+  // KHÔNG TỰ GỬI. Người dùng phải bấm nút. Đo trên máy này (i5, không GPU rời),
+  // cùng một câu hỏi và cùng một chương trình 3 dòng:
+  //
+  //     qwen3:0.6b         4,3 giây   TRẢ LỜI SAI (bảo là không thấy mã)
+  //     qwen3:1.7b         5,1 giây   đúng
+  //     gemma3:4b         13,8 giây   đúng
+  //     qwen3.5:4b        33,4 giây   đúng
+  //     qwen2.5-coder:7b  56,7 giây   đúng
+  //
+  // Bắt người học chờ 57 giây mà không hỏi trước là cướp thời gian của họ. Và
+  // model nhỏ nhất trả lời SAI — nên nhiều lựa chọn không phải trang trí.
+
+  let modelDangChon = '';
+
+  async function napDanhSachModel() {
+    const o = document.getElementById('chonModel');
+    const ghiChu = document.getElementById('aiModelNote');
+    if (!o) return;
+
+    o.addEventListener('change', () => { modelDangChon = o.value; });
+
+    // Hình dạng ba dòng này KHÔNG phải ngẫu nhiên. `test_hop_dong_api.js`
+    // đối chiếu mọi trường JS đọc từ JSON với handler Python để bắt lệch tên
+    // trường — nó lần theo BINDING, nên `const d = resp && resp.ok ? await
+    // resp.json() : null` làm nó mất dấu và cửa đỏ. Giữ nguyên lối gán thẳng.
+    const resp = await authFetch('/api/model').catch(() => null);
+    if (!resp || !resp.ok) {
+      if (ghiChu) ghiChu.textContent = 'không dò được';
+      return;
+    }
+    const d = await resp.json().catch(() => null);
+    if (!d) {
+      if (ghiChu) ghiChu.textContent = 'không đọc được câu trả lời';
+      return;
+    }
+
+    if (!d.co_ollama) {
+      // NÓI VÌ SAO. Một ô chọn chỉ có đúng một dòng "Không dùng" mà không giải
+      // thích thì người ta tưởng app hỏng, hoặc tưởng mình cài thiếu gì đó.
+      if (ghiChu) {
+        ghiChu.textContent = 'ⓘ';
+        ghiChu.title = d.ly_do || 'Không có model local nào.';
+      }
+      o.title = d.ly_do || '';
+      return;
+    }
+
+    for (const ten of d.cac_model) {
+      const opt = document.createElement('option');
+      opt.value = ten;
+      opt.textContent = ten;
+      o.appendChild(opt);
+    }
+    if (ghiChu) ghiChu.textContent = `${d.cac_model.length} model trên máy`;
+  }
+
+  /** Gửi câu hỏi cho model đang chọn và vẽ câu trả lời. */
+  async function hoiModelLocal(cauHoi) {
+    const ma = (state.editorMode === 'code'
+      && document.getElementById('codeEditorInput')
+      && document.getElementById('codeEditorInput').value.trim())
+      ? document.getElementById('codeEditorInput').value
+      : TheValidator.sinhMaPython(state.tree || [], 0, []);
+
+    // ĐỒNG HỒ THẬT, không phải ba chấm giả. Cái này đếm giây có thật đang trôi
+    // — người dùng cần biết mình đang chờ bao lâu để quyết có huỷ hay không.
+    const id = 'dangHoiModel_' + Date.now();
+    themTinNhanAi('assistant',
+      `<p id="${id}">⏳ Đang hỏi <strong>${escapeHtml(modelDangChon)}</strong>… <span>0,0 giây</span></p>`);
+    const t0 = performance.now();
+    const nhip = setInterval(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        const s = el.querySelector('span');
+        if (s) s.textContent = ((performance.now() - t0) / 1000).toFixed(1).replace('.', ',') + ' giây';
+      }
+    }, 100);
+
+    const resp = await authFetch('/api/hoi_model', {
+      method: 'POST',
+      body: JSON.stringify({ cau_hoi: cauHoi, model: modelDangChon, ma }),
+    }).catch(() => null);
+    clearInterval(nhip);
+    // Gán thẳng, không ba ngôi và không qua `let` — xem chú thích ở
+    // `napDanhSachModel`. Cửa đòi đúng `const <ten> = await resp.json()`.
+    if (!resp) {
+      themTinNhanAi('assistant',
+        '<p>❌ <strong>Không gọi được máy chủ.</strong></p>');
+      return;
+    }
+    const d = await resp.json().catch(() => null);
+
+    const cho = document.getElementById(id);
+    if (cho && cho.parentElement) cho.parentElement.removeChild(cho);
+
+    if (!d || !d.ok) {
+      const ly = (d && d.ly_do) || 'Không gọi được máy chủ.';
+      themTinNhanAi('assistant',
+        `<p>❌ <strong>Model không trả lời được.</strong></p><p>${escapeHtml(ly)}</p>`);
+      return;
+    }
+
+    const giay = (d.ms / 1000).toFixed(1).replace('.', ',');
+    themTinNhanAi('assistant', `
+      <div class="model-noi">
+        <p>${escapeHtml(d.tra_loi).replace(/\n/g, '<br>')}</p>
+        <span class="model-canh-bao">🧠 ${escapeHtml(d.model)} · ${giay} giây ·
+          ${escapeHtml(d.canh_bao || '')}</span>
+      </div>
+    `);
+  }
+
+  /** Nút "Hỏi model" gắn kèm câu "chưa hiểu" — chỉ hiện khi ĐÃ chọn model. */
+  function nutHoiModel(cauHoi) {
+    if (!modelDangChon) return '';
+    return `<button class="nut-hoi-model" data-cau-hoi="${escapeHtml(cauHoi)}">`
+      + `🧠 Hỏi ${escapeHtml(modelDangChon)}</button>`;
+  }
+
   function xuLyTinNhanNguoiDung(noiDung) {
     const raw = (noiDung || '').trim();
     if (!raw) return;
@@ -6797,6 +6925,7 @@ python3 main.py
       <p>Bốn nút ở trên chạy đúng bốn việc ấy.
          Chương trình đang mở có <strong>${demTheSau(state.tree || [])} thẻ</strong>
          (${escapeHtml(state.activeFileName || 'Chưa đặt tên')}).</p>
+      ${nutHoiModel(raw)}
     `);
   }
   function setupAiSidecarChat() {
@@ -6911,8 +7040,21 @@ python3 main.py
     const btnCloseRight = document.getElementById('btnToggleSidebarRightClose') || document.getElementById('btnCloseSidebarRight');
     if (btnCloseRight) btnCloseRight.addEventListener('click', toggleSidebarRight);
 
-    // Khởi tạo bảng Trợ lý AI Sidecar
+    // Khởi tạo bảng Soi Chương Trình
     setupAiSidecarChat();
+    napDanhSachModel();
+
+    // Nút "Hỏi model" sinh ra TRONG tin nhắn, sau khi khung này đã dựng xong —
+    // nên nghe ở khung cha thay vì gắn từng nút.
+    const khungTin = document.getElementById('aiMessagesContainer');
+    if (khungTin) {
+      khungTin.addEventListener('click', (e) => {
+        const nut = e.target.closest && e.target.closest('.nut-hoi-model');
+        if (!nut) return;
+        nut.disabled = true;
+        hoiModelLocal(nut.dataset.cauHoi || '');
+      });
+    }
 
     // Khởi tạo Trình Soạn Thảo Mã & Bộ Chuyển Chế Độ
     setupCodeEditorPane();

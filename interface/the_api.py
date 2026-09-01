@@ -25,6 +25,7 @@ from urllib.parse import urlsplit
 
 from aiohttp import web
 
+from core.soi_model import do_ollama, hoi_model
 from core.the_v1 import (
     BO_THE_V1,
     NHOM_THE,
@@ -369,6 +370,83 @@ async def file_tinh(request: web.Request) -> web.Response:
         content_type = "image/svg+xml"
 
     return web.Response(body=target_path.read_bytes(), content_type=content_type)
+
+
+# ==============================================================================
+# MODEL LOCAL  (tuỳ chọn — mặc định KHÔNG dùng)
+# ==============================================================================
+#
+# Bảng "Soi Chương Trình" trả lời theo luật và cố ý không có model nào. Hai
+# cổng dưới đây là chỗ người dùng TỰ CHỌN mượn một model chạy trên chính máy
+# họ, cho những câu nằm ngoài bốn việc bảng ấy làm được.
+#
+# CHỈ LOCAL. `core/soi_model.py` chỉ biết nói chuyện với Ollama trên
+# `127.0.0.1`; không có đường ra cloud, không có chỗ dán khoá API.
+#
+# KHÔNG khoá sau `--allow-exec`. Cờ ấy canh việc CHẠY MÃ của người học trong
+# một tiến trình Python có đủ quyền. Hỏi một model đang chạy sẵn trên máy thì
+# không chạy mã của ai cả — khoá nó chung một cửa là trộn hai rủi ro khác hẳn
+# nhau. Bốn lớp cổng vào (loopback · mã thông hành · Origin · khoá đường dẫn)
+# vẫn giữ nguyên như mọi endpoint khác.
+
+
+async def api_model(request: web.Request) -> web.Response:
+    """GET /api/model — máy này có model local nào dùng được không."""
+    if not xac_thuc_request(request):
+        return web.json_response({"error": "403 Forbidden: Mã thông hành không hợp lệ"}, status=403)
+
+    # Chạy trong luồng khác: `httpx.get` là đồng bộ, gọi thẳng trong vòng lặp
+    # sự kiện thì nó CHẶN cả máy chủ tối đa 1,5 giây — đúng lúc trang vừa mở
+    # và còn đang tải mấy thứ khác.
+    tinh_trang = await asyncio.to_thread(do_ollama)
+    # KHAI TÊN TRƯỜNG NGAY TẠI ĐÂY, không trả thẳng `tinh_trang.sang_dict()`.
+    # `tests/test_hop_dong_api.js` đối chiếu mọi trường JS đọc từ JSON với
+    # handler Python để bắt lệch tên trường — giấu hợp đồng trong một phương
+    # thức của dataclass thì cửa không chứng minh được gì và nó đỏ, đúng.
+    return web.json_response({
+        "co_ollama": tinh_trang.co_ollama,
+        "host": tinh_trang.host,
+        "cac_model": tinh_trang.cac_model,
+        "ly_do": tinh_trang.ly_do,
+        "ms": tinh_trang.ms,
+    })
+
+
+async def api_hoi_model(request: web.Request) -> web.Response:
+    """POST /api/hoi_model — hỏi một model local về chương trình đang mở."""
+    if not xac_thuc_request(request):
+        return web.json_response({"error": "403 Forbidden: Mã thông hành không hợp lệ"}, status=403)
+    if not kiem_tra_origin_hop_le(request):
+        return web.json_response({"error": "403 Forbidden: Origin không được phép"}, status=403)
+
+    try:
+        data = await request.json()
+    except Exception:  # noqa: BLE001
+        return web.json_response({"ok": False, "ly_do": "Thân yêu cầu không phải JSON"}, status=400)
+
+    cau_hoi = str(data.get("cau_hoi") or "").strip()
+    model = str(data.get("model") or "").strip()
+    ma = str(data.get("ma") or "")
+
+    if not cau_hoi:
+        return web.json_response({"ok": False, "ly_do": "Câu hỏi rỗng."}, status=400)
+    if not model:
+        return web.json_response({"ok": False, "ly_do": "Chưa chọn model nào."}, status=400)
+
+    ok, tra_loi, ms, ly_do = await asyncio.to_thread(hoi_model, cau_hoi, model, ma)
+    return web.json_response({
+        "ok": ok,
+        "tra_loi": tra_loi,
+        "ms": ms,
+        "ly_do": ly_do,
+        "model": model,
+        # Câu này đi kèm MỌI câu trả lời của model, không phải chỉ lần đầu.
+        # Bốn việc theo luật của bảng bên phải là DỮ KIỆN đọc từ cây thẻ; câu
+        # dưới đây thì không — nó là văn của một model 1-7 tỉ tham số chạy trên
+        # máy không có GPU. Trộn hai thứ vào một khung chat mà không dán nhãn
+        # là để người học tin cả hai như nhau.
+        "canh_bao": "Đây là model nói, không phải dữ kiện đọc từ thẻ. Có thể sai.",
+    })
 
 
 async def api_status(request: web.Request) -> web.Response:

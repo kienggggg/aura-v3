@@ -176,3 +176,94 @@ test('nhãn trên màn hình nói ĐÚNG việc bảng này làm', () => {
     'phải nói THẲNG trên màn hình là không có model — người dùng đọc nhãn, ' +
     'không đọc mã nguồn');
 });
+
+// ============================================================================
+// MODEL LOCAL — tuỳ chọn, mặc định TẮT
+// ============================================================================
+//
+// 01/09/2026, đo trên máy này (i5, không GPU rời), cùng một câu hỏi và cùng
+// một chương trình 3 dòng:
+//
+//     qwen3:0.6b         4,3 giây   TRẢ LỜI SAI (bảo là không thấy mã)
+//     qwen3:1.7b         5,1 giây   đúng
+//     gemma3:4b         13,8 giây   đúng
+//     qwen3.5:4b        33,4 giây   đúng
+//     qwen2.5-coder:7b  56,7 giây   đúng
+//
+// Hai điều rút ra, và cả hai thành khẳng định dưới đây: (1) chờ tới 57 giây
+// thì KHÔNG được tự gửi, người dùng phải bấm; (2) model nhỏ nhất trả lời SAI
+// nên danh sách nhiều model không phải trang trí.
+
+test('mặc định là KHÔNG dùng model', () => {
+  const i = HTML.indexOf('id="chonModel"');
+  assert.ok(i > 0, 'thiếu ô chọn model trong index.html');
+  const khoi = HTML.slice(i, i + 400);
+  const dau = khoi.match(/<option value="([^"]*)"/);
+  assert.ok(dau, 'ô chọn không có <option> nào');
+  assert.strictEqual(dau[1], '',
+    'lựa chọn ĐẦU TIÊN phải là rỗng = không dùng model. Mặc định bật một ' +
+    'model là bắt mọi người thử chờ hàng chục giây cho thứ họ không xin');
+  assert.ok(/Không dùng/i.test(khoi), 'phải nói rõ lựa chọn mặc định nghĩa là gì');
+  assert.ok(/let modelDangChon = ''/.test(APP_JS), 'biến nhớ phải khởi tạo rỗng');
+});
+
+test('CHƯA chọn model thì KHÔNG có nút hỏi — không thể lỡ tay', () => {
+  const nguonNut = trichKhoi('function nutHoiModel(cauHoi) {');
+  const f = new Function(`
+    let modelDangChon = arguments[0];
+    const escapeHtml = (s) => String(s);
+    ${nguonNut}
+    return nutHoiModel;`);
+  assert.strictEqual(f('')('câu gì đó'), '',
+    'chưa chọn model mà vẫn vẽ nút thì một cú bấm nhầm là 57 giây chờ');
+  const co = f('qwen3:1.7b')('câu gì đó');
+  assert.ok(co.includes('nut-hoi-model') && co.includes('qwen3:1.7b'),
+    'đã chọn model thì nút phải hiện, và phải GỌI TÊN model trên nút — người ' +
+    'dùng cần biết mình sắp chờ con nào');
+});
+
+test('KHÔNG tự gửi: chỉ có đúng một đường gọi model, và nó nằm sau cú bấm', () => {
+  const soLanGoi = (APP_JS.match(/hoiModelLocal\s*\(/g) || []).length;
+  assert.strictEqual(soLanGoi, 2,
+    `\`hoiModelLocal\` xuất hiện ${soLanGoi} lần — phải đúng 2: một chỗ định ` +
+    'nghĩa, một chỗ gọi trong handler click. Thêm chỗ nào là thêm một đường ' +
+    'gửi mà người dùng không bấm');
+  assert.ok(/nut-hoi-model[\s\S]{0,200}hoiModelLocal/.test(APP_JS),
+    'lời gọi phải nằm trong nhánh xử lý cú bấm vào `.nut-hoi-model`');
+});
+
+test('đồng hồ chờ là đồng hồ THẬT, không phải trễ giả', () => {
+  const than = trichKhoi('async function hoiModelLocal(cauHoi) {');
+  assert.ok(/setInterval/.test(than) && /performance\.now\(\)/.test(than),
+    'phải đếm giây có thật đang trôi — chờ tới 57 giây mà không hiện gì thì ' +
+    'người dùng tưởng app treo');
+  assert.ok(/clearInterval/.test(than), 'quên dọn thì đồng hồ chạy mãi');
+  assert.ok(!/setTimeout\s*\(\s*\(\s*\)\s*=>[^)]*\)\s*,\s*\d/.test(than),
+    'không được có trễ giả trong đường này — đúng thứ vừa gỡ khỏi bảng');
+});
+
+test('câu của MODEL phải trông khác câu đọc từ thẻ', () => {
+  const than = trichKhoi('async function hoiModelLocal(cauHoi) {');
+  assert.ok(/model-noi/.test(than),
+    'không dán nhãn riêng thì người học tin lời model ngang với dữ kiện đọc ' +
+    'từ cây thẻ — một bên là văn của model 1-7 tỉ tham số, một bên là số đếm');
+  assert.ok(/canh_bao/.test(than), 'phải hiện câu cảnh báo máy chủ gửi kèm');
+  assert.ok(/d\.model/.test(than) && /d\.ms/.test(than),
+    'phải ghi rõ model nào và mất bao lâu');
+});
+
+test('không dò được Ollama thì NÓI VÌ SAO', () => {
+  const than = trichKhoi('async function napDanhSachModel() {');
+  assert.ok(/!d\.co_ollama/.test(than), 'phải phân biệt có và không có Ollama');
+  // Neo vào TỪNG CHỖ ĐỌC ĐƯỢC, không dò `d.ly_do` trên cả hàm: gieo thử cho
+  // thấy cửa mù đúng chỗ đó — lý do được gán ở hai nơi, gỡ một nơi thì khẳng
+  // định dò cả hàm vẫn xanh. Cùng lỗi đã mắc ở `o.title = chu` sáng nay.
+  for (const [neo, vi_sao] of [
+    ['ghiChu.title = d.ly_do', 'ô ghi chú cạnh danh sách — chỗ người dùng rê chuột vào'],
+    ['o.title = d.ly_do', 'chính ô chọn — chỗ người dùng rê chuột vào trước'],
+  ]) {
+    assert.ok(than.includes(neo),
+      `thiếu \`${neo}\` (${vi_sao}). Một ô chọn chỉ có "Không dùng" mà không ` +
+      'giải thích thì người ta tưởng app hỏng, hoặc tưởng mình cài thiếu');
+  }
+});

@@ -4260,3 +4260,69 @@ body.presentation-mode-active .the {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
   pointer-events: none;
 }
+
+/* ==========================================================================
+   Ô CHỌN MODEL LOCAL
+   ==========================================================================
+   Mặc định là "Không dùng". Danh sách chỉ có gì khi máy người dùng đang chạy
+   Ollama — dò qua `GET /api/model`, đo 01/09/2026: 211ms khi CÓ Ollama, và
+   trần 1,5 giây khi không có (không được chặn lúc mở app lâu hơn thế). */
+.ai-model-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.ai-model-label {
+  flex-shrink: 0;
+}
+
+.ai-model-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.ai-model-note {
+  flex-shrink: 0;
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+/* Câu trả lời của MODEL phải trông khác câu đọc từ thẻ. Bốn việc theo luật là
+   dữ kiện; câu dưới đây là văn của một model vài tỉ tham số chạy không GPU.
+   Trộn chung một kiểu là để người học tin cả hai như nhau. */
+.model-noi {
+  border-left: 3px solid #A855F7;
+  padding-left: 8px;
+}
+
+.model-canh-bao {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.nut-hoi-model {
+  margin-top: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  cursor: pointer;
+}

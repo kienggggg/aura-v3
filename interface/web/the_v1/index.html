@@ -530,6 +530,18 @@
         <button class="quick-chip" data-action="trace-help">🌊 Mạch nước ngầm</button>
       </div>
 
+      <!-- Chọn model local. MẶC ĐỊNH LÀ KHÔNG DÙNG — bảng này trả lời
+           theo luật, đọc thẳng cây thẻ. Ô chọn chỉ có nghĩa với người đã tự
+           cài Ollama trên máy mình; ai không có sẽ thấy câu giải thích vì sao
+           danh sách trống, chứ không thấy một ô rỗng khó hiểu. -->
+      <div class="ai-model-row" id="aiModelRow">
+        <label class="ai-model-label" for="chonModel">🧠 Model:</label>
+        <select class="ai-model-select" id="chonModel">
+          <option value="">Không dùng — đọc thẻ theo luật</option>
+        </select>
+        <span class="ai-model-note" id="aiModelNote"></span>
+      </div>
+
       <!-- Khung hiển thị tin nhắn -->
       <div class="ai-messages-container" id="aiMessagesContainer">
         <!-- Tin nhắn ban đầu -->

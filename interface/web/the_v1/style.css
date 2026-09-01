@@ -187,9 +187,24 @@ body {
 }
 
 .file-icon,
-.file-badge,
-.nhan-nhanh {
+.file-badge {
   flex-shrink: 0;
+}
+
+/* `.nhan-nhanh` KHÔNG được ghim như hai cái trên — đó là chỗ lượt vá đầu sai.
+   Nó chứa câu báo lỗi dài tuỳ ý, và ghim rồi thì nó đẩy nguyên thanh đầu ra
+   ngoài. Đo ở 375 sau khi ghim:
+       "Không mở được tệp: Đường dẫn tệp không hợp lệ hoặc không tồn tại:
+        _khong_co.py"  (78 ký tự)  ->  #nhanNhanh rộng 473px
+       trang tràn 243px · btnRun mép phải 526 -> ngoài màn hình
+   Ô rỗng thì không ai thấy gì nên bệnh chỉ hiện khi CÓ lỗi — đúng lúc người
+   dùng cần thanh đầu nhất. Cắt bằng `…`; câu đầy đủ vẫn ở `title`. */
+.nhan-nhanh {
+  min-width: 0;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .file-badge {

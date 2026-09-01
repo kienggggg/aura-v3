@@ -6,6 +6,9 @@
   <title>AURA THẺ v1 — Lập trình bằng Thẻ Trực Quan</title>
   <link rel="icon" type="image/svg+xml" href="/static/aura_logo.svg">
   <link rel="stylesheet" href="/static/style.css">
+  <!-- Nạp SAU style.css: mobile.css chỉ chứa một khối @media và dựa
+       vào thứ tự này để đè, không dùng !important lung tung. -->
+  <link rel="stylesheet" href="/static/mobile.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -115,6 +118,11 @@
   </header>
 
   <!-- Main App Layout (3 Columns) -->
+  <!-- Nền mờ sau khay trượt trên điện thoại. Chạm ra ngoài để đóng —
+       không có nó thì khay che 62% màn hình và lối ra duy nhất là
+       tìm đúng nút nhỏ trên thanh đầu. -->
+  <div class="mobile-backdrop" id="mobileBackdrop" hidden></div>
+
   <main class="app-main" id="appMain">
     <!-- Left Column: KHAY THẺ (Toolbox) ⇅ CÂY THƯ MỤC (File Tree) ⇅ GÓI THẺ (Extensions) -->
     <aside class="sidebar-left" id="sidebarLeft">

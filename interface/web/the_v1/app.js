@@ -139,6 +139,15 @@
     }
   }
 
+  // Ngưỡng phải TRÙNG với `@media (max-width: 820px)` trong `mobile.css`.
+  // Lệch nhau thì có một dải bề rộng ở đó CSS vẽ khay trượt còn JS tưởng vẫn
+  // ba cột — nền mờ không hiện, chạm ra ngoài không đóng được gì.
+  const NGUONG_DIEN_THOAI = 820;
+
+  function laManHinhHep() {
+    return window.matchMedia(`(max-width: ${NGUONG_DIEN_THOAI}px)`).matches;
+  }
+
   // Quản lý Bố Cục IDE & Phông Chữ (Zoom)
   function applySidebarLayout() {
     const mainEl = document.getElementById('appMain');
@@ -148,6 +157,15 @@
 
     if (state.sidebarRightCollapsed) mainEl.classList.add('right-collapsed');
     else mainEl.classList.remove('right-collapsed');
+
+    // Nền mờ chỉ có nghĩa khi panel đang là KHAY TRƯỢT che màn hình. Ở ba cột
+    // nó sẽ phủ đen cả app trong khi chẳng có gì để đóng.
+    const nen = document.getElementById('mobileBackdrop');
+    if (nen) {
+      const coKhayMo = laManHinhHep() &&
+        (!state.sidebarLeftCollapsed || !state.sidebarRightCollapsed);
+      nen.hidden = !coKhayMo;
+    }
   }
 
   function toggleSidebarLeft() {
@@ -3021,6 +3039,11 @@
     const o = document.getElementById('nhanNhanh');
     if (!o) return;
     o.textContent = chu;
+    // 01/09/2026 — ô này nay bị cắt bằng `…` khi câu dài (nó TỪNG được ghim
+    // `flex-shrink: 0` và đẩy cả thanh đầu ra ngoài màn hình ở 375px: câu 78
+    // ký tự làm ô rộng 473px, trang tràn 243px). Cắt thì phải còn đường đọc
+    // đủ, nếu không là giấu chính câu lỗi người dùng đang cần.
+    o.title = chu;
     o.className = 'nhan-nhanh hien' + (loai === 'hong' ? ' hong' : '');
     if (hetGioBao) clearTimeout(hetGioBao);
     hetGioBao = setTimeout(
@@ -3034,6 +3057,7 @@
     const o = document.getElementById('nhanNhanh');
     if (!o) return;
     o.textContent = chu;
+    o.title = chu;
     o.classList.add('hien');
     if (hetGioBao) clearTimeout(hetGioBao);
     hetGioBao = setTimeout(() => o.classList.remove('hien'), 3000);
@@ -6680,6 +6704,35 @@ python3 main.py
   // ==========================================================================
   function setupEventListeners() {
     // 1. Sidebar Toggles
+    // TRÊN ĐIỆN THOẠI, MẶC ĐỊNH LÀ KHAY ĐÓNG.
+    //
+    // `state.sidebarLeft/RightCollapsed` mặc định `false` — đúng cho ba cột
+    // (mở app là thấy khay thẻ bên trái). Nhưng ở bố cục khay trượt, `false`
+    // nghĩa là hai khay TRƯỢT LÊN SẴN và che 62% màn hình ngay lần mở đầu:
+    // người dùng thấy một tấm phủ, không thấy canvas, và phải tự đoán cách
+    // đóng. Đo ở 375x812 trước khi thêm đoạn này — đúng như vậy.
+    //
+    // Chỉ ép ở LẦN ĐẦU (localStorage chưa có khoá): sau đó tôn trọng lựa chọn
+    // của người dùng, không đè lên mỗi lần mở app.
+    if (laManHinhHep() && localStorage.getItem('aura_sidebar_left_collapsed') === null) {
+      state.sidebarLeftCollapsed = true;
+      state.sidebarRightCollapsed = true;
+      applySidebarLayout();
+    }
+
+    const nenMo = document.getElementById('mobileBackdrop');
+    if (nenMo) {
+      nenMo.addEventListener('click', () => {
+        // Đóng CẢ HAI: hai khay chồng nhau được, và nền mờ là một tấm chung
+        // nên không biết người dùng định đóng cái nào.
+        state.sidebarLeftCollapsed = true;
+        state.sidebarRightCollapsed = true;
+        localStorage.setItem('aura_sidebar_left_collapsed', 'true');
+        localStorage.setItem('aura_sidebar_right_collapsed', 'true');
+        applySidebarLayout();
+      });
+    }
+
     const btnToggleLeft = document.getElementById('btnToggleSidebarLeft');
     if (btnToggleLeft) btnToggleLeft.addEventListener('click', toggleSidebarLeft);
 

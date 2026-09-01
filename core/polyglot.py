@@ -15,7 +15,7 @@ Tính năng:
   - Tra cứu metadata và template chuẩn của từng ngôn ngữ.
   - Chuyển đổi mã logic AST từ Python sang các ngôn ngữ đích (Transpiler).
   - Kiểm tra cú pháp độc lập (Syntax Validator) cho từng ngôn ngữ.
-  - Thực thi an toàn trong tiến trình cô lập (Isolated Runner) kèm timeout guard.
+  - Chạy mã trong một tiến trình con, CÓ trần thời gian nhưng KHÔNG có hộp cát.
 """
 from __future__ import annotations
 
@@ -834,7 +834,24 @@ def chay_ma_da_ngon_ngu(
     lang: str = "python",
     timeout_s: float = 5.0
 ) -> Dict[str, Any]:
-    """Thực thi mã nguồn an toàn trong môi trường cô lập có giới hạn thời gian."""
+    """Chạy mã trong một tiến trình con, có trần thời gian. KHÔNG có hộp cát.
+
+    01/09/2026 — câu này TRƯỚC ĐÂY viết "thực thi an toàn trong môi trường CÔ
+    LẬP". Chạy thử qua chính hàm này thì:
+
+        CWD                      D:/AURA_v3   (gốc kho, không phải thư mục tạm)
+        USER                     baloa        (đủ quyền tài khoản Windows)
+        liệt kê thư mục HOME     86 mục       (đọc được)
+        GHI TỆP NGOÀI thư mục tạm             ĐƯỢC
+
+    Chỉ có `timeout`. Không giới hạn tệp, không giới hạn mạng, không đổi
+    người dùng. CLAUDE.md mục 7 luật 3: "Cô lập", "sandbox", "không có quyền"
+    — ba chữ ấy người đọc sẽ TIN, và tin sai thì mất tệp. Kiểm được thì kiểm;
+    kiểm không được thì viết CHƯA chặn được, đừng viết đã chặn.
+
+    CHỈ Python và JavaScript chạy thật (cần `node`). Sáu ngôn ngữ còn lại chỉ
+    được KIỂM CÚ PHÁP — xem nhánh cuối hàm.
+    """
     lang = lang.lower().strip()
     if lang not in DANH_SACH_NGON_NGU:
         return {
@@ -945,17 +962,37 @@ def chay_ma_da_ngon_ngu(
             except OSError:
                 pass
 
-    # 3. Trình giả lập an toàn cho các ngôn ngữ khác nếu máy chưa cài toolchain
+    # 3. KHÔNG CHẠY ĐƯỢC — chỉ kiểm cú pháp.
+    #
+    # 01/09/2026 — nhánh này TRƯỚC ĐÂY trả `status: "PASS"`, `exit_code: 0` và
+    # in ra "[AURA Polyglot Engine Sandbox] ... đạt tiêu chuẩn biên dịch".
+    # Đo thật, 6 ngôn ngữ, mã CỐ Ý HỎNG:
+    #
+    #     go    fmt.Println(1/0)     -> PASS  exit 0
+    #     rust  panic!("no")         -> PASS  exit 0
+    #     cpp   return 1             -> PASS  exit 0
+    #     sql   SELECT 1/0           -> PASS  exit 0
+    #     bash  exit 3               -> PASS  exit 0   (máy CÓ bash!)
+    #     ts    (hợp lệ)             -> PASS  exit 0
+    #
+    # Sáu trên sáu báo đỗ trong khi không chương trình nào từng chạy. Giao diện
+    # đọc `status === 'PASS'` rồi vẽ huy hiệu xanh "EXIT CODE 0" — người dùng
+    # bấm CHẠY và nhận về màu xanh cho thứ chưa hề chạy.
+    #
+    # Ba trạng thái phải tách rời (CLAUDE.md mục 4): đạt · đo được mà không
+    # đạt · KHÔNG ĐO ĐƯỢC. Nhánh này là cái thứ ba.
     syntax_res = kiem_tra_cu_phap_da_ngon_ngu(ma, lang)
     t_ms = round((time.monotonic() - t0) * 1000, 1)
 
     if syntax_res.get("valid"):
         return {
-            "status": "PASS",
-            "exit_code": 0,
-            "stdout": f"[AURA Polyglot Engine Sandbox]\nĐã kiểm định cú pháp {DANH_SACH_NGON_NGU[lang].ten} thành công.\n"
-                      f"Chương trình đạt tiêu chuẩn biên dịch và tối ưu luồng thực thi.",
-            "stderr": "",
+            "status": "KHONG_CHAY_DUOC",
+            "exit_code": None,
+            "stdout": "",
+            "stderr": f"KHÔNG CHẠY ĐƯỢC — máy này chưa có bộ công cụ cho "
+                      f"{DANH_SACH_NGON_NGU[lang].ten}.\n"
+                      f"Đã kiểm CÚ PHÁP và thấy hợp lệ, nhưng chương trình "
+                      f"CHƯA HỀ CHẠY, nên không biết nó ra kết quả gì.",
             "latency_ms": t_ms,
             "language": lang,
             "simulated": True

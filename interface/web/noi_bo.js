@@ -595,7 +595,7 @@
       return;
     }
 
-    inConsolePolyglot(`Đang khởi tạo môi trường cô lập để chạy mã ${state.polyglotSourceLang.toUpperCase()} (Timeout: 5.0s)...`, 'RUNNING...', 'info');
+    inConsolePolyglot(`Đang chạy mã ${state.polyglotSourceLang.toUpperCase()} trong một tiến trình con (trần 5,0s, KHÔNG có hộp cát)...`, 'ĐANG CHẠY...', 'info');
 
     try {
       const resp = await fetch('/api/polyglot/run', {
@@ -612,18 +612,26 @@
       const out = data.stdout ? `--- STDOUT ---\n${data.stdout}\n` : '';
       const err = data.stderr ? `--- STDERR ---\n${data.stderr}\n` : '';
 
+      // BA TRẠNG THÁI, không phải hai. `KHONG_CHAY_DUOC` nghĩa là máy chưa
+      // có bộ công cụ cho ngôn ngữ ấy: chương trình CHƯA HỀ CHẠY. Gộp nó vào
+      // xanh thì người dùng tưởng đã đỗ; gộp vào đỏ thì tưởng mã mình sai.
+      // Đo 01/09: 6/8 ngôn ngữ đi vào nhánh này, và trước đây cả sáu đều nhận
+      // huy hiệu xanh "EXIT CODE 0" — kể cả `bash exit 3` trên máy CÓ bash.
+      const chuaChay = data.status === 'KHONG_CHAY_DUOC';
+      const dat = data.status === 'PASS';
       inConsolePolyglot(
-        `[KẾT QUẢ THỰC THI SANDBOX]\n` +
+        (chuaChay ? `[KHÔNG CHẠY ĐƯỢC — chỉ kiểm cú pháp]\n`
+                  : `[KẾT QUẢ CHẠY THẬT]\n`) +
         `• Ngôn ngữ: ${data.language || state.polyglotSourceLang}\n` +
-        `• Exit Code: ${data.exit_code}\n` +
-        `• Thời gian thực thi: ${data.latency_ms || 0} ms\n` +
+        (chuaChay ? '' : `• Exit Code: ${data.exit_code}\n`) +
+        `• Thời gian: ${data.latency_ms || 0} ms\n` +
         `• Trạng thái: ${data.status}\n\n` +
         (out || err || '(Chương trình chạy xong mà không in kết quả ra terminal)'),
-        data.status === 'PASS' ? 'EXIT CODE 0' : 'EXIT ERROR',
-        data.status === 'PASS' ? 'success' : 'error'
+        chuaChay ? 'CHƯA CHẠY' : (dat ? 'EXIT CODE 0' : 'EXIT ERROR'),
+        chuaChay ? 'info' : (dat ? 'success' : 'error')
       );
     } catch (err) {
-      inConsolePolyglot(`✕ Lỗi thực thi sandbox: ${err.message}`, 'CRASH', 'error');
+      inConsolePolyglot(`✕ Không gọi được máy chủ: ${err.message}`, 'HỎNG', 'error');
     }
   }
 

@@ -544,7 +544,17 @@ async def api_polyglot_validate(request: web.Request) -> web.Response:
 
 
 async def api_polyglot_run(request: web.Request) -> web.Response:
-    """Thực thi an toàn đoạn mã trong môi trường cô lập kèm timeout guard."""
+    """Chạy mã trong một tiến trình con, có trần thời gian. KHÔNG có hộp cát.
+
+    Câu này trước đây viết "an toàn ... môi trường cô lập". Đo được: mã chạy ở
+    `D:/AURA_v3` với đủ quyền tài khoản Windows, ghi được tệp ra ngoài thư mục
+    tạm, đọc được thư mục HOME. Chỉ có `timeout`.
+
+    Và cổng này KHÔNG có mã thông hành, KHÔNG kiểm Origin, KHÔNG có cờ
+    `--allow-exec` — khác hẳn app thẻ (bốn lớp cổng vào). `noi_bo_app.py` mặc
+    định bind 127.0.0.1 nhưng đọc biến `AURA_NOI_BO_HOST`, nên một biến môi
+    trường là mở ra LAN.
+    """
     try:
         data = await request.json()
     except Exception:

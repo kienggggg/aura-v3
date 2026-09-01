@@ -6548,38 +6548,6 @@ python3 main.py
     container.scrollTop = container.scrollHeight;
   }
 
-  function hienThiDangSuyNghi() {
-    const container = document.getElementById('aiMessagesContainer');
-    if (!container) return null;
-
-    const indEl = document.createElement('div');
-    indEl.className = 'ai-message assistant ai-typing-wrapper';
-    indEl.id = 'aiTypingIndicator';
-
-    const avatarEl = document.createElement('div');
-    avatarEl.className = 'msg-avatar';
-    avatarEl.textContent = '✨';
-
-    const typingBox = document.createElement('div');
-    typingBox.className = 'msg-content ai-typing-indicator';
-    typingBox.innerHTML = `
-      <div class="ai-typing-dot"></div>
-      <div class="ai-typing-dot"></div>
-      <div class="ai-typing-dot"></div>
-    `;
-
-    indEl.appendChild(avatarEl);
-    indEl.appendChild(typingBox);
-    container.appendChild(indEl);
-    container.scrollTop = container.scrollHeight;
-    return indEl;
-  }
-
-  function xoaDangSuyNghi() {
-    const ind = document.getElementById('aiTypingIndicator');
-    if (ind) ind.remove();
-  }
-
   function phanTichLoiThe() {
     const dsLoi = (state.diagnostics && state.diagnostics.danh_sach) || [];
     const soLoiDo = (state.diagnostics && state.diagnostics.so_loi_do) || 0;
@@ -6696,6 +6664,86 @@ python3 main.py
     `;
   }
 
+  // ==========================================================================
+  // BỘ ĐỌC Ý ĐỊNH CỦA CÂU HỎI  (không có model nào ở đây)
+  // ==========================================================================
+  //
+  // 01/09/2026 — bản trước dò bằng `q.includes('...')`. Đo trên hai bộ câu:
+  //
+  //     12 câu thường (người học hỏi bình thường)      11/12
+  //     10 câu khó   (từ khoá nằm lọt giữa từ khác,
+  //                   hoặc câu chạm hai chủ đề)         4/10
+  //
+  // Bốn kiểu hỏng, và chỉ MỘT trong đó là bệnh dò chuỗi con:
+  //
+  //   1. `fix` nằm trong `prefix` / `suffix`
+  //        "Biến prefix dùng thế nào?"        -> báo là hỏi LỖI
+  //      Chữa bằng ranh giới từ. Đây đúng bệnh CLAUDE.md mục 4.
+  //
+  //   2. Từ đơn quá chung, đứng riêng vẫn khớp
+  //        "Em muốn đổi màu nền thành đỏ"     -> `đỏ` -> báo là hỏi LỖI
+  //        "Tệp này có thêm gì mới không?"    -> `thêm` -> báo là xin GỢI Ý
+  //      Ranh giới từ KHÔNG chữa được, vì `đỏ` đứng riêng thật. Chữa bằng cách
+  //      đổi sang CỤM: `bị đỏ` · `thẻ đỏ` · `thêm thẻ`.
+  //
+  //   3. Câu chạm hai chủ đề thì nhánh đầu thắng, im lặng
+  //        "Gợi ý thẻ nào để sửa lỗi này?"    -> trả lời về LỖI, bỏ qua gợi ý
+  //      Chữa bằng cách HỎI LẠI thay vì tự chọn. Cùng luật ba trạng thái ở
+  //      CLAUDE.md: đạt · đo được mà không đạt · KHÔNG ĐO ĐƯỢC.
+  //
+  //   4. Ngữ nghĩa thật ("đỏ" là màu hay là lỗi) — bộ dò từ khoá KHÔNG làm
+  //      được, và không giả vờ làm được.
+  //
+  // Sau khi sửa: 12/12 và 9/10. Ca còn trượt: "Giải thích vì sao thẻ này đỏ"
+  // trả lời về kịch bản thay vì hỏi lại. CỐ Ý KHÔNG CHỮA: thêm `đỏ` trơ vào
+  // bảng thì hai ca ở nhóm 2 hỏng lại. Người dùng vẫn được câu trả lời hợp lý
+  // vì họ có nói "giải thích".
+
+  const KY_TU_TRONG_TU = '\\p{L}\\p{N}\\p{M}_';
+
+  const BANG_TU_KHOA_SOI = {
+    loi: ['lỗi', 'bị đỏ', 'thẻ đỏ', 'báo đỏ', 'cảnh báo', 'sai ở đâu', 'sai chỗ nào',
+          'sai gì', 'sửa thế nào', 'sửa sao', 'sửa kiểu gì', 'debug', 'không chạy',
+          'chạy không được', 'hỏng'],
+    kich_ban: ['kịch bản', 'luồng', 'giải thích', 'làm gì', 'chạy sao', 'hoạt động',
+               'chương trình này'],
+    goi_y: ['gợi ý', 'thêm thẻ', 'lắp thẻ', 'ghép thẻ', 'dùng thẻ gì', 'thẻ gì tiếp',
+            'nên dùng thẻ'],
+    trace: ['trace', 'traceback', 'mạch nước ngầm', 'dò vết', 'dò dòng', 'biến số'],
+  };
+
+  /** Cụm này có xuất hiện như một TỪ TRỌN VẸN trong câu không? */
+  function khopTronVen(cau, cum) {
+    const thoat = cum.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(
+      `(?<![${KY_TU_TRONG_TU}])${thoat}(?![${KY_TU_TRONG_TU}])`, 'iu').test(cau);
+  }
+
+  /**
+   * Câu này hỏi về việc gì?
+   *
+   * Trả `{ viec }` khi chắc, hoặc `{ viec: null, ly_do }` khi KHÔNG chắc —
+   * không bao giờ đoán bừa một chủ đề rồi trả lời như thể đã hiểu.
+   */
+  function docYDinhCauHoi(cau) {
+    const trung = {};
+    for (const [viec, cacCum] of Object.entries(BANG_TU_KHOA_SOI)) {
+      const khop = cacCum.filter((c) => khopTronVen(cau, c));
+      if (khop.length) trung[viec] = khop;
+    }
+    const ten = Object.keys(trung);
+    if (ten.length === 0) return { viec: null, ly_do: 'khong_khop' };
+    if (ten.length > 1) return { viec: null, ly_do: 'mo_ho', ung_vien: ten, trung };
+    return { viec: ten[0], trung };
+  }
+
+  const TEN_VIEC = {
+    loi: '🔍 lỗi trên thẻ',
+    kich_ban: '📖 kịch bản chương trình',
+    goi_y: '🧩 gợi ý lắp thẻ',
+    trace: '🌊 mạch nước ngầm',
+  };
+
   function xuLyTinNhanNguoiDung(noiDung) {
     const raw = (noiDung || '').trim();
     if (!raw) return;
@@ -6705,33 +6753,52 @@ python3 main.py
     const inputEl = document.getElementById('aiChatInput');
     if (inputEl) inputEl.value = '';
 
-    hienThiDangSuyNghi();
+    // TRẢ LỜI NGAY. Bản trước có `setTimeout(280ms)` cùng ba chấm nhấp nháy —
+    // không chờ gì cả, chỉ để trông như đang nghĩ. Bảng này không hỏi model
+    // nào: nó đọc `state.tree` và `state.diagnostics` rồi trả lời theo luật,
+    // mất chưa tới một mili-giây. Giả vờ nghĩ là dạy người dùng tin rằng có
+    // một cái đầu ở đâu đó — cùng họ "nhãn nói sai việc" ở CLAUDE.md mục 4.
+    const y = docYDinhCauHoi(raw);
 
-    setTimeout(() => {
-      xoaDangSuyNghi();
-      const q = raw.toLowerCase();
-      let traLoi = '';
+    if (y.viec) {
+      const lam = {
+        loi: phanTichLoiThe,
+        kich_ban: giaiThichKichBan,
+        goi_y: goiYThePhuHop,
+        trace: huongDanMachNuocNgam,
+      }[y.viec];
+      themTinNhanAi('assistant', lam());
+      return;
+    }
 
-      if (q.includes('lỗi') || q.includes('sai') || q.includes('đỏ') || q.includes('sửa') || q.includes('fix') || q.includes('bug')) {
-        traLoi = phanTichLoiThe();
-      } else if (q.includes('kịch bản') || q.includes('luồng') || q.includes('giải thích') || q.includes('làm gì') || q.includes('chạy sao')) {
-        traLoi = giaiThichKichBan();
-      } else if (q.includes('gợi ý') || q.includes('thêm') || q.includes('thẻ') || q.includes('lắp')) {
-        traLoi = goiYThePhuHop();
-      } else if (q.includes('trace') || q.includes('mạch nước') || q.includes('ngầm') || q.includes('dò')) {
-        traLoi = huongDanMachNuocNgam();
-      } else {
-        traLoi = `
-          <p>Em đã nhận câu hỏi: <em>"${escapeHtml(raw)}"</em>.</p>
-          <p>Hiện tại chương trình đang có <strong>${demTheSau(state.tree || [])} thẻ</strong> (${escapeHtml(state.activeFileName || 'Chưa đặt tên')}).</p>
-          <p>Sếp có thể bấm các nút gợi ý nhanh ở trên hoặc hỏi em về <strong>lỗi thẻ</strong>, <strong>kịch bản luồng</strong> hay <strong>dò vết mạch nước ngầm</strong> nhé!</p>
-        `;
-      }
+    if (y.ly_do === 'mo_ho') {
+      // HỎI LẠI thay vì tự chọn. Bản trước để nhánh `if` đầu tiên thắng và
+      // không nói gì: "Gợi ý thẻ nào để sửa lỗi này?" nhận về một bản kê lỗi,
+      // phần "gợi ý" bốc hơi mà người dùng không biết.
+      themTinNhanAi('assistant', `
+        <p>Câu này chạm <strong>${y.ung_vien.length} việc</strong> cùng lúc, em chưa
+           chắc Sếp muốn cái nào:</p>
+        <ul>${y.ung_vien.map((v) => `<li>${TEN_VIEC[v] || v}</li>`).join('')}</ul>
+        <p>Bấm giúp em một nút ở trên, hoặc hỏi lại gọn hơn.</p>
+      `);
+      return;
+    }
 
-      themTinNhanAi('assistant', traLoi);
-    }, 280);
+    // KHÔNG HIỂU thì nói là không hiểu.
+    //
+    // Bản trước mở đầu bằng "Em đã nhận câu hỏi: ..." rồi kê số thẻ — đọc như
+    // đã hiểu mà không trả lời. Bảng này chỉ làm được đúng bốn việc; nói thẳng
+    // ra thì người dùng biết đường mà dùng, thay vì hỏi tiếp vào khoảng không.
+    themTinNhanAi('assistant', `
+      <p>Em <strong>chưa hiểu câu này</strong>. Bảng bên phải không phải là một
+         model biết trò chuyện — nó đọc thẳng cây thẻ đang mở và trả lời đúng
+         bốn việc:</p>
+      <ul>${Object.values(TEN_VIEC).map((t) => `<li>${t}</li>`).join('')}</ul>
+      <p>Bốn nút ở trên chạy đúng bốn việc ấy.
+         Chương trình đang mở có <strong>${demTheSau(state.tree || [])} thẻ</strong>
+         (${escapeHtml(state.activeFileName || 'Chưa đặt tên')}).</p>
+    `);
   }
-
   function setupAiSidecarChat() {
     const btnSend = document.getElementById('btnSendAiChat');
     const input = document.getElementById('aiChatInput');
@@ -6779,32 +6846,16 @@ python3 main.py
         const act = chip.dataset.action;
         if (act === 'analyze-errors') {
           themTinNhanAi('user', '🔍 Phân tích lỗi thẻ');
-          hienThiDangSuyNghi();
-          setTimeout(() => {
-            xoaDangSuyNghi();
-            themTinNhanAi('assistant', phanTichLoiThe());
-          }, 200);
+          themTinNhanAi('assistant', phanTichLoiThe());
         } else if (act === 'explain-logic') {
           themTinNhanAi('user', '📖 Giải thích kịch bản luồng');
-          hienThiDangSuyNghi();
-          setTimeout(() => {
-            xoaDangSuyNghi();
-            themTinNhanAi('assistant', giaiThichKichBan());
-          }, 200);
+          themTinNhanAi('assistant', giaiThichKichBan());
         } else if (act === 'suggest-card') {
           themTinNhanAi('user', '🧩 Gợi ý lắp ghép thẻ');
-          hienThiDangSuyNghi();
-          setTimeout(() => {
-            xoaDangSuyNghi();
-            themTinNhanAi('assistant', goiYThePhuHop());
-          }, 200);
+          themTinNhanAi('assistant', goiYThePhuHop());
         } else if (act === 'trace-help') {
           themTinNhanAi('user', '🌊 Hướng dẫn Mạch Nước Ngầm');
-          hienThiDangSuyNghi();
-          setTimeout(() => {
-            xoaDangSuyNghi();
-            themTinNhanAi('assistant', huongDanMachNuocNgam());
-          }, 200);
+          themTinNhanAi('assistant', huongDanMachNuocNgam());
         }
       });
     }

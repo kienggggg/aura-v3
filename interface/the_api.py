@@ -512,7 +512,7 @@ async def api_danh_sach_tep(request: web.Request) -> web.Response:
         #
         # Trước đó danh mục chỉ có các THƯ MỤC CON, nên tệp nằm NGAY gốc dự án
         # không bao giờ được liệt kê. Đo trên bản cài trong venv sạch: tạo
-        # `bai_tap_cua_toii_du.py` rồi làm đúng lệnh README
+        # `bai_tap_cua_toi/vi_du.py` rồi làm đúng lệnh README
         # (`cd <thư mục>` · `aura-the`), `GET /api/tep_tin` trả **200 với
         # `tong_so: 0`** — hộp "Mở tệp" trống trơn, không một dòng báo lỗi.
         #

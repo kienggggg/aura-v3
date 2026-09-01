@@ -63,13 +63,34 @@ def _phang(nodes):
     return ra
 
 
+def _tach_dong(nguon: str) -> list:
+    """Tách dòng CHỈ trên xuống dòng thật — `\n`, `\r\n`, `\r`.
+
+    KHÔNG dùng `str.splitlines()`. Nó tách thêm trên tám ký tự khác:
+    `\v` `\f` `\x1c` `\x1d` `\x1e` `\x85` `\u2028` `\u2029`. Trình soạn
+    thảo và libcst đều coi chúng là ký tự giữa dòng, nên chỉ số dòng của bộ đo
+    lệch khỏi chỉ số dòng của bộ đọc.
+
+    01/09/2026 — đây KHÔNG phải lo xa. `interface/the_api.py` có đúng MỘT ký tự
+    `\v` nằm trong một chú thích (ai đó viết `"...bai_tap_cua_toi\vi_du.py"`
+    trong một chuỗi Python, và `\v` là escape của tab dọc — `/v` bị nuốt mất).
+    Một ký tự ấy làm `splitlines()` đếm 1513 dòng trong khi tệp có 1512.
+
+    Hậu quả đo được: cửa 4 báo **327 thẻ "tả sai"** — và cả 327 đều nằm trong
+    đúng tệp ấy, phân bố `chu_thich 90 · gan 134 · goi_ham 21 · tra_ve 82`,
+    khớp từng con số với báo cáo tổng. Không thẻ nào tả sai thật. Bộ đo lệch
+    một dòng thì mọi thẻ nằm sau ký tự ấy đều bị chấm trượt.
+    """
+    return nguon.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+
+
 def _chu_thich_that(nguon):
     """Dòng nào THẬT SỰ có chú thích cuối dòng, chấm bằng bộ tách token.
 
     Không dò dấu thăng: kho có 9 dòng chứa dấu ấy bên trong chuỗi, và
     user_memory.py:211 có CẢ HAI trên cùng một dòng.
     """
-    dong = nguon.splitlines()
+    dong = _tach_dong(nguon)
     ra = {}
     try:
         for t in tokenize.generate_tokens(io.StringIO(nguon).readline):
@@ -108,7 +129,7 @@ def cua_1_go_lai_y_cu(doc, luu):
                              "loi_mo": type(e).__name__})
             continue
         ds = _phang(rec.tree)
-        d0 = txt.splitlines()
+        d0 = _tach_dong(txt)
         hong = 0
         for n in ds:
             for m in ds:
@@ -315,7 +336,7 @@ def cua_4_doi_that(doc, luu):
     _dong_tep: set = set()
 
     for p in _tep_py():
-        goc = p.read_text(encoding="utf-8").splitlines()
+        goc = _tach_dong(p.read_text(encoding="utf-8"))
         tong_dong_vat_ly += len(goc)
         _dong_tep = set()
         try:
@@ -352,7 +373,7 @@ def cua_4_doi_that(doc, luu):
             n.da_sua = True
             rec.has_modifications = True
             try:
-                ra = luu(rec).decode("utf-8").splitlines()
+                ra = _tach_dong(luu(rec).decode("utf-8"))
             except Exception:
                 ra = None
             n.o[o] = cu                        # trả lại nguyên trạng

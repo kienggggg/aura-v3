@@ -134,6 +134,29 @@ body {
   margin-left: 4px;
 }
 
+/* 01/09/2026 — thanh này biến thành MỘT CỤC TRÒN cao nghều đè lên dòng
+   "0 Cảnh báo". Sếp thấy trên màn hình trước khi có ai đo.
+
+   Đo được, cùng khung 1920, chỉ đổi tên tệp:
+       a.py                          1 dòng · pill 44px · y=6    ✓
+       dong_ho.py                    1 dòng · pill 44px · y=6    ✓
+       core/local_first_gateway.py   1 dòng · pill 59px · y=-2    (tràn ngang)
+       "1. Hàm cộng hai số"          3 DÒNG · pill 62px · y=-3   ✗
+   Ở 1366 còn tệ hơn: tên thành 5 dòng, `#currentFileName` co còn 32px rộng
+   80px cao, pill cao 94px bắt đầu từ y=-19 — thò cả lên trên lẫn xuống dưới.
+
+   Thủ phạm là DẤU CÁCH: `.file-name` không có lấy một dòng CSS, nên nó nhận
+   `white-space: normal` và tên có dấu cách thì QUẤN DÒNG. Tên không dấu cách
+   (`core/local_first_gateway.py`) không quấn được nên chỉ tràn ngang — nó
+   thoát, và chính vì thế bệnh này nấp được lâu.
+
+   Gốc thì vẫn là `min-width: auto` của flex item — đúng con đã cắn
+   `.header-actions` ngày 30/08 (xem chú thích dưới), lần này ở phần tử anh em
+   mà lượt vá trước bỏ sót. Đắt gấp đôi vì "1. Hàm cộng hai số" là BÀI MẪU MỞ
+   SẴN: mọi người mở app lần đầu đều gặp nó ngay màn hình đầu tiên.
+
+   Sửa: cho thanh co được (`min-width: 0`), ghim biểu tượng và nhãn phụ
+   (`flex-shrink: 0`) để chúng không bị bóp, và cắt tên bằng `…` thay vì quấn. */
 .file-status-bar {
   display: flex;
   align-items: center;
@@ -144,6 +167,29 @@ body {
   border: 1px solid var(--border-color);
   font-size: 13px;
   color: var(--text-secondary);
+  min-width: 0;
+  /* `flex-shrink: 0` + trần 280px — KHÔNG phải `min-width: 0` một mình.
+     Lượt vá đầu chỉ cho nó co được, và đo lại thì hết quấn dòng thật, nhưng
+     ô tên hụt chữ ở MỌI tên, kể cả `a.py` (cần 27px, được 18px). Vì thanh đầu
+     vốn đã thừa nội dung ngay ở 1920: 184+156+247+262+1080 = 1929 > 1920, nên
+     flexbox chia phần thiếu cho mọi thứ co được — thanh tên gánh một phần.
+     Chỗ đáng gánh là `.header-actions-scroll` (30/08 đã cho cuộn trong chính
+     nó), không phải tên tệp. */
+  flex-shrink: 0;
+  max-width: 280px;
+}
+
+.file-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.file-icon,
+.file-badge,
+.nhan-nhanh {
+  flex-shrink: 0;
 }
 
 .file-badge {
@@ -182,6 +228,11 @@ body {
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
+  /* Nhóm này CUỘN ĐƯỢC nên nó phải là chỗ nhường ĐẦU TIÊN. Không ghi hệ số
+     này thì flexbox chia phần thiếu theo tỉ lệ và tên tệp cũng gánh một phần —
+     đo được ở 1920: tên "1. Hàm cộng hai số" cần 112px, chỉ được 86px, dù ô
+     cuộn ngay bên cạnh còn thừa chỗ để nhường. */
+  flex-shrink: 100;
 }
 
 .header-actions-scroll::-webkit-scrollbar {
@@ -2796,7 +2847,17 @@ body {
   gap: 2px;
   padding: 4px 8px 0;
   overflow-x: auto;
-  flex-shrink: 0;
+  /* 01/09/2026 — TRƯỚC ĐÂY `flex-shrink: 0`, tức nó có `overflow-x: auto` mà
+     không bao giờ được phép dùng: giữ cứng 156px rồi đẩy phần thiếu sang mấy
+     thứ khác. Đo ở 1024 (nguyên trạng, chưa động vào gì):
+         trang tràn 122px · btnRun mép phải 1106 -> NGOÀI màn hình
+     Cho nó nhường thì cả ba khung đều sạch — tràn 0, btnRun trong màn, tên tệp
+     đủ chữ, một dòng:
+         1920  thanh tab 133px      1366  82px      1024  49px  (đều cuộn được)
+     Giá phải trả: thanh tab cuộn sớm hơn. Đổi được, vì tên tệp đang mở còn
+     hiện ở thanh tròn bên cạnh và ở chân trang — không mất thông tin nào. */
+  flex-shrink: 1;
+  min-width: 0;
 }
 .tab-item {
   display: flex;

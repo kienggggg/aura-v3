@@ -14,13 +14,26 @@ Nên trình cài này lấy CẢ HAI: người dùng nhận **một tệp**, cò
 máy là bản **onedir** chạy nhanh. Cái giá là trình cài phải mang theo bản onedir
 đã nén bên trong.
 
-BA ĐIỀU TRÌNH CÀI NÀY KHÔNG LÀM, và không giả vờ làm:
+BỐN CHỖ NÓ ĐỂ LẠI TRÊN MÁY — không có chỗ thứ năm:
 
-  * KHÔNG ghi Registry. Không có mục trong "Apps & features". Gỡ cài bằng
-    `GO_CAI_DAT.bat` trong thư mục cài, hoặc xoá thư mục.
+  * `%LOCALAPPDATA%\\Programs\\AURA The`  — chương trình, 71 tệp / 30,2 MB
+  * `Documents\\AURA The`                 — bài tập của người dùng
+  * Lối tắt trên Desktop và trong Start Menu
+  * MỘT khoá registry ở bậc tài khoản (`HKCU`), để "AURA Thẻ" hiện trong
+    Settings > Apps. Không cần quyền quản trị, không đụng tài khoản khác.
+    Cài đè lần thứ hai vẫn chỉ một mục — đo được: nền 18 -> 19 -> 19.
+
+HAI ĐIỀU NÓ KHÔNG LÀM, và không giả vờ làm:
+
   * KHÔNG ký số. Windows vẫn hiện bảng xanh SmartScreen ở lần chạy đầu.
   * KHÔNG đụng vào thư mục bài của người dùng khi gỡ. Bài nằm ở
-    `Documents\\AURA The` và ở lại đó.
+    `Documents\\AURA The` và ở lại đó — đo bằng cách sửa bài rồi cài đè rồi gỡ.
+
+MỘT ĐIỀU CHƯA ĐO ĐƯỢC: chưa ai bấm nút "Uninstall" TRONG Settings. Đã đo được
+là kho phần mềm của Windows (`Get-Package -ProviderName Programs`) nhìn thấy
+mục này, và `GO_CAI_DAT.bat` chạy được qua cả `CreateProcess` lẫn
+`ShellExecute` — hai cơ chế Windows có thể dùng để gọi `UninstallString`. Nhưng
+cú bấm thật thì chưa.
 """
 from __future__ import annotations
 
@@ -116,28 +129,119 @@ def tao_loi_tat(duong_lnk: Path, dich: Path, doi_so: str, thu_muc_lam_viec: Path
     return duong_lnk.is_file()
 
 
+# Khoá đăng ký ứng dụng. CHỈ `HKEY_CURRENT_USER` — không bao giờ `HKLM`.
+#
+# HKCU thuộc về một tài khoản, không cần quyền quản trị, và không đụng tới
+# người dùng khác trên cùng máy. HKLM thì ngược lại cả ba, nên trình cài này
+# không biết đường tới đó.
+#
+# Đây là đăng ký ỨNG DỤNG (cùng loại việc với tạo lối tắt), không phải sửa cài
+# đặt hệ thống hay bảo mật: không đụng chính sách, không đụng khởi động cùng
+# Windows, không đụng gì ngoài đúng một khoá mang tên app.
+KHOA_UNINSTALL = r"Software\Microsoft\Windows\CurrentVersion\Uninstall"
+KHOA_APP = "AURA_The"
+
+
+def dang_ky_apps_features(thu_muc_cai: Path, go_cai: Path) -> bool:
+    """Tạo mục "AURA Thẻ" trong Settings > Apps > Installed apps.
+
+    Dùng `winreg` của Python, KHÔNG dùng `reg.exe` hay PowerShell. Lý do đo
+    được ngay trong tệp này: `WScript.Shell` ghi chuỗi qua trang mã ANSI nên
+    "AURA Thẻ" thành "AURA Th?". `winreg` ghi `REG_SZ` bằng UTF-16 nên tên
+    hiện đúng dấu trong Settings.
+
+    Kiểm bằng một bộ đọc KHÁC, không tự đọc lại bằng `winreg` rồi tự chấm —
+    `Get-Package -ProviderName Programs` là kho phần mềm của chính Windows::
+
+        winreg đọc thẳng registry            'AURA Thẻ'
+        Get-Package, console mặc định        'AURA Th?'
+        Get-Package, OutputEncoding UTF-8    'AURA Thẻ'
+
+    Ca đối chứng ở dòng ba nói rõ dấu hỏi ở dòng hai là do console PowerShell
+    nuốt dấu lúc IN RA, không phải byte trong registry sai. Không có dòng ba
+    thì dòng hai đọc y hệt "tên bị hỏng".
+    """
+    try:
+        import winreg
+    except ImportError:
+        return False
+
+    co = 0
+    for f in thu_muc_cai.rglob("*"):
+        if f.is_file():
+            co += f.stat().st_size
+
+    muc = {
+        "DisplayName": TEN_HIEN,
+        "DisplayVersion": "1.0",
+        "Publisher": "AURA",
+        "InstallLocation": str(thu_muc_cai),
+        # Dấu nháy kép: đường dẫn có khoảng trắng ("AURA The").
+        "UninstallString": f'"{go_cai}"',
+        "DisplayIcon": str(thu_muc_cai / "AURA_The.exe"),
+        # NoModify/NoRepair: Settings sẽ chỉ hiện nút "Uninstall", không hiện
+        # hai nút kia — bấm vào chúng thì chẳng có gì chạy.
+        "NoModify": 1,
+        "NoRepair": 1,
+    }
+    try:
+        with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER,
+                                f"{KHOA_UNINSTALL}\\{KHOA_APP}", 0,
+                                winreg.KEY_WRITE) as k:
+            for ten, gt in muc.items():
+                if isinstance(gt, int):
+                    winreg.SetValueEx(k, ten, 0, winreg.REG_DWORD, gt)
+                else:
+                    winreg.SetValueEx(k, ten, 0, winreg.REG_SZ, gt)
+            # Settings đọc trường này theo KB, không phải byte.
+            winreg.SetValueEx(k, "EstimatedSize", 0, winreg.REG_DWORD, co // 1024)
+        return True
+    except OSError:
+        return False
+
+
 NOI_DUNG_GO_CAI = """@echo off
 chcp 65001 > nul
+rem Tệp này nằm TRONG thư mục nó sắp xoá. Đo 01/09/2026, chạy tại chỗ:
+rem `rmdir` xoá luôn chính tệp đang chạy, cmd đọc dòng kế thì không còn tệp ->
+rem in "The system cannot find the path specified", THOÁT MÃ 1, và người dùng
+rem KHÔNG thấy dòng "Xong" lẫn `pause` — cửa sổ tắt giữa chừng. Từ Settings >
+rem Apps thì mã 1 ấy đọc ra là "gỡ cài đặt hỏng".
+rem Nên: tự chép sang %TEMP% rồi chạy bản chép; bản gốc `exit` NGAY (không
+rem `exit /b`) để tiến trình chết hẳn và nhả tệp ra cho `rmdir`.
+if "%~1"=="--tu-temp" goto lam
+copy /Y "%~f0" "%TEMP%\\AURA_The_go_cai.bat" > nul
+start "" "%TEMP%\\AURA_The_go_cai.bat" --tu-temp
+exit
+
+:lam
 title Gỡ cài đặt AURA Thẻ
 echo.
 echo   Gỡ cài đặt AURA Thẻ
 echo   ------------------------------------------------------------
-echo   Sẽ xoá:      %~dp0
+echo   Sẽ xoá:      {thu_muc_cai}
 echo   GIỮ NGUYÊN:  {thu_muc_bai}
 echo.
 choice /C YN /M "Xoá chương trình (bài tập của bạn vẫn còn)"
 if errorlevel 2 goto thoi
 del "{lnk_desktop}" 2>nul
 del "{lnk_menu}" 2>nul
+rem Xoá mục trong Settings > Apps. CHỈ HKCU, chỉ đúng khoá của app này.
+rem Xoá TRƯỚC khi xoá thư mục: nếu rmdir hỏng (app đang chạy) thì ít nhất
+rem Settings không còn trỏ vào một UninstallString đã chết.
+reg delete "HKCU\\{khoa_uninstall}\\{khoa_app}" /f >nul 2>&1
 echo   Đang xoá...
 cd /d "%TEMP%"
 rmdir /S /Q "{thu_muc_cai}"
+echo.
 echo   Xong. Bài tập của bạn vẫn ở: {thu_muc_bai}
+echo.
 pause
 exit /b 0
 :thoi
 echo   Đã huỷ, không xoá gì.
 pause
+exit /b 0
 """
 
 
@@ -156,6 +260,8 @@ def cai_dat() -> int:
     _in("=" * 66)
     _in(f"  Chương trình sẽ vào : {mac_dinh}")
     _in(f"  Bài tập của bạn vào : {thu_muc_bai}")
+    _in("  Lối tắt             : Desktop và Start Menu")
+    _in("  Gỡ ra bằng          : Settings > Apps > AURA Thẻ > Uninstall")
     _in("")
     _in("  Máy này KHÔNG cần cài Python. Không có gì gửi lên mạng.")
     _in("  Lưu ý: mã bạn bấm CHẠY THỬ có đủ quyền của tài khoản Windows")
@@ -229,13 +335,17 @@ def cai_dat() -> int:
 
     (dich / "GO_CAI_DAT.bat").write_text(
         NOI_DUNG_GO_CAI.format(thu_muc_cai=dich, thu_muc_bai=thu_muc_bai,
-                               lnk_desktop=desktop, lnk_menu=menu),
+                               lnk_desktop=desktop, lnk_menu=menu,
+                               khoa_uninstall=KHOA_UNINSTALL, khoa_app=KHOA_APP),
         encoding="utf-8")
+
+    ok_reg = dang_ky_apps_features(dich, dich / "GO_CAI_DAT.bat")
 
     _in("")
     _in("  XONG.")
     _in(f"    Lối tắt Desktop    : {'có' if ok_desktop else 'KHÔNG TẠO ĐƯỢC'}")
     _in(f"    Lối tắt Start Menu : {'có' if ok_menu else 'KHÔNG TẠO ĐƯỢC'}")
+    _in(f"    Trong Settings/Apps: {'có' if ok_reg else 'KHÔNG ĐĂNG KÝ ĐƯỢC'}")
     if not (ok_desktop or ok_menu):
         # Không có lối tắt nào thì phải chỉ đường khác, không để người dùng
         # cài xong rồi không biết mở bằng gì.

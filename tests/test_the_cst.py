@@ -1,5 +1,20 @@
 # -*- coding: utf-8 -*-
-"""Kiểm thử bộ phân tích và lưu tệp LibCST (the_cst.py) và the_v1.py."""
+"""Kiểm thử bộ phân tích và lưu tệp LibCST (`core/the_cst.py`).
+
+01/09/2026 — tệp này TỪNG chạy mỗi khẳng định HAI LẦN: một lần qua bộ đọc
+LibCST, một lần qua một bộ đọc AST thứ hai nằm trong `core/the_v1.py`. Nó
+không so hai bộ với nhau, chỉ đòi cả hai cùng thoả một tính chất.
+
+Bộ đọc AST ấy KHÔNG AI GỌI: `interface/the_api.py` lấy hàm đọc từ
+`the_cst`, chỉ lấy `BO_THE_V1 · NHOM_THE · TheNode · sinh_ma_python · …`
+từ `the_v1`. Phân tích khả đạt: 10/30 mục cấp module của `the_v1.py` không
+ai với tới — 588 dòng. Đã xoá.
+
+Nó không chỉ là mã chết. Ngày 01/09 tôi đo nhầm nó rồi báo với Sếp rằng app
+không dựng nổi thẻ `nhap` · `thu` · `bat_loi` · `bo_qua` · `dung_lap`. Số
+thật của bộ đọc app dùng: 46 · 19 · 26 · 7 · 1, và `ma_tho` chỉ 7,3% chứ
+không phải 22,1%. Hai bộ trông giống hệt nhau từ bên ngoài — đó là chỗ đắt.
+"""
 import pathlib
 import pytest
 
@@ -8,12 +23,7 @@ from core.the_cst import (
     luu_cay_the_ra_tep_py as cst_luu_tep,
     doc_chuoi_py_sang_cay_the as cst_doc_chuoi,
 )
-from core.the_v1 import (
-    doc_tep_py_sang_cay_the as v1_doc_tep,
-    luu_cay_the_ra_tep_py as v1_luu_tep,
-    BO_THE_V1,
-    NHOM_THE,
-)
+from core.the_v1 import BO_THE_V1, NHOM_THE
 
 
 def _phang(nodes):
@@ -25,10 +35,10 @@ def _phang(nodes):
     return ra
 
 
-def test_lossless_23_files_core():
-    """CST phải đảm bảo 100% byte-for-byte lossless trên toàn bộ 23 tệp core/*.py."""
+def test_lossless_core_files():
+    """CST phải đảm bảo 100% byte-for-byte lossless trên toàn bộ các tệp core/*.py."""
     files = list(pathlib.Path("core").glob("*.py"))
-    assert len(files) == 23, f"Kỳ vọng 23 tệp core/*.py, thấy {len(files)}"
+    assert len(files) >= 23, f"Kỳ vọng ít nhất 23 tệp core/*.py, thấy {len(files)}"
     for p in files:
         raw = p.read_bytes()
         rec = cst_doc_tep(p)
@@ -38,13 +48,6 @@ def test_lossless_23_files_core():
 
 def test_chu_thich_the_in_web_search():
     """core/web_search.py có nhiều chú thích dòng riêng (>= 80 thẻ chu_thich)."""
-    # 1. Kiểm tra trên the_v1
-    rec_ws_v1 = v1_doc_tep("core/web_search.py")
-    all_nodes_v1 = _phang(rec_ws_v1.tree)
-    chu_thich_v1 = [n for n in all_nodes_v1 if n.ma == "chu_thich"]
-    assert len(chu_thich_v1) >= 80, f"the_v1 web_search.py chỉ có {len(chu_thich_v1)} thẻ chu_thich, kỳ vọng >= 80"
-
-    # 2. Kiểm tra trên the_cst
     rec_ws_cst = cst_doc_tep("core/web_search.py")
     all_nodes_cst = _phang(rec_ws_cst.tree)
     chu_thich_cst = [n for n in all_nodes_cst if n.ma == "chu_thich"]
@@ -53,14 +56,6 @@ def test_chu_thich_the_in_web_search():
 
 def test_dong_ma_thuat_khong_thanh_chu_thich():
     """Dòng 1-2 chứa coding hoặc shebang (#!) KHÔNG được thành thẻ chu_thich (phải giữ trong ma_tho)."""
-    # 1. the_v1
-    rec_dh_v1 = v1_doc_tep("core/dong_ho.py")
-    all_nodes_v1 = _phang(rec_dh_v1.tree)
-    assert not any(n.ma == "chu_thich" and "coding" in n.o.get("noi_dung", "") for n in all_nodes_v1)
-    dong_1_v1 = next((n for n in all_nodes_v1 if n.line_start == 1), None)
-    assert dong_1_v1 is not None and dong_1_v1.ma == "ma_tho"
-
-    # 2. the_cst
     rec_dh_cst = cst_doc_tep("core/dong_ho.py")
     all_nodes_cst = _phang(rec_dh_cst.tree)
     assert not any(n.ma == "chu_thich" and "coding" in n.o.get("noi_dung", "") for n in all_nodes_cst)
@@ -217,3 +212,27 @@ def test_try_co_finally_van_la_ma_tho():
     r = cst_doc_chuoi(ma)
     assert _cay_cua(r)[0].ma == "ma_tho", _cay_cua(r)[0].ma
     assert cst_luu_tep(r) == ma.encode("utf-8")
+
+
+def test_cst_ten_diem_va_nested_call_attributes():
+    """Kiểm tra nhận dạng tên hàm phân cấp a.b.c qua _ten_diem trong the_cst."""
+    import libcst as cst
+    from core.the_cst import _ten_diem
+
+    nut_ten = cst.Name("func")
+    assert _ten_diem(nut_ten) == "func"
+
+    nut_attr1 = cst.Attribute(value=cst.Name("os"), attr=cst.Name("path"))
+    assert _ten_diem(nut_attr1) == "os.path"
+
+    nut_attr2 = cst.Attribute(value=nut_attr1, attr=cst.Name("join"))
+    assert _ten_diem(nut_attr2) == "os.path.join"
+
+    # Test qua chuỗi mã nguồn
+    ma = "os.path.join('a', 'b')\n"
+    r = cst_doc_chuoi(ma)
+    cay = _cay_cua(r)
+    assert len(cay) >= 1
+    assert cay[0].ma == "goi_ham"
+    assert cay[0].o["ten_ham"] == "os.path.join"
+

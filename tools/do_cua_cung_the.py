@@ -42,19 +42,6 @@ THU_MUC = ("core", "interface", "tools", "tests")
 KHOI = {"neu", "nguoc_lai", "ham", "lap_moi", "lap_khi"}
 
 
-def _muc(nut) -> int:
-    """Mức thụt đầu dòng để truyền cho `sinh_dong_the_don`.
-
-    ĐÃ SAI MỘT LẦN, 20/08: bản đầu đếm chiều sâu đệ quy. Sai hai đường —
-    `TheNode.indent` lưu SỐ DẤU CÁCH chứ không phải số cấp, và chiều sâu đệ quy
-    lệch hẳn vì thẻ `ma_tho` cũng lồng con (the_v1.py:684 thụt 4 dấu cách mà bộ
-    đếm ra mức 11). Hậu quả: 3 thẻ `else:` hoàn toàn lành bị chấm là tả sai.
-
-    Chấm bằng thứ máy ghi lại được, đừng chấm bằng thứ mình đếm lấy.
-    """
-    return (nut.indent or 0) // 4
-
-
 def _tep_py():
     ra = []
     for d in THU_MUC:
@@ -288,91 +275,6 @@ def cua_3_origin(kiem):
             "dat": sai == 0, "sai": sai, "tong": len(thu), "thu": ra}
 
 
-# ------------------------------------------------------------------- cửa 4
-def cua_4_tu_kiem(doc, sinh_dong):
-    """Bộ đọc phải TỰ KIỂM: thẻ nào tả sai nguồn thì phải là ma_tho.
-
-    Thà hiện ra mã thô còn hơn lặng lẽ xoá `-> bool`. Cửa này đo đúng một
-    điều: còn thẻ nào KHÔNG PHẢI ma_tho mà sinh lại không khớp nguồn không.
-    """
-    tong = sai = tho = 0
-    theo_the = {}
-    vi_du = []
-    tong_dong_vat_ly = 0
-    # ĐẾM THEO TỪNG TỆP, gom bằng TẬP rồi mới cộng số phần tử.
-    #
-    # Hai lỗi phải tránh cùng lúc, đã dính cả hai trong ngày 20/08:
-    #   cộng dồn `line_end - line_start + 1` -> thẻ khối tính cả thân nó rồi
-    #     từng thẻ con tính lại chính những dòng ấy: ra 113,7%, mà một tỉ lệ
-    #     vượt 100% là dấu hiệu công thức sai chứ không phải kết quả tốt;
-    #   dùng MỘT tập chung cho cả kho -> dòng 5 của tệp A đè dòng 5 của tệp B,
-    #     lần này lại đếm THIẾU.
-    dong_the_that = 0
-    _dong_tep: set = set()
-
-    for p in _tep_py():
-        dong = p.read_text(encoding="utf-8").splitlines()
-        tong_dong_vat_ly += len(dong)
-        _dong_tep = set()
-        try:
-            rec = doc(p)
-        except Exception:
-            sai += 1
-            continue
-
-        def di(ns, muc):
-            nonlocal tong, sai, tho
-            for n in ns:
-                if n.ma == "ma_tho":
-                    tho += 1
-                    di(n.than, muc + 1)
-                    continue
-                tong += 1
-                if n.line_start and n.line_end:
-                    _dong_tep.update(
-                        range(n.line_start, (n.line_end or n.line_start) + 1))
-                elif n.line_start:
-                    _dong_tep.add(n.line_start or 0)
-                o = theo_the.setdefault(n.ma, [0, 0])
-                o[0] += 1
-                if n.line_start is None:
-                    sai += 1
-                    o[1] += 1
-                    di(n.than, muc + 1)
-                    continue
-                try:
-                    ra = sinh_dong(n, _muc(n))
-                except Exception:
-                    ra = "<<khong sinh duoc>>"
-                # thẻ khối chỉ chịu trách nhiệm dòng ĐẦU, thân là thẻ con
-                if n.ma in KHOI:
-                    that = dong[n.line_start - 1]
-                else:
-                    that = "\n".join(
-                        dong[n.line_start - 1:(n.line_end or n.line_start)])
-                if ra != that:
-                    sai += 1
-                    o[1] += 1
-                    if len(vi_du) < 30:
-                        vi_du.append({"tep": p.name, "the": n.ma,
-                                      "dong": n.line_start,
-                                      "goc": that.strip()[:90],
-                                      "sinh": ra.strip()[:90]})
-                di(n.than, muc + 1)
-        di(rec.tree, 0)
-        dong_the_that += len(_dong_tep)     # cộng SAU khi gom hết một tệp
-    return {
-        "ten": "Cửa 4 — thẻ tả sai nguồn phải bị hạ xuống ma_tho",
-        "dat": sai == 0, "the_that": tong, "tho": tho, "sai": sai,
-        "phu_song": round(100 * (tong - sai) / max(tong + tho, 1), 1),
-        "phu_song_dong": round(100 * dong_the_that / max(tong_dong_vat_ly, 1), 1),
-        "theo_the": {k: {"tong": v[0], "sai": v[1]}
-                     for k, v in sorted(theo_the.items(),
-                                        key=lambda x: -x[1][0])},
-        "vi_du": vi_du,
-    }
-
-
 # Ô là MỘT biểu thức -> bọc ngoặc là cách sửa hợp lệ với mọi hình dạng.
 O_BIEU_THUC = ("gia_tri", "dieu_kien", "day")
 # Ô là DANH SÁCH ĐỐI SỐ -> bọc ngoặc thì hỏng: `(parents=True, exist_ok=True)`
@@ -486,22 +388,18 @@ def cua_4_doi_that(doc, luu):
     }
 
 
-def chay(dung_cst: bool = True):
+def chay():
     """Chạy cả bốn cửa nghiệm thu app thẻ, ghi MỘT tệp JSON khoá đã sắp.
 
-    Mặc định chấm bản LibCST của `the_cst`. Truyền `--v1` để chuyển sang
-    chấm bản `ast` cũ của `the_v1`. Hai sổ ghi ra hai tệp khác nhau để không
-    đè lên nhau.
+    01/09/2026 — bỏ cờ `--v1`. Bộ đọc AST trong `core/the_v1.py` đã bị xoá vì
+    KHÔNG AI GỌI: `interface/the_api.py` lấy hàm đọc từ `the_cst`. Giữ một
+    nhánh chấm bộ đọc không ai dùng là chấm một thứ không tồn tại trên đường
+    người dùng đi — và nó đã làm tôi báo sai một lần, xem `tests/test_the_cst.py`.
     """
     try:
         sys.path.insert(0, str(GOC))
-        if dung_cst:
-            from core.the_cst import (doc_tep_py_sang_cay_the,
-                                      luu_cay_the_ra_tep_py,
-                                      sinh_dong_the_don)
-        else:
-            from core.the_v1 import (doc_tep_py_sang_cay_the,
-                                      luu_cay_the_ra_tep_py, sinh_dong_the_don)
+        from core.the_cst import (doc_tep_py_sang_cay_the,
+                                  luu_cay_the_ra_tep_py)
         from interface.the_api import kiem_tra_origin_hop_le
     except Exception as e:
         return None, "khong nap duoc bo doc / interface.the_api: %r" % (e,)
@@ -509,7 +407,7 @@ def chay(dung_cst: bool = True):
     if not _tep_py():
         return None, "khong tim thay tep .py nao trong %s" % (THU_MUC,)
 
-    print(f"[*] Bộ đọc: {'the_cst (LibCST)' if dung_cst else 'the_v1 (ast)'} — Quét {len(_tep_py())} tệp .py...", flush=True)
+    print(f"[*] Bộ đọc: the_cst (LibCST) — Quét {len(_tep_py())} tệp .py...", flush=True)
     
     print("[1/4] Đang đo Cửa 1 (gõ lại y giá trị cũ, bảo toàn byte)...", flush=True)
     c1 = cua_1_go_lai_y_cu(doc_tep_py_sang_cay_the, luu_cay_the_ra_tep_py)
@@ -521,9 +419,7 @@ def chay(dung_cst: bool = True):
     c3 = cua_3_origin(kiem_tra_origin_hop_le)
     
     print("[4/4] Đang đo Cửa 4 (tỷ lệ phủ thẻ & độ chính xác miêu tả)...", flush=True)
-    c4 = (cua_4_doi_that(doc_tep_py_sang_cay_the, luu_cay_the_ra_tep_py)
-          if dung_cst else
-          cua_4_tu_kiem(doc_tep_py_sang_cay_the, sinh_dong_the_don))
+    c4 = cua_4_doi_that(doc_tep_py_sang_cay_the, luu_cay_the_ra_tep_py)
 
     cua = [c1, c2, c3, c4]
 
@@ -538,7 +434,7 @@ def chay(dung_cst: bool = True):
         ten_the = {}
 
     so = {
-        "bo_doc": "the_cst (LibCST)" if dung_cst else "the_v1 (ast)",
+        "bo_doc": "the_cst (LibCST)",
         "ten_the": ten_the,
         "luc": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
         "kho": str(GOC),
@@ -548,7 +444,7 @@ def chay(dung_cst: bool = True):
         "cua": cua,
     }
     RA.mkdir(parents=True, exist_ok=True)
-    ten_so = "cua_cung.json" if "--v1" in sys.argv else "cua_cung_cst.json"
+    ten_so = "cua_cung_cst.json"
     (RA / ten_so).write_text(
         json.dumps(so, ensure_ascii=False, sort_keys=True, indent=1),
         encoding="utf-8")
@@ -556,27 +452,24 @@ def chay(dung_cst: bool = True):
 
 
 def main() -> int:
-    """Chạy bốn cửa rồi in bảng. Mặc định dùng bộ đọc `the_cst` (LibCST). Cờ `--v1` đổi sang bộ đọc AST cũ.
+    """Chạy bốn cửa rồi in bảng, qua bộ đọc `the_cst` (LibCST).
 
     Mã thoát theo luật ba trạng thái: 0 đạt · 1 đo được mà không đạt ·
     2 không đo được. Gộp ba cái này làm hai là mở đường cho "0/4" đọc thành
     "thua sạch" trong khi thật ra phép đo chưa hề chạy.
     """
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-    dung_cst = "--v1" not in sys.argv
-    so, loi = chay(dung_cst=dung_cst)
+    so, loi = chay()
     if so is None:
         print("KHONG DO DUOC: " + loi)
         return 2                       # khong do duoc, KHAC voi truot
     from bao_cao_cua_cung import in_bang, dung_trang, TRANG
     # doc LAI tu dia, khong dung `so` trong RAM: bang nguoi doc phai dung tu
     # dung so JSON da ghi (luat CLAUDE.md muc 5)
-    ten_so = "cua_cung.json" if "--v1" in sys.argv else "cua_cung_cst.json"
+    ten_so = "cua_cung_cst.json"
     tu_so = json.loads((RA / ten_so).read_text(encoding="utf-8"))
     in_bang(tu_so)
-    from pathlib import Path as _P
-    trang = (TRANG if "--v1" in sys.argv
-             else TRANG.with_name("bao_cao_cst.html"))
+    trang = TRANG.with_name("bao_cao_cst.html")
     trang.write_text(dung_trang(tu_so), encoding="utf-8")
     print("\nso   : " + str(RA / ten_so))
     print("trang: " + str(trang))

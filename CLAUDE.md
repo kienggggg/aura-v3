@@ -210,6 +210,54 @@ Rút ra: không repo nào trong đó làm model thông minh hơn. Hermes cho mod
 **cái cân** — đó mới là thứ thật, nhưng cân sai thì càng tối ưu càng lệch. Phần
 khó chưa bao giờ là vòng lặp; phần khó là cái cân.
 
+### Đo cái app KHÔNG chạy thì mọi con số đều là số của người khác
+
+Ngày 01/09/2026 tôi báo với Sếp rằng App Thẻ không dựng nổi năm loại thẻ —
+`nhap` · `thu` · `bat_loi` · `bo_qua` · `dung_lap` — và `ma_tho` chiếm 22,1%.
+Kèm bảng, kèm phần trăm, kèm đề nghị sửa. Sếp bảo sửa.
+
+Số thật của bộ đọc app **thật sự dùng**, trên cùng năm tệp:
+
+```
+              tôi báo    thật
+nhap             0        46
+thu              0        19
+bat_loi          0        26
+bo_qua           0         7
+dung_lap         0         1
+ma_tho        22,1%      7,3%
+mã do AI viết  76%        92%
+vòng tròn mở-lưu  1/8     8/8
+```
+
+Repo có **hai** bộ đọc Python → thẻ, cùng tên hàm, cùng kiểu trả về:
+
+```
+core/the_v1.py   bằng ast      KHÔNG AI GỌI
+core/the_cst.py  bằng libcst   the_api.py:703 mở tệp · :921 lưu tệp
+```
+
+Tôi `import` cái thứ nhất. Không lần nào tự hỏi *app gọi hàm nào*.
+
+Chỗ đắt nhất không phải con số sai. Là lúc tôi **nhìn thấy** thẻ `import ... lấy
+... as` trên màn hình, thấy nó mâu thuẫn với số của mình, rồi **đính chính chính
+mình theo hướng sai** — bảo rằng mình đọc nhầm màu thành cấu trúc. Tôi lấy mã
+chết bác bỏ thứ đang chạy trước mắt.
+
+**Màn hình là app. Thư viện chỉ là thứ mình đoán rằng app dùng.** Mâu thuẫn
+giữa hai cái thì thứ phải kiểm là cái đoán, không phải cái thấy.
+
+Trước khi đo một hàm, `grep` xem **cửa vào có gọi nó không** — đi từ
+`the_app.py` / `the_api.py` xuống, không đi từ tên hàm nghe hợp lý lên.
+
+Đã xoá bộ đọc chết: phân tích khả đạt từ đúng những gì app + test import cho ra
+**10/30 mục cấp module không ai với tới, 588 dòng**. Cửa
+`tests/test_mot_bo_doc_duy_nhat.py` giữ cho nó không mọc lại, và đóng đinh cả
+hành vi (đếm số thẻ, không hỏi "có mặt không") lẫn nguồn import của `the_api`.
+
+Mã chết bình thường chỉ tốn chỗ. Mã chết **trông giống mã thật** thì làm người
+đọc kết luận sai — và người đọc ấy có thể là chính mình, ba tuần sau.
+
 ### Test xanh không có nghĩa là app dùng được
 
 Ngày 24-25/08/2026, **tám lỗi trong hai ngày, tất cả cùng một họ**: giao diện

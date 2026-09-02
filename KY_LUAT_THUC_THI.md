@@ -60,13 +60,19 @@ Mọi lần chạy thử nghiệm phải được lưu cô lập trong `data/evi
 > cách gọi `POST /api/dispatch` rồi soi đĩa (`tools/do_trang_thai_phong.py`):
 >
 > ```
-> chạy thật 0 · chưa chạy thật 7 · không đo được 0
-> 8 tệp được KHAI là đã tạo · 0 tệp có thật trên đĩa · mỗi lượt 2–9 ms
+> 02/09 sáng   chạy thật 0 · chưa chạy thật 7 · không đo được 0
+>              8 tệp được KHAI là đã tạo · 0 tệp có thật · mỗi lượt 2–9 ms
+> 02/09 chiều  chạy thật 1 · chưa chạy thật 6 · không đo được 0
 > ```
 >
-> Cả bảy phòng trả về **đoạn văn viết sẵn**. Nên những tiêu chuẩn dưới đây là
-> thứ các phòng **phải đạt**, không phải thứ chúng **đang đạt**. Đọc ngược lại
-> là đúng cái bẫy mà chính Chương I cấm.
+> Phòng chạy thật đầu tiên là **Alpha** (mục 2 ngay dưới): nó dựng video dọc
+> 720×1280 dài 60,6 s, giọng OneCore tiếng Việt, 6 hiện vật mỗi tệp một
+> SHA-256, và để `ffprobe` + `blackdetect` chấm — hết 6,4 s. Xem
+> `core/phong_alpha.py`.
+>
+> Sáu phòng còn lại vẫn trả về **đoạn văn viết sẵn**. Nên những tiêu chuẩn dưới
+> đây là thứ các phòng **phải đạt**, không phải thứ chúng **đang đạt** — trừ
+> mục 2. Đọc ngược lại là đúng cái bẫy mà chính Chương I cấm.
 
 
 ### 1. PHÒNG WRITER (Sáng tác Chương truyện)

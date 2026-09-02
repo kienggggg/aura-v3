@@ -310,6 +310,7 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
     # Thực thi hành động theo từng phòng chuyên trách
     ket_qua = ""
     artifacts: List[Dict[str, Any]] = []
+    _phong_tra_ve: Optional[str] = None   # phòng nào TỰ CHẤM thì điền vào đây
 
     if phong_id == "zeta":
         # Phòng Scout: Tra cứu web hoặc tổng hợp tin tức
@@ -321,14 +322,34 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
         artifacts.append({"name": "sources.json", "size": "1.2 KB", "type": "JSON"})
 
     elif phong_id == "alpha":
-        # Phòng Studio: Kịch bản video dọc & Visuals
-        ket_qua = f"🎬 **[Alpha Studio Output]**\nĐã khởi tạo kịch bản video dọc 60 giây (720×1280):\n\n" \
-                  f"1. **Scene 1 (0–15s)**: Hook kịch tính & Visual Card 1\n" \
-                  f"2. **Scene 2 (15–45s)**: Diễn biến cốt lõi & Giọng đọc OneCore SAPI\n" \
-                  f"3. **Scene 3 (45–60s)**: Điểm nhấn kết thúc & Call-to-action\n\n" \
-                  f"*Sẵn sàng kết xuất FFmpeg sang file MP4.*"
-        artifacts.append({"name": "storyboard.json", "size": "3.4 KB", "type": "JSON"})
-        artifacts.append({"name": "cards_preview.png", "size": "240 KB", "type": "IMAGE"})
+        # Phòng Studio: DỰNG VIDEO THẬT.
+        #
+        # Trước 02/09/2026 nhánh này in một storyboard viết sẵn rồi khai hai tệp
+        # `storyboard.json` (3.4 KB) và `cards_preview.png` (240 KB) — không tệp
+        # nào tồn tại, kích thước là chữ gõ tay.
+        #
+        # Nay nó chạy `core/phong_alpha.py`: giọng OneCore tiếng Việt -> 4 thẻ
+        # PIL 720×1280 -> FFmpeg -> MP4, rồi để `ffprobe` + `blackdetect` chấm.
+        # Mất khoảng 5 giây nên phải đẩy sang luồng khác, kẻo chẹn máy chủ.
+        from core.phong_alpha import dung_video
+
+        _kq = await asyncio.to_thread(
+            dung_video, PROJECT_ROOT / "data" / "alpha" / task_id)
+        _phong_tra_ve = _kq["trang_thai"]
+        artifacts = _kq["artifacts"]
+        _so = _kq["kiem"].get("so", {})
+        if _phong_tra_ve == "PASS":
+            ket_qua = (
+                "🎬 **[Alpha Studio]** Đã dựng xong video dọc; verifier độc lập đã chấm.\n\n"
+                f"- **Khung**: {_so.get('rong')}×{_so.get('cao')} · **dài** {_so.get('giay')}s\n"
+                f"- **Âm thanh**: có, đỉnh {_so.get('peak_db')} dB (không im lặng)\n"
+                f"- **Đoạn đen ≥ 2s**: {_so.get('doan_den')}\n"
+                f"- **Hiện vật**: {len(artifacts)} tệp thật, mỗi tệp một SHA-256\n\n"
+                f"Dựng hết {_kq['ms'] / 1000:.1f}s."
+            )
+        else:
+            ket_qua = (f"🎬 **[Alpha Studio]** {_phong_tra_ve}: {_kq['vi_sao']}\n\n"
+                       f"Đã để lại {len(artifacts)} hiện vật để soi.")
 
     elif phong_id == "delta":
         # Phòng Kỹ thuật: Bác sĩ mã & Chẩn đoán
@@ -374,6 +395,11 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
     bang_chung = [Path(d).name for d in _bang_chung_moi(_truoc, _anh_chup_bang_chung())]
     thieu = [a["name"] for a in artifacts if not _artifact_co_that(a["name"])]
     trang_thai = "PASS" if (bang_chung or (artifacts and not thieu)) else "KHONG_CHAY_DUOC"
+    # Phòng nào tự chấm mình thì lời của NÓ đè lên phép đo bằng chứng — nhưng
+    # chỉ theo chiều NGHIÊM HƠN. Có tệp trên đĩa không có nghĩa là đạt: Alpha
+    # dựng ra được một video rồi `blackdetect` vẫn có thể bác nó.
+    if _phong_tra_ve is not None and _phong_tra_ve != "PASS":
+        trang_thai = _phong_tra_ve
     if trang_thai != "PASS":
         _thieu = (f", và {len(thieu)} tệp nó khai là đã tạo thì không có thật: "
                   + ", ".join(thieu)) if thieu else ""

@@ -317,7 +317,38 @@ trả lời bằng chuỗi cứng + `setTimeout` 350ms giả vờ suy nghĩ, 0 r
 
 Sửa: bỏ hẳn trường `trang_thai` khỏi danh mục (có trường là có chỗ gõ tay),
 `api_danh_sach_phong` đọc từ sổ đo, chưa đo thì hiện `CHUA_DO`.
-`tests/test_phong_khong_tu_khai_online.py` giữ cho nó không khai lại.
+`tests/test_phong_khong_tu_khai_online.py` giữ cho nó không khai lại. Và
+`/api/dispatch` nay **fail-closed**: không để lại byte nào thì trả
+`KHONG_CHAY_DUOC`, không trả `PASS`. Giá đo được: 2–9 ms lên 316–519 ms mỗi
+lượt, vì phải chụp cây tệp hai lần.
+
+Rồi **Alpha thành phòng đầu tiên chạy thật** — `core/phong_alpha.py` dựng video
+dọc 720×1280 / 60,6 s, giọng OneCore tiếng Việt, 6 hiện vật có SHA-256, để
+`ffprobe` + `blackdetect` chấm. `chạy thật 1 · chưa chạy thật 6`.
+
+Ba chỗ đắt trên đường ấy:
+
+*Một câu báo "không có" có thể sai.* `System.Speech` báo máy không có giọng
+tiếng Việt. Đọc registry thì `Speech\Voices\Tokens` có 2 giọng en-US, còn
+`Speech_OneCore\Voices\Tokens` có 4 giọng **và có `MSTTS_V110_viVN_An`**. Giọng
+có thật, chỉ nằm ở nhánh mà API cũ không nhìn tới. Tin câu báo ấy là đi vòng
+một quãng không cần thiết. Cùng họ với *"không tìm thấy" và "không tồn tại" là
+hai câu khác nhau*.
+
+*PASS ngay lần đầu là lúc đáng ngờ nhất.* Nên dựng bốn video CỐ Ý HỎNG — sai
+khung, quá ngắn, audio câm, màn hình đen — và verifier bác đủ bốn, mỗi cái đúng
+lý do. Không có ca ấy thì "PASS" chỉ chứng minh verifier chưa từng nói không.
+
+*Và cửa canh của tôi tautological.* Nó khẳng định `(width, height) == (RONG,
+CAO)` bằng **chính hằng số mà mã dùng**, nên gieo `RONG, CAO = 640, 1136` thì
+hai vế cùng đổi và cửa vẫn xanh. Sửa: chép tay 720×1280 và 55–65 từ
+`KY_LUAT_THUC_THI.md` vào cửa, rồi đối chiếu mã **với đặc tả** thay vì với
+chính nó. Gieo lại 9/9 đỏ.
+
+> Chữ *tautological* lấy từ `mattpocock/skills` soi cùng ngày — *"the assertion
+> recomputes the expected value the way the code does, so it passes by
+> construction and can never disagree with the code"*. Đọc buổi sáng, dính bẫy
+> buổi chiều.
 
 **Hai bài học của phép đo, đắt ngang phát hiện:**
 

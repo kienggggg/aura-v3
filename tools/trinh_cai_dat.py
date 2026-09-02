@@ -29,11 +29,15 @@ HAI ĐIỀU NÓ KHÔNG LÀM, và không giả vờ làm:
   * KHÔNG đụng vào thư mục bài của người dùng khi gỡ. Bài nằm ở
     `Documents\\AURA The` và ở lại đó — đo bằng cách sửa bài rồi cài đè rồi gỡ.
 
-MỘT ĐIỀU CHƯA ĐO ĐƯỢC: chưa ai bấm nút "Uninstall" TRONG Settings. Đã đo được
-là kho phần mềm của Windows (`Get-Package -ProviderName Programs`) nhìn thấy
-mục này, và `GO_CAI_DAT.bat` chạy được qua cả `CreateProcess` lẫn
-`ShellExecute` — hai cơ chế Windows có thể dùng để gọi `UninstallString`. Nhưng
-cú bấm thật thì chưa.
+NÚT "Uninstall" TRONG SETTINGS: đã bấm thật, hai lần, cả hai dạng
+`UninstallString`. Cả hai lần gỡ đúng bốn thứ và giữ nguyên bài tập, registry
+về đúng nền 18 mục.
+
+Cái bẫy trên đường tới đó đáng nhớ hơn kết quả: ba lần bấm đầu **không có gì
+xảy ra**, và nguyên nhân không nằm trong tệp này. `SystemSettings.exe` mở lúc
+06:41:37, khoá ghi lần cuối 06:48:19, và trong 7 phút giữa hai mốc tôi xoá rồi
+tạo lại khoá HAI lần. Sếp bấm một mục trong danh sách chụp trước đó. **Đóng hẳn
+Settings rồi mở lại thì nút chạy ngay** — kể cả với dạng chuỗi cũ.
 """
 from __future__ import annotations
 
@@ -180,26 +184,38 @@ def dang_ky_apps_features(thu_muc_cai: Path, go_cai: Path) -> bool:
         "DisplayVersion": "1.0",
         "Publisher": "AURA",
         "InstallLocation": str(thu_muc_cai),
-        # Trỏ vào `cmd.exe` — MỘT TỆP .exe CÓ THẬT — rồi đưa `.bat` làm đối số,
-        # thay vì trỏ thẳng vào `.bat`.
+        # Trỏ vào `cmd.exe` — một tệp `.exe` có thật — rồi đưa `.bat` làm đối
+        # số, thay vì trỏ thẳng vào `.bat`.
         #
-        # Đo 02/09/2026, hai lần bấm nút Uninstall trong Settings với chuỗi trỏ
-        # thẳng vào `.bat`: KHÔNG có gì bị xoá, và `%TEMP%\AURA_The_go_cai.bat`
-        # không tồn tại. Bản chép sang `%TEMP%` là việc ĐẦU TIÊN của `.bat`,
-        # trước cả câu hỏi Y/N — vắng nó nghĩa là `.bat` chưa chạy một dòng nào,
-        # không phải "chạy rồi người dùng bấm N".
+        # DẠNG NÀY KHÔNG SỬA LỖI NÀO CẢ. Nói rõ vì suýt nữa nó được ghi vào đây
+        # như một bản vá. 02/09/2026, Sếp bấm nút Uninstall trong Settings ba
+        # lần, cả ba lần không có gì xảy ra; tôi đổi chuỗi sang dạng này, lần
+        # thứ tư chạy được, và tôi định kết luận là đã vá xong.
         #
-        # CHƯA ĐO ĐƯỢC vì sao. Thử gọi đúng chuỗi ấy từ một tiến trình thường
-        # thì cả hai dạng đều chạy:
+        # Nhưng giữa lần hỏng và lần chạy có HAI biến cùng đổi: dạng chuỗi, và
+        # cửa sổ Settings được đóng rồi mở lại. Ca đối chứng — cài bình thường
+        # rồi ghi đè NGƯỢC đúng một giá trị về dạng cũ, giữ nguyên Settings mở
+        # mới — cho kết quả:
         #
-        #     "...\GO_CAI_DAT.bat"            CreateProcess: chạy · ShellExecute: chạy
-        #     "...\cmd.exe" /c ""...bat""     CreateProcess: chạy · ShellExecute: chạy
+        #     chuỗi mới + Settings mở mới   -> CHẠY
+        #     chuỗi CŨ  + Settings mở mới   -> CHẠY   <- dạng chuỗi vô can
         #
-        # Phép đo ấy KHÔNG phân biệt được hai dạng, vì Settings là ứng dụng
-        # đóng gói chạy trong app container còn tiến trình đo thì không — thiếu
-        # đúng cái biến cần. Nên đây chưa phải "đã sửa xong", mà là dạng chuỗi
-        # mọi trình cài thật đều dùng: một `.exe` có thật thì không phải tra
-        # bảng liên kết phần mở rộng để biết lấy gì mà chạy.
+        # Thủ phạm thật là danh sách cũ: `SystemSettings.exe` mở lúc 06:41:37,
+        # khoá ghi lần cuối 06:48:19, và trong 7 phút giữa hai mốc tôi xoá rồi
+        # tạo lại khoá HAI lần. Sếp bấm một mục trong ảnh chụp trước đó. Lỗi
+        # nằm ở cách tôi bố trí phép thử, không ở mã.
+        #
+        # VẪN GIỮ dạng `cmd.exe`, vì một lý do khác, đo được cơ chế:
+        #
+        #     .bat -> batfile -> "%1" %*   (HKCR, bậc máy)
+        #     HKCU\...\FileExts\.bat\UserChoice   không có trên máy này
+        #
+        # `ShellExecute` mở `.bat` bằng cách tra bảng liên kết phần mở rộng, mà
+        # bảng ấy người dùng đè lên được. Máy này sạch nên cả hai dạng chạy;
+        # máy nào lỡ gán `.bat` cho một trình soạn thảo thì nút Uninstall mở
+        # trình soạn thảo — im lặng, đúng kiểu hỏng vừa tốn một tiếng để tìm.
+        # `cmd.exe` không đi qua bảng đó. CHƯA ĐO ĐƯỢC trên một máy bị đè liên
+        # kết như vậy; đây là suy luận từ cơ chế, không phải từ số.
         #
         # Dấu nháy đôi quanh `.bat`: cmd bóc một lớp nháy ngoài cùng, đường dẫn
         # có khoảng trắng ("AURA The") cần lớp còn lại.

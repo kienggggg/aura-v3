@@ -188,24 +188,27 @@ def test_start_chay_ban_trong_TEMP_chu_khong_phai_ban_goc():
 def test_uninstall_string_tro_vao_mot_exe_CO_THAT(tmp_path):
     """Không trỏ thẳng vào `.bat`.
 
-    Đo 02/09/2026 trên máy thật, hai lần bấm nút Uninstall trong Settings với
-    chuỗi trỏ thẳng vào `GO_CAI_DAT.bat`::
+    CỬA NÀY KHÔNG SINH RA TỪ MỘT LỖI ĐÃ XẢY RA. Nói rõ để người sau không đọc
+    ngược. 02/09/2026, nút Uninstall trong Settings bấm ba lần không có gì xảy
+    ra; đổi chuỗi sang `cmd.exe /c ""bat""` thì lần thứ tư chạy. Nhưng hai biến
+    cùng đổi — dạng chuỗi, và Settings được đóng rồi mở lại. Ca đối chứng, ghi
+    đè NGƯỢC đúng một giá trị về dạng cũ và giữ Settings mở mới::
 
-        registry                        19 mục, không đổi
-        thư mục cài                     71 tệp, còn nguyên
-        %TEMP%\\AURA_The_go_cai.bat     KHÔNG CÓ
+        chuỗi mới + Settings mở mới   -> CHẠY
+        chuỗi CŨ  + Settings mở mới   -> CHẠY
 
-    Bản chép sang `%TEMP%` là việc ĐẦU TIÊN của `.bat`, chạy trước cả câu hỏi
-    Y/N. Vắng nó nghĩa là `.bat` chưa chạy một dòng nào — không phải "chạy rồi
-    người dùng bấm N" (bấm N thì bản chép vẫn còn).
+    Dạng chuỗi vô can. Thủ phạm là danh sách cũ: Settings mở lúc 06:41:37, khoá
+    ghi lần cuối 06:48:19, giữa hai mốc khoá bị xoá và tạo lại hai lần.
 
-    CHƯA ĐO ĐƯỢC vì sao Settings không chạy được nó: gọi đúng chuỗi ấy từ một
-    tiến trình thường thì cả `CreateProcess` lẫn `ShellExecute` đều chạy được,
-    với cả hai dạng chuỗi. Phép đo đó không phân biệt được hai dạng vì thiếu
-    đúng cái biến cần — Settings là ứng dụng đóng gói chạy trong app container.
+    Lý do VẪN đóng đinh dạng `.exe` là chuyện khác, đo được cơ chế::
 
-    Nên cửa này KHÔNG khẳng định "đã sửa xong". Nó đóng đinh một tính chất kiểm
-    được: thứ Windows phải khởi động là một tệp `.exe` CÓ THẬT trên đĩa.
+        .bat -> batfile -> "%1" %*                  HKCR, bậc máy
+        HKCU\\...\\FileExts\\.bat\\UserChoice          không có trên máy này
+
+    `ShellExecute` mở `.bat` bằng cách tra bảng liên kết mà người dùng đè lên
+    được; máy nào gán `.bat` cho một trình soạn thảo thì nút Uninstall mở trình
+    soạn thảo, im lặng. `cmd.exe` không đi qua bảng đó. CHƯA ĐO ĐƯỢC trên một
+    máy bị đè liên kết — đây là suy luận từ cơ chế, không phải từ số.
     """
     from tools.trinh_cai_dat import CMD_EXE, dang_ky_apps_features
 

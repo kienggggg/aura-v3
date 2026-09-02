@@ -183,6 +183,79 @@ def test_start_chay_ban_trong_TEMP_chu_khong_phai_ban_goc():
     assert "--tu-temp" in dong[0], "quên truyền cờ -> bản chép lại đi chép tiếp"
 
 
+# ------------------------------- UninstallString phải trỏ vào một .exe có thật
+
+def test_uninstall_string_tro_vao_mot_exe_CO_THAT(tmp_path):
+    """Không trỏ thẳng vào `.bat`.
+
+    Đo 02/09/2026 trên máy thật, hai lần bấm nút Uninstall trong Settings với
+    chuỗi trỏ thẳng vào `GO_CAI_DAT.bat`::
+
+        registry                        19 mục, không đổi
+        thư mục cài                     71 tệp, còn nguyên
+        %TEMP%\\AURA_The_go_cai.bat     KHÔNG CÓ
+
+    Bản chép sang `%TEMP%` là việc ĐẦU TIÊN của `.bat`, chạy trước cả câu hỏi
+    Y/N. Vắng nó nghĩa là `.bat` chưa chạy một dòng nào — không phải "chạy rồi
+    người dùng bấm N" (bấm N thì bản chép vẫn còn).
+
+    CHƯA ĐO ĐƯỢC vì sao Settings không chạy được nó: gọi đúng chuỗi ấy từ một
+    tiến trình thường thì cả `CreateProcess` lẫn `ShellExecute` đều chạy được,
+    với cả hai dạng chuỗi. Phép đo đó không phân biệt được hai dạng vì thiếu
+    đúng cái biến cần — Settings là ứng dụng đóng gói chạy trong app container.
+
+    Nên cửa này KHÔNG khẳng định "đã sửa xong". Nó đóng đinh một tính chất kiểm
+    được: thứ Windows phải khởi động là một tệp `.exe` CÓ THẬT trên đĩa.
+    """
+    from tools.trinh_cai_dat import CMD_EXE, dang_ky_apps_features
+
+    winreg = pytest.importorskip("winreg")
+    duong = KHOA_UNINSTALL + "\\" + KHOA_APP
+    try:
+        winreg.CloseKey(winreg.OpenKey(winreg.HKEY_CURRENT_USER, duong))
+        pytest.skip("máy này đã cài AURA Thẻ thật — không đụng vào khoá của nó")
+    except FileNotFoundError:
+        pass
+    cha_co_san = True
+    try:
+        winreg.CloseKey(winreg.OpenKey(winreg.HKEY_CURRENT_USER, KHOA_UNINSTALL))
+    except FileNotFoundError:
+        cha_co_san = False
+
+    assert CMD_EXE.is_file(), f"không có {CMD_EXE}"
+    assert CMD_EXE.suffix.lower() == ".exe"
+
+    go = tmp_path / "GO_CAI_DAT.bat"
+    go.write_text("rem gia", encoding="utf-8")
+    try:
+        assert dang_ky_apps_features(tmp_path, go) is True
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, duong) as k:
+            chuoi = winreg.QueryValueEx(k, "UninstallString")[0]
+    finally:
+        try:
+            winreg.DeleteKey(winreg.HKEY_CURRENT_USER, duong)
+        except FileNotFoundError:
+            pass
+        if not cha_co_san:
+            try:
+                winreg.DeleteKey(winreg.HKEY_CURRENT_USER, KHOA_UNINSTALL)
+            except OSError:
+                pass
+
+    # Windows tách chuỗi này thành (tệp để chạy) + (đối số): tệp là phần nằm
+    # trong cặp nháy đầu tiên.
+    assert chuoi.startswith('"'), chuoi
+    tep = Path(chuoi[1:chuoi.index('"', 1)])
+    assert tep.is_file(), f"thứ Windows sẽ chạy không có trên đĩa: {tep}"
+    assert tep.suffix.lower() == ".exe", (
+        f"UninstallString trỏ vào {tep.suffix!r}, không phải .exe — đúng cấu "
+        "hình đã đo được là nút Uninstall trong Settings bấm không có tác dụng"
+    )
+    # `.bat` vẫn phải nằm trong chuỗi, ở vế đối số.
+    assert str(go) in chuoi, chuoi
+    assert " /c " in chuoi, "thiếu /c thì cmd mở cửa sổ tương tác rồi ngồi đó"
+
+
 # -------------------------------------------------------- không đụng bài tập
 
 def test_khong_dong_lenh_XOA_nao_cham_vao_thu_muc_bai_tap():
@@ -245,7 +318,6 @@ def test_ghi_doc_xoa_that_tren_registry(tmp_path):
         # Dấu tiếng Việt phải còn nguyên. `WScript.Shell` ghi qua trang mã ANSI
         # nên "AURA Thẻ" thành "AURA Th?"; `winreg` ghi REG_SZ UTF-16 thì không.
         assert gia_tri["DisplayName"] == TEN_HIEN == "AURA Thẻ"
-        assert gia_tri["UninstallString"] == '"' + str(go) + '"'
         assert gia_tri["InstallLocation"] == str(tmp_path)
         assert gia_tri["EstimatedSize"] == 2, "Settings đọc trường này theo KB"
         assert gia_tri["NoModify"] == 1 and gia_tri["NoRepair"] == 1

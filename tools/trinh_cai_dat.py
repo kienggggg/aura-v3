@@ -141,6 +141,10 @@ def tao_loi_tat(duong_lnk: Path, dich: Path, doi_so: str, thu_muc_lam_viec: Path
 KHOA_UNINSTALL = r"Software\Microsoft\Windows\CurrentVersion\Uninstall"
 KHOA_APP = "AURA_The"
 
+# Lấy từ %SystemRoot%, không đóng đinh "C:\Windows": máy cài Windows ở ổ khác
+# thì đường dẫn cứng trỏ vào chỗ không có gì.
+CMD_EXE = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "cmd.exe"
+
 
 def dang_ky_apps_features(thu_muc_cai: Path, go_cai: Path) -> bool:
     """Tạo mục "AURA Thẻ" trong Settings > Apps > Installed apps.
@@ -176,8 +180,30 @@ def dang_ky_apps_features(thu_muc_cai: Path, go_cai: Path) -> bool:
         "DisplayVersion": "1.0",
         "Publisher": "AURA",
         "InstallLocation": str(thu_muc_cai),
-        # Dấu nháy kép: đường dẫn có khoảng trắng ("AURA The").
-        "UninstallString": f'"{go_cai}"',
+        # Trỏ vào `cmd.exe` — MỘT TỆP .exe CÓ THẬT — rồi đưa `.bat` làm đối số,
+        # thay vì trỏ thẳng vào `.bat`.
+        #
+        # Đo 02/09/2026, hai lần bấm nút Uninstall trong Settings với chuỗi trỏ
+        # thẳng vào `.bat`: KHÔNG có gì bị xoá, và `%TEMP%\AURA_The_go_cai.bat`
+        # không tồn tại. Bản chép sang `%TEMP%` là việc ĐẦU TIÊN của `.bat`,
+        # trước cả câu hỏi Y/N — vắng nó nghĩa là `.bat` chưa chạy một dòng nào,
+        # không phải "chạy rồi người dùng bấm N".
+        #
+        # CHƯA ĐO ĐƯỢC vì sao. Thử gọi đúng chuỗi ấy từ một tiến trình thường
+        # thì cả hai dạng đều chạy:
+        #
+        #     "...\GO_CAI_DAT.bat"            CreateProcess: chạy · ShellExecute: chạy
+        #     "...\cmd.exe" /c ""...bat""     CreateProcess: chạy · ShellExecute: chạy
+        #
+        # Phép đo ấy KHÔNG phân biệt được hai dạng, vì Settings là ứng dụng
+        # đóng gói chạy trong app container còn tiến trình đo thì không — thiếu
+        # đúng cái biến cần. Nên đây chưa phải "đã sửa xong", mà là dạng chuỗi
+        # mọi trình cài thật đều dùng: một `.exe` có thật thì không phải tra
+        # bảng liên kết phần mở rộng để biết lấy gì mà chạy.
+        #
+        # Dấu nháy đôi quanh `.bat`: cmd bóc một lớp nháy ngoài cùng, đường dẫn
+        # có khoảng trắng ("AURA The") cần lớp còn lại.
+        "UninstallString": f'"{CMD_EXE}" /c ""{go_cai}""',
         "DisplayIcon": str(thu_muc_cai / "AURA_The.exe"),
         # NoModify/NoRepair: Settings sẽ chỉ hiện nút "Uninstall", không hiện
         # hai nút kia — bấm vào chúng thì chẳng có gì chạy.

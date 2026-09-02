@@ -49,15 +49,16 @@ authors = [{ name = "Phạm Xuân Kiên" }]
 dependencies = [
     "aiohttp",
     "httpx",
-    "libcst==1.9.0",
-]
+]  # `libcst` theo App Thẻ sang kho riêng 02/09/2026
 
 [project.optional-dependencies]
 dev = ["pytest"]
 
 [project.scripts]
-# `aura-the` chạy trong THƯ MỤC DỰ ÁN của người dùng, theo lối `git` / `code .`
-aura-the = "interface.the_app:main"
+# `aura-the` đã theo App Thẻ sang kho riêng ngày 02/09/2026. Khai một lệnh trỏ
+# vào mô-đun không còn trong gói thì `pip install` vẫn xong, chỉ gãy lúc người
+# dùng gõ lệnh — đúng loại hỏng lặng lẽ mà `package-data` bên dưới đã dính một
+# lần.
 # Tệp `aura_chat.py` ở gốc kho chỉ tái xuất `main` từ `interface.chat_app`,
 # nên trỏ thẳng vào đó — khỏi phải đóng gói thêm một mô-đun cấp gốc.
 aura-chat = "interface.chat_app:main"
@@ -84,4 +85,5 @@ packages = ["core", "interface"]
 # `site-packages/interface/web/the_v1/` — tức đúng thư mục ĐÃ được khai. Kiểm
 # trong chỗ mình vừa khai thì bao giờ cũng thấy đủ. Phải đối chiếu với thư mục
 # NGUỒN: `find interface/web -type f` ra 6 tệp, wheel có 4.
-interface = ["web/the_v1/*", "web/*.html", "web/*.css", "web/*.js"]
+# 02/09/2026: bỏ `web/the_v1/*` — giao diện App Thẻ đã sang kho riêng.
+interface = ["web/*.html", "web/*.css", "web/*.js"]

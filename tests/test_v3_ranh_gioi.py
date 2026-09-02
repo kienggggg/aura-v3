@@ -23,27 +23,21 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# HAI cửa vào, hai danh sách, hai trần RIÊNG.
+# Cửa vào của AURA v3.  Chỉ có một.
 #
-# Trước 02/09/2026 tệp này chỉ canh `aura_chat.py`. Đo hôm ấy, đi từ hai cửa
-# vào theo `import` thật:
+# Từ 19/08 đến 02/09/2026 kho này còn mang cả App Thẻ, và hàng rào KHÔNG canh
+# nó: `CUA_VAO` chỉ có `aura_chat.py`, nên 8 tệp / 5.509 dòng của App Thẻ —
+# **dài hơn phần được canh** — lớn lên ngoài tầm mắt. Đo được ngày 02/09 bằng
+# cách chạy lại phép đo từ hai cửa vào: hai bên không dùng chung tệp mã nào.
 #
-#     chat  (aura_chat.py)        19 tệp   5.135 dòng
-#     App Thẻ (the_app.py)         8 tệp   5.509 dòng
-#     DÙNG CHUNG                   0 tệp       0 dòng
-#
-# Không một tệp nào chung — hai chương trình riêng ở nhờ chung một kho. Và
-# phần KHÔNG được canh đã dài hơn phần được canh. Đúng bệnh v3 sinh ra để
-# chống, chỉ khác là nó mọc ở phía không ai nhìn.
-#
-# Gộp hai danh sách làm một thì trần mất nghĩa: 27 tệp không nói được chương
-# trình nào đang phình. Nên tách đôi, mỗi bên một trần.
-CUA_VAO_CHAT = ("aura_chat.py",)
-CUA_VAO_THE = ("interface/the_app.py",)
+# App Thẻ nay ở kho riêng: https://github.com/kienggggg/app-the
+# Hàng rào của nó là `tests/test_ranh_gioi.py` bên ấy, danh sách đóng 8 tệp,
+# trần 10.
+CUA_VAO = ("aura_chat.py",)
 
-# Xương sống chat.  19 file.  Mọi thứ khác trong repo là KHO PHỤ TÙNG của v2:
+# Toàn bộ AURA v3.  19 tệp.  Mọi thứ khác trong repo là KHO PHỤ TÙNG của v2:
 # vẫn nằm đó, vẫn đọc được, nhưng v3 không được phép với tay sang.
-V3_CHAT = frozenset({
+V3 = frozenset({
     "aura_chat.py",
     "core/chat_contract.py",       # hợp đồng Codex chốt ở lượt 003
     "core/chat_runtime.py",        # cổng cloud + sổ phiên JSONL
@@ -52,11 +46,9 @@ V3_CHAT = frozenset({
     "core/dong_ho.py",             # AURA từng trả sai ngày 20 hôm, nói chắc nịch
     "core/kiem_tien.py",     # "137.500 đồng/lượng" — sai tiền 1000 lần
     "core/loai_cau_hoi.py",  # 13/08: "Phạm Xuân Kiên là ai" -> bịa nguyên một
-                             # tiểu sử. Tự nghĩ / tra cứu / sáng tác.
     "core/local_first_gateway.py",  # trò làm trước, mượn thầy khi bí
     "core/may_tinh.py",      # AURA nói "khoảng 23 ngày" khi đúng là 22
     "core/nho_lai.py",       # 13/08: hỏi lại dữ kiện lượt 1 ở lượt 15 -> bịa
-                             # "biển số 123" trong khi sổ ghi "29AB-123.45"
     "core/paths.py",               # thay core/config.py 1.029 dòng
     "core/redact.py",
     "core/secret_guard.py",        # AURA không đọc mật khẩu ra màn hình
@@ -66,30 +58,6 @@ V3_CHAT = frozenset({
     "interface/chat_api.py",
     "interface/chat_app.py",
 })
-
-# App Thẻ.  8 file.  Cửa vào `interface/the_app.py`, KHÔNG dùng chung tệp nào
-# với chat — kể cả `core/paths.py`.
-V3_THE = frozenset({
-    "interface/the_app.py",        # cửa vào; có nhánh thông dịch cho bản .exe
-    "interface/the_api.py",        # 1.513 dòng — phần dài nhất của App Thẻ
-    "core/the_cst.py",             # bộ đọc Python -> thẻ mà app THẬT SỰ gọi
-    "core/the_v1.py",              # dựng lệnh chạy, biết mình có bị đóng băng
-    "core/lat_nguoc.py",           # gieo lỗi rồi xem test có đỏ không
-    "core/trace_runtime.py",       # dò dòng dữ liệu
-    "core/soi_model.py",           # cổng Ollama; không có Ollama thì nói thẳng
-    "core/nhip_thuc_thi.py",
-})
-
-# Giữ tên cũ cho chỗ khác đọc tới.
-V3 = V3_CHAT | V3_THE
-CUA_VAO = CUA_VAO_CHAT + CUA_VAO_THE
-
-# (tên, cửa vào, danh sách đóng, trần) — trần là LỜI HỨA, vượt thì phải hỏi
-# vì sao, không phải nới ra cho xanh.
-CHUONG_TRINH = (
-    ("chat", CUA_VAO_CHAT, V3_CHAT, 20),
-    ("App Thẻ", CUA_VAO_THE, V3_THE, 10),
-)
 
 # Gói nhà trồng được — `import httpx` thì kệ, `import core.daemon` thì không.
 GOI_NHA = {"core", "interface", "factory", "brains", "evolution", "robot",
@@ -119,10 +87,10 @@ def _import_cua(path: Path) -> set[str]:
     return {m for m in ra if m.split(".")[0] in GOI_NHA}
 
 
-def _dong_bao_dong(cua_vao=CUA_VAO) -> set[str]:
+def _dong_bao_dong() -> set[str]:
     """Tập đóng của các file v3 thật sự với tới, đi từ cửa vào."""
     tham: set[Path] = set()
-    hang_doi = [ROOT / c for c in cua_vao]
+    hang_doi = [ROOT / c for c in CUA_VAO]
     while hang_doi:
         hien_tai = hang_doi.pop()
         if hien_tai in tham:
@@ -135,35 +103,21 @@ def _dong_bao_dong(cua_vao=CUA_VAO) -> set[str]:
     return {p.relative_to(ROOT).as_posix() for p in tham}
 
 
-@pytest.mark.parametrize("ten, cua_vao, danh_sach", [(a, b, c) for a, b, c, _ in CHUONG_TRINH])
-def test_khong_voi_tay_sang_kho_phu_tung_v2(ten, cua_vao, danh_sach):
-    lan_ra = _dong_bao_dong(cua_vao) - danh_sach
+def test_v3_khong_voi_tay_sang_kho_phu_tung_v2():
+    lan_ra = _dong_bao_dong() - V3
     assert not lan_ra, (
-        f"{ten} vừa với tay sang kho phụ tùng v2: "
+        "AURA v3 vừa với tay sang kho phụ tùng v2: "
         + ", ".join(sorted(lan_ra))
         + ". Muốn mang một mảnh v2 sang thì phải ĐO nó chạy trước, rồi thêm "
-        "tên vào danh sách trong chính tệp này — không kéo lén qua import."
+        "tên vào V3 trong chính tệp này — không kéo lén qua đường import."
     )
 
 
-@pytest.mark.parametrize("ten, cua_vao, danh_sach", [(a, b, c) for a, b, c, _ in CHUONG_TRINH])
-def test_danh_sach_khong_co_ten_chet(ten, cua_vao, danh_sach):
-    """Tên khai mà không ai với tới = rác đang tích lại. Đúng bệnh của v2."""
-    chet = danh_sach - _dong_bao_dong(cua_vao)
+def test_danh_sach_v3_khong_co_ten_chet():
+    """Tên trong V3 mà không ai với tới = rác đang tích lại. Đúng bệnh của v2."""
+    chet = V3 - _dong_bao_dong()
     assert not chet, (
-        f"Có tên trong danh sách {ten} nhưng không cửa nào với tới: "
-        + ", ".join(sorted(chet))
-    )
-
-
-def test_hai_chuong_trinh_van_la_hai():
-    """Đo 02/09/2026: 0 tệp dùng chung. Không cấm dùng chung — nhưng ngày nào
-    hai bên bắt đầu chia nhau một tệp thì phải có người THẤY, vì lúc ấy hai
-    trần riêng không còn nói đúng nữa."""
-    chung = _dong_bao_dong(CUA_VAO_CHAT) & _dong_bao_dong(CUA_VAO_THE)
-    assert not chung, (
-        "chat và App Thẻ bắt đầu dùng chung: " + ", ".join(sorted(chung))
-        + ". Không sai, nhưng phải cố ý: sửa lời hứa trong tệp này trước."
+        "Có tên trong V3 nhưng không cửa nào với tới: " + ", ".join(sorted(chet))
     )
 
 
@@ -172,13 +126,9 @@ def test_moi_file_v3_deu_ton_tai(ten):
     assert (ROOT / ten).is_file(), f"V3 khai có {ten} nhưng trên đĩa không có"
 
 
-@pytest.mark.parametrize("ten, danh_sach, tran", [(a, c, d) for a, _, c, d in CHUONG_TRINH])
-def test_van_con_nho(ten, danh_sach, tran):
-    """Con số này là lời hứa. v2 có 339 file; vượt trần thì phải hỏi vì sao,
-    không phải nới trần cho xanh."""
-    assert len(danh_sach) <= tran, (
-        f"{ten} đã phình lên {len(danh_sach)} file (trần {tran}) — dừng lại xem lại đi"
-    )
+def test_v3_van_con_nho():
+    """Con số này là lời hứa. v2 có 339 tệp; v3 vượt 20 thì phải hỏi vì sao."""
+    assert len(V3) <= 20, f"v3 đã phình lên {len(V3)} tệp — dừng lại xem lại đi"
 
 
 def test_config_1029_dong_cua_v2_KHONG_con_trong_v3():

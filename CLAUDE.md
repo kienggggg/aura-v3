@@ -13,33 +13,27 @@ nguyên và **không được đẩy lên GitHub** (lịch sử có ~20 khoá AP
 
 ## 1. Việc này là gì
 
-**AURA v3** — **hai** chương trình, hai cửa vào, không dùng chung tệp nào.
+**AURA v3** — một con chatbot có màn hình chat. Một cửa vào.
 
 ```
-venv\Scripts\python.exe aura_chat.py          ->  http://127.0.0.1:8799
-venv\Scripts\python.exe -m interface.the_app  ->  App Thẻ
+venv\Scripts\python.exe aura_chat.py      ->  http://127.0.0.1:8799
 venv\Scripts\python.exe -m pytest tests -q
 ```
 
-Đo 02/09/2026, đi từ hai cửa vào theo `import` thật:
+Đo 02/09/2026, đi từ cửa vào theo `import` thật: **19 tệp · 5.135 dòng ·
+2 gói ngoài** (`aiohttp`, `httpx`).
 
-| | tệp | dòng |
-|---|---|---|
-| chat (`aura_chat.py`) | 19 | 5.135 |
-| App Thẻ (`interface/the_app.py`) | 8 | 5.509 |
-| **dùng chung** | **0** | **0** |
-
-**3 gói ngoài** (`aiohttp`, `httpx`, `libcst`) — đếm trên cả hai cửa vào.
-
-> Dòng trên trước 25/08 ghi `pytest` thay cho `libcst`. `pytest` là gói
-> kiểm thử, không cần để chạy app; `libcst` thì `core/the_cst.py` cần
-> thật. Bắt được bằng cách quét `import` trong mã, không bằng đọc lại.
-
-> Và trước 02/09 dòng ấy ghi **"đúng 17 tệp mã, một cửa vào · 17 tệp ·
-> 4.248 dòng"**. Sai hai lần. Số thật của chat là 19/5.135 — danh sách đóng
-> đã lên 19 mà câu tóm tắt không ai sửa. Còn "một cửa vào" thì bỏ sót nguyên
-> App Thẻ, 5.509 dòng, dài hơn cả phần được đếm. Bắt được bằng cách chạy lại
-> phép đo, không bằng đọc lại — đúng chỗ tệp này dặn ở mục 4.
+> **App Thẻ đã tách sang kho riêng ngày 02/09/2026** —
+> https://github.com/kienggggg/app-the — mang theo `libcst` (gói ngoài thứ ba
+> cũ) và 8 tệp / 5.509 dòng. Hai bên không dùng chung tệp mã nào.
+>
+> Và đây là chỗ đắt: đến 02/09 hàng rào chỉ soi `aura_chat.py`, nên App Thẻ —
+> **dài hơn phần được canh** — lớn lên ngoài tầm mắt suốt từ 19/08. Bắt được
+> bằng cách chạy lại phép đo từ hai cửa vào, không bằng đọc lại.
+>
+> Trước 02/09 dòng đầu mục này còn ghi **"đúng 17 tệp mã · 4.248 dòng"** trong
+> khi danh sách đóng đã lên 19. Câu tóm tắt tụt lại sau phép đo, và không ai
+> sửa vì không ai chạy lại.
 
 Con số đó là cả lý do v3 tồn tại. AURA v2 có **339 tệp .py / 47.566 dòng**, với
 **33 cờ bật-tắt tính năng mà 29 cái đang TẮT**. Bệnh không phải "mã dở" — bệnh

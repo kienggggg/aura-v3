@@ -7,7 +7,35 @@ Hai ứng dụng chạy được trên máy không cần GPU rời:
 
 ---
 
-## 1. Cài đặt
+## Chỉ muốn DÙNG App Thẻ? Không cần Python, không cần git.
+
+Tải bản đóng gói sẵn cho Windows:
+
+### → [github.com/kienggggg/aura-v3/releases](https://github.com/kienggggg/aura-v3/releases/tag/v1.0)
+
+| tệp | làm gì |
+|---|---|
+| `AURA_The_CaiDat_....exe` (24 MB) | bấm đúp, bấm Enter. Tạo lối tắt Desktop + Start Menu, và mục "AURA Thẻ" trong Settings > Apps để gỡ ra. |
+| `AURA_The_ban_thu_....zip` (15 MB) | giải nén rồi chạy, không cài gì. Có thêm `CHAY_KHONG_CHAY_MA.bat` (khoá nút CHẠY THỬ). |
+| `DOC_TRUOC_KHI_DUNG.txt` | đọc trước. |
+
+Máy **không cần cài Python** — bản đóng gói mang sẵn trình thông dịch bên trong.
+Khởi động **0,71 giây**.
+
+Hai điều nói trước, không giấu:
+
+- **Windows sẽ chặn lần đầu**: bảng xanh *"Windows protected your PC"* → `More info`
+  → `Run anyway`. Bản này chưa mua chữ ký số nên Windows chưa biết nó. Bạn không
+  yên tâm thì đừng bấm.
+- **Mã bạn bấm CHẠY THỬ có đủ quyền của tài khoản Windows đang dùng — KHÔNG có
+  hộp cát.** Y như khi bạn tự chạy `python bai.py`. Chỉ chạy mã do chính bạn viết.
+
+---
+
+## 1. Cài đặt (cho người muốn chạy từ mã nguồn)
+
+Phần dưới đây dành cho ai muốn đọc/sửa mã. Chỉ dùng app thì không cần đọc tiếp —
+xem mục trên.
 
 Yêu cầu máy đã cài **Python >= 3.11**.
 

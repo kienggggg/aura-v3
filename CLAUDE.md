@@ -13,18 +13,33 @@ nguyên và **không được đẩy lên GitHub** (lịch sử có ~20 khoá AP
 
 ## 1. Việc này là gì
 
-**AURA v3** — một con chatbot có màn hình chat. Đúng 17 tệp mã, một cửa vào.
+**AURA v3** — **hai** chương trình, hai cửa vào, không dùng chung tệp nào.
 
 ```
-venv\Scripts\python.exe aura_chat.py      ->  http://127.0.0.1:8799
+venv\Scripts\python.exe aura_chat.py          ->  http://127.0.0.1:8799
+venv\Scripts\python.exe -m interface.the_app  ->  App Thẻ
 venv\Scripts\python.exe -m pytest tests -q
 ```
 
-17 tệp · 4.248 dòng · **3 gói ngoài** (`aiohttp`, `httpx`, `libcst`).
+Đo 02/09/2026, đi từ hai cửa vào theo `import` thật:
+
+| | tệp | dòng |
+|---|---|---|
+| chat (`aura_chat.py`) | 19 | 5.135 |
+| App Thẻ (`interface/the_app.py`) | 8 | 5.509 |
+| **dùng chung** | **0** | **0** |
+
+**3 gói ngoài** (`aiohttp`, `httpx`, `libcst`) — đếm trên cả hai cửa vào.
 
 > Dòng trên trước 25/08 ghi `pytest` thay cho `libcst`. `pytest` là gói
 > kiểm thử, không cần để chạy app; `libcst` thì `core/the_cst.py` cần
 > thật. Bắt được bằng cách quét `import` trong mã, không bằng đọc lại.
+
+> Và trước 02/09 dòng ấy ghi **"đúng 17 tệp mã, một cửa vào · 17 tệp ·
+> 4.248 dòng"**. Sai hai lần. Số thật của chat là 19/5.135 — danh sách đóng
+> đã lên 19 mà câu tóm tắt không ai sửa. Còn "một cửa vào" thì bỏ sót nguyên
+> App Thẻ, 5.509 dòng, dài hơn cả phần được đếm. Bắt được bằng cách chạy lại
+> phép đo, không bằng đọc lại — đúng chỗ tệp này dặn ở mục 4.
 
 Con số đó là cả lý do v3 tồn tại. AURA v2 có **339 tệp .py / 47.566 dòng**, với
 **33 cờ bật-tắt tính năng mà 29 cái đang TẮT**. Bệnh không phải "mã dở" — bệnh
@@ -32,10 +47,17 @@ là mọi thứ được xây rồi cắm vào, không thứ nào phải chứng
 không thứ nào bị gỡ ra. `core/config.py` dài **1.029 dòng** trong khi xương sống
 chat dùng đúng **một** hằng số của nó; ở đây nó là `core/paths.py`, 19 dòng.
 
-`tests/test_v3_ranh_gioi.py` giữ **danh sách đóng**. Muốn thêm tệp thì phải sửa
-`V3` trong chính tệp đó — tức là phải cố ý, phải có người thấy, phải giải thích
-được. Hàng rào đi từ cửa vào và lần theo `import` thật, kể cả import giấu trong
-hàm.
+`tests/test_v3_ranh_gioi.py` giữ **hai danh sách đóng, hai trần riêng**:
+`V3_CHAT` (trần 20) và `V3_THE` (trần 10). Muốn thêm tệp thì phải sửa danh sách
+trong chính tệp đó — tức là phải cố ý, phải có người thấy, phải giải thích được.
+Hàng rào đi từ cửa vào và lần theo `import` thật, kể cả import giấu trong hàm.
+
+Gộp hai làm một thì trần mất nghĩa: "27 tệp" không nói được bên nào đang phình.
+
+> Đến 02/09 hàng rào chỉ canh `aura_chat.py`. App Thẻ — **8 tệp, 5.509 dòng,
+> dài hơn phần được canh** — nằm ngoài, không có gì giữ nó khỏi phình. Đúng
+> bệnh v3 sinh ra để chống, mọc ở phía không ai nhìn. Gieo 6 lỗi vào hàng rào
+> mới thì 6/6 đỏ, gồm cả ca "App Thẻ bắt đầu dùng chung tệp với chat".
 
 Máy: Windows 11, i5, 11,7 GB RAM, **không GPU rời**. Model local `qwen3.5:4b`
 qua Ollama, kho model ở `F:\ollama-models` (`OLLAMA_MODELS`).

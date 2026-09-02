@@ -66,6 +66,51 @@ def doc_trang_thai_da_do() -> dict[str, str]:
         return {}
 
 
+# ---------------------------------------------------------------- FAIL-CLOSED
+#
+# `KY_LUAT_THUC_THI.md` Chương I: *"Bằng chứng trên đĩa là chân lý duy nhất"*,
+# và *"Lỗi là FAIL hoặc BLOCKED. Cấm nuốt lỗi."* Trước 02/09/2026 đường
+# `/api/dispatch` làm ngược: nó trả `"status": "PASS"` cho MỌI lượt, kể cả lượt
+# chỉ in ra một đoạn văn viết sẵn. Đo được: 7/7 phòng, 8 tệp được KHAI là đã
+# tạo, **0 tệp có thật**.
+#
+# Nay phòng nào không để lại byte nào thì trả `KHONG_CHAY_DUOC`. Không phải
+# `FAIL` — vì phòng ấy chưa hỏng, nó chưa CHẠY. Gộp hai thứ làm một thì "chưa
+# làm gì" đội lốt "đã làm, không đạt".
+#
+# Hai chỗ trừ ra, giống hệt `tools/do_trang_thai_phong.py`:
+#   * `so_cai.jsonl` — hàm này ghi cho MỌI phòng; tính vào thì phòng nào cũng đạt
+#   * `__pycache__` — Python sinh ra khi nạp mô-đun
+THU_MUC_BANG_CHUNG = ("data", "interface")
+
+
+def _anh_chup_bang_chung() -> Dict[str, tuple]:
+    ra: Dict[str, tuple] = {}
+    for ten in THU_MUC_BANG_CHUNG:
+        for f in (PROJECT_ROOT / ten).rglob("*"):
+            if not f.is_file():
+                continue
+            d = f.as_posix()
+            if "/__pycache__/" in d or f == OMEGA_SO_CAI:
+                continue
+            try:
+                st = f.stat()
+            except OSError:
+                continue
+            ra[d] = (st.st_size, st.st_mtime)
+    return ra
+
+
+def _bang_chung_moi(truoc: Dict[str, tuple], sau: Dict[str, tuple]) -> List[str]:
+    return sorted([k for k in sau if k not in truoc]
+                  + [k for k in sau if k in truoc and sau[k] != truoc[k]])
+
+
+def _artifact_co_that(ten: str) -> bool:
+    """Tệp phòng KHAI là đã tạo — có trên đĩa không?"""
+    return any(f.is_file() for f in PROJECT_ROOT.rglob(ten))
+
+
 # Danh mục 7 Đặc Nhiệm AURA v3
 DANH_MUC_PHONG = [
     {
@@ -260,6 +305,7 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
 
     task_id = f"task_{phong_id}_{int(time.time())}_{uuid4().hex[:6]}"
     bat_dau = time.monotonic()
+    _truoc = _anh_chup_bang_chung()
 
     # Thực thi hành động theo từng phòng chuyên trách
     ket_qua = ""
@@ -324,6 +370,20 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
                   f"Nội dung đã được biên soạn theo đúng bible và phong cách riêng, cấu trúc chặt chẽ và sẵn sàng phân phối cho các phòng ban liên quan."
         artifacts.append({"name": "draft_chapter.md", "size": "5.6 KB", "type": "MARKDOWN"})
 
+    # ---- FAIL-CLOSED: phòng có để lại byte nào không? ----
+    bang_chung = [Path(d).name for d in _bang_chung_moi(_truoc, _anh_chup_bang_chung())]
+    thieu = [a["name"] for a in artifacts if not _artifact_co_that(a["name"])]
+    trang_thai = "PASS" if (bang_chung or (artifacts and not thieu)) else "KHONG_CHAY_DUOC"
+    if trang_thai != "PASS":
+        _thieu = (f", và {len(thieu)} tệp nó khai là đã tạo thì không có thật: "
+                  + ", ".join(thieu)) if thieu else ""
+        ket_qua = (
+            "**KHÔNG CHẠY ĐƯỢC.** Phòng này trả lời xong mà không để lại byte "
+            "nào trên đĩa" + _thieu + ".\n\n"
+            "Đoạn dưới là văn bản viết sẵn, KHÔNG phải kết quả của một lượt "
+            "chạy:\n\n---\n\n" + ket_qua
+        )
+
     # Tự động ghi nhận vào Sổ cái Omega
     try:
         OMEGA_SO_CAI.parent.mkdir(parents=True, exist_ok=True)
@@ -332,7 +392,9 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
             "phong_id": phong_id,
             "yeu_cau": yeu_cau[:200],
             "timestamp": datetime.now().isoformat(),
-            "status": "PASS",
+            "status": trang_thai,
+            "bang_chung": bang_chung,
+            "artifacts_thieu": thieu,
             "latency_ms": round((time.monotonic() - bat_dau) * 1000, 1)
         }
         with open(OMEGA_SO_CAI, "a", encoding="utf-8") as f:
@@ -343,11 +405,13 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
     thoi_gian_ms = round((time.monotonic() - bat_dau) * 1000, 1)
 
     return web.json_response({
-        "status": "PASS",
+        "status": trang_thai,
         "task_id": task_id,
         "phong": phong,
         "tra_loi": ket_qua,
         "artifacts": artifacts,
+        "bang_chung": bang_chung,
+        "artifacts_thieu": thieu,
         "latency_ms": thoi_gian_ms
     })
 

@@ -5,9 +5,22 @@ và commit thì gọi **Sếp**.
 
 Repo này tách ra khỏi `D:\AURA_OS_v2` ngày 12/08/2026. Luật dưới đây **không
 chép từ đâu về** — mỗi dòng là một lần đã trả giá trên chính máy này. Chỗ nào
-cần tra lại lịch sử hoặc sổ bằng chứng công nghệ thì sang repo cũ; nó vẫn còn
-nguyên và **không được đẩy lên GitHub** (lịch sử có ~20 khoá API thật ở commit
-`88e8c07`). Repo này thì lịch sử bắt đầu từ commit đầu tiên, sạch.
+cần tra lại lịch sử hoặc sổ bằng chứng công nghệ thì sang repo cũ trên đĩa.
+
+**LỊCH SỬ của `D:\AURA_OS_v2` không được đẩy lên GitHub** — nó có ~20 khoá API
+thật ở commit `88e8c07`.
+
+> Câu trên trước 02/09/2026 viết gọn là *"repo cũ không được đẩy lên GitHub"*,
+> và đọc ra thành "v2 không có trên GitHub". Sai. Sếp nhắc, đo lại thì:
+> `github.com/kienggggg/AURA-OS-V2` **đang công khai từ 13/08** — nhưng là một
+> **ảnh chụp sạch**: 1 commit, 730 tệp, không mang lịch sử, email tác giả đã là
+> `noreply`. Quét toàn bộ lịch sử kho ấy: **0 khoá thật**, 0 tệp `.env` bị theo
+> dõi, 0 chỗ gán `api_key`/`token` giá trị dài; commit `88e8c07` **không có
+> trong đó**.
+>
+> Thứ bị cấm là **lịch sử**, không phải **mã**. Viết gộp hai thứ làm một thì
+> lần sau có người đọc luật này rồi tưởng mình vừa làm lộ khoá — hoặc tệ hơn,
+> tưởng đẩy ảnh chụp sạch cũng là vi phạm rồi bỏ mất một việc làm được.
 
 ---
 

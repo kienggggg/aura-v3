@@ -303,7 +303,16 @@ function thinking(){
 /* ------------------------------------------------------------------ PHÒNG
    Sếp bấm phòng nào thì máy BIẾT CHẮC đang làm việc gì, thay vì để model
    đoán từ câu hỏi. Biết chắc là điều kiện để nạp đúng bộ luật và gọi đúng
-   công cụ — xem thaoluan.md lượt 007-011.
+   công cụ.
+
+   Cùng lối với `core/dong_ho.py` · `core/may_tinh.py` · `core/web_search.py`
+   ở CLAUDE.md mục 3: thứ nào máy biết chắc thì máy quyết, không hỏi model —
+   hỏi là mời nó đoán.
+
+   Dòng này trước 02/09/2026 ghi "xem thaoluan.md lượt 007-011". Con trỏ ấy
+   đã chết từ trước: `thaoluan.md` trong kho nói về Phòng Maestro và không có
+   đánh số lượt nào (`grep "lượt 00"` ra 0). Nó trỏ vào một tệp cùng tên ở nơi
+   khác. Nay viết thẳng lý do vào đây, để chú thích tự đứng được.
 
    `null` = Tự động: giữ nguyên hành vi cũ, `loai_cau_hoi.py` tự phân loại.
    Đó là mặc định, vì 4/5 câu hỏi thường ngày không thuộc phòng nào cả. */

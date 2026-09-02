@@ -39,6 +39,33 @@ OMEGA_SO_CAI = PROJECT_ROOT / "data" / "omega" / "so_cai.jsonl"
 EVIDENCE_DIR = PROJECT_ROOT / "data" / "evidence_sprint" / "runs"
 
 
+# Trạng thái phòng KHÔNG nằm trong danh mục này nữa.
+#
+# 02/09/2026: bảy phòng khai sẵn `trang_thai`, sáu cái "ONLINE" — toàn bộ là
+# chuỗi gõ tay, không dòng mã nào tính ra chúng. Đo lại bằng cách gọi đúng
+# `POST /api/dispatch` rồi soi đĩa (`tools/do_trang_thai_phong.py`):
+#
+#     chạy thật 0 · chưa chạy thật 7 · không đo được 0
+#     8 tệp được KHAI là đã tạo, 0 tệp có thật trên đĩa
+#
+# Ca đối chứng chứng minh máy đo không mù: gieo một lượt ghi tệp thật vào
+# nhánh `beta` thì nó lật sang CHAY_THAT và gọi đúng tên tệp; trả mã về thì
+# lật lại.
+#
+# Nay `api_danh_sach_phong` đọc trạng thái TỪ SỔ ĐO. Chưa đo thì hiện
+# `CHUA_DO` — không phòng nào được tự khai ONLINE nữa.
+SO_TRANG_THAI = PROJECT_ROOT / "data" / "noi_bo" / "trang_thai_phong.json"
+
+
+def doc_trang_thai_da_do() -> dict[str, str]:
+    """Đọc sổ đo. Không có sổ, sổ hỏng, thiếu phòng -> `CHUA_DO`."""
+    try:
+        d = json.loads(SO_TRANG_THAI.read_text(encoding="utf-8"))
+        return {p["phong_id"]: p["trang_thai"] for p in d.get("phong", [])}
+    except (OSError, ValueError, KeyError, TypeError):
+        return {}
+
+
 # Danh mục 7 Đặc Nhiệm AURA v3
 DANH_MUC_PHONG = [
     {
@@ -49,7 +76,6 @@ DANH_MUC_PHONG = [
         "bieu_tuong": "⚡",
         "mau_sac": "#3B82F6",
         "mo_ta": "Sáng tác chương truyện, bài viết, kịch bản bám sát bible và văn phong; phân loại luồng công việc.",
-        "trang_thai": "ONLINE",
         "cong_cu": ["Soạn thảo chương", "Phân tích kịch bản", "Điều phối phòng ban", "Quản lý nhân vật"],
         "system_prompt": "Bạn là AURA — Trợ lý điều phối trung tâm và chuyên gia sáng tác nội dung trong hệ sinh thái AURA v3."
     },
@@ -61,7 +87,6 @@ DANH_MUC_PHONG = [
         "bieu_tuong": "🎬",
         "mau_sac": "#EC4899",
         "mo_ta": "Sản xuất video dọc 720×1280 (55–65s) 100% offline; ghép ảnh PIL Cards, tổng hợp giọng đọc SAPI và render FFmpeg.",
-        "trang_thai": "STANDBY",
         "cong_cu": ["Tạo Visual Cards (PIL)", "Tổng hợp TTS OneCore", "Ghép Video FFmpeg", "Kiểm định blackdetect"],
         "system_prompt": "Bạn là Alpha — Giám đốc Phòng Studio Video Dọc chuyên sản xuất video ngắn 60 giây đạt chuẩn kỹ thuật cao."
     },
@@ -73,7 +98,6 @@ DANH_MUC_PHONG = [
         "bieu_tuong": "🧪",
         "mau_sac": "#F59E0B",
         "mo_ta": "Phòng thí nghiệm prompt, giả lập kịch bản tương tác, thử nghiệm tính năng mới trước khi đưa vào sản xuất.",
-        "trang_thai": "ONLINE",
         "cong_cu": ["Thử nghiệm Prompt", "Mô phỏng phản hồi", "A/B Testing kịch bản", "Đo độ sáng tạo"],
         "system_prompt": "Bạn là Beta — Chuyên gia Nghiên cứu & Thử nghiệm sáng tạo, phụ trách sandbox và kiểm chứng ý tưởng mới."
     },
@@ -85,7 +109,6 @@ DANH_MUC_PHONG = [
         "bieu_tuong": "🔧",
         "mau_sac": "#10B981",
         "mo_ta": "Chẩn đoán lỗi logic, định vị nguyên nhân lỗi E1, phân tích AST và tự động sinh bản vá lỗi (Auto-Fix).",
-        "trang_thai": "ONLINE",
         "cong_cu": ["Khám bệnh AST", "Tự động sửa lỗi Auto-Fix", "Định vị lỗi E1", "Tối ưu hiệu năng mã"],
         "system_prompt": "Bạn là Delta — Bác sĩ kỹ thuật chuyên chẩn đoán lỗi logic, sửa mã nguồn Python và bảo vệ tính toàn vẹn hệ thống."
     },
@@ -97,7 +120,6 @@ DANH_MUC_PHONG = [
         "bieu_tuong": "📊",
         "mau_sac": "#8B5CF6",
         "mo_ta": "Đo lường hiệu năng hệ thống: Tốc độ sinh chữ (token/s), mức tiêu thụ RAM thật, tỷ lệ đỗ Hard Gates của các phòng ban.",
-        "trang_thai": "ONLINE",
         "cong_cu": ["Đo RAM & CPU", "Thống kê Hard Gates", "Phân tích tốc độ mô hình", "Báo cáo Evidence"],
         "system_prompt": "Bạn là Gamma — Chuyên gia phân tích số liệu và giám sát chất lượng hệ thống theo bằng chứng thật trên đĩa."
     },
@@ -109,7 +131,6 @@ DANH_MUC_PHONG = [
         "bieu_tuong": "🎵",
         "mau_sac": "#06B6D4",
         "mo_ta": "Quản trị sổ cái nhiệm vụ chỉ-ghi-thêm (so_cai.jsonl), nhịp công việc và điều phối âm thanh/nhạc nền (LUFS, BPM, Stems).",
-        "trang_thai": "ONLINE",
         "cong_cu": ["Ghi sổ cái chỉ-ghi-thêm", "Kiểm soát nhịp", "Phân tích chuẩn Loudness", "Tách bè âm thanh"],
         "system_prompt": "Bạn là Omega — Thủ thư quản trị sổ cái nhiệm vụ bất biến và phụ trách âm nhạc Maestro cho hệ sinh thái."
     },
@@ -121,7 +142,6 @@ DANH_MUC_PHONG = [
         "bieu_tuong": "🔍",
         "mau_sac": "#6366F1",
         "mo_ta": "Tra cứu mạng, trích xuất dữ liệu đa nguồn, tổng hợp bằng chứng kèm URL nguồn thật chống bịa đặt (Anti-hallucination).",
-        "trang_thai": "ONLINE",
         "cong_cu": ["Tìm kiếm web DuckDuckGo", "Trích xuất bài viết", "Xác thực nguồn tin", "Lọc tin rác"],
         "system_prompt": "Bạn là Zeta — Trinh sát viên Scout chuyên thu thập dữ liệu từ Internet và kiểm chứng thông tin chính xác."
     }
@@ -205,8 +225,16 @@ async def api_status(request: web.Request) -> web.Response:
 
 
 async def api_danh_sach_phong(request: web.Request) -> web.Response:
-    """Trả về danh sách 7 phòng ban kèm chi tiết khả năng."""
-    return web.json_response({"status": "PASS", "rooms": DANH_MUC_PHONG})
+    """Trả về danh sách 7 phòng, kèm trạng thái ĐÃ ĐO (không phải tự khai)."""
+    da_do = doc_trang_thai_da_do()
+    phong = [{**p, "trang_thai": da_do.get(p["id"], "CHUA_DO")}
+             for p in DANH_MUC_PHONG]
+    return web.json_response({
+        "status": "PASS",
+        "rooms": phong,
+        "nguon_trang_thai": str(SO_TRANG_THAI.relative_to(PROJECT_ROOT))
+                            if SO_TRANG_THAI.is_file() else "CHUA_DO",
+    })
 
 
 # ==============================================================================

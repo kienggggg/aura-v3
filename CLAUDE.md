@@ -287,6 +287,52 @@ hành vi (đếm số thẻ, không hỏi "có mặt không") lẫn nguồn impo
 Mã chết bình thường chỉ tốn chỗ. Mã chết **trông giống mã thật** thì làm người
 đọc kết luận sai — và người đọc ấy có thể là chính mình, ba tuần sau.
 
+### Trạng thái tự khai không phải trạng thái
+
+Ngày 02/09/2026, `interface/noi_bo_api.py` khai bảy phòng nội bộ, mỗi phòng bốn
+công cụ, **sáu phòng `trang_thai: "ONLINE"`**. Không một dòng mã nào tính ra chữ
+ấy — toàn bộ là chuỗi gõ tay. Cùng lúc `chat.html` khai ngược lại: Delta và
+Omega ở đó là `san: false`, nút bị khoá thật.
+
+Đo bằng cách đi từ cửa vào — gọi đúng `POST /api/dispatch` như giao diện gọi —
+rồi hỏi một câu: *sau lượt ấy trên đĩa có gì mới không?*
+
+```
+chạy thật 0 · chưa chạy thật 7 · không đo được 0
+8 tệp được KHAI là đã tạo · 0 tệp có thật · mỗi lượt 2–9 ms
+```
+
+Cả bảy trả về đoạn văn viết sẵn. Chỗ chua nhất là `gamma` — **phòng đo lường** —
+in *"Số liệu đo đạc thời gian thực"* rồi báo `RAM 4.2 GB / 16.0 GB` trên một máy
+có **11,7 GB**, cùng `100% (714/714 tests)`. Ba con số, ba lần gõ tay. Số 4.2/16.0
+ấy đến từ nhánh `except` của `api_status` — số giả đội lốt số đo — mà `psutil`
+thì không có trong `requirements.txt`, nên máy sạch cài xong thì đường ấy nổ 500.
+
+Và bộ điều phối ghi `"status": "PASS"` vào sổ cái cho **mọi** lượt, kể cả lượt
+không làm gì.
+
+Đây là AURA v2 thu nhỏ: ở đó *33 cờ, 29 cái TẮT*; ở đây *7 phòng, 6 cái tự khai
+ONLINE, 0 cái phải chứng minh*. Cùng họ với lỗi 24/08 ở App Thẻ — panel Agent
+trả lời bằng chuỗi cứng + `setTimeout` 350ms giả vờ suy nghĩ, 0 request.
+
+Sửa: bỏ hẳn trường `trang_thai` khỏi danh mục (có trường là có chỗ gõ tay),
+`api_danh_sach_phong` đọc từ sổ đo, chưa đo thì hiện `CHUA_DO`.
+`tests/test_phong_khong_tu_khai_online.py` giữ cho nó không khai lại.
+
+**Hai bài học của phép đo, đắt ngang phát hiện:**
+
+*Máy đo phải chứng minh nó biết nói ĐẠT.* "0/7" chỉ có nghĩa nếu máy đo từng nói
+được "chạy thật". Gieo một lượt ghi tệp thật vào nhánh `beta` thì nó lật
+`CHUA_CHAY_THAT` → `CHAY_THAT` và gọi đúng tên tệp; trả mã về thì lật lại, sáu
+phòng kia không đổi. Không có ca ấy thì 0/7 có thể chỉ là máy đo mù.
+
+*Và cửa canh đầu tiên của tôi mù thật.* Gieo 6 lỗi thì **2 vẫn xanh**, đúng hai
+phép quan trọng nhất: "gộp KHÔNG ĐO ĐƯỢC vào chưa-chạy-thật" và "API trả thẳng
+danh mục, không đọc sổ đo". Cả hai đều vì tôi **dò chuỗi trong mã** thay vì
+**gọi hàm rồi xem nó trả về gì**. Bệnh `x in y`, lần thứ ba trong một ngày, lần
+này nằm ngay trong cửa sinh ra để chống nó. Viết lại thành phép đo hành vi thì
+6/6 đỏ.
+
 ### Test xanh không có nghĩa là app dùng được
 
 Ngày 24-25/08/2026, **tám lỗi trong hai ngày, tất cả cùng một họ**: giao diện

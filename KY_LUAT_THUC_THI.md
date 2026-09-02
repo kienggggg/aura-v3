@@ -39,6 +39,36 @@ Mọi lần chạy thử nghiệm phải được lưu cô lập trong `data/evi
 
 ## CHƯƠNG II: TIÊU CHUẨN KỸ THUẬT CỨNG CHO 4 PHÒNG
 
+> **BẢNG TÊN — đọc trước, kẻo tra nhầm phòng.**
+>
+> Chương này gọi phòng bằng **tên chức năng**; mã và giao diện gọi bằng **mã
+> danh**. Trước 02/09/2026 hai hệ thống tên ấy đụng nhau: mục 4 dưới đây tên là
+> *"PHÒNG ALPHA"* và giao vai **sửa lỗi tự động**, trong khi
+> `interface/noi_bo_api.py` và `interface/web/chat.html` đều giao vai ấy cho
+> **Delta**, còn **Alpha** ở đó là phòng **dựng video**. Một cái tên, hai phòng.
+>
+> | chương này | mã danh | vai trong mã |
+> |---|---|---|
+> | 1. WRITER | `aura` | Writer & Core Orchestrator |
+> | 2. STUDIO | `alpha` | Video Studio & Visual Cards |
+> | 3. SCOUT | `zeta` | Web Scout & Fact-Checker |
+> | 4. **DELTA** *(trước 02/09 ghi nhầm là "ALPHA")* | `delta` | Code Doctor & Diagnostics |
+>
+> Ba phòng còn lại trong mã (`beta`, `gamma`, `omega`) chưa có chương nào ở đây.
+>
+> **VÀ ĐÂY LÀ ĐIỀU PHẢI ĐỌC TRƯỚC MỌI TIÊU CHUẨN BÊN DƯỚI.** Đo 02/09/2026 bằng
+> cách gọi `POST /api/dispatch` rồi soi đĩa (`tools/do_trang_thai_phong.py`):
+>
+> ```
+> chạy thật 0 · chưa chạy thật 7 · không đo được 0
+> 8 tệp được KHAI là đã tạo · 0 tệp có thật trên đĩa · mỗi lượt 2–9 ms
+> ```
+>
+> Cả bảy phòng trả về **đoạn văn viết sẵn**. Nên những tiêu chuẩn dưới đây là
+> thứ các phòng **phải đạt**, không phải thứ chúng **đang đạt**. Đọc ngược lại
+> là đúng cái bẫy mà chính Chương I cấm.
+
+
 ### 1. PHÒNG WRITER (Sáng tác Chương truyện)
 * **Đầu vào:** `bible.json`, `style_card.json` (duy nhất 1 card) được snapshot trong `raw/`.
 * **Đầu ra:** Chương truyện Markdown (1.500–2.500 từ).
@@ -78,12 +108,16 @@ Mọi lần chạy thử nghiệm phải được lưu cô lập trong `data/evi
   3. Lưu toàn bộ file raw HTML đã crawl vào `runs/<run_id>/raw/scout/`.
   4. Verifier chấm điểm trực tiếp trên snapshot HTML đã lưu, không cào lại mạng. Cấm mọi hành vi gửi biểu mẫu hoặc external submit.
 
-### 4. PHÒNG ALPHA (Harness Sửa Lỗi Tự động & Sandbox Chống Gian)
+### 4. PHÒNG DELTA (Harness Sửa Lỗi Tự động & Sandbox Chống Gian)
 * **Quy trình Thử nghiệm:**
   1. **Sanity Phase:** Chạy qua 5 bài test công khai (sanity tests).
   2. **Hidden Phase:** Chạy qua 5 bài test ẩn được đóng băng (model không thấy test code và expected diff).
 * **7 Khóa Chống Gian Lận (Anti-Cheat Locks):**
   1. Sandbox cô lập, ngắt hoàn toàn kết nối mạng (`no-network`).
+     **CHƯA CHẶN ĐƯỢC.** Đo 01/09/2026 trên `core/polyglot.py`: mã chạy ở
+     gốc kho với đủ quyền tài khoản Windows và GHI ĐƯỢC tệp ra ngoài thư
+     mục tạm; chỉ có một trần thời gian. Và `alpha.py::verify_anti_cheat_keys()`
+     trả về bảy chuỗi `"PASS"` gõ cứng — không đo gì cả.
   2. Giới hạn ngân sách tài nguyên nghiêm ngặt (timeout, CPU/RAM/disk budget).
   3. Chặn mã sửa đổi bộ test hoặc import mock thư viện kiểm thử.
   4. Kiểm tra cú pháp và tính an toàn bằng AST parser trước khi thực thi.

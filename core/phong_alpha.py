@@ -117,6 +117,27 @@ CHENH_DAI_TREN_MAX = 1.0
 # cần hạ khoảng 7 dB -> hệ số 0,45.
 HE_SO_NHAC = 0.45
 
+# CỬA NỘI DUNG (03/09/2026). Ba ngưỡng dưới đây chép tay từ `KY_LUAT_THUC_THI.md`
+# — đăng ký ở đó TRƯỚC khi có mã này.
+#
+# Vì sao cần. Đề đã đóng băng là MỘT CÂU LẶP 22 LẦN, và video dựng từ nó qua
+# sạch mọi cửa đang có: `scdet` vẫn đếm 12 lần đổi cảnh (nền thẻ xoay góc vàng
+# nên đổi màu dù chữ y hệt), `silencedetect` trên bản trộn không thấy gì (nhạc
+# phủ kín 15 giây câm), `loudnorm` vẫn trong khoảng (nhạc gánh phần im). Mỗi cửa
+# đo đúng phần nó đo, và không cửa nào đo NỘI DUNG.
+#
+#   154 từ -> đọc hết 41,27s;  15,23s / 56,50s (27%) không có giọng
+#   13 khối phụ đề · 1 khối khác nhau (tỉ lệ 0,077)
+TI_LE_PHU_DE_KHAC_MIN = 0.80
+TI_LE_KHOI_LAP_MAX = 0.25
+# Hiệu chuẩn: văn bản 13 câu KHÁC NHAU, 179 từ, cùng giọng OneCore -> 16 khoảng
+# nghỉ, dài nhất 0,77s, trung bình 0,59s. 2,0s là 2,6 lần khoảng dài nhất.
+QUANG_CAM_TOI_DA_GIAY = 2.0
+# Dò THẤP hơn ngưỡng chấm. Đặt bằng nhau thì mọi quãng ngắn hơn bị giấu — đúng
+# lỗi đã mắc với `freezedetect` (probe d bằng ngưỡng thì không thấy gì).
+DO_CAM_PROBE_GIAY = 0.5
+DO_CAM_NGUONG_DB = -50
+
 # Phông phải có dấu tiếng Việt. Segoe UI có; nếu máy không có thì thử lần lượt.
 PHONG_UNG_VIEN = ("segoeui.ttf", "arial.ttf", "tahoma.ttf", "calibri.ttf")
 
@@ -660,6 +681,67 @@ def kiem_video(mp4: Path) -> Dict[str, Any]:
     return kq
 
 
+def khoi_phu_de(noi_dung: str) -> List[str]:
+    """Rút phần CHỮ của từng khối .srt (bỏ số thứ tự và dòng mốc thời gian)."""
+    ra: List[str] = []
+    for khoi in re.split(r"\n\s*\n", noi_dung.strip()):
+        dong = [d.strip() for d in khoi.strip().splitlines() if d.strip()]
+        chu = [d for d in dong
+               if not d.isdigit() and "-->" not in d]
+        if chu:
+            ra.append(" ".join(chu))
+    return ra
+
+
+def kiem_lap_phu_de(khoi: List[str]) -> List[str]:
+    """Chấm độ lặp của phụ đề. Trả lý do BÁC; rỗng nghĩa là đạt.
+
+    Hàm THUẦN, cùng lý do với `kiem_nung` và `kiem_am_thanh`: để phép chấm nằm
+    rải trong dây chuyền thì cửa canh chỉ khẳng định được "số đo nằm trong
+    khoảng" trên một lượt ĐẠT, không cách nào đưa số XẤU vào.
+    """
+    if not khoi:
+        return ["không có khối phụ đề nào để chấm"]
+    ti_le_khac = len(set(khoi)) / len(khoi)
+    lap_nhieu_nhat = max(khoi.count(k) for k in set(khoi)) / len(khoi)
+    ra: List[str] = []
+    if ti_le_khac < TI_LE_PHU_DE_KHAC_MIN:
+        ra.append(f"chỉ {len(set(khoi))}/{len(khoi)} khối phụ đề khác nhau "
+                  f"(tỉ lệ {ti_le_khac:.3f}), cần ≥ {TI_LE_PHU_DE_KHAC_MIN}")
+    if lap_nhieu_nhat > TI_LE_KHOI_LAP_MAX:
+        ra.append(f"một khối chiếm {lap_nhieu_nhat:.3f} tổng số khối, cần ≤ "
+                  f"{TI_LE_KHOI_LAP_MAX}")
+    return ra
+
+
+def _quang_cam_dai_nhat(wav: Path) -> float:
+    """Quãng KHÔNG CÓ GIỌNG dài nhất trong tệp, tính bằng giây.
+
+    Trả `-1.0` nếu không đo được — không gộp vào 0.0, vì 0.0 đọc ra thành
+    "đo rồi, không có quãng nào".
+    """
+    r = subprocess.run(
+        ["ffmpeg", "-v", "info", "-i", str(wav), "-af",
+         f"silencedetect=noise={DO_CAM_NGUONG_DB}dB:d={DO_CAM_PROBE_GIAY}",
+         "-f", "null", "-"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        timeout=TRAN_RENDER_GIAY)
+    if r.returncode != 0:
+        return -1.0
+    quang = [float(m) for m in re.findall(r"silence_duration: ([\d.]+)", r.stderr)]
+    return max(quang) if quang else 0.0
+
+
+def kiem_quang_cam(giay: float) -> List[str]:
+    """Chấm quãng không có giọng. Trả lý do BÁC; rỗng nghĩa là đạt."""
+    if giay < 0:
+        return ["không đo được quãng câm trong giọng đọc"]
+    if giay > QUANG_CAM_TOI_DA_GIAY:
+        return [f"quãng không có giọng dài {giay:.2f}s, cần ≤ "
+                f"{QUANG_CAM_TOI_DA_GIAY}s — kịch bản ngắn hơn cửa sổ video"]
+    return []
+
+
 def kiem_phu_de(srt: Path, so_the: int, dai_video: float) -> Dict[str, Any]:
     """Phụ đề phải đủ dòng và không chạy quá phim.
 
@@ -801,6 +883,23 @@ def dung_video(thu_muc_ra: Path, van_ban: str | None = None) -> Dict[str, Any]:
     ly_do_am = kiem_am_thanh(lufs_giong, lufs_nhac, lufs_ra)
     if ly_do_am:
         kiem["vi_sao"] += ly_do_am
+        kiem["dat"] = False
+
+    # CỬA NỘI DUNG. Mọi phép trên chỉ đo HÌNH DẠNG, nên một kịch bản là một câu
+    # lặp 22 lần vẫn qua sạch. Hai phép này đo thứ khán giả thật sự nhận được.
+    khoi = khoi_phu_de(srt.read_text(encoding="utf-8")) if srt.is_file() else []
+    kiem["so"]["so_khoi_phu_de"] = len(khoi)
+    kiem["so"]["so_khoi_khac_nhau"] = len(set(khoi))
+    ly_do_lap = kiem_lap_phu_de(khoi)
+    if ly_do_lap:
+        kiem["vi_sao"] += ly_do_lap
+        kiem["dat"] = False
+
+    quang = _quang_cam_dai_nhat(wav)
+    kiem["so"]["quang_cam_dai_nhat_s"] = round(quang, 2)
+    ly_do_cam = kiem_quang_cam(quang)
+    if ly_do_cam:
+        kiem["vi_sao"] += ly_do_cam
         kiem["dat"] = False
 
     return {"trang_thai": "PASS" if kiem["dat"] else "FAIL",

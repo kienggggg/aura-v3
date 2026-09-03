@@ -86,7 +86,32 @@ Mọi lần chạy thử nghiệm phải được lưu cô lập trong `data/evi
   5. `path_confinement`: File đầu ra chỉ nằm trong thư mục được cấp phép (`Path.resolve` + `is_relative_to`).
 
 ### 2. PHÒNG STUDIO (Sản xuất Video Dọc Offline)
-* **Đầu vào:** `STUDIO_FIXTURE.md` (120–160 từ) đã đóng băng kèm SHA-256 (nhãn `synthetic_fixture`).
+* **Đầu vào:** `STUDIO_FIXTURE.md` (**215–250 từ**, **≥13 câu khác nhau**) đã
+  đóng băng kèm SHA-256 (nhãn `synthetic_fixture`).
+
+  > Trước 03/09/2026 dòng này ghi **120–160 từ**, và nó MÂU THUẪN với chính yêu
+  > cầu video 55–65 s ngay bên dưới. Đo tốc độ giọng OneCore trên năm mẫu:
+  >
+  > ```
+  >  80 từ (lặp)   22,38 s   3,58 từ/s
+  > 154 từ (lặp)   42,05 s   3,66
+  > 240 từ (lặp)   65,93 s   3,64
+  > 179 từ (văn)   46,38 s   3,86
+  > 266 từ (văn)   67,30 s   3,95
+  > ```
+  >
+  > Ở mọi tốc độ ấy, một đề 160 từ đọc hết **nhiều nhất 41,5 s** — không cách nào
+  > chạm 55 s. Hai con số chưa bao giờ giao nhau; thứ âm thầm hoà giải chúng là
+  > `_dai_ngan_lai()` đệm im lặng, và **15,23 giây câm chính là chỗ chúng va
+  > nhau**. Cửa nội dung bên dưới làm chỗ va ấy kêu thành tiếng.
+  >
+  > Văn xuôi đọc nhanh hơn văn lặp ~7%, nên ngân sách lấy 3,9 từ/s: 55 s → 215
+  > từ, 65 s → 254 từ. Đã kiểm: **235 từ / 15 câu → PASS**; **266 từ → 67,3 s,
+  > FAIL vì quá dài**.
+  >
+  > Đề cũ giữ lại nguyên vẹn ở `STUDIO_FIXTURE_LAP.md` làm **ca đối chứng âm** —
+  > nó là bằng chứng đã kiểm rằng một kịch bản rác vẫn qua sạch mọi cửa hình
+  > dạng. Xoá nó đi là mất vật chứng.
 * **Quy trình Thực thi 100% Offline trên Máy:**
   1. **Tổng hợp Giọng đọc (TTS):** Sử dụng Windows SAPI OneCore token `MSTTS_V110_viVN_An` xuất ra `voice.wav` thật.
   2. **Visual Cards:** Sinh tối thiểu 3 ảnh 720×1280 bằng thư viện PIL (Pillow), có nhãn `kind=generated_template` và SHA-256 riêng.
@@ -146,6 +171,40 @@ Mọi lần chạy thử nghiệm phải được lưu cô lập trong `data/evi
   > Ngưỡng lấy từ đâu: 60 s ÷ 8 = 7,5 s một lần đổi cảnh, là mức tối thiểu để
   > một video dọc không đọc ra thành slideshow. Còn 5 giây là ngưỡng riêng cho
   > TỪNG đoạn — 8 lần đổi vẫn có thể giấu một quãng đứng yên 20 giây.
+
+* **Cửa NỘI DUNG (thêm 03/09/2026 — mọi cửa trên chỉ đo HÌNH DẠNG):**
+  - Tỉ lệ khối phụ đề **khác nhau ≥ 0,80** trên tổng số khối.
+  - Không khối phụ đề nào chiếm **quá 0,25** tổng số khối.
+  - Quãng **không có giọng nói** dài nhất trong luồng giọng (đo TRƯỚC khi trộn
+    nhạc) **≤ 2,0 giây**.
+
+  > Vì sao thêm. Đề đã đóng băng `STUDIO_FIXTURE.md` là **một câu lặp 22 lần** —
+  > `"Kael nhìn lên bầu trời đỏ rực."` ×22 — và video dựng từ nó **qua sạch sẽ
+  > mọi cửa trên**. Đo ngày 03/09/2026:
+  >
+  > ```
+  > 154 từ  ->  đọc hết 41,27 s
+  > 15,23 s / 56,50 s  (27%)  KHÔNG CÓ GIỌNG NÓI
+  > 13 khối phụ đề · 1 khối có nội dung khác nhau  (tỉ lệ 0,077)
+  > ```
+  >
+  > Không cửa nào kêu, vì mỗi cửa đo đúng phần nó đo: nền thẻ xoay theo góc vàng
+  > nên `scdet` vẫn đếm đủ 12 lần đổi cảnh dù chữ y hệt; nhạc nền phủ kín 15 giây
+  > câm nên `silencedetect` trên bản trộn không thấy gì; `loudnorm` vẫn trong
+  > khoảng vì nhạc gánh phần im. **Cửa hình dạng không thay được cửa nội dung.**
+  >
+  > Ngưỡng lấy từ đâu. Cho một văn bản 13 câu KHÁC NHAU, 179 từ, đọc bằng đúng
+  > giọng OneCore ấy: **16 khoảng nghỉ**, dài nhất **0,77 s**, trung bình 0,59 s.
+  > Đặt 2,0 s là 2,6 lần khoảng nghỉ tự nhiên dài nhất — đủ rộng để không bắt oan
+  > nhịp thở giữa câu, mà vẫn cách 15,23 s của bản đệm rất xa. Còn 0,80 và 0,25:
+  > đề hiện tại cho 0,077 và 1,00; văn bản 13 câu khác nhau cho 1,00 và 0,077.
+  > Hai ngưỡng nằm giữa, chừa chỗ cho một câu điệp khúc lặp vài lần.
+  >
+  > `silencedetect` phải dò ở `d=0,5` — THẤP hơn ngưỡng chấm 2,0. Đặt bằng nhau
+  > thì mọi quãng ngắn hơn bị giấu, đúng lỗi đã mắc với `freezedetect`.
+  >
+  > Ba ngưỡng này đặt **TRƯỚC** khi sửa mã, và chúng làm đề đóng băng hiện tại
+  > **RỚT**. Rớt là đúng.
 
 ### 3. PHÒNG SCOUT (Tra cứu Dữ kiện Mới & Source Receipt)
 * **Đầu vào:** Tối thiểu 3 câu hỏi cần dữ kiện mới.

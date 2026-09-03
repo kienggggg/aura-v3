@@ -9,7 +9,9 @@ trước, ở `KY_LUAT_THUC_THI.md` Chương II mục 2; thiếu đúng phần m
 NĂM THỨ ĐÃ CHẠY THỬ TRƯỚC KHI VIẾT DÒNG NÀO (`CLAUDE.md` mục 7 luật 2)::
 
     Pillow 12.3.0 · ffmpeg 7.1 · blackdetect · astats · silencedetect   CÓ
-    STUDIO_FIXTURE.md   924 byte · 154 từ
+    STUDIO_FIXTURE.md   1403 byte · 235 từ · 15 câu khác nhau
+                        (bản 924 byte / 154 từ / MỘT câu lặp 22 lần giữ ở
+                         STUDIO_FIXTURE_LAP.md làm ca đối chứng âm)
     MSTTS_V110_viVN_An  CÓ — nhưng `System.Speech` báo KHÔNG, và câu ấy SAI:
 
         HKLM\\...\\Speech\\Voices\\Tokens            2 giọng, cả hai en-US
@@ -780,4 +782,205 @@ def test_day_chuyen_NGHE_phan_quyet_cua_cham_nung(tmp_path):
         pytest.skip(f"đối chứng không đo được: {sach['vi_sao']}")
     assert sach["trang_thai"] == "PASS", (
         f"đối chứng phải PASS mới chứng minh được bài trên: {sach['vi_sao']}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# CỬA NỘI DUNG (03/09/2026)
+#
+# Ba con số dưới đây CHÉP TAY từ `KY_LUAT_THUC_THI.md`, không `import` từ
+# `core.phong_alpha`. Lý do đã trả giá ngày 02/09: bài kiểm khung hình khẳng
+# định `(width, height) == (RONG, CAO)` bằng CHÍNH hằng số mà mã dùng, nên gieo
+# `RONG, CAO = 640, 1136` thì hai vế cùng đổi và cửa vẫn xanh.
+DAC_TA_TI_LE_KHAC_MIN = 0.80
+DAC_TA_TI_LE_LAP_MAX = 0.25
+DAC_TA_QUANG_CAM_MAX = 2.0
+
+
+def test_hang_so_cua_noi_dung_khop_dac_ta():
+    import core.phong_alpha as pa
+
+    assert pa.TI_LE_PHU_DE_KHAC_MIN == DAC_TA_TI_LE_KHAC_MIN
+    assert pa.TI_LE_KHOI_LAP_MAX == DAC_TA_TI_LE_LAP_MAX
+    assert pa.QUANG_CAM_TOI_DA_GIAY == DAC_TA_QUANG_CAM_MAX
+
+
+def test_probe_do_cam_phai_THAP_hon_nguong_cham():
+    """Đặt probe bằng ngưỡng chấm thì mọi quãng ngắn hơn bị GIẤU.
+
+    Đã mắc đúng lỗi này với `freezedetect` ngày 02/09: probe `d` đặt bằng ngưỡng
+    5,0 s nên không đoạn nào ngắn hơn lộ ra, và bảng đo đọc thành "sạch".
+    """
+    import core.phong_alpha as pa
+
+    assert pa.DO_CAM_PROBE_GIAY < pa.QUANG_CAM_TOI_DA_GIAY, (
+        f"probe {pa.DO_CAM_PROBE_GIAY}s không được ≥ ngưỡng chấm "
+        f"{pa.QUANG_CAM_TOI_DA_GIAY}s"
+    )
+
+
+def test_khoi_phu_de_bo_so_thu_tu_va_moc_gio():
+    from core.phong_alpha import khoi_phu_de
+
+    srt = ("1\n00:00:00,000 --> 00:00:04,000\nCâu một.\n\n"
+           "2\n00:00:04,000 --> 00:00:08,000\nCâu hai\ndòng tiếp.\n")
+    assert khoi_phu_de(srt) == ["Câu một.", "Câu hai dòng tiếp."]
+    assert khoi_phu_de("") == []
+
+
+def test_cham_lap_phu_de_bac_kich_ban_mot_cau():
+    """Đề đóng băng CŨ là một câu lặp 22 lần → 1/13 khối khác nhau."""
+    from core.phong_alpha import kiem_lap_phu_de
+
+    assert not kiem_lap_phu_de([f"Câu {i}." for i in range(13)]), (
+        "13 khối khác nhau phải ĐẠT"
+    )
+    mot_cau = kiem_lap_phu_de(["Kael nhìn lên bầu trời đỏ rực."] * 13)
+    assert any("khác nhau" in l for l in mot_cau), mot_cau
+    assert any("một khối chiếm" in l for l in mot_cau), mot_cau
+
+    # Điệp khúc lặp 2 lần trong 13 khối vẫn phải lọt — ngưỡng chừa chỗ cho nó.
+    diep_khuc = [f"Câu {i}." for i in range(12)] + ["Câu 0."]
+    assert not kiem_lap_phu_de(diep_khuc), diep_khuc
+
+    # Nhưng lặp tới 4/13 (0,308 > 0,25) thì bác.
+    lan_at = [f"Câu {i}." for i in range(10)] + ["Câu 0."] * 3
+    assert kiem_lap_phu_de(lan_at), "một khối chiếm 4/13 phải BÁC"
+
+    assert kiem_lap_phu_de([]), "không có khối nào thì phải BÁC, không phải ĐẠT"
+
+
+def test_cham_quang_cam_tach_ba_trang_thai():
+    from core.phong_alpha import kiem_quang_cam
+
+    assert not kiem_quang_cam(0.77), "khoảng nghỉ tự nhiên dài nhất phải ĐẠT"
+    assert not kiem_quang_cam(0.0)
+    assert kiem_quang_cam(15.23), "15,23s đệm im lặng phải BÁC"
+    assert kiem_quang_cam(DAC_TA_QUANG_CAM_MAX + 0.01), "quá ngưỡng phải BÁC"
+    khong_do = kiem_quang_cam(-1.0)
+    assert any("không đo được" in l for l in khong_do), (
+        f"không đo được phải nói RA, không được gộp vào đạt: {khong_do}"
+    )
+
+
+def test_day_chuyen_NGHE_phan_quyet_cua_hai_cua_noi_dung(tmp_path):
+    """Bơm phán quyết BÁC vào từng cửa nội dung rồi chạy CẢ dây chuyền.
+
+    Không có bài này thì hai bài chấm ở trên vẫn xanh dù `dung_video` ngừng nghe
+    chúng — đúng chỗ mù đã bắt được ngày 03/09 với `kiem_nung`: gieo
+    `if ly_do_nung:` → `if False:` mà cả 30 bài vẫn xanh, vì mọi bài đều gọi
+    thẳng hàm thuần.
+    """
+    import core.phong_alpha as pa
+
+    for ten_ham, gia in (("kiem_lap_phu_de", ["gieo: phụ đề lặp"]),
+                         ("kiem_quang_cam", ["gieo: quãng câm quá dài"])):
+        goc = getattr(pa, ten_ham)
+        try:
+            setattr(pa, ten_ham, lambda *_a, **_k: list(gia))
+            kq = pa.dung_video(tmp_path / f"bom_{ten_ham}")
+        finally:
+            setattr(pa, ten_ham, goc)
+
+        if kq["trang_thai"] == "KHONG_CHAY_DUOC":
+            pytest.skip(f"không đo được: {kq['vi_sao']}")
+        assert kq["trang_thai"] == "FAIL", (
+            f"{ten_ham} BÁC mà dây chuyền vẫn {kq['trang_thai']} — "
+            f"phán quyết không đi tới `trang_thai`"
+        )
+        assert gia[0] in kq["vi_sao"], (
+            f"lý do bác của {ten_ham} không lọt ra ngoài: {kq['vi_sao']!r}"
+        )
+
+    # Ca đối chứng: không bơm gì thì cùng đường ấy phải PASS.
+    sach = pa.dung_video(tmp_path / "khong_bom")
+    if sach["trang_thai"] == "KHONG_CHAY_DUOC":
+        pytest.skip(f"đối chứng không đo được: {sach['vi_sao']}")
+    assert sach["trang_thai"] == "PASS", (
+        f"đối chứng phải PASS mới chứng minh được bài trên: {sach['vi_sao']}"
+    )
+
+
+def test_de_dong_bang_du_dai_va_du_cau_khac_nhau():
+    """Đề phải tự nó lấp đầy 55–65s, không nhờ đệm im lặng.
+
+    Trước 03/09 đặc tả đòi đề 120–160 từ VÀ video 55–65 s cùng lúc. Ở tốc độ đo
+    được (3,58–3,95 từ/s) thì đề 160 từ đọc hết nhiều nhất 41,5 s — hai con số
+    chưa bao giờ giao nhau, và `_dai_ngan_lai()` âm thầm hoà giải chúng bằng
+    15,23 s im lặng.
+    """
+    import re
+
+    from core.phong_alpha import FIXTURE
+
+    van = FIXTURE.read_text(encoding="utf-8").strip()
+    so_tu = len(van.split())
+    cau = [c.strip() for c in re.split(r"(?<=[.!?])\s+", van) if c.strip()]
+
+    assert 215 <= so_tu <= 250, f"đề {so_tu} từ, đặc tả đòi 215–250"
+    assert len(set(cau)) >= 13, (
+        f"đề chỉ có {len(set(cau))} câu khác nhau trên {len(cau)}, cần ≥ 13"
+    )
+    # Ở 3,9 từ/s — cận dưới của cửa sổ video, không cần đệm.
+    assert so_tu / 3.95 >= 55.0, f"đề đọc hết {so_tu / 3.95:.1f}s, dưới 55s"
+
+
+def test_de_doi_chung_AM_van_con_tren_dia():
+    """Đề cũ là vật chứng: kịch bản rác qua sạch mọi cửa HÌNH DẠNG.
+
+    Giữ tệp lại để lần sau còn dựng lại được ca ấy mà không phải chế lại.
+    """
+    import re
+
+    from core.phong_alpha import FIXTURE
+
+    lap = FIXTURE.with_name("STUDIO_FIXTURE_LAP.md")
+    assert lap.is_file(), "mất ca đối chứng âm"
+    van = lap.read_text(encoding="utf-8").strip()
+    cau = [c.strip() for c in re.split(r"(?<=[.!?])\s+", van) if c.strip()]
+    assert len(set(cau)) == 1 and len(cau) >= 20, (
+        f"đối chứng âm phải là MỘT câu lặp nhiều lần, đang là "
+        f"{len(set(cau))} câu khác nhau trên {len(cau)}"
+    )
+
+
+def test_do_quang_cam_SINH_RA_khong_do_duoc_khi_ffmpeg_gay(tmp_path):
+    """`_quang_cam_dai_nhat` phải TRẢ VỀ −1,0 khi không đo được, không phải 0,0.
+
+    Gieo 03/09/2026 bắt được chỗ mù: đổi `return -1.0` thành `return 0.0` trong
+    nhánh `r.returncode != 0` mà cả 39 bài vẫn xanh. Lý do là bài
+    `test_cham_quang_cam_tach_ba_trang_thai` chấm hàm `kiem_quang_cam(-1.0)` —
+    tức chấm NGƯỜI XỬ — trong khi không bài nào bắt NGƯỜI SINH RA số ấy phải
+    sinh đúng. Trên một lượt chạy được thì ffmpeg không bao giờ gãy, nên nhánh
+    ấy chưa từng chạy.
+
+    Cùng họ với `kiem_nung`: chấm được một hàm không chứng minh giá trị vào nó
+    từ đâu ra. Lần thứ tư trong tệp này.
+
+    0,0 nguy hơn 0,0 nghe có vẻ: nó đọc thành "đo rồi, không có quãng câm nào"
+    và `kiem_quang_cam(0.0)` cho ĐẠT — tức "chưa đo được" đội lốt "đã đo, không
+    sao", đúng cái ba-trạng-thái sinh ra để chống.
+    """
+    from core.phong_alpha import _quang_cam_dai_nhat, kiem_quang_cam
+
+    for ten, tep in (("tệp không tồn tại", tmp_path / "khong_co.wav"),
+                     ("tệp không phải wav", tmp_path / "rac.wav")):
+        if tep.name == "rac.wav":
+            tep.write_bytes(b"day khong phai wav")
+        do = _quang_cam_dai_nhat(tep)
+        assert do < 0, (
+            f"{ten}: trả {do}, phải là số ÂM. Trả 0.0 thì "
+            f"`kiem_quang_cam` cho ĐẠT và 'không đo được' biến mất."
+        )
+        assert kiem_quang_cam(do), f"{ten}: {do} phải dẫn tới BÁC"
+
+    # Ca đối chứng: một tệp wav THẬT thì phải đo ra số không âm.
+    from core.phong_alpha import FIXTURE, doc_giong
+
+    that, ly_do = doc_giong("Một câu ngắn để thử.", tmp_path)
+    if that is None:
+        pytest.skip(f"đối chứng không đo được: {ly_do}")
+    assert _quang_cam_dai_nhat(that) >= 0, (
+        "tệp wav thật phải đo ra số không âm — nếu không thì bài trên xanh "
+        "chỉ vì hàm luôn trả số âm"
     )

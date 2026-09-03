@@ -294,6 +294,68 @@ AURA viết kịch bản, Alpha dựng video. Mối nối là tham số `van_ban
 
 ---
 
+### 5. NĂM PHÒNG NỘI BỘ CÒN LẠI (`core/phong_noi_bo.py`, 03/09/2026)
+
+Đo qua `POST /api/dispatch` sáng 03/09: **chạy thật 2 · chưa chạy thật 5**. Năm
+phòng `beta` · `delta` · `gamma` · `omega` · `zeta` đều trả một đoạn văn viết
+sẵn rồi khai một tệp không tồn tại.
+
+Chỗ chua nhất là `gamma` — **phòng đo lường**. Nó in *"Số liệu đo đạc thời gian
+thực"* rồi báo bốn con số gõ tay, và cả bốn đều sai:
+
+```
+RAM        4.2 GB / 16.0 GB    thật: 9,11 / 12,61 GB
+Hard Gates 714/714 tests       thật: 692 tests lúc ấy
+Tốc độ     38.4 tokens/giây    thật: 5,02–6,69 tok/s (thổi 5,7–7,6 lần)
+Latency    42 ms               chưa từng đo
+```
+
+* **Mỗi phòng để lại MỘT hiện vật thật** kèm SHA-256 tính từ đĩa:
+
+  | phòng | việc thật | hiện vật | ai kiểm chéo được |
+  |---|---|---|---|
+  | `gamma` | RAM · số bài test · tốc độ sinh | `metrics.json` | `ctypes` gọi thẳng Win32 · `pytest --collect-only` |
+  | `omega` | đọc sổ cái, tính thống kê | `bao_cao_so_cai.md` | đếm lại dòng bằng tay |
+  | `zeta` | tra mạng thật | `bien_nhan.json` | mở URL ra đối chiếu, kèm SHA-256 nội dung |
+  | `delta` | quét AST thật | `chan_doan.json` | gọi `ast` tay rồi so số hàm/lớp |
+  | `beta` | A/B hai biến thể lời nhắc | `ab_test.json` | chấm bằng chính `do_kich_ban` |
+
+* **KHÔNG dùng `psutil`.** Nó không có trong `requirements.txt`, và chính nhánh
+  `except` khi thiếu nó đã đẻ ra con số giả `4.2/16.0`. `ctypes` gọi thẳng
+  `GlobalMemoryStatusEx` — đọc được, không thêm gói ngoài nào.
+
+* **`omega` KHÔNG được lấy `so_cai.jsonl` làm bằng chứng của mình.** Mọi phòng
+  đều ghi vào đó, nên `tools/do_trang_thai_phong.py` cố ý loại nó ra khỏi ảnh
+  chụp. Phòng nào lấy dòng sổ của mình làm bằng chứng thì phòng nào cũng "đạt".
+
+* **`zeta` tra được mà không ra nguồn nào là `FAIL`, không phải `KHONG_CHAY_DUOC`
+  và tuyệt đối không phải `PASS`.** Nó đã CHẠY, chỉ là kết quả rỗng.
+
+* **`delta` KHÔNG tự sửa mã.** Bản cũ khai có `Auto-Fix` — không có, và sẽ không
+  có: sửa mã hộ người khác mà không ai duyệt là chuyện khác hẳn với đọc mã.
+
+* **`beta` phải tự nói ra khi N quá nhỏ.** Mỗi biến thể tốn một lượt gọi model
+  64–96 giây, nên mặc định `so_lan=1` để lọt trần 360 s của máy đo phòng. Một
+  lượt mỗi bên **không kết luận được gì**, và trường `du_de_ket_luan` nói thẳng
+  điều đó thay vì đưa ra một tỉ lệ trông như bằng chứng. Đủ để kết luận: **≥ 3**.
+
+  > Việc này CÓ THẬT. Ngày 03/09 tôi thêm *"mỗi câu KHÔNG quá 15 từ"* vào lời
+  > nhắc của `core/viet_truyen.py` để chữa trần 19,2 từ/câu. Nó chữa được, nhưng
+  > kéo tụt tổng độ dài — chạy thật ra 171 · 163 · 187 từ, trượt cả ba vì quá
+  > ngắn. Không ai phát hiện bằng đọc lời nhắc. Chạy `beta` lần đầu thì nó dựng
+  > lại đúng ca ấy: biến thể A cho 304 từ → ĐẠT, biến thể B cho 197 từ → trượt.
+
+* **MỘT tệp cho cả năm phòng, không phải năm tệp.** `V3_PHONG` trần 8, đang 4;
+  năm mô-đun riêng là 9 — vượt trần. Hàng rào ấy dựng cùng ngày và nó đang làm
+  đúng việc: bắt người viết phải cố ý.
+
+* **CHƯA SỬA — `api_chay_pipeline` vẫn giả.** 91 dòng, gõ tay
+  `"trang_thai": "PASS"` **5 lần**, không gọi phòng nào, nhưng CÓ ghi vào
+  `so_cai.jsonl` — tức để lại dấu vết của việc chưa từng xảy ra. Đây là lỗ trong
+  chính cửa fail-closed: nó có thể bị thoả mãn bởi một phòng ghi tệp về việc nó
+  không làm. `tests/test_phong_noi_bo.py` đóng đinh con số 5 để món nợ này không
+  lặng lẽ trôi đi.
+
 ## CHƯƠNG III: CƠ CHẾ BẢO MẬT & BỘ LỌC DỮ LIỆU NHẠY CẢM (REDACTION)
 - Mọi file log lỗi (`raw/error.txt`) phải đi qua bộ lọc tập trung (Centralized Redactor).
 - Tự động che giấu mọi dạng key/token: Bearer tokens, OpenAI/Gemini/Anthropic/OpenRouter API keys, Basic Auth credentials trong URL.

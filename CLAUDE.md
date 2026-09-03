@@ -329,6 +329,21 @@ Rồi **Alpha thành phòng đầu tiên chạy thật** — `core/phong_alpha.p
 dọc 720×1280 / 60,6 s, giọng OneCore tiếng Việt, 6 hiện vật có SHA-256, để
 `ffprobe` + `blackdetect` chấm. `chạy thật 1 · chưa chạy thật 6`.
 
+> Đến hết 03/09/2026: **`chạy thật 7 · chưa chạy thật 0 · không đo được 0`**, và
+> mỗi phòng khai bao nhiêu tệp thì có thật bấy nhiêu. `aura` viết kịch bản
+> (`core/viet_truyen.py`), năm phòng còn lại ở `core/phong_noi_bo.py`.
+>
+> Con số đắt nhất trên đường ấy là của `gamma` — **phòng đo lường**. Nó in *"Số
+> liệu đo đạc thời gian thực"* rồi báo bốn con số gõ tay, và cả bốn đều sai:
+> `4.2/16.0 GB` (thật 6,98/12,61) · `714/714 tests` (thật 718) · `38.4 tok/s`
+> (thật 6,69 — **thổi 5,7 lần**) · `42 ms` (chưa từng đo).
+>
+> Và một món **CHƯA sửa**: `api_chay_pipeline` vẫn gõ tay `"trang_thai": "PASS"`
+> năm lần, không gọi phòng nào, nhưng **có ghi vào sổ cái** — tức để lại dấu vết
+> của việc chưa từng xảy ra. Đây là lỗ trong chính cửa fail-closed: nó thoả mãn
+> được bằng một phòng ghi tệp về việc nó không làm. `tests/test_phong_noi_bo.py`
+> đóng đinh con số 5 để món nợ ấy không lặng lẽ trôi đi.
+
 Ba chỗ đắt trên đường ấy:
 
 *Một câu báo "không có" có thể sai.* `System.Speech` báo máy không có giọng

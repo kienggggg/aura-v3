@@ -313,14 +313,75 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
     artifacts: List[Dict[str, Any]] = []
     _phong_tra_ve: Optional[str] = None   # phòng nào TỰ CHẤM thì điền vào đây
 
-    if phong_id == "zeta":
-        # Phòng Scout: Tra cứu web hoặc tổng hợp tin tức
-        from core.web_search import loc_menh_lenh
-        menh_lenh = loc_menh_lenh(yeu_cau)
-        ket_qua = f"🔍 **[Zeta Scout Report]**\nĐã thu thập và xác thực dữ liệu cho truy vấn: *{yeu_cau}*\n\n" \
-                  f"- **Nguồn kiểm chứng**: Wikipedia, Dân Trí, VNExpress, Báo Chính Phủ\n" \
-                  f"- **Kết luận trích xuất**: Dữ liệu có tính xác thực cao, không có dấu hiệu bịa đặt thông tin."
-        artifacts.append({"name": "sources.json", "size": "1.2 KB", "type": "JSON"})
+    if phong_id in ("zeta", "delta", "gamma", "omega", "beta"):
+        # NĂM PHÒNG NÀY LÀM VIỆC THẬT (03/09/2026).
+        #
+        # Trước đó cả năm in một đoạn văn viết sẵn rồi khai một tệp không tồn
+        # tại. Đo qua chính đường này: `chạy thật 2 · chưa chạy thật 5`.
+        #
+        # Chỗ chua nhất là `gamma` — phòng ĐO LƯỜNG — in "Số liệu đo đạc thời
+        # gian thực" rồi báo bốn con số gõ tay, cả bốn đều sai:
+        #
+        #     RAM        4.2 GB / 16.0 GB    thật: 9,11 / 12,61 GB
+        #     Hard Gates 714/714 tests       thật: 692 tests lúc ấy
+        #     Tốc độ     38.4 tokens/giây    thật: 5,02–6,69 (thổi 5,7–7,6 lần)
+        #     Latency    42 ms               chưa từng đo
+        #
+        # Cả năm nay ở `core/phong_noi_bo.py`, mỗi phòng để lại một hiện vật
+        # thật kèm SHA-256 tính từ đĩa. Chúng gọi mạng và gọi model nên chậm —
+        # `beta` tới ~170 giây — phải đẩy sang luồng khác kẻo chẹn máy chủ.
+        from core.phong_noi_bo import PHONG
+
+        _kq = await asyncio.to_thread(PHONG[phong_id], task_id, yeu_cau)
+        _phong_tra_ve = _kq["trang_thai"]
+        artifacts = _kq["artifacts"]
+        _so = _kq["so"]
+        _ten = {"zeta": "🔍 **[Zeta Scout]**", "delta": "🔧 **[Delta Code Doctor]**",
+                "gamma": "📊 **[Gamma Analytics]**", "omega": "🎵 **[Omega Ledger]**",
+                "beta": "🧪 **[Beta Sandbox]**"}[phong_id]
+
+        def _dong(nhan: str, d: dict, chu: str) -> str:
+            """Đo được thì in số; không đo được thì NÓI RA, đừng bỏ trống."""
+            return (f"- **{nhan}**: {chu}\n" if d.get("do_duoc")
+                    else f"- **{nhan}**: không đo được — {d.get('vi_sao')}\n")
+
+        if phong_id == "gamma" and _kq["trang_thai"] != "KHONG_CHAY_DUOC":
+            _r, _t, _v = _so["ram"], _so["test"], _so["toc_do"]
+            ket_qua = (
+                f"{_ten} Số đo thật, không con số nào gõ tay.\n\n"
+                + _dong("RAM", _r, f"{_r.get('dang_dung_gb')} / {_r.get('tong_gb')} GB "
+                                   f"({_r.get('phan_tram')}%)")
+                + _dong("Số bài test", _t, f"{_t.get('so_test')} (`pytest --collect-only`)")
+                + _dong("Tốc độ sinh", _v, f"{_v.get('tok_moi_giay')} tok/s "
+                                           f"({_v.get('model')}, {_v.get('so_token')} token)")
+            )
+        elif phong_id == "omega" and _kq["trang_thai"] == "PASS":
+            ket_qua = (f"{_ten} Đã đọc sổ cái và viết báo cáo.\n\n"
+                       f"- **{_so['so_dong']:,} dòng** · {_so['so_byte']:,} byte · "
+                       f"{_so['dong_hong']} dòng hỏng\n"
+                       f"- **SHA-256 sổ cái**: `{_so['sha256_so_cai'][:16]}…`\n"
+                       f"- **Phòng có mặt trong sổ**: {len(_so['theo_phong'])}\n")
+        elif phong_id == "zeta" and _kq["trang_thai"] == "PASS":
+            ket_qua = (f"{_ten} Đã tra mạng thật và ghi biên nhận.\n\n"
+                       f"- **Truy vấn**: {_so['truy_van']}\n"
+                       f"- **Số nguồn**: {_so['so_nguon']} — mỗi nguồn kèm URL và "
+                       f"SHA-256 nội dung\n"
+                       f"- **Lấy lúc**: {_so['lay_luc']}\n")
+        elif phong_id == "delta" and _kq["trang_thai"] != "KHONG_CHAY_DUOC":
+            ket_qua = (f"{_ten} Đã quét AST thật. **Không tự sửa gì cả.**\n\n"
+                       f"- **{_so['so_tep']} tệp** · {_so['tong_dong']:,} dòng · "
+                       f"{_so['so_ham']} hàm · {_so['so_lop']} lớp\n"
+                       f"- **Lỗi cú pháp**: {len(_so['loi_cu_phap'])}\n")
+        elif phong_id == "beta" and _kq["trang_thai"] == "PASS":
+            _d = " · ".join(f"{k}: đạt {v['so_lan_dat']}/{v['so_lan_do_duoc']}"
+                            for k, v in _so["ket_qua"].items())
+            ket_qua = (f"{_ten} Đã chạy A/B hai biến thể lời nhắc.\n\n"
+                       f"- **Chủ đề**: {_so['chu_de']}\n"
+                       f"- {_d}\n"
+                       f"- **Đủ để kết luận**: {_so['du_de_ket_luan']}"
+                       + (f" — {_so['ghi_chu']}" if _so["ghi_chu"] else "") + "\n")
+        else:
+            ket_qua = f"{_ten} {_kq['trang_thai']}: {_kq['vi_sao']}"
 
     elif phong_id == "alpha":
         # Phòng Studio: DỰNG VIDEO THẬT.
@@ -351,39 +412,6 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
         else:
             ket_qua = (f"🎬 **[Alpha Studio]** {_phong_tra_ve}: {_kq['vi_sao']}\n\n"
                        f"Đã để lại {len(artifacts)} hiện vật để soi.")
-
-    elif phong_id == "delta":
-        # Phòng Kỹ thuật: Bác sĩ mã & Chẩn đoán
-        ket_qua = f"🔧 **[Delta Code Doctor Diagnosis]**\nĐã quét cây cú pháp và kiểm tra logic cho yêu cầu:\n\n" \
-                  f"✅ **AST Status**: PASS (Không có lỗi cú pháp `SyntaxError`)\n" \
-                  f"✅ **Mạch nước ngầm**: Luồng dữ liệu nhất quán, không có biến rác.\n" \
-                  f"✨ **Khuyến nghị**: Đoạn mã đạt chuẩn tối ưu để chạy trong tiến trình riêng."
-        artifacts.append({"name": "ast_diagnosis.json", "size": "850 B", "type": "JSON"})
-
-    elif phong_id == "gamma":
-        # Phòng Giám sát: Đo lường & Báo cáo
-        ket_qua = f"📊 **[Gamma Analytics Dashboard]**\nSố liệu đo đạc thời gian thực:\n\n" \
-                  f"- **Tốc độ sinh**: 38.4 tokens/giây\n" \
-                  f"- **RAM tiêu thụ**: 4.2 GB / 16.0 GB (Ổn định)\n" \
-                  f"- **Tỷ lệ Pass Hard Gates**: 100% (714/714 tests)\n" \
-                  f"- **Latency API**: 42 ms"
-        artifacts.append({"name": "metrics_snapshot.json", "size": "1.5 KB", "type": "JSON"})
-
-    elif phong_id == "omega":
-        # Phòng Sổ cái: Ghi nhận nhiệm vụ
-        ket_qua = f"🎵 **[Omega Task Ledger & Maestro]**\nĐã ghi nhận nhiệm vụ vào Sổ cái chỉ-ghi-thêm `so_cai.jsonl`:\n\n" \
-                  f"- **Mã nhiệm vụ**: `{task_id}`\n" \
-                  f"- **Trạng thái ghi**: ĐÃ GHI THẬT TRÊN ĐĨA (Append-only)\n" \
-                  f"- **Cấu hình âm nhạc**: Tempo 120 BPM · Tone C Major · Loudness -14 LUFS"
-        artifacts.append({"name": "so_cai_entry.jsonl", "size": "420 B", "type": "JSONL"})
-
-    elif phong_id == "beta":
-        # Phòng Sandbox: Thử nghiệm kịch bản
-        ket_qua = f"🧪 **[Beta Creative Sandbox]**\nĐã chạy thử nghiệm giả lập kịch bản:\n\n" \
-                  f"- **Độ mạch lạc**: 9.4/10\n" \
-                  f"- **Độ bất ngờ (Perplexity)**: 4.8\n" \
-                  f"- **Đánh giá chung**: Ý tưởng đạt chuẩn để chuyển giao sang phòng AURA viết chi tiết."
-        artifacts.append({"name": "sandbox_experiment.json", "size": "2.1 KB", "type": "JSON"})
 
     else:
         # AURA Writer: VIẾT KỊCH BẢN THẬT, ghi ra đĩa.

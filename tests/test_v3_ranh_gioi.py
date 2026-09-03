@@ -83,6 +83,7 @@ V3 = frozenset({
 # Trần 8, không phải 20: phần này nhỏ hơn hẳn và phải giữ cho nó nhỏ. Đang 3.
 V3_PHONG = frozenset({
     "core/phong_alpha.py",    # dựng video dọc thật, verifier độc lập
+    "core/phong_noi_bo.py",   # beta · delta · gamma · omega · zeta, MỘT tệp
     "core/polyglot.py",
     "core/viet_truyen.py",    # MÁY đếm, model viết — kịch bản cho Alpha
     "interface/noi_bo_api.py",  # /api/dispatch, fail-closed

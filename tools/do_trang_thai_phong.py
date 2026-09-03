@@ -61,7 +61,18 @@ SO_CAI = ROOT / "data" / "omega" / "so_cai.jsonl"
 RA = ROOT / "data" / "noi_bo" / "trang_thai_phong.json"
 CONG = 8791
 TRAN_LEN_GIAY = 40.0
-TRAN_MOT_PHONG_GIAY = 30.0
+# Trần cho MỘT phòng. Nới 30 -> 360 ngày 03/09/2026.
+#
+# Phòng `aura` nay gọi model thật (`core/viet_truyen.py`) và đo được 85–273
+# giây, tuỳ nó phải sinh lại mấy lần. Để nguyên 30 giây thì máy đo báo
+# `KHONG_DO_DUOC` cho một phòng THẬT SỰ CHẠY — tức trần của nhạc cụ làm sai kết
+# luận về thứ được đo, không phải phòng ấy hỏng.
+#
+# 360 = 273 (lượt chậm nhất đo được) + biên. Không đặt bằng trần lý thuyết của
+# `viet_kich_ban` (3 × 300 = 900 s) vì chờ 15 phút cho một lượt đo thì máy đo
+# không dùng được nữa — nếu chạm 360 s thì đó là tin đáng biết, không phải tin
+# nên nuốt.
+TRAN_MOT_PHONG_GIAY = 360.0
 
 # Câu yêu cầu dùng cho mọi phòng. Cố ý VÔ HẠI và giống nhau, để khác biệt giữa
 # các phòng là do PHÒNG, không do đề bài.

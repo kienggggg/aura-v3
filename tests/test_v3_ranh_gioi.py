@@ -35,6 +35,25 @@ ROOT = Path(__file__).resolve().parent.parent
 # trần 10.
 CUA_VAO = ("aura_chat.py",)
 
+# Cửa vào THỨ HAI: hệ thống Phòng nội bộ.
+#
+# Đo 03/09/2026, và bắt được vì phải trả lời câu "tệp mới sẽ nằm ở đâu so với
+# hàng rào" — không phải vì đọc lại mã:
+#
+#     hàng rào đang canh    19 tệp · 5.116 dòng · trần 20
+#     KHÔNG được canh        3 tệp · 2.723 dòng · KHÔNG CÓ TRẦN
+#         908  core/phong_alpha.py
+#       1.009  core/polyglot.py
+#         806  interface/noi_bo_api.py
+#
+# Đúng bệnh đã ghi về App Thẻ: *"dài hơn phần được canh, nằm ngoài, không có gì
+# giữ nó khỏi phình"*. Lần đó bắt được bằng cách chạy phép đo từ hai cửa vào;
+# lần này cũng thế.
+#
+# Gộp một danh sách thì trần mất nghĩa: "25 tệp" không nói được bên nào đang
+# phình.
+CUA_VAO_PHONG = ("interface/noi_bo_api.py",)
+
 # Toàn bộ AURA v3.  19 tệp.  Mọi thứ khác trong repo là KHO PHỤ TÙNG của v2:
 # vẫn nằm đó, vẫn đọc được, nhưng v3 không được phép với tay sang.
 V3 = frozenset({
@@ -57,6 +76,26 @@ V3 = frozenset({
     "interface/chat_adapters.py",  # composition root
     "interface/chat_api.py",
     "interface/chat_app.py",
+})
+
+# Hệ thống Phòng nội bộ — chỉ những tệp KHÔNG có trong V3.
+#
+# Trần 8, không phải 20: phần này nhỏ hơn hẳn và phải giữ cho nó nhỏ. Đang 3.
+V3_PHONG = frozenset({
+    "core/phong_alpha.py",    # dựng video dọc thật, verifier độc lập
+    "core/polyglot.py",
+    "core/viet_truyen.py",    # MÁY đếm, model viết — kịch bản cho Alpha
+    "interface/noi_bo_api.py",  # /api/dispatch, fail-closed
+})
+
+# Hai bên được phép dùng chung ĐÚNG hai tệp này, không hơn.
+#
+# Đóng đinh danh sách chứ không đếm, vì con số không nói được bên nào lấn: nếu
+# `noi_bo_api` bắt đầu `import core.chat_service` thì số vẫn có thể là 2 nếu một
+# tệp khác rụng đi. Cùng lý do CLAUDE.md đòi danh sách đóng thay vì trần đơn.
+DUNG_CHUNG = frozenset({
+    "core/paths.py",       # 19 dòng, gốc đường dẫn
+    "core/web_search.py",  # polyglot cần tra mạng
 })
 
 # Gói nhà trồng được — `import httpx` thì kệ, `import core.daemon` thì không.
@@ -87,10 +126,10 @@ def _import_cua(path: Path) -> set[str]:
     return {m for m in ra if m.split(".")[0] in GOI_NHA}
 
 
-def _dong_bao_dong() -> set[str]:
-    """Tập đóng của các file v3 thật sự với tới, đi từ cửa vào."""
+def _dong_bao_dong(cua_vao: tuple[str, ...] = CUA_VAO) -> set[str]:
+    """Tập đóng của các file thật sự với tới, đi từ cửa vào."""
     tham: set[Path] = set()
-    hang_doi = [ROOT / c for c in CUA_VAO]
+    hang_doi = [ROOT / c for c in cua_vao]
     while hang_doi:
         hien_tai = hang_doi.pop()
         if hien_tai in tham:
@@ -140,3 +179,80 @@ def test_config_1029_dong_cua_v2_KHONG_con_trong_v3():
     for ten in sorted(V3):
         nguon = (ROOT / ten).read_text(encoding="utf-8")
         assert "core.config" not in nguon, f"{ten} còn dính core/config.py"
+
+
+# ---------------------------------------------------------------------------
+# HÀNG RÀO THỨ HAI — hệ thống Phòng nội bộ (03/09/2026)
+#
+# Vì sao có. Hàng rào trên đi từ MỘT cửa vào là `aura_chat.py`, nên cả hệ thống
+# Phòng — 3 tệp, 2.723 dòng — không với tới được từ đó và không ai đếm nó. Cùng
+# hình dạng với App Thẻ hồi 19/08–02/09: phần không được canh DÀI HƠN phần được
+# canh, và lớn lên ngoài tầm mắt.
+
+def test_he_thong_phong_khong_voi_tay_ra_ngoai():
+    lan_ra = _dong_bao_dong(CUA_VAO_PHONG) - V3 - V3_PHONG
+    assert not lan_ra, (
+        "Hệ thống Phòng vừa với tay sang tệp không ai khai: "
+        + ", ".join(sorted(lan_ra))
+        + ". Thêm tên vào V3_PHONG trong chính tệp này, đừng kéo lén qua import."
+    )
+
+
+def test_danh_sach_phong_khong_co_ten_chet():
+    chet = V3_PHONG - _dong_bao_dong(CUA_VAO_PHONG)
+    assert not chet, (
+        "Có tên trong V3_PHONG nhưng không cửa nào với tới: " + ", ".join(sorted(chet))
+    )
+
+
+@pytest.mark.parametrize("ten", sorted(V3_PHONG))
+def test_moi_file_phong_deu_ton_tai(ten):
+    assert (ROOT / ten).is_file(), f"V3_PHONG khai có {ten} nhưng trên đĩa không có"
+
+
+def test_he_thong_phong_van_con_nho():
+    """Trần riêng, 8. Gộp vào trần 20 của chat thì không biết bên nào phình."""
+    assert len(V3_PHONG) <= 8, (
+        f"hệ thống Phòng đã phình lên {len(V3_PHONG)} tệp — dừng lại xem lại đi"
+    )
+
+
+def test_hai_ben_dung_chung_DUNG_HAI_TEP():
+    """Chat và Phòng chỉ được chung `paths.py` và `web_search.py`.
+
+    Đây là cửa quan trọng nhất của cả nhóm này. Hai hệ thống dùng chung càng
+    nhiều thì tách ra càng khó, và cái giá ấy không hiện lên ở bất kỳ con số
+    tổng nào. Ca đã trả giá: hàng rào App Thẻ 02/09 có đúng một phép gieo là
+    "App Thẻ bắt đầu dùng chung tệp với chat", và nó là phép đắt nhất.
+    """
+    chung = _dong_bao_dong(CUA_VAO) & _dong_bao_dong(CUA_VAO_PHONG)
+    assert chung == set(DUNG_CHUNG), (
+        f"phần dùng chung đổi: đang là {sorted(chung)}, khai là {sorted(DUNG_CHUNG)}. "
+        "Thêm một tệp dùng chung là buộc hai hệ thống chặt hơn — phải cố ý."
+    )
+
+
+def test_phong_KHONG_dung_ruot_cua_chat():
+    """Phòng không được với vào xương sống chat.
+
+    `paths.py` (19 dòng) và `web_search.py` là hạ tầng dùng chung được. Nhưng
+    `chat_service`, `chat_runtime`, `user_memory`, `nho_lai` là RUỘT của chat —
+    Phòng chạm vào là hai hệ thống dính vào nhau.
+    """
+    RUOT = {"core/chat_service.py", "core/chat_runtime.py", "core/chat_contract.py",
+            "core/user_memory.py", "core/nho_lai.py", "core/doc_so_phien.py",
+            "interface/chat_api.py", "interface/chat_app.py",
+            "interface/chat_adapters.py", "aura_chat.py"}
+    cham = _dong_bao_dong(CUA_VAO_PHONG) & RUOT
+    assert not cham, (
+        "Hệ thống Phòng vừa với vào ruột của chat: " + ", ".join(sorted(cham))
+    )
+
+
+def test_hai_danh_sach_khong_de_ten_lot_khe():
+    """Mỗi tệp Phòng với tới phải nằm ở ĐÚNG MỘT danh sách, không phải cả hai."""
+    trung = V3 & V3_PHONG
+    assert not trung, (
+        f"tên nằm ở CẢ HAI danh sách: {sorted(trung)}. V3_PHONG chỉ khai tệp "
+        "riêng của Phòng; phần dùng chung khai ở DUNG_CHUNG."
+    )

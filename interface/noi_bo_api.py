@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -385,11 +386,51 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
         artifacts.append({"name": "sandbox_experiment.json", "size": "2.1 KB", "type": "JSON"})
 
     else:
-        # AURA Writer: Viết kịch bản & phân tích
-        ket_qua = f"⚡ **[AURA Orchestrator & Writer]**\nĐã tiếp nhận và xử lý yêu cầu sáng tác:\n\n" \
-                  f"*{yeu_cau}*\n\n" \
-                  f"Nội dung đã được biên soạn theo đúng bible và phong cách riêng, cấu trúc chặt chẽ và sẵn sàng phân phối cho các phòng ban liên quan."
-        artifacts.append({"name": "draft_chapter.md", "size": "5.6 KB", "type": "MARKDOWN"})
+        # AURA Writer: VIẾT KỊCH BẢN THẬT, ghi ra đĩa.
+        #
+        # Trước 03/09/2026 nhánh này in một đoạn văn viết sẵn — *"Nội dung đã
+        # được biên soạn theo đúng bible và phong cách riêng"* — rồi khai
+        # `draft_chapter.md` (5.6 KB). Tệp ấy KHÔNG TỒN TẠI; kích thước là chữ
+        # gõ tay. Đo 02/09 qua `POST /api/dispatch`: 8 tệp được khai, 0 tệp có
+        # thật, mỗi lượt 2–9 ms.
+        #
+        # Nay nó gọi `core/viet_truyen.py`: model viết, MÁY đếm, cắt giữa cho
+        # lọt cửa sổ 215–250 từ / ≥13 câu khác nhau, trần 3 lần sinh. Chạy thật
+        # 3 chủ đề: ĐẠT 3/3, mỗi lượt 85–234 giây — nên phải đẩy sang luồng
+        # khác, kẻo chẹn máy chủ.
+        #
+        # Kịch bản này chính là đầu vào `van_ban` của phòng Alpha.
+        from core.viet_truyen import viet_kich_ban
+
+        _kq = await asyncio.to_thread(viet_kich_ban, yeu_cau)
+        _phong_tra_ve = "PASS" if _kq["trang_thai"] == "DAT" else _kq["trang_thai"]
+        _so = _kq["so"]
+
+        if _kq["trang_thai"] == "DAT":
+            _thu_muc = PROJECT_ROOT / "data" / "aura" / task_id
+            _thu_muc.mkdir(parents=True, exist_ok=True)
+            _tep = _thu_muc / "kich_ban.md"
+            _tep.write_text(_kq["van_ban"] + "\n", encoding="utf-8")
+            artifacts.append({
+                "name": _tep.name,
+                "path": _tep.relative_to(PROJECT_ROOT).as_posix(),
+                "size_bytes": _tep.stat().st_size,
+                "sha256": hashlib.sha256(_tep.read_bytes()).hexdigest(),
+                "type": "MARKDOWN", "kind": "kich_ban_cho_alpha",
+            })
+            ket_qua = (
+                "⚡ **[AURA Writer]** Đã viết xong kịch bản cho Alpha.\n\n"
+                f"- **Độ dài**: {_so.get('so_tu')} từ "
+                f"(≈{_so.get('so_tu', 0) / 3.9:.0f}s đọc, cửa sổ 55–65s)\n"
+                f"- **Câu khác nhau**: {_so.get('so_cau_khac')} · "
+                f"{_so.get('tu_moi_cau')} từ/câu\n"
+                f"- **Số lần sinh**: {_kq['so_lan_thu']}/3\n\n"
+                f"Mất {_kq['ms'] / 1000:.1f}s."
+            )
+        else:
+            _vi = "; ".join(str(l.get("vi_sao")) for l in _kq["lan"])
+            ket_qua = (f"⚡ **[AURA Writer]** {_kq['trang_thai']} sau "
+                       f"{_kq['so_lan_thu']} lần sinh: {_vi}")
 
     # ---- FAIL-CLOSED: phòng có để lại byte nào không? ----
     bang_chung = [Path(d).name for d in _bang_chung_moi(_truoc, _anh_chup_bang_chung())]

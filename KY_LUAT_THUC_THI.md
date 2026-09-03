@@ -85,6 +85,58 @@ Mọi lần chạy thử nghiệm phải được lưu cô lập trong `data/evi
   4. `prompt_leak`: Chuẩn hóa Unicode `NFC` + `casefold` + dọn khoảng trắng, quét sạch mọi mảnh cấu hình/sentinel/heading của prompt.
   5. `path_confinement`: File đầu ra chỉ nằm trong thư mục được cấp phép (`Path.resolve` + `is_relative_to`).
 
+### 1b. KỊCH BẢN CHO STUDIO (`core/viet_truyen.py`, 03/09/2026)
+
+AURA viết kịch bản, Alpha dựng video. Mối nối là tham số `van_ban` đã có sẵn của
+`dung_video()`.
+
+* **Ngưỡng, đặt TRƯỚC khi viết mã:**
+  - Số từ **215–250**.
+  - **≥ 13 câu khác nhau**.
+  - Không câu nào lặp **quá 2 lần**.
+  - Trần **3 lần sinh** cho một kịch bản, và **phải báo ra đã thử mấy lần**.
+
+  > Ngưỡng lấy từ đâu. Tốc độ giọng OneCore đo trên 5 mẫu: 3,58–3,95 từ/giây,
+  > văn xuôi ở cận trên. Lấy 3,9 → cửa sổ 55–65 s = 215–250 từ. Đã kiểm bằng
+  > dây chuyền thật: **235 từ / 15 câu → PASS**; **266 từ → 67,3 s, FAIL**.
+  > 13 câu là số thẻ ở 60 giây (`round(60 / 4,5)`).
+
+* **MÁY đếm, model không đếm.** Đo 5 lượt, yêu cầu 232 từ:
+  `214 · 346 · 273 · 190 · 134` — **0/5 đúng số từ**, lệch −42% đến +49%.
+  Ràng buộc *số câu* thì model giữ được **4/5**. Nhưng từ/câu dao động
+  **11,2–24,7**, nên số câu cũng không điều khiển được độ dài. Không núm nào của
+  model làm được việc này.
+
+* **Cách xử lý: xin dài dư rồi CẮT GIỮA.** Xin ~320 từ, giữ câu mở và các câu
+  cuối, bỏ dần câu ở giữa. Đo 5 lượt:
+
+  ```
+  không cắt      1/5 lọt cửa
+  cắt từ DƯỚI    4/5 lọt cửa   — nhưng MẤT KẾT TRUYỆN
+  cắt từ GIỮA    4/5 lọt cửa   — giữ được mở và kết
+  ```
+
+  Cùng tỉ lệ, nhưng câu kết khác hẳn: cắt dưới cho *"Sự im lặng giữa hai người
+  không nặng nề mà đầy chất thơ"* (cắt ngang), cắt giữa cho *"Mỗi giọt mưa rơi
+  xuống đất đều là một lời cầu nguyện"* (kết thật).
+
+* **Trần cứng 19,2 từ/câu.** Lượt trượt duy nhất không hỏng vì dài — sau khi cắt
+  nó đúng 237 từ — mà vì chỉ còn **11 câu**. Nó viết 442 từ trong 21 câu, tức
+  21 từ/câu, trong khi `250 ÷ 13 = 19,2` là trần. Viết câu dài hơn thế thì hai
+  ràng buộc **không thể cùng đúng**, và không cách cắt nào cứu được. Máy phải đo
+  từ/câu **trước khi cắt** và sinh lại ngay, khỏi phí công.
+
+* **Ba trạng thái, không gộp:** `DAT` · `KHONG_DAT` (đo được mà ngoài cửa sổ,
+  kèm số) · `KHONG_DO_DUOC` (Ollama tắt, hết giờ, model không trả lời).
+
+* **CHƯA CHẶN ĐƯỢC — không viết là đã chặn:** cửa này đếm từ, đếm câu, đếm lặp.
+  Nó **không** biết truyện hay hay dở, có mạch lạc không. Mười lăm câu vô nghĩa
+  nhưng khác nhau vẫn lọt sạch. Model cũng có thể viết 15 câu khác chuỗi mà cùng
+  một ý — cửa mù chỗ đó.
+
+* **Giá phải nói ra:** mỗi lượt sinh 64–96 giây. Trần 3 lần = tới ~4,8 phút cho
+  một kịch bản, chưa tính 30 giây dựng video.
+
 ### 2. PHÒNG STUDIO (Sản xuất Video Dọc Offline)
 * **Đầu vào:** `STUDIO_FIXTURE.md` (**215–250 từ**, **≥13 câu khác nhau**) đã
   đóng băng kèm SHA-256 (nhãn `synthetic_fixture`).

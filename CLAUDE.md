@@ -33,7 +33,7 @@ venv\Scripts\python.exe aura_chat.py      ->  http://127.0.0.1:8799
 venv\Scripts\python.exe -m pytest tests -q
 ```
 
-Đo 02/09/2026, đi từ cửa vào theo `import` thật: **19 tệp · 5.135 dòng ·
+Đo 03/09/2026, đi từ cửa vào theo `import` thật: **19 tệp · 5.116 dòng ·
 2 gói ngoài** (`aiohttp`, `httpx`).
 
 > **App Thẻ đã tách sang kho riêng ngày 02/09/2026** —
@@ -54,17 +54,20 @@ là mọi thứ được xây rồi cắm vào, không thứ nào phải chứng
 không thứ nào bị gỡ ra. `core/config.py` dài **1.029 dòng** trong khi xương sống
 chat dùng đúng **một** hằng số của nó; ở đây nó là `core/paths.py`, 19 dòng.
 
-`tests/test_v3_ranh_gioi.py` giữ **hai danh sách đóng, hai trần riêng**:
-`V3_CHAT` (trần 20) và `V3_THE` (trần 10). Muốn thêm tệp thì phải sửa danh sách
+`tests/test_v3_ranh_gioi.py` giữ **một danh sách đóng, một trần**: `V3`, trần
+20, đi từ cửa vào duy nhất `aura_chat.py`. Muốn thêm tệp thì phải sửa danh sách
 trong chính tệp đó — tức là phải cố ý, phải có người thấy, phải giải thích được.
-Hàng rào đi từ cửa vào và lần theo `import` thật, kể cả import giấu trong hàm.
+Hàng rào lần theo `import` thật, kể cả import giấu trong hàm.
 
-Gộp hai làm một thì trần mất nghĩa: "27 tệp" không nói được bên nào đang phình.
-
-> Đến 02/09 hàng rào chỉ canh `aura_chat.py`. App Thẻ — **8 tệp, 5.509 dòng,
-> dài hơn phần được canh** — nằm ngoài, không có gì giữ nó khỏi phình. Đúng
-> bệnh v3 sinh ra để chống, mọc ở phía không ai nhìn. Gieo 6 lỗi vào hàng rào
-> mới thì 6/6 đỏ, gồm cả ca "App Thẻ bắt đầu dùng chung tệp với chat".
+> Mục này trước 03/09/2026 ghi **"hai danh sách đóng, hai trần riêng: `V3_CHAT`
+> (trần 20) và `V3_THE` (trần 10)"**, kèm một đoạn giải thích vì sao không được
+> gộp hai làm một. Đọc thì thuyết phục; đo thì sai: App Thẻ tách sang kho riêng
+> ngày 02/09, `V3_THE` đi theo, và tệp này chỉ còn **một** danh sách. Luật mô tả
+> một cấu trúc không còn tồn tại — cùng bệnh với câu "đúng 17 tệp" từng tụt lại
+> sau phép đo.
+>
+> Đoạn về App Thẻ nằm ngoài tầm canh (8 tệp · 5.509 dòng) vẫn đúng **về mặt
+> lịch sử** và là lý do sinh ra hàng rào thứ hai; nay nó thuộc kho `app-the`.
 
 Máy: Windows 11, i5, 11,7 GB RAM, **không GPU rời**. Model local `qwen3.5:4b`
 qua Ollama, kho model ở `F:\ollama-models` (`OLLAMA_MODELS`).

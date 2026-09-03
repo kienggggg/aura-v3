@@ -1,0 +1,99 @@
+# Lịch sử App Thẻ (công khai) — 20/08 đến 27/08/2026
+
+54 tài liệu. Chúng nói về **App Thẻ**, nay ở kho riêng
+https://github.com/kienggggg/app-the — mã đi theo kho ấy, còn *vì sao* thì ở đây.
+
+Dời khỏi `docs/` ngày 03/09/2026: `docs/` có 61 tệp mà chỉ **1** tệp còn được mã
+trỏ tới (`DO_NEEDLE_VA_KHAY_2026-08-20.md`, do
+`experiments/evidence_sprint/do_needle_khay.py` đọc). Số còn lại là lịch sử,
+và trộn lẫn với thứ đang dùng thì mỗi lần tìm phải lọc tay.
+
+Phần bàn giao **không công khai** nằm ở `../2026-08_app_the_rieng_tu/`.
+
+## Gửi Antigravity — từng vòng giao việc app-thẻ
+
+26 tệp:
+
+- `GUI_ANTIGRAVITY_2026-08-20.md` — 2026-08-20
+- `GUI_ANTIGRAVITY_2026-08-20b.md` — 2026-08-20
+- `GUI_ANTIGRAVITY_2026-08-21.md` — 2026-08-21
+- `GUI_ANTIGRAVITY_2026-08-21b.md` — 2026-08-21
+- `GUI_ANTIGRAVITY_2026-08-21c.md` — 2026-08-21
+- `GUI_ANTIGRAVITY_2026-08-21d.md` — 2026-08-21
+- `GUI_ANTIGRAVITY_2026-08-21e.md` — 2026-08-21
+- `GUI_ANTIGRAVITY_2026-08-21f.md` — 2026-08-21
+- `GUI_ANTIGRAVITY_2026-08-21g.md` — 2026-08-21
+- `GUI_ANTIGRAVITY_2026-08-21h.md` — 2026-08-21
+- `GUI_ANTIGRAVITY_2026-08-21i.md` — 2026-08-21
+- `GUI_ANTIGRAVITY_2026-08-22.md` — 2026-08-22
+- `GUI_ANTIGRAVITY_2026-08-22b.md` — 2026-08-22
+- `GUI_ANTIGRAVITY_2026-08-22c.md` — 2026-08-22
+- `GUI_ANTIGRAVITY_2026-08-22d.md` — 2026-08-22
+- `GUI_ANTIGRAVITY_2026-08-22e.md` — 2026-08-22
+- `GUI_ANTIGRAVITY_2026-08-22f.md` — 2026-08-22
+- `GUI_ANTIGRAVITY_2026-08-22g.md` — 2026-08-22
+- `GUI_ANTIGRAVITY_2026-08-22h.md` — 2026-08-22
+- `GUI_ANTIGRAVITY_2026-08-23.md` — 2026-08-23
+- `GUI_ANTIGRAVITY_2026-08-23b.md` — 2026-08-23
+- `GUI_ANTIGRAVITY_2026-08-23c.md` — 2026-08-23
+- `GUI_ANTIGRAVITY_2026-08-23d.md` — 2026-08-23
+- `GUI_ANTIGRAVITY_2026-08-24.md` — 2026-08-24
+- `GUI_ANTIGRAVITY_2026-08-24b.md` — 2026-08-24
+- `GUI_ANTIGRAVITY_2026-08-24c.md` — 2026-08-24
+
+## Gửi Codex
+
+3 tệp:
+
+- `GUI_CODEX_2026-08-20.md` — 2026-08-20
+- `GUI_CODEX_2026-08-22.md` — 2026-08-22
+- `GUI_CODEX_2026-08-22b.md` — 2026-08-22
+
+## Nghiệm thu — bấm thử như người dùng rồi ghi số
+
+10 tệp:
+
+- `NGHIEM_THU_CAI_TAO_2026-08-22.md` — 2026-08-22
+- `NGHIEM_THU_CHOT_2026-08-22.md` — 2026-08-22
+- `NGHIEM_THU_CUA_THUC_THI_2026-08-22.md` — 2026-08-22
+- `NGHIEM_THU_E1_APP_2026-08-22.md` — 2026-08-22
+- `NGHIEM_THU_E1_GIU_NGUYEN_VAN_2026-08-24.md` — 2026-08-24
+- `NGHIEM_THU_GIAO_DIEN_2026-08-21.md` — 2026-08-21
+- `NGHIEM_THU_THE_MOT_DONG_2026-08-22.md` — 2026-08-22
+- `NGHIEM_THU_THE_NOI_THANG_2026-08-23.md` — 2026-08-23
+- `NGHIEM_THU_THE_NOI_THANG_2026-08-24.md` — 2026-08-24
+- `NGHIEM_THU_UNG_VIEN_BI_LOAI_2026-08-23.md` — 2026-08-23
+
+## Bộ đề đo model
+
+3 tệp:
+
+- `BO_DE_3_TRUY_NGUOC_2026-08-25.md` — 2026-08-25
+- `BO_DE_4_VA_5_TRUY_NGUOC_2026-08-25.md` — 2026-08-25
+- `BO_DE_6_VA_LOI_E1_2026-08-25.md` — 2026-08-25
+
+## Truy ngược giá trị
+
+2 tệp:
+
+- `TRUY_NGUOC_GIA_TRI_2026-08-24.md` — 2026-08-24
+- `TRUY_NGUOC_GIA_TRI_BO2_2026-08-24.md` — 2026-08-24
+
+## Antigravity soi lại
+
+5 tệp:
+
+- `ANTIGRAVITY_REVIEW_E1_APP_01_2026-08-22.md` — 2026-08-22
+- `ANTIGRAVITY_REVIEW_WRITER_01.md`
+- `ANTIGRAVITY_REVIEW_WRITER_02.md`
+- `ANTIGRAVITY_REVIEW_WRITER_03.md`
+- `ANTIGRAVITY_REVIEW_WRITER_04.md`
+
+## Khác
+
+- `BANG_TONG_KET_2026-08-22.md`
+- `BO5_MOI_2026-08-26.md`
+- `E1_NGOAI_HO_2026-08-23.md`
+- `KE_HOACH_APP_THE_TOI_DELTA_2026-08-20.md`
+- `KIEM_CHUNG_TEST_LAT_NGUOC_2026-08-25.md`
+

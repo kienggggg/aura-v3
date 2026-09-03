@@ -190,17 +190,22 @@ def test_hien_vat_mang_sha256_TINH_TU_DIA(tmp_path):
 
 @pytest.mark.slow
 @can_ffmpeg
-def test_day_chuyen_chay_that_nhung_CHUA_QUA_cua_chat_luong(tmp_path):
-    """Trạng thái THẬT hôm nay: dựng được, nhưng chưa đủ hay.
+def test_day_chuyen_QUA_ca_cua_dinh_dang_lan_chat_luong(tmp_path):
+    """Trạng thái hôm nay: dựng được VÀ đủ hay theo sáu cửa.
 
-    Bài này TRƯỚC 02/09 chiều khẳng định `trang_thai == "PASS"`. Rồi hai cửa
-    chất lượng được thắt vào (`KY_LUAT_THUC_THI.md` Chương II mục 2) và dây
-    chuyền RỚT — đúng như dự tính, vì nó đẻ ra bốn ảnh tĩnh mỗi ảnh giữ 15 giây.
+    Bài này đã đổi hai lần trong một ngày, và cả hai lần đều là bằng chứng chứ
+    không phải lời hứa::
 
-    Giữ bài này ở trạng thái `FAIL` là cố ý. Nó nói ra CHÍNH XÁC chặng nào còn
-    thiếu, thay vì để một slideshow đội lốt "video đạt chuẩn". Ngày nào dây
-    chuyền có chuyển động thật thì bài này phải được sửa cùng lúc — và lúc ấy
-    con số ở đây là bằng chứng cho biết nó đã tiến bao xa.
+        sáng   khẳng định PASS   (chỉ có bốn cửa ĐỊNH DẠNG)
+        chiều  đổi sang FAIL     (thắt hai cửa CHẤT LƯỢNG, slideshow rớt)
+        tối    đổi lại PASS      (thêm chuyển động, số liệu lật theo)
+
+    Số lật theo::
+
+        đứng yên lâu nhất   18,29 s -> 6,88 s -> 0,0 s
+        đổi cảnh                  0 ->     0  ->  12
+        thẻ                       4 ->    13  ->  13
+        video                583 KB -> 775 KB -> 1,49 MB
     """
     from core.phong_alpha import dung_video
 
@@ -208,11 +213,23 @@ def test_day_chuyen_chay_that_nhung_CHUA_QUA_cua_chat_luong(tmp_path):
     if kq["trang_thai"] == "KHONG_CHAY_DUOC":
         pytest.skip(f"không đo được trên máy này: {kq['vi_sao']}")
 
-    # 1. Dây chuyền CHẠY được — không phải "chưa chạy".
-    assert kq["trang_thai"] == "FAIL", kq["vi_sao"]
+    assert kq["trang_thai"] == "PASS", kq["vi_sao"]
+
+    so = kq["kiem"]["so"]
+    # bốn cửa ĐỊNH DẠNG
+    assert (so["rong"], so["cao"]) == (DAC_TA_RONG, DAC_TA_CAO)
+    assert DAC_TA_DAI_MIN <= so["giay"] <= DAC_TA_DAI_MAX, so
+    assert so["doan_den"] == 0
+    assert so["peak_db"] not in (None, "-inf")
+    # hai cửa CHẤT LƯỢNG
+    assert so["dung_yen_lau_nhat"] <= DAC_TA_TRAN_TINH_GIAY, so
+    assert so["doi_canh"] >= DAC_TA_SO_DOI_CANH, so
+
     loai = [a["type"] for a in kq["artifacts"]]
     assert loai.count("VIDEO") == 1 and loai.count("AUDIO") == 1
-    assert loai.count("IMAGE") >= DAC_TA_SO_THE_TOI_THIEU
+    assert loai.count("IMAGE") >= DAC_TA_SO_DOI_CANH, (
+        "cần đủ thẻ để có ≥8 lần cắt — 4 thẻ thì tối đa 3 lần"
+    )
     for a in kq["artifacts"]:
         f = Path(a["path"])
         d = f if f.is_absolute() and f.is_file() else (PROJECT_ROOT / a["path"])
@@ -221,18 +238,41 @@ def test_day_chuyen_chay_that_nhung_CHUA_QUA_cua_chat_luong(tmp_path):
         assert d.is_file(), a
         assert hashlib.sha256(d.read_bytes()).hexdigest() == a["sha256"], a["name"]
 
-    # 2. Bốn cửa ĐỊNH DẠNG vẫn đỗ.
-    so = kq["kiem"]["so"]
-    assert (so["rong"], so["cao"]) == (DAC_TA_RONG, DAC_TA_CAO)
-    assert DAC_TA_DAI_MIN <= so["giay"] <= DAC_TA_DAI_MAX, so
-    assert so["doan_den"] == 0
-    assert so["peak_db"] not in (None, "-inf")
 
-    # 3. Cửa CHẤT LƯỢNG là thứ làm nó rớt, và rớt vì đúng lý do.
-    assert so["dung_yen_lau_nhat"] > DAC_TA_TRAN_TINH_GIAY, so
-    assert so["doi_canh"] < DAC_TA_SO_DOI_CANH, so
-    assert any("đứng yên" in l for l in kq["kiem"]["vi_sao"])
-    assert any("slideshow" in l for l in kq["kiem"]["vi_sao"])
+def test_so_the_theo_THOI_LUONG_chu_khong_co_dinh():
+    """4 thẻ / 60 s thì tối đa 3 lần cắt — không đời nào đạt ngưỡng 8.
+
+    Số thẻ phải bám thời lượng, nếu không thì cửa `đổi cảnh ≥ 8` là bất khả thi
+    chứ không phải nghiêm khắc.
+    """
+    from core.phong_alpha import GIAY_MOI_THE, SO_THE_TOI_THIEU
+
+    for dai in (DAC_TA_DAI_MIN, 60.0, DAC_TA_DAI_MAX):
+        n = max(SO_THE_TOI_THIEU, int(round(dai / GIAY_MOI_THE)))
+        assert n - 1 >= DAC_TA_SO_DOI_CANH, (
+            f"video {dai}s ra {n} thẻ = {n - 1} lần cắt, không đủ "
+            f"{DAC_TA_SO_DOI_CANH}"
+        )
+
+
+def test_the_lien_nhau_phai_KHAC_MAU_du_de_may_dem_thay(tmp_path):
+    """Bốn thẻ cũ cùng gradient chỉ khác chữ -> `scdet` chấm 0 lần đổi cảnh.
+
+    Đo trên thang xám: thẻ liền nhau phải chênh đủ để không bị coi là một cảnh.
+    """
+    from PIL import Image, ImageChops, ImageStat
+
+    cards = sinh_the_hinh(" ".join(f"Câu {i}." for i in range(1, 14)),
+                          tmp_path, so_the=13)
+    lech = []
+    for a, b in zip(cards, cards[1:]):
+        with Image.open(a) as x, Image.open(b) as y:
+            d = ImageChops.difference(x.convert("L"), y.convert("L"))
+            lech.append(ImageStat.Stat(d).mean[0])
+    assert min(lech) >= 4.0, (
+        f"hai thẻ liền nhau chỉ chênh {min(lech):.2f} trên thang xám — "
+        "bộ dò cảnh sẽ coi cả video là một cảnh"
+    )
 
 
 def test_don_luot_cu_giu_dung_so_luot(tmp_path):
@@ -376,3 +416,26 @@ def test_video_dung_yen_SUOT_khong_duoc_lot(tmp_path):
         "đứng yên — đang bỏ sót đoạn không có điểm kết thúc"
     )
     assert any("đứng yên" in l for l in k["vi_sao"]), k["vi_sao"]
+
+
+@pytest.mark.slow
+@can_ffmpeg
+def test_chuyen_dong_phai_CO_THAT_khong_phai_nho_the_ngan(tmp_path):
+    """Cửa 5 giây một mình KHÔNG bắt được việc thiếu chuyển động.
+
+    Gieo thử bắt được: bỏ hẳn `zoompan` (thẻ đứng im hoàn toàn) mà cửa vẫn
+    xanh — vì mỗi thẻ chỉ giữ 4,33 s, dưới ngưỡng 5 s. Tức là video có thể lại
+    thành slideshow, chỉ cần cắt vụn hơn.
+
+    Nên đòi thêm một tính chất mạnh hơn: giữa hai lần cắt KHÔNG được có đoạn
+    đứng yên nào cả. Đo được trên dây chuyền thật: **0,0 s**.
+    """
+    from core.phong_alpha import dung_video
+
+    kq = dung_video(tmp_path / "ra")
+    if kq["trang_thai"] == "KHONG_CHAY_DUOC":
+        pytest.skip(f"không đo được: {kq['vi_sao']}")
+    assert kq["kiem"]["so"]["dung_yen_lau_nhat"] == 0.0, (
+        f"còn {kq['kiem']['so']['dung_yen_lau_nhat']}s đứng yên — thẻ đang tĩnh, "
+        "chỉ là chưa đủ dài để cửa 5 giây bắt được"
+    )

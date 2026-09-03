@@ -80,6 +80,17 @@ TRAN_DEN_GIAY = 2.0
 TRAN_TINH_GIAY = 5.0
 SO_DOI_CANH_TOI_THIEU = 8
 
+# Mỗi thẻ giữ bao nhiêu giây. 60s ÷ 4,5 ≈ 13 thẻ, tức 12 lần cắt — dư trên
+# ngưỡng 8. Bản đầu để 4 thẻ / 15 giây mỗi thẻ, và đó chính là thứ làm nó rớt.
+GIAY_MOI_THE = 4.5
+# Bước xoay màu nền giữa hai thẻ liền nhau, tính theo vòng màu.
+#
+# 137,5° là góc vàng — chia vòng tròn đều nhất có thể với số bước bất kỳ, nên
+# hai thẻ LIỀN NHAU không bao giờ gần màu. Cần thế thật: `scdet` chấm bốn thẻ
+# cũ là **0** lần đổi cảnh, vì chúng cùng gradient và chỉ khác chữ — với bộ dò
+# cảnh thì cả video là một cảnh.
+BUOC_MAU_DO = 137.5
+
 # Phông phải có dấu tiếng Việt. Segoe UI có; nếu máy không có thì thử lần lượt.
 PHONG_UNG_VIEN = ("segoeui.ttf", "arial.ttf", "tahoma.ttf", "calibri.ttf")
 
@@ -129,19 +140,26 @@ def sinh_the_hinh(van_ban: str, thu_muc: Path, so_the: int = 4) -> List[Path]:
     """Sinh ≥3 ảnh 720×1280. Nhãn `generated_template`, mỗi ảnh một SHA-256."""
     from PIL import Image, ImageDraw
 
+    import colorsys
+
     phong, _ = _tim_phong()
     ra: List[Path] = []
     doan = _cat_doan(van_ban, so_the)
     for i, chu in enumerate(doan, 1):
-        # Nền chuyển màu dọc: mỗi thẻ một tông, để `blackdetect` không bắt
-        # nhầm và để mắt người thấy thẻ đã đổi.
+        # Nền chuyển màu dọc, MỖI THẺ MỘT TÔNG KHÁC HẲN.
+        #
+        # Bản đầu chỉ nhích `i * 12` vào kênh đỏ — mắt thấy khác chút, nhưng
+        # `scdet` chấm cả bốn thẻ là MỘT cảnh (0 lần đổi). Nay xoay hẳn vòng
+        # màu theo góc vàng nên hai thẻ liền nhau luôn xa nhau.
+        h = ((i - 1) * BUOC_MAU_DO / 360.0) % 1.0
         anh = Image.new("RGB", (RONG, CAO))
         ve = ImageDraw.Draw(anh)
         for y in range(CAO):
             t = y / CAO
+            r, g, b = colorsys.hsv_to_rgb(h, 0.62, 0.20 + 0.30 * t)
             ve.line([(0, y), (RONG, y)],
-                    fill=(int(18 + 40 * t + i * 12), int(22 + 30 * t), int(46 + 70 * t)))
-        ve.text((48, 90), f"THẺ {i}/{len(doan)}", font=phong, fill=(120, 200, 255))
+                    fill=(int(r * 255), int(g * 255), int(b * 255)))
+        ve.text((48, 90), f"THẺ {i}/{len(doan)}", font=phong, fill=(235, 245, 255))
         # Ngắt dòng thủ công: PIL không tự xuống dòng.
         dong, hien = [], ""
         for tu in chu.split():
@@ -207,22 +225,59 @@ def _dai_ngan_lai(wav: Path, dich: float) -> None:
         tam.replace(wav)
 
 
+FPS = 24
+
+
 def render(cards: List[Path], wav: Path, ra: Path) -> tuple[bool, str]:
+    """Ghép thẻ + giọng thành MP4, mỗi thẻ có chuyển động chậm (Ken Burns).
+
+    VÌ SAO KHÔNG DÙNG `concat` ẢNH TĨNH NỮA. Bản đầu ghép thẳng ảnh, ra video
+    đứng yên 14,1 giây mỗi thẻ và bitrate video **30 kb/s** — bốn tấm ảnh chứ
+    không phải video. `freezedetect` bắt đúng.
+
+    `zoompan` phóng rất chậm (1,00 -> 1,12 trong suốt một thẻ) nên KHÔNG khung
+    nào trùng khung trước, mà mắt vẫn thấy tĩnh tại. Cắt giữa các thẻ vẫn là
+    cắt cứng — đó là thứ `scdet` đếm được; `xfade` chuyển mượt thì nó lại không
+    tính là đổi cảnh.
+    """
     dai = _giay(wav)
     if dai <= 0:
         return False, "không đọc được thời lượng voice.wav"
     moi_the = dai / len(cards)
-    ds = ra.with_name("cards.txt")
-    ds.write_text(
-        "".join(f"file '{c.as_posix()}'\nduration {moi_the:.4f}\n" for c in cards)
-        + f"file '{cards[-1].as_posix()}'\n", encoding="utf-8")
-    r = subprocess.run(
-        ["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(ds),
-         "-i", str(wav), "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-         "-r", "24", "-vf", f"scale={RONG}:{CAO}", "-c:a", "aac", "-b:a", "96k",
-         "-shortest", str(ra)],
-        capture_output=True, text=True, encoding="utf-8", errors="replace",
-        timeout=TRAN_RENDER_GIAY)
+    khung_moi_the = max(2, int(round(moi_the * FPS)))
+
+    lenh: List[str] = ["ffmpeg", "-v", "error", "-y"]
+    for c in cards:
+        # `-framerate FPS` để đầu vào TỰ sinh đủ khung; zoompan chỉ việc đi qua
+        # từng khung một (`d=1`).
+        lenh += ["-loop", "1", "-framerate", str(FPS),
+                 "-t", f"{moi_the:.4f}", "-i", str(c)]
+    lenh += ["-i", str(wav)]
+
+    # `d=1`, KHÔNG phải `d=khung_moi_the`.
+    #
+    # Bản đầu để `d=khung_moi_the` cùng với `-loop 1`: mỗi khung VÀO sinh ra
+    # `d` khung RA, mà `on` thì đếm dồn trên toàn bộ khung đã xuất — nên mức
+    # phóng cộng dồn khủng khiếp. Đo được: ở giây 45 nhãn "THẺ i/13" đã trôi
+    # hẳn khỏi khung, chênh lệch giữa các khung trong video chỉ còn 0,5–5,6
+    # trong khi các thẻ gốc chênh nhau 5–17. Tức là video gần như chỉ có một
+    # hai thẻ đầu, phóng to dần.
+    #
+    # `min(...)` chặn trần: dù tính sai vẫn không phóng quá 1,12.
+    buoc = 0.12 / khung_moi_the
+    doan = "".join(
+        f"[{i}:v]zoompan=z='min(1+{buoc:.6f}*on,1.12)':d=1"
+        f":x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
+        f":s={RONG}x{CAO}:fps={FPS},setsar=1[v{i}];"
+        for i in range(len(cards)))
+    doan += "".join(f"[v{i}]" for i in range(len(cards)))
+    doan += f"concat=n={len(cards)}:v=1:a=0[vout]"
+
+    lenh += ["-filter_complex", doan, "-map", "[vout]", "-map", f"{len(cards)}:a",
+             "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+             "-r", str(FPS), "-c:a", "aac", "-b:a", "96k", "-shortest", str(ra)]
+    r = subprocess.run(lenh, capture_output=True, text=True,
+                       encoding="utf-8", errors="replace", timeout=TRAN_RENDER_GIAY)
     if r.returncode != 0 or not ra.is_file():
         return False, f"ffmpeg: {(r.stderr or '').strip()[:200]}"
     return True, ""
@@ -286,8 +341,19 @@ def kiem_video(mp4: Path) -> Dict[str, Any]:
 
     # ---- cửa CHẤT LƯỢNG ----
     # Đứng yên quá lâu: `freezedetect` báo từng đoạn kèm thời lượng.
+    # ĐẦU DÒ ĐẶT Ở 1 GIÂY, KHÔNG PHẢI Ở NGƯỠNG CHẤM 5 GIÂY.
+    #
+    # `freezedetect=d=X` chỉ báo những đoạn dài TỪ X trở lên. Đặt đầu dò đúng
+    # bằng ngưỡng chấm thì mọi đoạn ngắn hơn biến mất khỏi phép đo — và gieo
+    # lỗi bắt được đúng chuyện đó: bỏ hẳn `zoompan` (thẻ đứng im hoàn toàn) mà
+    # cửa vẫn xanh, vì mỗi thẻ chỉ 4,33 s, dưới 5 s.
+    #
+    # Nay đo từ 1 s trở lên; luật chấm vẫn là `> TRAN_TINH_GIAY`. Nhờ vậy con số
+    # phân biệt được "có chuyển động thật" (0,0 s) với "tĩnh nhưng cắt vụn"
+    # (4,33 s) — hai thứ mà ngưỡng 5 giây một mình gộp làm một.
+    DAU_DO_TINH_GIAY = 1.0
     r4 = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(mp4),
-                         "-vf", f"freezedetect=n=-60dB:d={TRAN_TINH_GIAY}",
+                         "-vf", f"freezedetect=n=-60dB:d={DAU_DO_TINH_GIAY}",
                          "-an", "-f", "null", "-"], capture_output=True, text=True,
                         encoding="utf-8", errors="replace", timeout=180)
     #
@@ -307,10 +373,12 @@ def kiem_video(mp4: Path) -> Dict[str, Any]:
     if len(mo) > len(dong_lai) and dai > 0:
         tinh.append(round(dai - mo[-1], 2))
     kq["so"]["dung_yen_lau_nhat"] = round(max(tinh), 2) if tinh else 0.0
-    if tinh:
+    kq["so"]["so_doan_tinh"] = len(tinh)
+    qua_tran = [x for x in tinh if x > TRAN_TINH_GIAY]
+    if qua_tran:
         kq["vi_sao"].append(
-            f"{len(tinh)} đoạn đứng yên > {TRAN_TINH_GIAY:.0f}s "
-            f"(lâu nhất {max(tinh):.1f}s)")
+            f"{len(qua_tran)} đoạn đứng yên > {TRAN_TINH_GIAY:.0f}s "
+            f"(lâu nhất {max(qua_tran):.1f}s)")
 
     # Đổi cảnh: đếm bằng `scdet`, KHÔNG bằng `select='gt(scene,…)',showinfo`.
     #
@@ -327,8 +395,23 @@ def kiem_video(mp4: Path) -> Dict[str, Any]:
     # Lệch 1 so với số cắt thật (khung đầu không tính là một lần đổi). Còn số 0
     # của Alpha thì đúng chứ không phải máy đo mù: bốn thẻ cùng gradient, cùng
     # bố cục, chỉ khác chữ — với bộ dò cảnh thì cả video là MỘT cảnh.
+    # NGƯỠNG NHẠY CỦA MÁY ĐO, khác hẳn ngưỡng CHẤM (`SO_DOI_CANH_TOI_THIEU`).
+    # Cái này nói "thế nào thì tính là một lần đổi cảnh"; cái kia nói "bao nhiêu
+    # lần thì đủ". Lẫn hai thứ là chỉnh cân theo đáp án.
+    #
+    # Con số 10 ở bản đầu do tôi chọn mà KHÔNG đo. Hiệu chuẩn lại trên ba video
+    # đã biết trước số cắt:
+    #
+    #     video                    th=1  th=2  th=3  th=5  th=10   cắt THẬT
+    #     13 thẻ, có zoom            12    12    12    10     2       12
+    #     8 màu cắt cứng              6     6     6     6     6        7
+    #     xanh trơn 60s (tĩnh)        0     0     0     0     0        0
+    #
+    # Ngưỡng 1–3 cho kết quả y hệt nhau — một mặt bằng ổn định — và KHÔNG có
+    # dương tính giả nào dù video đang zoom liên tục (nhiễu < 1). Cắt yếu nhất
+    # đo được là 3,62. Chọn 3: giữa mặt bằng, trên sàn nhiễu, dưới cắt yếu nhất.
     r5 = subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "debug",
-                         "-i", str(mp4), "-vf", "scdet=threshold=10",
+                         "-i", str(mp4), "-vf", "scdet=threshold=3",
                          "-an", "-f", "null", "-"], capture_output=True, text=True,
                         encoding="utf-8", errors="replace", timeout=180)
     doi_canh = len(re.findall(r"lavfi\.scd\.time", r5.stderr or ""))
@@ -394,7 +477,10 @@ def dung_video(thu_muc_ra: Path, van_ban: str | None = None) -> Dict[str, Any]:
     # `max(SO_THE_TOI_THIEU, 4)` ở bản đầu làm hằng số này thành CHẾT: hạ nó
     # xuống 2 mà số thẻ vẫn là 4. Gieo lỗi phát hiện — cửa canh xanh vì phép
     # gieo không đổi được hành vi, chứ không phải vì cửa mù.
-    cards = sinh_the_hinh(van_ban, thu_muc_ra, so_the=SO_THE_TOI_THIEU + 1)
+    # Số thẻ theo THỜI LƯỢNG, không phải một con số cố định: mỗi thẻ ~4,5 giây
+    # thì 60 giây ra ~13 thẻ / 12 lần cắt, dư trên ngưỡng 8 lần đổi cảnh.
+    so_the = max(SO_THE_TOI_THIEU, int(round(_giay(wav) / GIAY_MOI_THE)))
+    cards = sinh_the_hinh(van_ban, thu_muc_ra, so_the=so_the)
     hien_vat += [_hien_vat(c, "IMAGE", "generated_template") for c in cards]
 
     mp4 = thu_muc_ra / "video.mp4"

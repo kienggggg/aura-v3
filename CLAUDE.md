@@ -364,6 +364,19 @@ danh mục, không đọc sổ đo". Cả hai đều vì tôi **dò chuỗi tron
 này nằm ngay trong cửa sinh ra để chống nó. Viết lại thành phép đo hành vi thì
 6/6 đỏ.
 
+*Chấm được một hàm không chứng minh kết quả của nó đi tới đâu.* Ngày 03/09 gieo
+`if ly_do_nung:` → `if False:` trong `dung_video` — tức dây chuyền thôi nghe
+phép chấm chữ-nung-vào-hình — thì **cả 30 bài vẫn xanh**. Lý do: mọi bài đều gọi
+thẳng hàm thuần `kiem_nung(...)`, và hàm ấy vẫn trả đúng lý do bác. Không bài
+nào hỏi *phán quyết ấy có tới `trang_thai` không*. Đây là lần thứ ba cùng một
+hình dạng trong tệp này (trước đó ở phần âm thanh và phần phụ đề). Cách đóng:
+bơm một phán quyết BÁC vào rồi chạy cả dây chuyền, kèm ca đối chứng không bơm.
+Gieo lại 2/2 đỏ.
+
+Và ca đối chứng ấy suýt sai vì tiếc thời gian: dùng câu bốn mệnh đề cho nhanh
+thì bản trộn ra **−29,9 LUFS** (trần −18…−12), nên đối chứng đỏ vì độ ồn chứ
+không vì chuyện đang xét — rẻ hơn 2 phút, nhưng đo sai biến.
+
 ### Test xanh không có nghĩa là app dùng được
 
 Ngày 24-25/08/2026, **tám lỗi trong hai ngày, tất cả cùng một họ**: giao diện

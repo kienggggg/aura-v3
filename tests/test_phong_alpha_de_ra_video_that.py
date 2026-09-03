@@ -35,6 +35,7 @@ HAI CA ĐỐI CHỨNG, vì "PASS ngay lần đầu" là lúc đáng ngờ nhất
 from __future__ import annotations
 
 import hashlib
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -187,57 +188,6 @@ def test_hien_vat_mang_sha256_TINH_TU_DIA(tmp_path):
 
 
 # --------------------------------------------------- cả dây chuyền, chạy thật
-
-@pytest.mark.slow
-@can_ffmpeg
-def test_day_chuyen_QUA_ca_cua_dinh_dang_lan_chat_luong(tmp_path):
-    """Trạng thái hôm nay: dựng được VÀ đủ hay theo sáu cửa.
-
-    Bài này đã đổi hai lần trong một ngày, và cả hai lần đều là bằng chứng chứ
-    không phải lời hứa::
-
-        sáng   khẳng định PASS   (chỉ có bốn cửa ĐỊNH DẠNG)
-        chiều  đổi sang FAIL     (thắt hai cửa CHẤT LƯỢNG, slideshow rớt)
-        tối    đổi lại PASS      (thêm chuyển động, số liệu lật theo)
-
-    Số lật theo::
-
-        đứng yên lâu nhất   18,29 s -> 6,88 s -> 0,0 s
-        đổi cảnh                  0 ->     0  ->  12
-        thẻ                       4 ->    13  ->  13
-        video                583 KB -> 775 KB -> 1,49 MB
-    """
-    from core.phong_alpha import dung_video
-
-    kq = dung_video(tmp_path / "ra")
-    if kq["trang_thai"] == "KHONG_CHAY_DUOC":
-        pytest.skip(f"không đo được trên máy này: {kq['vi_sao']}")
-
-    assert kq["trang_thai"] == "PASS", kq["vi_sao"]
-
-    so = kq["kiem"]["so"]
-    # bốn cửa ĐỊNH DẠNG
-    assert (so["rong"], so["cao"]) == (DAC_TA_RONG, DAC_TA_CAO)
-    assert DAC_TA_DAI_MIN <= so["giay"] <= DAC_TA_DAI_MAX, so
-    assert so["doan_den"] == 0
-    assert so["peak_db"] not in (None, "-inf")
-    # hai cửa CHẤT LƯỢNG
-    assert so["dung_yen_lau_nhat"] <= DAC_TA_TRAN_TINH_GIAY, so
-    assert so["doi_canh"] >= DAC_TA_SO_DOI_CANH, so
-
-    loai = [a["type"] for a in kq["artifacts"]]
-    assert loai.count("VIDEO") == 1 and loai.count("AUDIO") == 1
-    assert loai.count("IMAGE") >= DAC_TA_SO_DOI_CANH, (
-        "cần đủ thẻ để có ≥8 lần cắt — 4 thẻ thì tối đa 3 lần"
-    )
-    for a in kq["artifacts"]:
-        f = Path(a["path"])
-        d = f if f.is_absolute() and f.is_file() else (PROJECT_ROOT / a["path"])
-        if not d.is_file():
-            d = tmp_path / "ra" / a["name"]
-        assert d.is_file(), a
-        assert hashlib.sha256(d.read_bytes()).hexdigest() == a["sha256"], a["name"]
-
 
 def test_so_the_theo_THOI_LUONG_chu_khong_co_dinh():
     """4 thẻ / 60 s thì tối đa 3 lần cắt — không đời nào đạt ngưỡng 8.
@@ -438,4 +388,396 @@ def test_chuyen_dong_phai_CO_THAT_khong_phai_nho_the_ngan(tmp_path):
     assert kq["kiem"]["so"]["dung_yen_lau_nhat"] == 0.0, (
         f"còn {kq['kiem']['so']['dung_yen_lau_nhat']}s đứng yên — thẻ đang tĩnh, "
         "chỉ là chưa đủ dài để cửa 5 giây bắt được"
+    )
+
+
+# ------------------------------------ cửa PHỤ ĐỀ & NHẠC NỀN, 02/09/2026 tối
+
+DAC_TA_LUFS_MIN, DAC_TA_LUFS_MAX = -18.0, -12.0
+DAC_TA_CHENH_NHAC_DB = 12.0
+
+
+def test_hang_so_am_thanh_khop_DAC_TA():
+    from core.phong_alpha import CHENH_NHAC_DB, LUFS_MAX, LUFS_MIN
+
+    assert (LUFS_MIN, LUFS_MAX) == (DAC_TA_LUFS_MIN, DAC_TA_LUFS_MAX)
+    assert CHENH_NHAC_DB == DAC_TA_CHENH_NHAC_DB
+
+
+def test_phu_de_khop_so_the_va_khong_chay_qua_phim(tmp_path):
+    """Ba ca: đủ dòng · thiếu dòng · chạy quá phim."""
+    from core.phong_alpha import kiem_phu_de, lam_phu_de
+
+    doan = [f"Câu {i}." for i in range(1, 14)]
+    srt = lam_phu_de(doan, 4.0, tmp_path / "ok.srt")
+    k = kiem_phu_de(srt, so_the=13, dai_video=52.0)
+    assert k["dat"], k["vi_sao"]
+    assert k["so"]["so_dong"] == 13
+    assert k["so"]["ket_dong_cuoi"] == 52.0
+
+    thieu = kiem_phu_de(srt, so_the=20, dai_video=52.0)
+    assert not thieu["dat"]
+    assert any("dòng phụ đề" in l for l in thieu["vi_sao"]), thieu["vi_sao"]
+
+    qua = kiem_phu_de(srt, so_the=13, dai_video=30.0)
+    assert not qua["dat"]
+    assert any("dài" in l for l in qua["vi_sao"]), qua["vi_sao"]
+
+    assert not kiem_phu_de(tmp_path / "khong-co.srt", 3, 60.0)["dat"]
+
+
+def test_moc_thoi_gian_srt_dung_dinh_dang():
+    """Sai định dạng mốc thì trình phát bỏ qua phụ đề, IM LẶNG."""
+    from core.phong_alpha import _mmss
+
+    assert _mmss(0) == "00:00:00,000"
+    assert _mmss(4.346) == "00:00:04,346"
+    assert _mmss(56.5) == "00:00:56,500"
+    assert _mmss(3661.007) == "01:01:01,007"
+
+
+@can_ffmpeg
+def test_verifier_bac_video_KHONG_co_luong_phu_de(tmp_path):
+    v = _lam_video(tmp_path / "khong_phude.mp4", DAC_TA_RONG, DAC_TA_CAO, 60,
+                   "blue", "sine=f=440")
+    k = kiem_video(v)
+    assert k["so"]["co_phu_de"] is False
+    assert any("phụ đề" in l for l in k["vi_sao"]), k["vi_sao"]
+
+
+@can_ffmpeg
+def test_nhac_nen_la_am_SINH_RA_va_du_nho(tmp_path):
+    """Nhạc phải thấp hơn giọng ≥12 dB, và mức ấy phải NUNG VÀO TỆP.
+
+    Bản đầu áp hệ số âm lượng lúc trộn, nên đo tệp nhạc là đo mức CHƯA hạ —
+    phép "chênh giọng/nhạc" so sai cặp: báo 9,85 dB trong khi mức thật đi vào
+    bản trộn là −52,9 dB, nhỏ tới mức không ai nghe thấy.
+    """
+    from core.phong_alpha import _lufs, lam_nhac_nen
+
+    nhac, ly_do = lam_nhac_nen(8.0, tmp_path / "nhac.wav")
+    assert nhac is not None, ly_do
+    assert nhac.stat().st_size > 0
+    muc = _lufs(nhac)
+    assert muc is not None, "không đo được độ ồn nền nhạc"
+    # Giọng đọc đo được −17,04 LUFS. Nền phải thấp hơn thế ít nhất 12 dB.
+    assert muc <= -17.04 - DAC_TA_CHENH_NHAC_DB, (
+        f"nền nhạc {muc:.1f} LUFS — chưa đủ thấp dưới giọng −17,04"
+    )
+
+
+@pytest.mark.slow
+@can_ffmpeg
+def test_day_chuyen_qua_CA_TAM_cua(tmp_path):
+    """Tám cửa: bốn định dạng · hai chất lượng · phụ đề · độ ồn."""
+    from core.phong_alpha import dung_video
+
+    kq = dung_video(tmp_path / "ra")
+    if kq["trang_thai"] == "KHONG_CHAY_DUOC":
+        pytest.skip(f"không đo được: {kq['vi_sao']}")
+    assert kq["trang_thai"] == "PASS", kq["vi_sao"]
+
+    so = kq["kiem"]["so"]
+    assert so["co_phu_de"] is True
+    assert so["so_dong"] >= DAC_TA_SO_DOI_CANH
+    assert so["ket_dong_cuoi"] <= so["giay"] + 0.25, so
+    assert DAC_TA_LUFS_MIN <= so["lufs_video"] <= DAC_TA_LUFS_MAX, so
+    assert so["chenh_giong_nhac_db"] >= DAC_TA_CHENH_NHAC_DB, so
+
+    # bốn cửa ĐỊNH DẠNG
+    assert (so["rong"], so["cao"]) == (DAC_TA_RONG, DAC_TA_CAO)
+    assert DAC_TA_DAI_MIN <= so["giay"] <= DAC_TA_DAI_MAX, so
+    assert so["doan_den"] == 0
+    assert so["peak_db"] not in (None, "-inf")
+    # hai cửa CHẤT LƯỢNG
+    assert so["dung_yen_lau_nhat"] <= DAC_TA_TRAN_TINH_GIAY, so
+    assert so["doi_canh"] >= DAC_TA_SO_DOI_CANH, so
+
+    nhan = {a["kind"] for a in kq["artifacts"]}
+    assert "srt_theo_the" in nhan and "generated_tone_bed" in nhan, nhan
+    assert "tts_onecore" in nhan, "giọng đọc phải là tệp riêng, đo được"
+
+    loai = [a["type"] for a in kq["artifacts"]]
+    # HAI video: bản đã nung chữ, và bản chưa nung giữ lại để đối chiếu. Không
+    # giữ bản chưa nung thì không cách nào chứng minh chữ đã vào hình.
+    assert loai.count("VIDEO") == 2, loai
+    assert "chua_nung_phu_de" in {a["kind"] for a in kq["artifacts"]}
+    assert so["dai_duoi"] >= DAC_TA_DAI_DUOI_MIN, so
+    assert so["dai_tren"] <= DAC_TA_DAI_TREN_MAX, so
+    assert loai.count("SUBTITLE") == 1
+    # HAI tệp âm thanh: giọng và nhạc. Đo chênh lệch giữa chúng cần cả hai nằm
+    # riêng trên đĩa — trộn rồi thì không tách ra được nữa.
+    assert loai.count("AUDIO") == 2, loai
+    assert loai.count("IMAGE") >= DAC_TA_SO_DOI_CANH, (
+        "cần đủ thẻ để có ≥8 lần cắt — 4 thẻ thì tối đa 3 lần"
+    )
+
+    # Mọi hiện vật phải tự chứng minh: đường dẫn thật, byte thật, SHA-256 khớp.
+    for a in kq["artifacts"]:
+        f = Path(a["path"])
+        d = f if f.is_absolute() and f.is_file() else (PROJECT_ROOT / a["path"])
+        if not d.is_file():
+            d = tmp_path / "ra" / a["name"]
+        assert d.is_file(), a
+        assert hashlib.sha256(d.read_bytes()).hexdigest() == a["sha256"], a["name"]
+
+
+def test_cham_am_thanh_biet_BAC_khi_so_xau():
+    """Đưa SỐ XẤU vào và xem verifier có bác không.
+
+    Gieo lỗi bắt được bản đầu: ba phép chấm nằm rải trong `dung_video`, nên cửa
+    canh chỉ khẳng định được "số đo nằm trong khoảng" — không cách nào đưa số
+    xấu vào. Bỏ hẳn hai nhánh chấm mà cửa vẫn xanh, HAI LẦN.
+    """
+    from core.phong_alpha import kiem_am_thanh
+
+    # đạt: giọng −17, nhạc −34 (chênh 17 dB), video −16,9
+    assert kiem_am_thanh(-17.04, -33.82, -16.89) == []
+
+    qua_to = kiem_am_thanh(-17.04, -33.82, -8.0)
+    assert any("độ ồn" in l for l in qua_to), qua_to
+    qua_nho = kiem_am_thanh(-17.04, -33.82, -30.0)
+    assert any("độ ồn" in l for l in qua_nho), qua_nho
+
+    at_loi = kiem_am_thanh(-17.04, -20.0, -16.89)
+    assert any("át lời" in l for l in at_loi), at_loi
+    # Đúng sát ngưỡng thì vẫn phải đạt — ngưỡng là ≥, không phải >.
+    assert kiem_am_thanh(-17.04, -17.04 - DAC_TA_CHENH_NHAC_DB, -16.89) == []
+
+    assert kiem_am_thanh(None, -33.82, -16.89), "thiếu số đo phải BÁC, không bỏ qua"
+    assert kiem_am_thanh(-17.04, None, -16.89)
+    assert kiem_am_thanh(-17.04, -33.82, None)
+
+
+@can_ffmpeg
+def test_render_THAT_SU_tron_nhac_vao_ban_ra(tmp_path):
+    """Có tệp nhạc trên đĩa không có nghĩa nhạc đã vào video.
+
+    Gieo lỗi bắt được: bỏ hẳn nhạc khỏi `render` mà cửa vẫn xanh — tệp nhạc vẫn
+    được sinh ra và vẫn được đo, chỉ là nó không vào phim.
+
+    HAI KỊCH BẢN ĐO TRƯỚC ĐÓ ĐỀU HỎNG, ghi lại kẻo lặp:
+
+    * Dùng mức thật: nhạc thấp hơn giọng 16,8 dB nên chỉ nâng tổng ~0,09 dB —
+      hai bản đọc RA CÙNG MỘT SỐ (−17,52), vì `loudnorm` chỉ trả hai chữ số.
+    * Dùng giọng TTS thật với một câu ngắn: audio ra chỉ **2,325 giây**
+      (`amix duration=first` + `-shortest`), mà `loudnorm` đo trên 2,3 giây thì
+      không tin được. Sine "toàn thang" cũng chỉ đo ra −21,75 LUFS.
+
+    Nên bỏ TTS hẳn: hai nguồn dựng sẵn, dài 10 giây, chênh nhau rõ rệt. Phép
+    này chỉ cần trả lời một câu — ĐƯỜNG DÂY CÓ NỐI KHÔNG.
+    """
+    from core.phong_alpha import _lufs, render
+
+    def tao(ten: str, tan: int, muc: float) -> Path:
+        d = tmp_path / ten
+        subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-f", "lavfi",
+             "-i", f"sine=frequency={tan}:duration=10",
+             "-af", f"volume={muc},aformat=sample_fmts=s16:sample_rates=44100"
+                    ":channel_layouts=mono", str(d)],
+            capture_output=True, timeout=300)
+        assert d.is_file(), ten
+        return d
+
+    khe = tao("khe.wav", 300, 0.02)     # đóng vai giọng, rất nhỏ
+    to = tao("to.wav", 800, 1.0)        # đóng vai nhạc, rất to
+    chenh_nguon = _lufs(to) - _lufs(khe)
+    assert chenh_nguon > 20, f"hai nguồn chỉ chênh {chenh_nguon:.1f} dB, chưa đủ rõ"
+
+    cards = sinh_the_hinh("Câu một. Câu hai. Câu ba.", tmp_path, so_the=3)
+    ok1, l1 = render(cards, khe, tmp_path / "khong_nhac.mp4", srt=None, nhac=None)
+    ok2, l2 = render(cards, khe, tmp_path / "co_nhac.mp4", srt=None, nhac=to)
+    assert ok1 and ok2, (l1, l2)
+
+    a, b = _lufs(tmp_path / "khong_nhac.mp4"), _lufs(tmp_path / "co_nhac.mp4")
+    assert a is not None and b is not None
+    assert b > a + 10.0, (
+        f"trộn một nguồn to hơn {chenh_nguon:.0f} dB vào mà độ ồn chỉ đi từ "
+        f"{a:.2f} sang {b:.2f} LUFS — nhạc chưa vào phim"
+    )
+
+
+# ---------------------------------------- nung chữ vào hình, 02/09/2026 tối
+
+DAC_TA_DAI_DUOI_MIN = 3.0
+DAC_TA_DAI_TREN_MAX = 1.0
+
+
+def test_hang_so_nung_khop_DAC_TA():
+    from core.phong_alpha import CHENH_DAI_DUOI_MIN, CHENH_DAI_TREN_MAX
+
+    assert CHENH_DAI_DUOI_MIN == DAC_TA_DAI_DUOI_MIN
+    assert CHENH_DAI_TREN_MAX == DAC_TA_DAI_TREN_MAX
+
+
+@can_ffmpeg
+def test_chenh_dai_phu_de_phan_biet_CO_NUNG_voi_KHONG(tmp_path):
+    """Máy không đọc được chữ trên khung, chỉ so được hai khung với nhau.
+
+    Ba ca: cùng một video (không đổi gì) · đổi ở DẢI DƯỚI (giống phụ đề) · đổi
+    ở DẢI TRÊN (không phải phụ đề).
+    """
+    from core.phong_alpha import chenh_dai_phu_de
+
+    goc = _lam_video(tmp_path / "goc.mp4", DAC_TA_RONG, DAC_TA_CAO, 6,
+                     "blue", "sine=f=440")
+
+    def ve_dai(ten: str, y: str) -> Path:
+        """Vẽ một DẢI đặc, KHÔNG dùng `drawtext`.
+
+        Hai bản trước đều hỏng, ghi lại kẻo lặp:
+
+        * `drawtext` một dòng `fontsize=48`, hộp bó sát -> dải dưới chỉ chênh
+          **1,85**, dưới ngưỡng 3,0. Ngưỡng ấy hiệu chuẩn theo phụ đề THẬT (đo
+          được 10,37 và 10,63), nên ca đối chứng phải mạnh tương đương; hạ
+          ngưỡng cho vừa một ca yếu là chỉnh cân theo đáp án.
+        * Thêm `drawbox` vào trước `drawtext` -> ffmpeg gãy hẳn, tệp ra **0
+          byte**: bản ffmpeg này KHÔNG có fontconfig
+          (*"Cannot load default config file"*), nên `drawtext` không tìm được
+          phông mặc định.
+
+        Bộ đo chỉ hỏi *dải nào đổi*, không cần biết đó là chữ hay hộp — nên bỏ
+        `drawtext` đi là bỏ một phụ thuộc mong manh, không mất gì.
+        """
+        d = tmp_path / ten
+        subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-i", str(goc),
+             "-vf", f"drawbox=x=0:y={y}:w=iw:h=200:color=white@0.85:t=fill",
+             "-c:a", "copy", str(d)], capture_output=True, timeout=300)
+        assert d.is_file() and d.stat().st_size > 0, ten
+        return d
+
+    duoi = ve_dai("duoi.mp4", "ih-260")
+    tren = ve_dai("tren.mp4", "60")
+
+    khong_doi = chenh_dai_phu_de(goc, goc, giay=3.0)
+    assert khong_doi["dai_duoi"] < DAC_TA_DAI_DUOI_MIN, khong_doi
+    assert khong_doi["dai_tren"] <= DAC_TA_DAI_TREN_MAX, khong_doi
+
+    co_nung = chenh_dai_phu_de(goc, duoi, giay=3.0)
+    assert co_nung["dai_duoi"] >= DAC_TA_DAI_DUOI_MIN, co_nung
+    assert co_nung["dai_tren"] <= DAC_TA_DAI_TREN_MAX, co_nung
+
+    sai_cho = chenh_dai_phu_de(goc, tren, giay=3.0)
+    assert sai_cho["dai_tren"] > DAC_TA_DAI_TREN_MAX, (
+        f"chữ vẽ ở ĐẦU khung mà dải trên chỉ chênh {sai_cho['dai_tren']} — "
+        "phép đo không phân biệt được chỗ"
+    )
+
+
+@pytest.mark.slow
+@can_ffmpeg
+def test_dung_video_CO_dua_nhac_vao_ban_tron(tmp_path):
+    """Chạy `dung_video` HAI lần, khác đúng một biến: có nền nhạc hay không.
+
+    Gieo lỗi bắt được chỗ mù: bỏ hẳn nhạc khỏi lời gọi `render` bên trong
+    `dung_video` mà cửa vẫn xanh, vì phép kiểm trước đó gọi thẳng `render`.
+
+    Đo bằng RMS (`astats`, sáu chữ số) chứ không bằng LUFS (hai chữ số): nhạc
+    thấp hơn giọng 16,8 dB nên chỉ dịch tổng ~0,2 dB — LUFS làm tròn mất, RMS
+    thì thấy.
+    """
+    import core.phong_alpha as pa
+
+    def rms(v: Path) -> float:
+        r = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(v), "-af", "astats",
+                            "-f", "null", "-"], capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=180)
+        m = re.search(r"RMS level dB:\s*(-?[\d.]+)", r.stderr or "")
+        assert m, "không đọc được RMS"
+        return float(m.group(1))
+
+    ngan = "Một hai ba. Bốn năm sáu. Bảy tám chín. Mười."
+    co = pa.dung_video(tmp_path / "co", van_ban=ngan)
+    if co["trang_thai"] == "KHONG_CHAY_DUOC":
+        pytest.skip(f"không đo được: {co['vi_sao']}")
+
+    goc_lam_nhac = pa.lam_nhac_nen
+    try:
+        pa.lam_nhac_nen = lambda dai, dich: (None, "tắt cho phép đo")
+        khong = pa.dung_video(tmp_path / "khong", van_ban=ngan)
+    finally:
+        pa.lam_nhac_nen = goc_lam_nhac
+
+    a = rms(tmp_path / "khong" / "video.mp4")
+    b = rms(tmp_path / "co" / "video.mp4")
+    assert abs(b - a) > 0.05, (
+        f"có nhạc và không nhạc cho cùng RMS ({a:.6f} vs {b:.6f} dB) — "
+        "`dung_video` không đưa nhạc vào bản trộn"
+    )
+
+
+def test_cham_nung_biet_BAC_khi_so_xau():
+    """Đưa SỐ XẤU vào và xem verifier có bác không.
+
+    Gieo lỗi bắt được chỗ mù: bỏ hẳn hai nhánh chấm nung mà cửa vẫn xanh, vì
+    bài chạy-thật chỉ khẳng định "số đo nằm trong khoảng" trên một lượt ĐẠT —
+    không cách nào đưa số xấu vào. Cùng gốc với chỗ mù ở phần âm thanh.
+    """
+    from core.phong_alpha import kiem_nung
+
+    assert kiem_nung({"dai_duoi": 10.63, "dai_tren": 0.25}) == []
+    # Sát ngưỡng vẫn phải đạt — ngưỡng là ≥ và ≤, không phải > và <.
+    assert kiem_nung({"dai_duoi": DAC_TA_DAI_DUOI_MIN,
+                      "dai_tren": DAC_TA_DAI_TREN_MAX}) == []
+
+    chua_nung = kiem_nung({"dai_duoi": 0.4, "dai_tren": 0.1})
+    assert any("chưa nung" in l for l in chua_nung), chua_nung
+
+    sai_cho = kiem_nung({"dai_duoi": 10.0, "dai_tren": 40.0})
+    assert any("không nằm ở chỗ phụ đề" in l for l in sai_cho), sai_cho
+
+    ca_hai = kiem_nung({"dai_duoi": 0.1, "dai_tren": 40.0})
+    assert len(ca_hai) == 2, ca_hai
+
+    assert kiem_nung({"dai_duoi": -1.0, "dai_tren": -1.0}), (
+        "không rút được khung thì phải BÁC, không được coi là đạt"
+    )
+    assert kiem_nung({}), "thiếu số đo phải BÁC"
+
+
+def test_day_chuyen_NGHE_phan_quyet_cua_cham_nung(tmp_path):
+    """Bơm một phán quyết BÁC vào `kiem_nung` rồi chạy cả dây chuyền.
+
+    Gieo 03/09/2026 bắt được chỗ mù: đổi `if ly_do_nung:` thành `if False:`
+    trong `dung_video` mà cả 30 bài vẫn xanh. Lý do là mọi bài chấm nung đều
+    gọi thẳng hàm thuần `kiem_nung(...)` — hàm ấy vẫn trả đúng lý do, nên
+    không bài nào nhận ra dây chuyền đã ngừng NGHE nó.
+
+    Cùng họ với hai chỗ mù đã sửa ở phần âm thanh và phần phụ đề: chấm được
+    một hàm không có nghĩa là kết quả của hàm ấy đi tới đâu.
+    """
+    import core.phong_alpha as pa
+
+    goc = pa.kiem_nung
+    try:
+        pa.kiem_nung = lambda cd: ["gieo: chữ chưa nung vào hình"]
+        kq = pa.dung_video(tmp_path / "bom_bac")
+    finally:
+        pa.kiem_nung = goc
+
+    if kq["trang_thai"] == "KHONG_CHAY_DUOC":
+        pytest.skip(f"không đo được: {kq['vi_sao']}")
+
+    assert kq["trang_thai"] == "FAIL", (
+        f"chấm nung BÁC mà dây chuyền vẫn {kq['trang_thai']} — "
+        "phán quyết của `kiem_nung` không đi tới `trang_thai`"
+    )
+    assert "gieo: chữ chưa nung vào hình" in kq["vi_sao"], (
+        f"lý do bác không lọt ra ngoài: {kq['vi_sao']!r}"
+    )
+
+    # Ca đối chứng: KHÔNG bơm gì thì cùng đường ấy phải PASS. Thiếu ca này thì
+    # bài trên có thể xanh chỉ vì `dung_video` luôn FAIL trong tmp_path.
+    #
+    # Cả hai lượt dùng VĂN BẢN MẶC ĐỊNH, không dùng câu ngắn cho nhanh: đo
+    # 03/09/2026 thì câu bốn mệnh đề cho bản trộn −29,9 LUFS (trần là −18…−12),
+    # nên đối chứng đỏ vì độ ồn chứ không vì chuyện đang xét. Rẻ hơn 2 phút,
+    # nhưng đo sai biến.
+    sach = pa.dung_video(tmp_path / "khong_bom")
+    if sach["trang_thai"] == "KHONG_CHAY_DUOC":
+        pytest.skip(f"đối chứng không đo được: {sach['vi_sao']}")
+    assert sach["trang_thai"] == "PASS", (
+        f"đối chứng phải PASS mới chứng minh được bài trên: {sach['vi_sao']}"
     )

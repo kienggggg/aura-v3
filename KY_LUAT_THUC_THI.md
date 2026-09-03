@@ -98,6 +98,37 @@ Mọi lần chạy thử nghiệm phải được lưu cô lập trong `data/evi
 * **Cửa CHẤT LƯỢNG (thêm 02/09/2026 — bốn cửa trên chỉ đo ĐỊNH DẠNG):**
   - `freezedetect` xác nhận **không đoạn nào đứng yên quá 5 giây**.
   - Số lần **đổi cảnh ≥ 8** trên toàn video (`select='gt(scene,0.3)'`).
+* **Cửa PHỤ ĐỀ & NHẠC NỀN (thêm 02/09/2026, tối):**
+  - MP4 phải có **luồng phụ đề** (`ffprobe` thấy `codec_type=subtitle`), và tệp
+    `.srt` là một hiện vật riêng kèm SHA-256.
+  - Chữ phải **NUNG THẲNG VÀO HÌNH**, không chỉ nằm ở luồng rời. Đo bằng cách so
+    khung của bản chưa nung với bản đã nung: **dải dưới 30% chênh ≥ 3,0** trên
+    thang xám, **dải trên 30% chênh ≤ 1,0**.
+
+    > Vì sao cần cả hai. Luồng phụ đề rời thì `ffprobe` đọc được — nên nó đo
+    > được — nhưng trên Facebook/TikTok người ta lướt và xem TẮT TIẾNG, mà
+    > luồng rời thường không tự bật. Chữ nung vào hình thì luôn thấy, nhưng máy
+    > không đọc ra được. Giữ cả hai: luồng rời để KIỂM, chữ nung để XEM.
+    >
+    > Ngưỡng lấy từ đâu: đo trên video thật, nung bằng `subtitles` + libass ra
+    > **dải dưới 10,37 · dải trên 0,14**. Đặt 3,0 và 1,0 là chừa biên rộng cho
+    > cả hai phía, và hai con số ấy phân biệt được "có nung" với "không nung"
+    > mà không bị màu nền thẻ đánh lừa.
+  - Số dòng phụ đề **≥ số thẻ**, và mốc kết thúc của dòng cuối **≤ thời lượng
+    video** — phụ đề chạy quá phim là phụ đề sai.
+  - Âm thanh cuối phải là **hỗn hợp giọng + nhạc**, độ ồn tích hợp trong khoảng
+    **−18 đến −12 LUFS** (`loudnorm`).
+  - Nền nhạc phải **thấp hơn giọng ≥ 12 dB**, đo trên hai tệp RIÊNG trước khi
+    trộn. Nhạc át giọng thì video vô dụng, mà LUFS của bản trộn không nói được
+    điều đó.
+
+  > Ngưỡng lấy từ đâu. Giọng đọc một mình đo được **−17,04 LUFS**; các nền phát
+  > hành thường quanh −14 (YouTube) đến −16 (TikTok), nên khoảng −18…−12 vừa
+  > chứa cả hai vừa đủ rộng để không phải chỉnh mỗi lần đổi giọng. Còn 12 dB là
+  > mức chênh tối thiểu quen dùng khi lồng nhạc dưới lời đọc.
+  >
+  > Nhạc ở đây là **âm sinh bằng ffmpeg**, nhãn `generated_tone_bed` — không
+  > phải nhạc thật, và không được khai là nhạc thật.
 
   > Vì sao thêm. Bản Alpha đầu tiên ĐỖ cả bốn cửa định dạng — 720×1280,
   > 60,62 s, có tiếng, 0 khung đen — nhưng đo ra:

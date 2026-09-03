@@ -91,6 +91,32 @@ GIAY_MOI_THE = 4.5
 # cảnh thì cả video là một cảnh.
 BUOC_MAU_DO = 137.5
 
+# ---- CỬA PHỤ ĐỀ & NHẠC NỀN, thêm 02/09/2026 tối ----
+#
+# Chép từ `KY_LUAT_THUC_THI.md` Chương II mục 2. Giọng đọc một mình đo được
+# −17,04 LUFS; các nền phát hành thường quanh −14 (YouTube) đến −16 (TikTok),
+# nên khoảng −18…−12 vừa chứa cả hai vừa đủ rộng.
+LUFS_MIN, LUFS_MAX = -18.0, -12.0
+# Nhạc phải thấp hơn giọng ít nhất chừng này, đo trên hai tệp RIÊNG. LUFS của
+# bản đã trộn không nói được nhạc có át giọng hay không.
+CHENH_NHAC_DB = 12.0
+# Chữ nung vào hình: dải dưới phải đổi mạnh, dải trên gần như không đổi.
+# Đo thật trên một video 13 thẻ: dải dưới 10,37 · dải trên 0,14. Đặt 3,0 và
+# 1,0 là chừa biên rộng cả hai phía.
+CHENH_DAI_DUOI_MIN = 3.0
+CHENH_DAI_TREN_MAX = 1.0
+# Hệ số âm lượng nhạc, NUNG THẲNG VÀO TỆP chứ không áp lúc trộn.
+#
+# Bản đầu áp hệ số bên trong `render`, nên `_lufs(nhac)` đo tệp CHƯA hạ — tức
+# là phép "chênh giọng/nhạc" so sai cặp. Đo được lúc ấy: nhạc −26,89 LUFS,
+# giọng −17,04, chênh 9,85 dB; nhưng mức thật đi vào bản trộn là −26,89 − 26 =
+# −52,9 dB, nhỏ tới mức không ai nghe thấy. Một con số sai che một con số sai.
+#
+# Nay tệp trên đĩa CHÍNH LÀ mức được dùng, nên đo nó là đo đúng thứ.
+# Hiệu chuẩn: nhạc gốc −26,89 LUFS, muốn chênh ~16 dB dưới giọng (−17,04) thì
+# cần hạ khoảng 7 dB -> hệ số 0,45.
+HE_SO_NHAC = 0.45
+
 # Phông phải có dấu tiếng Việt. Segoe UI có; nếu máy không có thì thử lần lượt.
 PHONG_UNG_VIEN = ("segoeui.ttf", "arial.ttf", "tahoma.ttf", "calibri.ttf")
 
@@ -228,7 +254,145 @@ def _dai_ngan_lai(wav: Path, dich: float) -> None:
 FPS = 24
 
 
-def render(cards: List[Path], wav: Path, ra: Path) -> tuple[bool, str]:
+def _mmss(giay: float) -> str:
+    """Mốc thời gian kiểu SRT: HH:MM:SS,mmm."""
+    ms = int(round(giay * 1000))
+    g, ms = divmod(ms, 1000)
+    p, g = divmod(g, 60)
+    h, p = divmod(p, 60)
+    return f"{h:02d}:{p:02d}:{g:02d},{ms:03d}"
+
+
+def lam_phu_de(doan: List[str], moi_the: float, dich: Path) -> Path:
+    """Một dòng phụ đề cho mỗi thẻ, khớp đúng khoảng thẻ ấy trên màn hình.
+
+    Viết ra tệp `.srt` RIÊNG chứ không nung chữ vào khung hình: nung vào thì
+    không ai kiểm được bằng máy, còn luồng phụ đề thì `ffprobe` đọc ra.
+    """
+    khoi = []
+    for i, chu in enumerate(doan, 1):
+        bd, kt = (i - 1) * moi_the, i * moi_the
+        khoi.append(f"{i}\n{_mmss(bd)} --> {_mmss(kt)}\n{chu.strip()}\n")
+    dich.write_text("\n".join(khoi), encoding="utf-8", newline="\n")
+    return dich
+
+
+def lam_nhac_nen(dai: float, dich: Path) -> tuple[Path | None, str]:
+    """Sinh nền âm bằng ffmpeg — KHÔNG phải nhạc thật, và không được khai thế.
+
+    Ba nốt ngân chồng nhau (A3–C#4–E4) cộng một lớp nhiễu rất nhỏ, vào/ra êm.
+    Nhãn `generated_tone_bed`. Máy này không có tệp nhạc nào có bản quyền rõ
+    ràng, nên tự sinh là lối duy nhất giữ được lời hứa "100% ngoại tuyến".
+    """
+    r = subprocess.run(
+        ["ffmpeg", "-v", "error", "-y",
+         "-f", "lavfi", "-i", f"sine=frequency=220:duration={dai:.2f}",
+         "-f", "lavfi", "-i", f"sine=frequency=277:duration={dai:.2f}",
+         "-f", "lavfi", "-i", f"sine=frequency=330:duration={dai:.2f}",
+         "-filter_complex",
+         "[0:a][1:a][2:a]amix=inputs=3:duration=first,"
+         f"afade=t=in:st=0:d=2,afade=t=out:st={max(0.0, dai - 2):.2f}:d=2,"
+         f"volume={HE_SO_NHAC},"
+         "aformat=sample_fmts=s16:sample_rates=44100:channel_layouts=mono[a]",
+         "-map", "[a]", str(dich)],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        timeout=TRAN_RENDER_GIAY)
+    if r.returncode != 0 or not dich.is_file() or dich.stat().st_size == 0:
+        return None, f"không sinh được nền nhạc: {(r.stderr or '').strip()[:160]}"
+    return dich, ""
+
+
+def chenh_dai_phu_de(a: Path, b: Path, giay: float = 20.0) -> Dict[str, float]:
+    """So một khung của HAI video: dải dưới phải đổi, dải trên thì không.
+
+    Cách duy nhất máy đọc được chữ đã nung vào hình mà không cần OCR: lấy cùng
+    một mốc thời gian ở hai bản, rồi hỏi *chỗ nào đổi*. Chữ nằm ở đáy khung nên
+    dải dưới đổi mạnh; nếu dải TRÊN cũng đổi thì thứ vừa thêm không phải phụ đề
+    (mã hoá lại lệch màu, hay lọc nhầm cả khung).
+    """
+    from PIL import Image, ImageChops, ImageStat
+
+    ra: Dict[str, float] = {}
+    tam = a.parent / "_khung_so"
+    tam.mkdir(exist_ok=True)
+    khung = []
+    for i, v in enumerate((a, b)):
+        p = tam / f"k{i}.png"
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{giay:.2f}",
+                        "-i", str(v), "-frames:v", "1", str(p)],
+                       capture_output=True, timeout=180)
+        if not p.is_file():
+            return {"dai_duoi": -1.0, "dai_tren": -1.0}
+        khung.append(Image.open(p).convert("L"))
+    w, h = khung[0].size
+    for nhan, hop in (("dai_duoi", (0, int(h * 0.7), w, h)),
+                      ("dai_tren", (0, 0, w, int(h * 0.3)))):
+        d = ImageChops.difference(khung[0].crop(hop), khung[1].crop(hop))
+        ra[nhan] = round(ImageStat.Stat(d).mean[0], 2)
+    for k in khung:
+        k.close()
+    shutil.rmtree(tam, ignore_errors=True)
+    return ra
+
+
+def kiem_nung(cd: Dict[str, float]) -> List[str]:
+    """Chấm hai con số của phép nung. Trả về lý do BÁC; rỗng nghĩa là đạt.
+
+    Tách ra thành hàm thuần vì cùng lý do với `kiem_am_thanh`: để nằm rải trong
+    `dung_video` thì cửa canh chỉ khẳng định được "số đo nằm trong khoảng",
+    không cách nào đưa số XẤU vào. Gieo lỗi bắt đúng chỗ ấy — bỏ hẳn hai nhánh
+    chấm mà cửa vẫn xanh.
+    """
+    ra: List[str] = []
+    if cd.get("dai_duoi", -1.0) < 0 or cd.get("dai_tren", -1.0) < 0:
+        return ["không rút được khung để đối chiếu bản nung"]
+    if cd["dai_duoi"] < CHENH_DAI_DUOI_MIN:
+        ra.append(f"dải dưới chỉ chênh {cd['dai_duoi']}, cần ≥ "
+                  f"{CHENH_DAI_DUOI_MIN} — chữ chưa nung vào hình")
+    if cd["dai_tren"] > CHENH_DAI_TREN_MAX:
+        ra.append(f"dải trên chênh {cd['dai_tren']}, cần ≤ "
+                  f"{CHENH_DAI_TREN_MAX} — thứ vừa thêm không nằm ở chỗ phụ đề")
+    return ra
+
+
+def kiem_am_thanh(lufs_giong: float | None, lufs_nhac: float | None,
+                  lufs_video: float | None) -> List[str]:
+    """Chấm ba con số độ ồn. Trả về danh sách lý do BÁC; rỗng nghĩa là đạt.
+
+    TÁCH RA THÀNH HÀM THUẦN LÀ CÓ CHỦ ĐÍCH. Bản đầu để ba phép này nằm rải
+    trong `dung_video`, nên cửa canh chỉ khẳng định được "số đo nằm trong
+    khoảng" — không cách nào đưa số XẤU vào để xem verifier có bác không. Gieo
+    lỗi bắt đúng chỗ ấy: bỏ hẳn hai nhánh chấm mà cửa vẫn xanh, hai lần.
+    """
+    ra: List[str] = []
+    if lufs_video is None:
+        ra.append("không đo được độ ồn của video")
+    elif not (LUFS_MIN <= lufs_video <= LUFS_MAX):
+        ra.append(f"độ ồn {lufs_video:.1f} LUFS, cần {LUFS_MIN:.0f}…{LUFS_MAX:.0f}")
+    if lufs_giong is None or lufs_nhac is None:
+        ra.append("không đo được độ ồn giọng hoặc nhạc")
+    else:
+        chenh = lufs_giong - lufs_nhac
+        if chenh < CHENH_NHAC_DB:
+            ra.append(f"nhạc chỉ thấp hơn giọng {chenh:.1f} dB, "
+                      f"cần ≥ {CHENH_NHAC_DB:.0f} — nhạc đang át lời")
+    return ra
+
+
+def _lufs(tep: Path) -> float | None:
+    """Độ ồn tích hợp, theo `loudnorm`. `None` nếu không đo được."""
+    r = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(tep),
+                        "-af", "loudnorm=print_format=json", "-f", "null", "-"],
+                       capture_output=True, text=True, encoding="utf-8",
+                       errors="replace", timeout=180)
+    m = re.search(r'"input_i"\s*:\s*"(-?[\d.]+|-inf)"', r.stderr or "")
+    if not m or m.group(1) == "-inf":
+        return None
+    return float(m.group(1))
+
+
+def render(cards: List[Path], wav: Path, ra: Path,
+           srt: Path | None = None, nhac: Path | None = None) -> tuple[bool, str]:
     """Ghép thẻ + giọng thành MP4, mỗi thẻ có chuyển động chậm (Ken Burns).
 
     VÌ SAO KHÔNG DÙNG `concat` ẢNH TĨNH NỮA. Bản đầu ghép thẳng ảnh, ra video
@@ -273,13 +437,71 @@ def render(cards: List[Path], wav: Path, ra: Path) -> tuple[bool, str]:
     doan += "".join(f"[v{i}]" for i in range(len(cards)))
     doan += f"concat=n={len(cards)}:v=1:a=0[vout]"
 
-    lenh += ["-filter_complex", doan, "-map", "[vout]", "-map", f"{len(cards)}:a",
+    i_giong = len(cards)
+    map_am = f"{i_giong}:a"
+    if nhac is not None and nhac.is_file():
+        # Hạ nhạc rồi mới trộn. `duration=first` để nền dài hơn cũng bị cắt theo
+        # giọng, khỏi kéo dài video quá cửa sổ 55–65 giây.
+        lenh += ["-i", str(nhac)]
+        # `normalize=0` — BẮT BUỘC. Mặc định `amix` chia âm lượng cho số đầu
+        # vào, nên trộn hai luồng là giọng tụt 6 dB. Đo được: bản trộn ra
+        # −23,05 LUFS trong khi giọng gốc là −17,04, và cửa độ ồn bác đúng.
+        doan += (f";[{i_giong}:a][{i_giong + 1}:a]amix=inputs=2:duration=first"
+                 ":dropout_transition=0:normalize=0[aout]")
+        map_am = "[aout]"
+
+    lenh += ["-filter_complex", doan, "-map", "[vout]", "-map", map_am,
              "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
              "-r", str(FPS), "-c:a", "aac", "-b:a", "96k", "-shortest", str(ra)]
     r = subprocess.run(lenh, capture_output=True, text=True,
                        encoding="utf-8", errors="replace", timeout=TRAN_RENDER_GIAY)
     if r.returncode != 0 or not ra.is_file():
         return False, f"ffmpeg: {(r.stderr or '').strip()[:200]}"
+
+    # ---- NUNG CHỮ VÀO HÌNH ----
+    #
+    # Luồng phụ đề rời thì `ffprobe` đọc được — nên nó ĐO được — nhưng trên
+    # Facebook/TikTok người ta lướt và xem TẮT TIẾNG, mà luồng rời thường không
+    # tự bật. Chữ nung vào hình thì luôn thấy, nhưng máy không đọc ra được.
+    # Giữ cả hai: luồng rời để KIỂM, chữ nung để XEM.
+    #
+    # `subtitles` cần đường dẫn KHÔNG có dấu `:` của ổ đĩa Windows, nên chạy
+    # ffmpeg ngay trong thư mục chứa tệp và chỉ truyền TÊN.
+    if srt is not None and srt.is_file():
+        # GIỮ LẠI BẢN CHƯA NUNG. Không có nó thì không cách nào chứng minh chữ
+        # đã vào hình — máy không đọc được chữ trên khung, chỉ so được hai
+        # khung với nhau.
+        shutil.copy(ra, ra.with_name("video_chua_nung.mp4"))
+        nung = ra.with_name("_nung_" + ra.name)
+        kieu = ("FontName=Segoe UI,FontSize=20,PrimaryColour=&H00FFFFFF,"
+                "OutlineColour=&H90000000,BorderStyle=3,Outline=2,"
+                "Alignment=2,MarginV=60")
+        r3 = subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-i", ra.name,
+             "-vf", f"subtitles={srt.name}:force_style='{kieu}'",
+             "-c:a", "copy", nung.name],
+            cwd=str(ra.parent), capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=TRAN_RENDER_GIAY)
+        if r3.returncode != 0 or not nung.is_file():
+            return False, f"nung phụ đề hỏng: {(r3.stderr or '').strip()[:200]}"
+        nung.replace(ra)
+
+    # Phụ đề ghép ở LƯỢT RIÊNG, `-c copy`, không mã hoá lại.
+    #
+    # Nhét thêm một đầu vào vào chính `filter_complex` ở trên thì phải tự đếm
+    # chỉ số đầu vào — và bản đầu của tôi đếm sai, gọi một hàm không tồn tại.
+    # Tách ra thì chỉ số hết ý nghĩa, và video không bị nén lại lần hai.
+    if srt is not None and srt.is_file():
+        tam = ra.with_name("_" + ra.name)
+        r2 = subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-i", str(ra), "-i", str(srt),
+             "-c", "copy", "-c:s", "mov_text",
+             "-metadata:s:s:0", "language=vie", str(tam)],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=TRAN_RENDER_GIAY)
+        if r2.returncode != 0 or not tam.is_file():
+            return False, f"ghép phụ đề hỏng: {(r2.stderr or '').strip()[:200]}"
+        tam.replace(ra)
     return True, ""
 
 
@@ -421,6 +643,49 @@ def kiem_video(mp4: Path) -> Dict[str, Any]:
             f"chỉ {doi_canh} lần đổi cảnh, cần ≥ {SO_DOI_CANH_TOI_THIEU} "
             "— video đang là slideshow")
 
+    # ---- cửa PHỤ ĐỀ: có luồng hay không ----
+    r6 = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "stream=index,codec_type",
+         "-of", "json", str(mp4)], capture_output=True, text=True, timeout=60)
+    try:
+        luong6 = json.loads(r6.stdout or "{}").get("streams", [])
+    except ValueError:
+        luong6 = []
+    co_phu_de = any(x.get("codec_type") == "subtitle" for x in luong6)
+    kq["so"]["co_phu_de"] = co_phu_de
+    if not co_phu_de:
+        kq["vi_sao"].append("không có luồng phụ đề")
+
+    kq["dat"] = not kq["vi_sao"]
+    return kq
+
+
+def kiem_phu_de(srt: Path, so_the: int, dai_video: float) -> Dict[str, Any]:
+    """Phụ đề phải đủ dòng và không chạy quá phim.
+
+    Tách khỏi `kiem_video` vì nó cần biết SỐ THẺ và thời lượng, hai thứ chỉ dây
+    chuyền mới có. `kiem_video` thì chỉ được nhìn tệp mp4, không hơn — verifier
+    nhìn thêm thứ khác là verifier bớt độc lập đi.
+    """
+    kq: Dict[str, Any] = {"dat": False, "vi_sao": [], "so": {}}
+    if not srt.is_file():
+        kq["vi_sao"].append("không có tệp .srt")
+        return kq
+    moc = re.findall(
+        r"(\d\d):(\d\d):(\d\d),(\d\d\d) --> (\d\d):(\d\d):(\d\d),(\d\d\d)",
+        srt.read_text(encoding="utf-8"))
+    kq["so"]["so_dong"] = len(moc)
+    if not moc:
+        kq["vi_sao"].append("tệp .srt không có dòng nào")
+        return kq
+    h, ph, g, ms = moc[-1][4:]
+    ket = int(h) * 3600 + int(ph) * 60 + int(g) + int(ms) / 1000
+    kq["so"]["ket_dong_cuoi"] = round(ket, 3)
+    if len(moc) < so_the:
+        kq["vi_sao"].append(f"{len(moc)} dòng phụ đề, cần ≥ {so_the} (số thẻ)")
+    if ket > dai_video + 0.25:
+        kq["vi_sao"].append(
+            f"dòng cuối kết ở {ket:.2f}s nhưng video chỉ dài {dai_video:.2f}s")
     kq["dat"] = not kq["vi_sao"]
     return kq
 
@@ -483,14 +748,61 @@ def dung_video(thu_muc_ra: Path, van_ban: str | None = None) -> Dict[str, Any]:
     cards = sinh_the_hinh(van_ban, thu_muc_ra, so_the=so_the)
     hien_vat += [_hien_vat(c, "IMAGE", "generated_template") for c in cards]
 
+    # Phụ đề: một dòng cho mỗi thẻ, khớp đúng khoảng thẻ ấy trên màn hình.
+    dai_giong = _giay(wav)
+    srt = lam_phu_de(_cat_doan(van_ban, len(cards)),
+                     dai_giong / len(cards), thu_muc_ra / "phu_de.srt")
+    hien_vat.append(_hien_vat(srt, "SUBTITLE", "srt_theo_the"))
+
+    # Nhạc nền SINH BẰNG MÁY, không phải nhạc thật.
+    nhac, ly_do_nhac = lam_nhac_nen(dai_giong, thu_muc_ra / "nhac_nen.wav")
+    if nhac is not None:
+        hien_vat.append(_hien_vat(nhac, "AUDIO", "generated_tone_bed"))
+
     mp4 = thu_muc_ra / "video.mp4"
-    ok, loi = render(cards, wav, mp4)
+    ok, loi = render(cards, wav, mp4, srt=srt, nhac=nhac)
     if not ok:
         return {"trang_thai": "KHONG_CHAY_DUOC", "artifacts": hien_vat, "kiem": {},
                 "ms": round((time.monotonic() - t0) * 1000, 1), "vi_sao": loi}
     hien_vat.append(_hien_vat(mp4, "VIDEO", "rendered"))
 
+    # Chênh lệch giọng / nhạc phải đo trên HAI TỆP RIÊNG, trước khi trộn.
+    # LUFS của bản đã trộn không nói được nhạc có át giọng hay không.
+    lufs_giong, lufs_nhac = _lufs(wav), (_lufs(nhac) if nhac else None)
     kiem = kiem_video(mp4)
+    kiem["so"]["lufs_giong"] = lufs_giong
+    kiem["so"]["lufs_nhac"] = lufs_nhac
+
+    kp = kiem_phu_de(srt, len(cards), _giay(mp4))
+    kiem["so"].update(kp["so"])
+    if not kp["dat"]:
+        kiem["vi_sao"] += kp["vi_sao"]
+        kiem["dat"] = False
+
+    # Chữ đã nung vào hình chưa: so bản chưa nung với bản đã nung.
+    chua_nung = mp4.with_name("video_chua_nung.mp4")
+    if chua_nung.is_file():
+        hien_vat.append(_hien_vat(chua_nung, "VIDEO", "chua_nung_phu_de"))
+        cd = chenh_dai_phu_de(chua_nung, mp4)
+        kiem["so"].update(cd)
+        ly_do_nung = kiem_nung(cd)
+        if ly_do_nung:
+            kiem["vi_sao"] += ly_do_nung
+            kiem["dat"] = False
+    else:
+        kiem["vi_sao"].append("không có bản chưa nung để đối chiếu")
+        kiem["dat"] = False
+
+    # Ba con số độ ồn, chấm bằng MỘT hàm thuần để cửa canh đưa số xấu vào được.
+    lufs_ra = _lufs(mp4)
+    kiem["so"]["lufs_video"] = lufs_ra
+    if lufs_giong is not None and lufs_nhac is not None:
+        kiem["so"]["chenh_giong_nhac_db"] = round(lufs_giong - lufs_nhac, 2)
+    ly_do_am = kiem_am_thanh(lufs_giong, lufs_nhac, lufs_ra)
+    if ly_do_am:
+        kiem["vi_sao"] += ly_do_am
+        kiem["dat"] = False
+
     return {"trang_thai": "PASS" if kiem["dat"] else "FAIL",
             "artifacts": hien_vat, "kiem": kiem,
             "ms": round((time.monotonic() - t0) * 1000, 1),

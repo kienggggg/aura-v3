@@ -73,8 +73,19 @@ def test_gieo_giu_nguyen_do_dai_van_phai_vao_toi_may(tmp_path):
     ĐỪNG đổi phép gieo này sang một cặp khác độ dài — làm thế là gỡ mất cái bẫy.
     """
     goc = _du_an(tmp_path, "\n")
+    import os
     import subprocess
-    subprocess.run(LENH, cwd=str(goc), capture_output=True)      # sinh .pyc cũ
+
+    # Lượt hâm nóng PHẢI được phép ghi .pyc, nên dọn `PYTHONDONTWRITEBYTECODE`
+    # khỏi môi trường thay vì thừa hưởng của cha.
+    #
+    # 03/09/2026: bài này đỏ khi chạy DƯỚI `gieo.py` và xanh khi chạy thẳng —
+    # vì `chay_gieo` đặt đúng biến ấy cho tiến trình con, và `subprocess.run`
+    # ở đây thừa hưởng nó. Không sinh được .pyc thì khẳng định ngay dưới gãy.
+    # Bắt được nhờ chính bản sửa hôm nay: nền đỏ nay in ra TÊN BÀI.
+    mt = dict(os.environ)
+    mt.pop("PYTHONDONTWRITEBYTECODE", None)
+    subprocess.run(LENH, cwd=str(goc), capture_output=True, env=mt)   # sinh .pyc cũ
     assert list((goc / "__pycache__").glob("ma.*.pyc")), "chưa sinh được .pyc để thử bẫy"
 
     cu = (goc / "ma.py").read_bytes()
@@ -162,3 +173,130 @@ def test_ham_gieo_tuy_y_cung_dung_duoc(tmp_path):
     assert kq.khong_vao == []
     assert kq.cua_mu == []
     assert kq.ma_thoat == 0
+
+
+# ---------------------------------------------------------------------------
+# TÊN BÀI ĐỎ (thêm 03/09/2026)
+#
+# Trước đó bảng chỉ ghi "-> ĐỎ (đạt)" và "1 failed, 39 passed". Hai chuyện quan
+# trọng đều không nói ra được:
+#
+#   nền đỏ  -> không biết bài nào. Gặp đúng ca ấy hai lần liên tiếp ngày 03/09;
+#              phải chạy lại tay mới biết, rồi lần chạy lại nó XANH nên mất dấu.
+#   gieo đỏ -> một phép gieo làm đỏ một bài CHẲNG LIÊN QUAN trông y hệt một phép
+#              gieo bắt trúng.
+
+def test_boc_ten_bai_do_tu_dau_ra_pytest():
+    """Đo 03/09 chứ không đoán: `pytest -q` CÓ SẴN khối `short test summary`."""
+    from tools.gieo import ten_bai_do
+
+    ra = ten_bai_do(
+        "..F.F\n"
+        "=========================== short test summary info ====================\n"
+        "FAILED tests/test_a.py::test_mot - assert 1 == 2\n"
+        "FAILED tests/test_b.py::test_hai - ValueError: hong\n"
+        "ERROR tests/test_c.py\n"
+        "2 failed, 3 passed in 0.07s\n"
+    )
+    assert ra == ["tests/test_a.py::test_mot", "tests/test_b.py::test_hai",
+                  "tests/test_c.py"], ra
+
+
+def test_boc_ten_bai_do_tu_dau_ra_node_tap():
+    from tools.gieo import ten_bai_do
+
+    assert ten_bai_do("ok 1 - chay duoc\nnot ok 2 - nut khong co handler\n") == [
+        "nut khong co handler"]
+
+
+def test_boc_ten_khong_bia_khi_khong_co_gi():
+    """Rỗng phải là RỖNG — không được bịa ra một tên nghe hợp lý."""
+    from tools.gieo import ten_bai_do
+
+    assert ten_bai_do("") == []
+    assert ten_bai_do("3 passed in 0.02s\n") == []
+    # "FAILED" nằm giữa dòng thì KHÔNG phải dòng tổng kết của pytest.
+    assert ten_bai_do("day la mot cau co chu FAILED o giua\n") == []
+
+
+def test_nen_do_thi_NOI_RA_bai_nao_do(tmp_path, capsys):
+    """Nền đỏ là lúc CẦN tên bài nhất — gieo dừng ngay, dấu vết mất luôn."""
+    du_an = _du_an(tmp_path, "\n")
+    (du_an / "test_do_san.py").write_text(
+        "def test_da_do_san():\n    assert False\n", encoding="utf-8")
+
+    kq = chay_gieo(
+        lenh=[PY_EXE, "-m", "pytest", ".", "-q", "-p", "no:cacheprovider"],
+        cac_phep=[Phep("doi hang so", "ma.py", "42", "41")],
+        goc=du_an,
+    )
+    assert not kq.nen_xanh
+    assert any("test_da_do_san" in t for t in kq.bai_do_nen), kq.bai_do_nen
+    assert "test_da_do_san" in capsys.readouterr().out, (
+        "tên bài đỏ phải được IN RA, không chỉ nằm trong KetQua"
+    )
+
+
+def test_gieo_do_thi_noi_ra_do_o_BAI_NAO(tmp_path, capsys):
+    """"ĐỎ" chưa đủ — phải đỏ VÌ ĐÚNG LÝ DO.
+
+    Ca đối chứng nằm ngay trong bài: hai phép gieo, một phép nhắm trúng làm đỏ
+    ĐÚNG MỘT bài, một phép cùn (hỏng import) kéo đổ CẢ HAI. Trước 03/09 hai
+    phép ấy in ra y hệt nhau.
+    """
+    du_an = _du_an(tmp_path, "\n")
+    (du_an / "test_ma.py").write_text(
+        "import sys\nfrom pathlib import Path\n"
+        "sys.path.insert(0, str(Path(__file__).resolve().parent))\n"
+        "from ma import GIA_TRI\n\n\n"
+        "def test_dung_gia_tri():\n    assert GIA_TRI == 42\n\n\n"
+        "def test_la_so_nguyen():\n    assert isinstance(GIA_TRI, int)\n",
+        encoding="utf-8")
+
+    kq = chay_gieo(
+        lenh=[PY_EXE, "-m", "pytest", "test_ma.py", "-q", "-p", "no:cacheprovider"],
+        cac_phep=[
+            Phep("nham trung: doi gia tri", "ma.py", "GIA_TRI = 42", "GIA_TRI = 41"),
+            Phep("cun: doi sang chuoi", "ma.py", "GIA_TRI = 42", 'GIA_TRI = "42"'),
+        ],
+        goc=du_an,
+    )
+    assert kq.cua_mu == [], kq.cua_mu
+    trung = kq.bai_do["nham trung: doi gia tri"]
+    cun = kq.bai_do["cun: doi sang chuoi"]
+    assert len(trung) == 1 and "test_dung_gia_tri" in trung[0], trung
+    assert len(cun) == 2, f"phép cùn phải làm đỏ cả hai bài: {cun}"
+    ra = capsys.readouterr().out
+    assert "test_dung_gia_tri" in ra and "test_la_so_nguyen" in ra, (
+        "hai phép gieo phải PHÂN BIỆT được trên màn hình"
+    )
+
+
+def test_khong_boc_duoc_ten_thi_NOI_LA_khong_boc_duoc(tmp_path, capsys):
+    """Ba trạng thái, không gộp: có tên · không có bài đỏ · KHÔNG BÓC ĐƯỢC.
+
+    Nếu chỗ in lặng lẽ bỏ qua khi danh sách rỗng thì "không bóc được tên" đọc y
+    hệt "gieo này sạch" — đúng cái ba-trạng-thái sinh ra để chống.
+    """
+    from tools.gieo import _in_bai_do
+
+    dong: list[str] = []
+    _in_bai_do(dong.append, [])
+    assert dong and "không bóc được" in dong[0], dong
+
+
+def test_boc_ten_bo_trung_lap():
+    """Một bài đỏ phải đếm MỘT lần, dù đầu ra nhắc nó nhiều lần.
+
+    Gieo 03/09 bắt được chỗ mù: bỏ `dict.fromkeys` mà cả bộ vẫn xanh — không
+    bài nào đưa vào đầu ra có tên lặp. `pytest -rA` in cả `ERROR` lẫn `FAILED`
+    cho cùng một bài, nên đây không phải ca tưởng tượng.
+    """
+    from tools.gieo import ten_bai_do
+
+    ra = ten_bai_do(
+        "FAILED tests/test_a.py::test_mot - loi lan mot\n"
+        "FAILED tests/test_b.py::test_hai - loi khac\n"
+        "FAILED tests/test_a.py::test_mot - van loi ay\n"
+    )
+    assert ra == ["tests/test_a.py::test_mot", "tests/test_b.py::test_hai"], ra

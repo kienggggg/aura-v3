@@ -137,6 +137,19 @@ class KetQua:
     khong_vao: list[str] = field(default_factory=list)
     cua_mu: list[str] = field(default_factory=list)
     khong_tra_duoc: list[str] = field(default_factory=list)
+    # Tên bài ĐỎ, để người đọc kiểm được ĐỎ VÌ ĐÚNG LÝ DO.
+    #
+    # Thêm 03/09/2026. Trước đó bảng chỉ ghi "-> ĐỎ (đạt)", và hai chuyện quan
+    # trọng đều không nói ra được:
+    #
+    #   nền đỏ  -> "1 failed, 39 passed" mà không biết bài nào. Ngày 03/09 gặp
+    #              đúng ca ấy hai lần liên tiếp; phải chạy lại tay mới biết, rồi
+    #              lần chạy lại nó XANH nên mất luôn dấu vết.
+    #   gieo đỏ -> một phép gieo làm đỏ một bài CHẲNG LIÊN QUAN vẫn được tính là
+    #              "cửa bắt được". Cùng họ với luật "phán quyết phải đi kèm phép
+    #              đo tạo ra nó".
+    bai_do_nen: list[str] = field(default_factory=list)
+    bai_do: dict[str, list[str]] = field(default_factory=dict)
 
     @property
     def ma_thoat(self) -> int:
@@ -170,7 +183,34 @@ def _don_pycache(cac_tep: Sequence[Path]) -> None:
                 pass
 
 
-def _chay(lenh: Sequence[str], goc: Path, tom_tat) -> tuple[int, str]:
+def ten_bai_do(dau_ra: str) -> list[str]:
+    """Bóc tên các bài ĐỎ ra khỏi đầu ra thô. Không thấy thì trả danh sách rỗng.
+
+    Đo 03/09/2026 chứ không đoán: `pytest -q` **có sẵn** khối `short test summary
+    info` với dòng `FAILED tệp::tên - lý do` (mặc định `-r fE`), nên không cần
+    bắt người gọi thêm `-rf`.
+
+    Rỗng KHÔNG có nghĩa là không có bài nào đỏ — có thể là không bóc được (khung
+    test khác, đầu ra bị cắt). Chỗ gọi phải nói ra được sự khác nhau ấy, đừng
+    gộp "không bóc được" vào "không có".
+    """
+    ra: list[str] = []
+    for d in dau_ra.splitlines():
+        d = d.strip()
+        # pytest: "FAILED tests/x.py::test_y - AssertionError" · "ERROR tests/x.py"
+        if d.startswith(("FAILED ", "ERROR ")):
+            ten = d.split(None, 1)[1] if " " in d else d
+            ra.append(ten.split(" - ")[0].strip())
+        # node --test (TAP): "not ok 3 - ten bai"
+        elif d.startswith("not ok "):
+            phan = d.split(" - ", 1)
+            if len(phan) == 2:
+                ra.append(phan[1].strip())
+    # Giữ thứ tự, bỏ trùng.
+    return list(dict.fromkeys(ra))
+
+
+def _chay(lenh: Sequence[str], goc: Path, tom_tat) -> tuple[int, str, list[str]]:
     import os
 
     moi_truong = dict(os.environ)
@@ -186,8 +226,20 @@ def _chay(lenh: Sequence[str], goc: Path, tom_tat) -> tuple[int, str]:
             encoding="utf-8", errors="replace", cwd=str(goc), env=moi_truong,
         )
     except Exception as e:                                   # noqa: BLE001
-        return -1, f"KHÔNG CHẠY ĐƯỢC LỆNH: {type(e).__name__}: {e}"
-    return r.returncode, tom_tat((r.stdout or "") + "\n" + (r.stderr or ""))
+        return -1, f"KHÔNG CHẠY ĐƯỢC LỆNH: {type(e).__name__}: {e}", []
+    tho = (r.stdout or "") + "\n" + (r.stderr or "")
+    return r.returncode, tom_tat(tho), ten_bai_do(tho)
+
+
+def _in_bai_do(noi, ten: Sequence[str], tran: int = 6) -> None:
+    """In tên bài đỏ dưới dòng bảng. Không có tên thì NÓI RA là không bóc được."""
+    if not ten:
+        noi("      đỏ ở: (không bóc được tên bài từ đầu ra)")
+        return
+    for t in ten[:tran]:
+        noi(f"      đỏ ở: {t[:96]}")
+    if len(ten) > tran:
+        noi(f"      đỏ ở: … và {len(ten) - tran} bài nữa")
 
 
 def _tom_tat_mac_dinh(dau_ra: str) -> str:
@@ -228,11 +280,16 @@ def chay_gieo(
             _in(*a)
 
     try:
-        ma, tt = _chay(lenh, goc, tom_tat)
+        ma, tt, do = _chay(lenh, goc, tom_tat)
         kq.nen_xanh = (ma == 0)
         kq.dong_nen = tt
+        kq.bai_do_nen = do
         noi(f"  {'chưa gieo gì':<52} mã thoát {ma}  {tt}")
         if not kq.nen_xanh:
+            # Nền đỏ là lúc CẦN tên bài nhất: gieo dừng ngay ở đây, và nếu lần
+            # chạy sau nó xanh trở lại thì dấu vết mất luôn. Gặp đúng ca ấy hai
+            # lần ngày 03/09 — phải chạy lại tay mới biết, rồi không dựng lại được.
+            _in_bai_do(noi, do)
             noi("\n  *** NỀN ĐÃ ĐỎ SẴN — gieo lúc này không nói lên điều gì. Dừng. ***")
             return kq
         noi("")
@@ -249,10 +306,11 @@ def chay_gieo(
             ghi(d, moi, goc_kieu[ph.tep])
             _don_pycache([d])
             try:
-                ma, tt = _chay(lenh, goc, tom_tat)
+                ma, tt, do = _chay(lenh, goc, tom_tat)
             finally:
                 ghi(d, cu, goc_kieu[ph.tep])
                 _don_pycache([d])
+            kq.bai_do[ph.ten] = do
             if ma == 0:
                 kq.cua_mu.append(ph.ten)
                 ket = "*** VẪN XANH — CỬA MÙ ***"
@@ -260,9 +318,14 @@ def chay_gieo(
                 ket = "ĐỎ (đạt)"
             kq.hang.append((ph.ten, ket, tt))
             noi(f"  {ph.ten:<52} mã thoát {ma}  {tt}  -> {ket}")
+            # In tên ngay cả khi đạt: "ĐỎ" chưa đủ, phải đỏ VÌ ĐÚNG LÝ DO. Một
+            # phép gieo làm đỏ một bài chẳng liên quan trông y hệt một phép gieo
+            # bắt trúng — và nền đã xanh nên mọi bài đỏ ở đây đều do phép gieo.
+            if ma != 0:
+                _in_bai_do(noi, do)
 
         noi("")
-        ma, tt = _chay(lenh, goc, tom_tat)
+        ma, tt, _ = _chay(lenh, goc, tom_tat)
         noi(f"  {'trả mã về nguyên trạng':<52} mã thoát {ma}  {tt}")
     finally:
         # Trả về, rồi CHỨNG MINH là đã trả về — so băm, không tin vào việc mình vừa ghi.

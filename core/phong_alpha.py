@@ -65,6 +65,21 @@ TRAN_RENDER_GIAY = 300
 # Khung đen liên tục quá ngưỡng này là hỏng, theo đặc tả.
 TRAN_DEN_GIAY = 2.0
 
+# ---- CỬA CHẤT LƯỢNG, thêm 02/09/2026 ----
+#
+# Bốn cửa cũ (khung · thời lượng · có tiếng · không đen) chỉ đo ĐỊNH DẠNG. Bản
+# Alpha đầu tiên đỗ cả bốn, rồi đo ra:
+#
+#     1.455 khung · 24 fps · bitrate video 30 kb/s
+#     số lần đổi cảnh   2
+#     đứng yên          14,08 s · 14,12 s · 14,12 s
+#
+# Bốn tấm ảnh tĩnh, mỗi tấm giữ 15 giây. Một slideshow chữ qua được cả bốn cửa
+# cũ. Hai ngưỡng dưới đây chép từ `KY_LUAT_THUC_THI.md` Chương II mục 2, đặt
+# TRƯỚC khi sửa dây chuyền — nên chúng làm video hiện tại RỚT, và rớt là đúng.
+TRAN_TINH_GIAY = 5.0
+SO_DOI_CANH_TOI_THIEU = 8
+
 # Phông phải có dấu tiếng Việt. Segoe UI có; nếu máy không có thì thử lần lượt.
 PHONG_UNG_VIEN = ("segoeui.ttf", "arial.ttf", "tahoma.ttf", "calibri.ttf")
 
@@ -268,6 +283,60 @@ def kiem_video(mp4: Path) -> Dict[str, Any]:
     kq["so"]["doan_den"] = len(den)
     if den:
         kq["vi_sao"].append(f"{len(den)} đoạn đen ≥ {TRAN_DEN_GIAY}s")
+
+    # ---- cửa CHẤT LƯỢNG ----
+    # Đứng yên quá lâu: `freezedetect` báo từng đoạn kèm thời lượng.
+    r4 = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(mp4),
+                         "-vf", f"freezedetect=n=-60dB:d={TRAN_TINH_GIAY}",
+                         "-an", "-f", "null", "-"], capture_output=True, text=True,
+                        encoding="utf-8", errors="replace", timeout=180)
+    #
+    # CHỖ NÀY TỪNG ĐỂ LỌT CA TỆ NHẤT. `freezedetect` chỉ in `freeze_duration`
+    # khi một đoạn đứng yên KẾT THÚC. Video đứng yên suốt từ đầu tới cuối thì
+    # đoạn ấy không bao giờ kết thúc — đo được: một video xanh trơn 60 s /
+    # 1.500 khung cho **0** dòng `freeze_duration`, trong khi slideshow của
+    # Alpha (có đổi thẻ) cho 3 dòng. Nên chỉ đếm `freeze_duration` là bỏ sót
+    # đúng thứ tĩnh nhất.
+    #
+    # Sửa: đọc cả `freeze_start`; đoạn nào mở mà không đóng thì tính dài tới
+    # hết video.
+    tinh = [float(x) for x in
+            re.findall(r"freeze_duration:\s*([\d.]+)", r4.stderr or "")]
+    mo = [float(x) for x in re.findall(r"freeze_start:\s*([\d.]+)", r4.stderr or "")]
+    dong_lai = re.findall(r"freeze_end:\s*([\d.]+)", r4.stderr or "")
+    if len(mo) > len(dong_lai) and dai > 0:
+        tinh.append(round(dai - mo[-1], 2))
+    kq["so"]["dung_yen_lau_nhat"] = round(max(tinh), 2) if tinh else 0.0
+    if tinh:
+        kq["vi_sao"].append(
+            f"{len(tinh)} đoạn đứng yên > {TRAN_TINH_GIAY:.0f}s "
+            f"(lâu nhất {max(tinh):.1f}s)")
+
+    # Đổi cảnh: đếm bằng `scdet`, KHÔNG bằng `select='gt(scene,…)',showinfo`.
+    #
+    # Bản đầu dùng `select+showinfo` và luôn ra **0**, kể cả trên một video cắt
+    # cảnh liên tục — `showinfo` chỉ in hai dòng cấu hình, không in dòng nào cho
+    # khung được chọn. Đếm bằng `grep -c showinfo` thì ra 2, và tôi suýt nhận
+    # con số ấy làm "2 lần đổi cảnh". Nó là 2 dòng cấu hình.
+    #
+    # Hiệu chuẩn bằng ca đối chứng — video 8 màu khác hẳn nhau, tức 7 lần cắt:
+    #
+    #     scdet threshold=3 · 6 · 10 · 14   ->  đếm được 6, ổn định
+    #     slideshow 4 thẻ của Alpha         ->  đếm được 0
+    #
+    # Lệch 1 so với số cắt thật (khung đầu không tính là một lần đổi). Còn số 0
+    # của Alpha thì đúng chứ không phải máy đo mù: bốn thẻ cùng gradient, cùng
+    # bố cục, chỉ khác chữ — với bộ dò cảnh thì cả video là MỘT cảnh.
+    r5 = subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "debug",
+                         "-i", str(mp4), "-vf", "scdet=threshold=10",
+                         "-an", "-f", "null", "-"], capture_output=True, text=True,
+                        encoding="utf-8", errors="replace", timeout=180)
+    doi_canh = len(re.findall(r"lavfi\.scd\.time", r5.stderr or ""))
+    kq["so"]["doi_canh"] = doi_canh
+    if doi_canh < SO_DOI_CANH_TOI_THIEU:
+        kq["vi_sao"].append(
+            f"chỉ {doi_canh} lần đổi cảnh, cần ≥ {SO_DOI_CANH_TOI_THIEU} "
+            "— video đang là slideshow")
 
     kq["dat"] = not kq["vi_sao"]
     return kq

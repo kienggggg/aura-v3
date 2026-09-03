@@ -95,6 +95,26 @@ Mọi lần chạy thử nghiệm phải được lưu cô lập trong `data/evi
   - `ffprobe` xác nhận có luồng video 720×1280 và luồng audio non-silence (`mean_level`, `max_level` hợp lệ).
   - Filter `blackdetect` xác nhận không có khung hình đen liên tục vượt quá 2 giây.
   - Video mở xem được bình thường trên các trình phát media.
+* **Cửa CHẤT LƯỢNG (thêm 02/09/2026 — bốn cửa trên chỉ đo ĐỊNH DẠNG):**
+  - `freezedetect` xác nhận **không đoạn nào đứng yên quá 5 giây**.
+  - Số lần **đổi cảnh ≥ 8** trên toàn video (`select='gt(scene,0.3)'`).
+
+  > Vì sao thêm. Bản Alpha đầu tiên ĐỖ cả bốn cửa định dạng — 720×1280,
+  > 60,62 s, có tiếng, 0 khung đen — nhưng đo ra:
+  >
+  > ```
+  > 1.455 khung · 24 fps · bitrate video 30 kb/s
+  > số lần đổi cảnh   2
+  > đứng yên          14,08 s · 14,12 s · 14,12 s
+  > ```
+  >
+  > Tức là bốn tấm ảnh tĩnh, mỗi tấm giữ 15 giây. Một slideshow chữ vẫn qua
+  > được cả bốn cửa cũ. Hai ngưỡng này đặt **TRƯỚC** khi sửa mã, và chúng làm
+  > video hiện tại **RỚT** — rớt là đúng, vì nó nói ra chặng nào còn thiếu.
+  >
+  > Ngưỡng lấy từ đâu: 60 s ÷ 8 = 7,5 s một lần đổi cảnh, là mức tối thiểu để
+  > một video dọc không đọc ra thành slideshow. Còn 5 giây là ngưỡng riêng cho
+  > TỪNG đoạn — 8 lần đổi vẫn có thể giấu một quãng đứng yên 20 giây.
 
 ### 3. PHÒNG SCOUT (Tra cứu Dữ kiện Mới & Source Receipt)
 * **Đầu vào:** Tối thiểu 3 câu hỏi cần dữ kiện mới.

@@ -69,7 +69,18 @@ class TestNoiBoApp(AioHTTPTestCase):
             data = await resp.json()
             assert "task_id" in data
             assert data["tra_loi"]
-            assert data["status"] in ("PASS", "KHONG_CHAY_DUOC"), data["status"]
+            # BA trạng thái, không phải hai. `FAIL` xuất hiện từ 02/09 chiều khi
+            # Alpha bắt đầu tự chấm bằng verifier riêng: nó CHẠY được, để lại 6
+            # hiện vật thật, nhưng video ra là slideshow nên verifier bác.
+            #
+            #   PASS             để lại byte, và không phòng nào tự bác
+            #   FAIL             chạy được, có hiện vật, nhưng verifier bác
+            #   KHONG_CHAY_DUOC  không để lại byte nào
+            #
+            # Gộp `FAIL` vào `KHONG_CHAY_DUOC` là mất phân biệt giữa "chưa làm"
+            # và "làm rồi nhưng chưa đủ hay" — đúng lỗi mà cả tệp này sinh ra
+            # để chống.
+            assert data["status"] in ("PASS", "FAIL", "KHONG_CHAY_DUOC"), data["status"]
             # Hai trường này phải có LUÔN LUÔN, không chỉ ở nhánh đỗ. Gieo thử
             # bắt được bản đầu: bỏ hẳn chúng khỏi phản hồi mà cửa vẫn xanh, vì
             # phép kiểm nằm bên trong `if status == "PASS"` — nhánh không chạy.
@@ -77,6 +88,11 @@ class TestNoiBoApp(AioHTTPTestCase):
             if data["status"] == "PASS":
                 # Đỗ thì phải chỉ ra được BẰNG CHỨNG, không được đỗ suông.
                 assert data["bang_chung"] or not data["artifacts_thieu"], data
+            elif data["status"] == "FAIL":
+                # Rớt thì phải có hiện vật để soi, và phải nói RỚT VÌ SAO.
+                assert data["artifacts"], "FAIL mà không để lại gì để soi"
+                assert data["bang_chung"], "FAIL mà không có byte nào trên đĩa"
+                assert not data["artifacts_thieu"], data["artifacts_thieu"]
             else:
                 # Chưa chạy thì câu trả lời phải NÓI RA, không để người đọc tự suy.
                 assert "KHÔNG CHẠY ĐƯỢC" in data["tra_loi"], data["tra_loi"][:120]

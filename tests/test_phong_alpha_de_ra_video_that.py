@@ -42,8 +42,9 @@ from pathlib import Path
 import pytest
 
 from core.paths import PROJECT_ROOT
-from core.phong_alpha import (CAO, DAI_MAX, DAI_MIN, RONG, SO_THE_TOI_THIEU,
-                              _tim_phong, kiem_video, sinh_the_hinh)
+from core.phong_alpha import (CAO, DAI_MAX, DAI_MIN, RONG, SO_DOI_CANH_TOI_THIEU,
+                              SO_THE_TOI_THIEU, TRAN_TINH_GIAY, _tim_phong,
+                              kiem_video, sinh_the_hinh)
 
 # NGUỒN SỰ THẬT ĐỘC LẬP — chép tay từ `KY_LUAT_THUC_THI.md` Chương II mục 2,
 # KHÔNG import từ mã đang bị kiểm.
@@ -55,6 +56,8 @@ from core.phong_alpha import (CAO, DAI_MAX, DAI_MIN, RONG, SO_THE_TOI_THIEU,
 DAC_TA_RONG, DAC_TA_CAO = 720, 1280
 DAC_TA_DAI_MIN, DAC_TA_DAI_MAX = 55.0, 65.0
 DAC_TA_SO_THE_TOI_THIEU = 3
+DAC_TA_TRAN_TINH_GIAY = 5.0
+DAC_TA_SO_DOI_CANH = 8
 
 CO_FFMPEG = bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
 can_ffmpeg = pytest.mark.skipif(not CO_FFMPEG, reason="máy này không có ffmpeg/ffprobe")
@@ -95,6 +98,8 @@ def test_hang_so_trong_ma_khop_DAC_TA():
     assert (RONG, CAO) == (DAC_TA_RONG, DAC_TA_CAO)
     assert (DAI_MIN, DAI_MAX) == (DAC_TA_DAI_MIN, DAC_TA_DAI_MAX)
     assert SO_THE_TOI_THIEU >= DAC_TA_SO_THE_TOI_THIEU
+    assert TRAN_TINH_GIAY == DAC_TA_TRAN_TINH_GIAY
+    assert SO_DOI_CANH_TOI_THIEU == DAC_TA_SO_DOI_CANH
 
 
 @can_ffmpeg
@@ -185,11 +190,17 @@ def test_hien_vat_mang_sha256_TINH_TU_DIA(tmp_path):
 
 @pytest.mark.slow
 @can_ffmpeg
-def test_dung_video_that_va_qua_verifier(tmp_path):
-    """Chạy nguyên dây chuyền. Mất ~6 giây và cần giọng OneCore.
+def test_day_chuyen_chay_that_nhung_CHUA_QUA_cua_chat_luong(tmp_path):
+    """Trạng thái THẬT hôm nay: dựng được, nhưng chưa đủ hay.
 
-    Không có giọng thì KHÔNG ĐO ĐƯỢC — bỏ qua, chứ không tính là hỏng. Gộp hai
-    thứ ấy là để "chưa đo được" đội lốt "đã đo, không đạt".
+    Bài này TRƯỚC 02/09 chiều khẳng định `trang_thai == "PASS"`. Rồi hai cửa
+    chất lượng được thắt vào (`KY_LUAT_THUC_THI.md` Chương II mục 2) và dây
+    chuyền RỚT — đúng như dự tính, vì nó đẻ ra bốn ảnh tĩnh mỗi ảnh giữ 15 giây.
+
+    Giữ bài này ở trạng thái `FAIL` là cố ý. Nó nói ra CHÍNH XÁC chặng nào còn
+    thiếu, thay vì để một slideshow đội lốt "video đạt chuẩn". Ngày nào dây
+    chuyền có chuyển động thật thì bài này phải được sửa cùng lúc — và lúc ấy
+    con số ở đây là bằng chứng cho biết nó đã tiến bao xa.
     """
     from core.phong_alpha import dung_video
 
@@ -197,41 +208,31 @@ def test_dung_video_that_va_qua_verifier(tmp_path):
     if kq["trang_thai"] == "KHONG_CHAY_DUOC":
         pytest.skip(f"không đo được trên máy này: {kq['vi_sao']}")
 
-    assert kq["trang_thai"] == "PASS", kq["vi_sao"]
+    # 1. Dây chuyền CHẠY được — không phải "chưa chạy".
+    assert kq["trang_thai"] == "FAIL", kq["vi_sao"]
+    loai = [a["type"] for a in kq["artifacts"]]
+    assert loai.count("VIDEO") == 1 and loai.count("AUDIO") == 1
+    assert loai.count("IMAGE") >= DAC_TA_SO_THE_TOI_THIEU
+    for a in kq["artifacts"]:
+        f = Path(a["path"])
+        d = f if f.is_absolute() and f.is_file() else (PROJECT_ROOT / a["path"])
+        if not d.is_file():
+            d = tmp_path / "ra" / a["name"]
+        assert d.is_file(), a
+        assert hashlib.sha256(d.read_bytes()).hexdigest() == a["sha256"], a["name"]
+
+    # 2. Bốn cửa ĐỊNH DẠNG vẫn đỗ.
     so = kq["kiem"]["so"]
     assert (so["rong"], so["cao"]) == (DAC_TA_RONG, DAC_TA_CAO)
     assert DAC_TA_DAI_MIN <= so["giay"] <= DAC_TA_DAI_MAX, so
     assert so["doan_den"] == 0
     assert so["peak_db"] not in (None, "-inf")
 
-    loai = [a["type"] for a in kq["artifacts"]]
-    assert loai.count("VIDEO") == 1 and loai.count("AUDIO") == 1
-    assert loai.count("IMAGE") >= DAC_TA_SO_THE_TOI_THIEU
-    for a in kq["artifacts"]:
-        f = PROJECT_ROOT / a["path"] if not Path(a["path"]).is_absolute() else Path(a["path"])
-        d = f if f.is_file() else (tmp_path / "ra" / a["name"])
-        assert d.is_file(), a
-        assert hashlib.sha256(d.read_bytes()).hexdigest() == a["sha256"], a["name"]
-
-
-def test_phong_KHONG_duoc_tu_cham_PASS_khi_verifier_bac(tmp_path, monkeypatch):
-    """`KY_LUAT_THUC_THI.md` Chương I: *worker không được tự chấm PASS*.
-
-    Gieo thử bắt được bản đầu: bắt `dung_video` luôn trả `PASS` mà cửa vẫn
-    xanh, vì bài chạy-thật dùng một video ĐẠT nên hai đường cho cùng kết quả.
-    Ở đây ép verifier bác, rồi xem phòng có dám nói đỗ không.
-    """
-    import core.phong_alpha as pa
-
-    monkeypatch.setattr(pa, "kiem_video",
-                        lambda mp4: {"dat": False, "vi_sao": ["ép bác"], "so": {}})
-    kq = pa.dung_video(tmp_path / "ra")
-    if kq["trang_thai"] == "KHONG_CHAY_DUOC":
-        pytest.skip(f"không đo được: {kq['vi_sao']}")
-    assert kq["trang_thai"] == "FAIL", (
-        f"verifier bác mà phòng vẫn khai {kq['trang_thai']!r}"
-    )
-    assert "ép bác" in kq["vi_sao"]
+    # 3. Cửa CHẤT LƯỢNG là thứ làm nó rớt, và rớt vì đúng lý do.
+    assert so["dung_yen_lau_nhat"] > DAC_TA_TRAN_TINH_GIAY, so
+    assert so["doi_canh"] < DAC_TA_SO_DOI_CANH, so
+    assert any("đứng yên" in l for l in kq["kiem"]["vi_sao"])
+    assert any("slideshow" in l for l in kq["kiem"]["vi_sao"])
 
 
 def test_don_luot_cu_giu_dung_so_luot(tmp_path):
@@ -287,3 +288,91 @@ def test_dung_video_CO_GOI_don_luot_cu(tmp_path):
         "dây chuyền không dọn lượt cũ — data/alpha sẽ phình mãi, và "
         "/api/dispatch quét thư mục ấy hai lần mỗi lượt"
     )
+
+
+# ---------------------------------------------------- cửa CHẤT LƯỢNG, 02/09/2026
+
+@can_ffmpeg
+def test_verifier_bac_slideshow_dung_yen_qua_lau(tmp_path):
+    """Một ảnh tĩnh giữ nguyên 60 giây qua được CẢ BỐN cửa định dạng.
+
+    Đó chính là thứ Alpha đẻ ra ở bản đầu: 720×1280, 60,62 s, có tiếng, 0 khung
+    đen — mà đo ra 3 đoạn đứng yên 14,1 s và bitrate video 30 kb/s.
+    """
+    v = _lam_video(tmp_path / "tinh.mp4", DAC_TA_RONG, DAC_TA_CAO, 60,
+                   "blue", "sine=f=440")
+    k = kiem_video(v)
+    assert not k["dat"]
+    assert any("đứng yên" in l for l in k["vi_sao"]), k["vi_sao"]
+    assert k["so"]["dung_yen_lau_nhat"] > DAC_TA_TRAN_TINH_GIAY, k["so"]
+    # Bốn cửa ĐỊNH DẠNG vẫn đỗ — đó là lý do phải có cửa chất lượng.
+    assert (k["so"]["rong"], k["so"]["cao"]) == (DAC_TA_RONG, DAC_TA_CAO)
+    assert k["so"]["doan_den"] == 0
+    assert k["so"]["peak_db"] not in (None, "-inf")
+
+
+@can_ffmpeg
+def test_may_dem_doi_canh_KHONG_MU(tmp_path):
+    """Ca đối chứng bắt buộc: máy đếm phải phân biệt được tĩnh với động.
+
+    Bản đầu đếm bằng `select='gt(scene,…)',showinfo` và luôn ra **0**, kể cả
+    trên video cắt cảnh liên tục — nên "0 lần đổi cảnh" của Alpha có thể chỉ là
+    máy đo mù. Ở đây dựng một video 8 màu khác hẳn nhau (7 lần cắt thật) và bắt
+    máy đếm phải thấy.
+    """
+    doan = []
+    for i, mau in enumerate(("red", "green", "blue", "yellow",
+                             "magenta", "cyan", "white", "orange"), 1):
+        p = tmp_path / f"p{i}.mp4"
+        subprocess.run(
+            ["ffmpeg", "-v", "error", "-y", "-f", "lavfi",
+             "-i", f"color=c={mau}:s={DAC_TA_RONG}x{DAC_TA_CAO}:d=1.5",
+             "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
+             str(p)], capture_output=True, timeout=120)
+        assert p.is_file(), f"không dựng được {p.name}"
+        doan.append(p)
+
+    ds = tmp_path / "l.txt"
+    ds.write_text("\n".join(f"file '{d.name}'" for d in doan) + "\n",
+                  encoding="utf-8")
+    dong = tmp_path / "dong.mp4"
+    subprocess.run(
+        ["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(ds),
+         "-f", "lavfi", "-i", "sine=f=440:d=12", "-c:v", "libx264",
+         "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-c:a", "aac",
+         "-shortest", str(dong)],
+        cwd=str(tmp_path), capture_output=True, timeout=300)
+    assert dong.is_file()
+
+    tinh = _lam_video(tmp_path / "tinh.mp4", DAC_TA_RONG, DAC_TA_CAO, 12,
+                      "blue", "sine=f=440")
+
+    n_dong = kiem_video(dong)["so"]["doi_canh"]
+    n_tinh = kiem_video(tinh)["so"]["doi_canh"]
+    assert n_dong >= 5, (
+        f"video 7 lần cắt thật mà máy chỉ đếm {n_dong} — máy đếm đang mù, "
+        "nên con số 0 của slideshow không nói lên điều gì"
+    )
+    assert n_tinh == 0, f"video một màu tĩnh mà đếm ra {n_tinh} lần đổi cảnh"
+    assert n_dong > n_tinh
+
+
+@can_ffmpeg
+def test_video_dung_yen_SUOT_khong_duoc_lot(tmp_path):
+    """Ca tệ nhất từng LỌT qua cửa.
+
+    `freezedetect` chỉ in `freeze_duration` khi một đoạn đứng yên KẾT THÚC. Video
+    đứng yên suốt từ đầu tới cuối thì đoạn ấy không bao giờ kết thúc — đo được:
+    video xanh trơn 60 s / 1.500 khung cho **0** dòng `freeze_duration`, còn
+    slideshow của Alpha (có đổi thẻ) cho 3 dòng. Chỉ đếm `freeze_duration` là
+    bỏ sót đúng thứ tĩnh nhất.
+    """
+    v = _lam_video(tmp_path / "xanh.mp4", DAC_TA_RONG, DAC_TA_CAO, 60,
+                   "blue", "sine=f=440")
+    k = kiem_video(v)
+    assert not k["dat"]
+    assert k["so"]["dung_yen_lau_nhat"] >= 55, (
+        f"video tĩnh HOÀN TOÀN mà chỉ đo được {k['so']['dung_yen_lau_nhat']}s "
+        "đứng yên — đang bỏ sót đoạn không có điểm kết thúc"
+    )
+    assert any("đứng yên" in l for l in k["vi_sao"]), k["vi_sao"]

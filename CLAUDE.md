@@ -402,6 +402,29 @@ Và ca đối chứng ấy suýt sai vì tiếc thời gian: dùng câu bốn m�
 thì bản trộn ra **−29,9 LUFS** (trần −18…−12), nên đối chứng đỏ vì độ ồn chứ
 không vì chuyện đang xét — rẻ hơn 2 phút, nhưng đo sai biến.
 
+### Bẫy tautological không chừa người vừa viết nó ra
+
+Ngày 02/09/2026 tôi ghi vào tệp này: cửa canh khẳng định `(width, height) ==
+(RONG, CAO)` bằng **chính hằng số mà mã dùng**, nên gieo `RONG, CAO = 640, 1136`
+thì hai vế cùng đổi và cửa vẫn xanh.
+
+Ngày 04/09, viết cửa canh cho trần số bước của `/api/pipeline/custom`, tôi dùng:
+
+```python
+_chay_custom(monkeypatch, [{"phong_id": "omega"}] * (_api.TRAN_BUOC_TUY_BIEN + 1))
+```
+
+Gieo `TRAN_BUOC_TUY_BIEN = 8 -> 999` thì bài test gửi 1000 bước, vẫn quá trần,
+vẫn xanh. **Hai vế cùng đổi.** Cùng một bẫy, cách nhau hai ngày, do cùng một
+người vừa viết luật chống nó.
+
+Sửa: chép tay `DAC_TA_TRAN_BUOC = 8` từ `KY_LUAT_THUC_THI.md` vào bài test, và
+thêm một bài đối chiếu hằng số trong mã với hằng số ấy. Gieo lại: đỏ.
+
+**Đọc luật không miễn nhiễm với luật.** Thứ bắt được nó là phép gieo, không phải
+trí nhớ. Mỗi lần viết một khẳng định có hằng số, hỏi: *nếu tôi đổi hằng số trong
+mã, vế bên kia có đổi theo không?*
+
 ### Một cổng chưa từng cho ai đi qua thì chưa chứng minh được gì
 
 Ngày 04/09/2026 vá `/api/polyglot/run` — đường **chạy mã tuỳ ý**. Đo cái lỗ

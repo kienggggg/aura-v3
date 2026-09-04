@@ -391,6 +391,23 @@ Latency    42 ms               chưa từng đo
 - Tự động che giấu mọi dạng key/token: Bearer tokens, OpenAI/Gemini/Anthropic/OpenRouter API keys, Basic Auth credentials trong URL.
 - Test bộ lọc bằng token giả; tuyệt đối không đưa key thật vào test fixture hoặc log commit.
 
+### Chuỗi phòng TÙY BIẾN (`/api/pipeline/custom`, 04/09/2026)
+
+Người gọi tự đặt danh sách bước, nên ba thứ chuỗi cố định không cần mà chuỗi này
+cần:
+
+* **Trần 8 bước.** Một lượt `aura` tốn tới 273 giây; 20 bước là hơn một tiếng
+  rưỡi chẹn một luồng. Quá trần thì chặn **trước khi chạy**, trả
+  `KHONG_CHAY_DUOC` + HTTP 400.
+* **Tên phòng bịa là `FAIL`**, không phải bỏ qua im lặng và tuyệt đối không phải
+  `PASS`. Đây là chỗ duy nhất một cái tên do người ngoài đặt đi vào hệ thống.
+* **Danh sách rỗng là `KHONG_CHAY_DUOC`**, không phải `PASS`. Chạy 0 bước rồi
+  báo đạt là đúng bệnh mà cả chương này sinh ra để chống.
+
+Bốn trạng thái mỗi bước và phép chấm cả chuỗi dùng CHUNG với `/api/pipeline/run`
+(`chay_chuoi_phong`, `trang_thai_chuoi`) — hai bản riêng thì chúng trôi khỏi
+nhau, và bản ít người nhìn hơn sẽ là bản mục.
+
 ### Cổng vào của `/api/polyglot/run` (04/09/2026)
 
 Đường này **chạy mã tuỳ ý** trong tiến trình con. Đo trước khi vá, bằng một

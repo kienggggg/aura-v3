@@ -731,6 +731,85 @@ nguyên nhân, hay cả hai cùng là hệ quả của thứ thứ ba?** Câu �
 được thứ mà bốn lần thử tái hiện không bắt được — vì tái hiện trên máy rảnh là
 đo đúng cái biến đã tắt.
 
+### Cửa chấm không nhận thứ nó phải chấm
+
+Ngày 04/09/2026, chạy thật một lượt `aura` → `alpha` cho đề *"Vì sao một bài
+test luôn xanh thì chưa chứng minh được gì"*. AURA trả về một bài giảng về
+**gian lận thi cử và điểm số**, và nó **ĐẠT**.
+
+Không phải cửa mù. Cửa **không thể** nhìn:
+
+```
+chữ ký hàm: do_kich_ban(van_ban: str) -> ...
+                        ^ không có `chu_de`
+```
+
+Nó đếm từ, đếm câu khác nhau, đếm lặp — ba phép đúng, trên ba thứ không phải
+thứ đang hỏi. Ca đối chứng cứng: một bài về **nấu phở** chấm cho đề trên ra
+`DAT` (244 từ · 17 câu khác · lặp 1), trong khi một bài **đúng đề** ra
+`KHONG_DAT` vì 273 từ. **Cửa nhận bài lạc đề và bác bài đúng đề.**
+
+Bệnh này khác bệnh "cửa mù". Cửa mù là cửa có đường dây nhưng đứt ở đâu đó —
+gieo lỗi thì bắt được. Cửa này gieo bao nhiêu cũng không bắt được, vì dữ kiện
+cần thiết **chưa từng đi vào hàm**. Muốn thấy nó phải nhìn CHỮ KÝ, không nhìn
+thân hàm. Câu hỏi rẻ: *hàm này có nhận đủ thứ để trả lời câu nó đang trả lời
+không?*
+
+**Ba thang đã CHẠY THỬ trước khi chọn, không thang nào dùng được:**
+
+```
+embedding cosine     /api/embed -> "This server does not support embeddings"
+trùng từ theo tỉ lệ  đề "nấu phở bò":  đúng đề 0,33 · lạc đề 0,17
+                     đề "bài test":    đúng đề 0,67 · bài lạc 0,33
+                     -> cùng con số 0,33 vừa đúng vừa sai tuỳ đề
+hỏi model            chính model vừa viết lại chấm bài mình — hình dạng Hermes
+```
+
+Nên **đổi hợp đồng thay vì dựng cái cân**: không hỏi *"bài này có ĐÚNG đề
+không"* — câu ấy không có thang đo được trên máy này — mà hỏi *"bài này có NÊU
+đề ra không"*. Câu sau tất định, không có ngưỡng phải hiệu chuẩn. Khi phần khó
+là cái cân và cái cân chưa dựng được, đổi câu hỏi sang thứ cân được là một nước
+đi hợp lệ — miễn là **nói rõ mình đã đổi**, và ghi lại thứ vẫn chưa chặn được.
+
+**Bỏ dấu là bệnh `x in y` đổi áo.** Tiếng Việt đơn âm: bỏ dấu thì `bò` `bỏ` `bó`
+`bọ` cùng thành `bo`. Giữ dấu còn trả công ngay trong lượt viết: bài test của
+tôi kỳ vọng đề trên cho `["bài","test","xanh"]`, máy trả thêm `["chứng","minh"]`
+— và **máy đúng**. Danh sách hư từ có `chúng` và `mình`; bỏ dấu thì bốn chữ ấy
+thành hai, và từ khoá thật của đề bị vứt đi như hư từ.
+
+**Và cửa mới cũng có giới hạn của nó, phải nói ra cùng lúc với thành quả.** Nó
+so **TỪ**, không so **NGHĨA**. Lượt đo lời nhắc trả về câu mở *"Một lá **bài**
+được lật ra màu **xanh** lá cây."* — khớp hai từ khoá, cửa cho ĐẠT, trong khi
+`bài` là **lá bài** và `xanh` là màu lá cây. Tiếng Việt đơn âm nên đồng âm khác
+nghĩa là chuyện thường. Lượt ấy vẫn bị bác, nhưng bởi cửa ĐỘ DÀI — **một cửa
+khác bắt hộ không chứng minh được cửa này biết bắt.**
+
+**Và lời nhắc KHÔNG phải chỗ để vá.** Việc đầu tiên nghĩ tới là bảo model nhắc
+đề ngay câu mở. Thử ba cách, mỗi cách 5 hạt giống cố định:
+
+```
+lời cũ                            dài 4/5  đề 2/5  CẢ HAI 2/5
+"CÂU ĐẦU TIÊN phải nhắc tới ..."  dài 0/5  đề 0/5  CẢ HAI 0/5
+chèn vào mệnh đề đề tài           dài 2/5  đề 3/5  CẢ HAI 2/5
+mệnh đề ngắn ở cuối               dài 2/5  đề 3/5  CẢ HAI 2/5
+```
+
+Không bản nào mua được gì: cái gì giúp cửa đề thì lấy đi đúng chừng ấy ở cửa
+dài. Bản mệnh lệnh viết hoa còn đẩy từ/câu từ ~19 lên **21,7–24,3**, quá trần
+19,2 cả năm lượt, nên không lượt nào đi tới nổi cửa đề. Cùng hình dạng với lần
+03/09 ở ngay tệp ấy: thêm một ràng buộc vào lời nhắc thì model đổi cách viết
+theo kiểu mình không điều khiển được. **Máy canh vẫn là máy canh.**
+
+n=5 mỗi nhánh, nên `2/5` so `2/5` không chứng minh hai bản bằng nhau — nó chỉ
+nói ở n=5 chưa thấy khác biệt. Đủ để KHÔNG đổi; chưa đủ để nói đổi thì vô ích.
+
+**Thêm một trạng thái là phải đi lại mọi chỗ đọc trạng thái cũ.** Cửa mới
+fail-closed trước vòng lặp nên trả `"lan": []`, và **hai** chỗ trong
+`interface/noi_bo_api.py` đang đọc `lan[-1]`. Chỗ thứ nhất `IndexError` — lý do
+bác thành sự cố 500. Chỗ thứ hai `"; ".join(...)` trên danh sách rỗng, **không
+nổ**, chỉ trả một câu báo lỗi không có lý do nào trong đó — hỏng lặng hơn, nên
+nguy hơn. Vá một chỗ rồi tưởng xong là bệnh cũ; phải `grep` hết mọi chỗ đọc.
+
 ---
 
 ## 5. Viết mã ở đây

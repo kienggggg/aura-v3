@@ -720,3 +720,81 @@ def test_hai_pipeline_dung_CHUNG_bo_chay_chuoi():
     for ten in ("api_chay_pipeline", "api_pipeline_custom"):
         assert "chay_chuoi_phong" in _than_ham(ten), ten
         assert "trang_thai_chuoi" in _than_ham(ten), ten
+
+
+def test_aura_fail_closed_som_KHONG_lam_ca_chuoi_no_500(monkeypatch):
+    """`lan` RỖNG là trạng thái THẬT, và hai chỗ gọi từng đọc `lan[-1]`.
+
+    Từ 04/09/2026 cửa nêu đề fail-closed TRƯỚC vòng lặp khi đề tài không còn từ
+    nội dung nào — nên `viet_kich_ban` trả về `"lan": []`, không có lượt sinh
+    nào để kể. `_kq['lan'][-1]` ở đó là `IndexError`, và một lý do bác đọc được
+    biến thành sự cố 500.
+
+    Đây là cái giá của việc thêm một trạng thái mới: mọi chỗ đọc trạng thái cũ
+    phải được đi lại. Bài này canh cho lần sau.
+    """
+    import asyncio
+    import json as _json
+
+    import core.phong_alpha as _pa
+    import core.phong_noi_bo as _pnb
+    import core.viet_truyen as _vt
+    import interface.noi_bo_api as _api
+
+    def _aura_khong_do_duoc(chu_de, *a, **k):
+        return {"trang_thai": "KHONG_DO_DUOC", "van_ban": "",
+                "so": {"so_tu_de": 0}, "so_lan_thu": 0, "lan": [],
+                "vi_sao": [f"đề {chu_de!r} không còn từ nội dung nào"],
+                "ms": 1.0}
+
+    def _alpha(thu_muc, van_ban=None, *a, **k):
+        raise AssertionError("alpha không được chạy khi aura không ra kịch bản")
+
+    monkeypatch.setattr(_vt, "viet_kich_ban", _aura_khong_do_duoc)
+    monkeypatch.setattr(_pa, "dung_video", _alpha)
+    monkeypatch.setattr(_pnb, "PHONG", {})
+
+    r = asyncio.run(_api.api_pipeline_custom(_ReqGia(
+        {"ten": "thử", "chu_de": "vì sao thì mà là",
+         "cac_buoc": [{"phong_id": "aura"}, {"phong_id": "alpha"}]})))
+    d = _json.loads(r.body.decode("utf-8"))
+
+    assert r.status == 200, f"nổ {r.status} thay vì trả lý do đọc được"
+    assert d["status"] != "PASS", d["status"]
+    assert d["cac_buoc"][0]["trang_thai"] == "KHONG_DO_DUOC", d["cac_buoc"][0]
+    # Lý do phải LỌT RA NGOÀI, không được thành chuỗi rỗng hay `None`.
+    mo_ta = str(d["cac_buoc"][0].get("ket_qua", ""))
+    assert "không còn từ nội dung nào" in mo_ta, mo_ta
+    assert "None" not in mo_ta, f"lý do bác rơi mất: {mo_ta!r}"
+
+
+def test_dispatch_aura_lan_RONG_van_noi_ro_ly_do(monkeypatch):
+    """Chỗ vá THỨ HAI. Vá một chỗ rồi tưởng xong là bệnh cũ.
+
+    `viet_kich_ban` được gọi từ HAI đường: `chay_chuoi_phong` (bài ở trên) và
+    `api_dieu_phoi_phong`. Cả hai đều đọc `lan` của nó. Đường thứ hai không
+    `IndexError` — nó nối chuỗi rỗng — nên nó hỏng LẶNG HƠN: người dùng nhận
+    một câu báo lỗi không có lý do nào trong đó.
+    """
+    import asyncio
+    import json as _json
+
+    import core.viet_truyen as _vt
+    import interface.noi_bo_api as _api
+
+    def _aura_khong_do_duoc(chu_de, *a, **k):
+        return {"trang_thai": "KHONG_DO_DUOC", "van_ban": "",
+                "so": {"so_tu_de": 0}, "so_lan_thu": 0, "lan": [],
+                "vi_sao": [f"đề {chu_de!r} không còn từ nội dung nào"],
+                "ms": 1.0}
+
+    monkeypatch.setattr(_vt, "viet_kich_ban", _aura_khong_do_duoc)
+    r = asyncio.run(_api.api_dieu_phoi_phong(_ReqGia(
+        {"phong_id": "aura", "yeu_cau": "vì sao thì mà là"})))
+    d = _json.loads(r.body.decode("utf-8"))
+
+    assert r.status == 200, f"nổ {r.status} thay vì trả lý do đọc được"
+    assert d["status"] != "PASS", d["status"]
+    noi_dung = str(d)
+    assert "không còn từ nội dung nào" in noi_dung, (
+        f"lý do bác không lọt ra ngoài: {noi_dung[:300]}")

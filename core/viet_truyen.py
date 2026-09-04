@@ -135,6 +135,80 @@ def do_kich_ban(van_ban: str) -> Tuple[str, List[str], Dict[str, Any]]:
     return ("DAT" if not ly_do else "KHONG_DAT"), ly_do, so
 
 
+# Ngưỡng chép tay từ `KY_LUAT_THUC_THI.md` mục 1b, "Cửa NÊU ĐỀ".
+SO_TU_DE_TRONG_CAU_MO_MIN = 1
+
+# Hư từ tiếng Việt — bỏ ra khỏi đề tài vì chúng có mặt trong MỌI văn bản, nên
+# giữ lại thì câu mở nào cũng "nêu đề". Danh sách ĐÓNG, có dấu: bỏ dấu thì `bò`,
+# `bỏ`, `bó`, `bọ` cùng thành `bo` — đúng họ bệnh `x in y` đã trả giá bảy lần.
+HU_TU = frozenset("""
+là và của có không được một những này đó ấy thì mà nên cho đến từ với về
+trong ngoài trên dưới khi nếu vì bởi như sẽ đã đang cũng còn chỉ rất quá
+mình chúng ta họ tôi bạn ai gì sao thế nào mọi tất cả đều hay hơn nhất
+cái người việc làm ra vào lên xuống ở tại bằng theo sau trước giữa nửa
+phải cần nhiều ít hoặc càng đầu luôn chưa các để bị nó lại đi
+""".split())
+
+
+def _tu(van_ban: str) -> List[str]:
+    """Tách từ (âm tiết) — giữ nguyên dấu, hạ về chữ thường."""
+    return re.findall(r"\w+", van_ban.lower(), re.UNICODE)
+
+
+def tu_khoa_de(chu_de: str) -> List[str]:
+    """Từ nội dung của đề tài: bỏ hư từ, bỏ từ một ký tự. Giữ thứ tự, không lặp."""
+    ra: List[str] = []
+    for t in _tu(chu_de):
+        if len(t) > 1 and t not in HU_TU and t not in ra:
+            ra.append(t)
+    return ra
+
+
+def kiem_neu_de(chu_de: str, van_ban: str) -> Tuple[str, List[str], Dict[str, Any]]:
+    """Câu mở đầu có NÊU đề tài ra không. Trả `(trạng thái, lý do bác, số đo)`.
+
+    HÀM THUẦN, cùng lý do với `do_kich_ban`: để phép chấm nằm rải trong
+    `viet_kich_ban` thì cửa canh không cách nào đưa ca XẤU vào.
+
+    NÓ ĐO GÌ — VÀ KHÔNG ĐO GÌ. Nó hỏi *"bài này có nêu đề ra không"*, không hỏi
+    *"bài này có đúng đề không"*. Câu thứ hai không có thang đo được trên máy
+    này: embedding tắt (`/api/embed` trả *"This server does not support
+    embeddings"*), trùng-từ-theo-tỉ-lệ không tách nổi (đề "nấu phở bò" cho đúng
+    đề 0,33 / lạc đề 0,17; đề "bài test" cho đúng đề 0,67 / bài lạc 0,33 — cùng
+    con số 0,33 vừa đúng vừa sai tuỳ đề), còn hỏi model là để model vừa viết
+    chấm chính bài mình.
+
+    Ba trạng thái, không gộp:
+        DAT             câu mở có ≥1 từ nội dung của đề
+        KHONG_DAT       đo được mà câu mở không nêu đề
+        KHONG_DO_DUOC   đề không còn từ nội dung nào -> FAIL-CLOSED
+
+    Fail-closed ở nhánh thứ ba là có chủ đích: không đo được đề thì không dựng
+    một video nhận là về đề ấy.
+    """
+    tu_de = tu_khoa_de(chu_de)
+    if not tu_de:
+        return ("KHONG_DO_DUOC",
+                [f"đề {chu_de!r} không còn từ nội dung nào sau khi bỏ hư từ — "
+                 "không có gì để đối chiếu, hãy đặt đề cụ thể hơn"],
+                {"so_tu_de": 0})
+
+    cau = _tach_cau(van_ban)
+    if not cau:
+        return "KHONG_DO_DUOC", ["không tách được câu nào để đọc câu mở"], \
+               {"so_tu_de": len(tu_de)}
+
+    tu_cau_mo = set(_tu(cau[0]))
+    trung = [t for t in tu_de if t in tu_cau_mo]
+    so = {"so_tu_de": len(tu_de), "so_tu_de_trong_cau_mo": len(trung),
+          "tu_de_trung": trung}
+    if len(trung) < SO_TU_DE_TRONG_CAU_MO_MIN:
+        return ("KHONG_DAT",
+                [f"câu mở không nêu đề: cần ≥{SO_TU_DE_TRONG_CAU_MO_MIN} từ "
+                 f"trong {tu_de}, thấy {len(trung)} — {cau[0][:70]!r}"], so)
+    return "DAT", [], so
+
+
 def cat_cho_vua(van_ban: str) -> Tuple[str, int]:
     """Cắt từ GIỮA cho lọt cửa sổ. Trả `(văn bản mới, số câu đã bỏ)`.
 
@@ -189,6 +263,29 @@ def _loi_nhac(chu_de: str) -> str:
     Phép đo cho 4/5 lọt cửa dùng lời nhắc KHÔNG có câu ấy. Tôi sửa lời nhắc rồi
     không đo lại — đúng tội "tiện tay" mà `CLAUDE.md` mục 5 cấm. Trần từ/câu đã
     có máy canh ở `viet_kich_ban`; không cần nhờ model giữ hộ.
+
+    04/09/2026 — LỜI NHẮC NÀY GIỮ NGUYÊN, và đó là một QUYẾT ĐỊNH CÓ SỐ.
+
+    Thêm cửa NÊU ĐỀ thì việc đầu tiên nghĩ tới là bảo model nhắc đề ngay câu mở.
+    Đã thử ba cách, mỗi cách 5 hạt giống CỐ ĐỊNH, cùng model, cùng tham số:
+
+        lời cũ                            dài 4/5  đề 2/5  CẢ HAI 2/5
+        "CÂU ĐẦU TIÊN phải nhắc tới ..."  dài 0/5  đề 0/5  CẢ HAI 0/5
+        chèn vào mệnh đề đề tài           dài 2/5  đề 3/5  CẢ HAI 2/5
+        mệnh đề ngắn ở cuối               dài 2/5  đề 3/5  CẢ HAI 2/5
+
+    **Không bản nào mua được gì.** Cái gì giúp cửa đề (2/5 → 3/5) lấy đi đúng
+    chừng ấy ở cửa dài (4/5 → 2/5). Bản mệnh lệnh viết hoa còn tệ hơn hẳn: nó
+    đẩy từ/câu từ ~19 lên **21,7–24,3**, quá trần 19,2 cả năm lượt, nên không
+    lượt nào đi tới nổi cửa đề.
+
+    Đây đúng là hình dạng đã trả giá 03/09 ở ngay trên: thêm một ràng buộc vào
+    lời nhắc thì model đổi cách viết theo kiểu mình không điều khiển được. Máy
+    canh vẫn là máy canh; lời nhắc không phải chỗ để vá.
+
+    Nói rõ giới hạn của phép đo: n=5 mỗi nhánh. `2/5` so với `2/5` KHÔNG chứng
+    minh hai bản bằng nhau — nó chỉ nói ở n=5 chưa thấy khác biệt nào. Đủ để
+    KHÔNG đổi; chưa đủ để nói đổi thì vô ích.
     """
     return (f"Viết một truyện ngắn tiếng Việt hoàn chỉnh về: {chu_de}. "
             f"Có mở đầu và kết thúc rõ ràng, dài khoảng {SO_TU_XIN} từ, "
@@ -202,8 +299,29 @@ def viet_kich_ban(chu_de: str, tran: int = TRAN_SO_LAN, hat_dau: int = 1) -> Dic
     Luôn trả về `so_lan_thu` — một kịch bản đạt sau 1 lần và sau 3 lần là hai
     chuyện khác nhau, và giấu con số ấy là giấu giá. Cùng lý do sổ phiên phải
     mang `latency_ms`: đừng in ra phán quyết mà không kèm con số tạo ra nó.
+
+    HAI CỬA, KHÔNG PHẢI MỘT (từ 04/09/2026): `do_kich_ban` chấm HÌNH DẠNG (đủ
+    từ, đủ câu khác nhau, không lặp quá), `kiem_neu_de` chấm câu mở có NÊU đề
+    ra không. Trước đó chỉ có cửa thứ nhất, và nó không thể có cửa thứ hai — chữ
+    ký `do_kich_ban(van_ban)` không bao giờ nhận `chu_de`. Chạy thật 04/09: đề
+    về "bài test luôn xanh" cho ra một bài giảng về gian lận thi cử, ĐẠT sạch.
+
+    `"lan": []` LÀ TRẠNG THÁI THẬT, không phải ca hiếm: đề không còn từ nội dung
+    nào thì fail-closed ngay, chưa tốn lượt model nào. Chỗ nào đọc `lan[-1]`
+    phải rà lại — hai chỗ trong `interface/noi_bo_api.py` từng nổ IndexError vì
+    nó.
     """
     t0 = time.monotonic()
+
+    # FAIL-CLOSED TRƯỚC KHI TỐN MỘT LƯỢT MODEL. Đề không còn từ nội dung nào thì
+    # không có gì để đối chiếu — và mỗi lượt sinh tốn 64–96 giây, nên hỏi câu
+    # này sau ba lượt là đốt tới 4,8 phút để nói ra thứ biết ngay từ đầu.
+    tt_de, ly_do_de, so_de = kiem_neu_de(chu_de, "câu giả để đọc đề.")
+    if tt_de == "KHONG_DO_DUOC" and not so_de.get("so_tu_de"):
+        return {"trang_thai": "KHONG_DO_DUOC", "van_ban": "", "so": so_de,
+                "so_lan_thu": 0, "lan": [], "vi_sao": ly_do_de,
+                "ms": round((time.monotonic() - t0) * 1000, 1)}
+
     lan: List[Dict[str, Any]] = []
     for i in range(tran):
         try:
@@ -225,6 +343,16 @@ def viet_kich_ban(chu_de: str, tran: int = TRAN_SO_LAN, hat_dau: int = 1) -> Dic
 
         van, da_bo = cat_cho_vua(tho)
         trang_thai, ly_do, so = do_kich_ban(van)
+
+        # Cửa NÊU ĐỀ, chấm SAU khi cắt: `cat_cho_vua` bỏ câu ở GIỮA nên câu mở
+        # luôn còn nguyên — chấm trước khi cắt thì đo đúng cùng một câu, nhưng
+        # chấm sau mới là chấm đúng thứ sẽ đi vào video.
+        tt_de, ly_do_de, so_de = kiem_neu_de(chu_de, van)
+        so = {**so, **so_de}
+        if tt_de != "DAT":
+            trang_thai = "KHONG_DAT" if trang_thai == "DAT" else trang_thai
+            ly_do = list(ly_do) + ly_do_de
+
         lan.append({"hat": hat_dau + i, "trang_thai": trang_thai, "so": so,
                     "vi_sao": ly_do, "giay": round(giay, 1), "cau_da_bo": da_bo})
         if trang_thai == "DAT":

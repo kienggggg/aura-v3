@@ -186,6 +186,15 @@ def test_cat_xong_van_phai_QUA_phep_cham():
 
 # --------------------------------------------------------------- vòng có trần
 
+# Đề dùng cho 8 bài canh VÒNG LẶP bên dưới. Chúng đo số lần thử, ba trạng thái,
+# và bản trả về — KHÔNG đo cửa nêu đề. Nhưng từ 04/09/2026 `viet_kich_ban` bắt
+# câu mở phải nhắc tới đề, nên đề `"thu"` cũ làm cả tám đỏ: văn bản mẫu mở bằng
+# `"Cau so 1 ..."`, không có chữ "thu" nào. Đổi sang `"cau"` để thứ đang đo vẫn
+# là vòng lặp, không phải cửa mới. Cửa nêu đề có bài riêng của nó.
+DE_KHOP_VAN_MAU = "cau"
+
+
+
 class _GiaModel:
     """Thay `_xin_model` để đo vòng lặp mà không phải chờ model 90 giây/lượt."""
 
@@ -204,7 +213,7 @@ class _GiaModel:
 def test_dat_ngay_lan_dau_thi_KHONG_thu_them(monkeypatch):
     gia = _GiaModel([_van_ban(26, 9)])
     monkeypatch.setattr("core.viet_truyen._xin_model", gia)
-    kq = viet_kich_ban("thu")
+    kq = viet_kich_ban(DE_KHOP_VAN_MAU)
     assert kq["trang_thai"] == "DAT"
     assert kq["so_lan_thu"] == 1, "đạt rồi mà vẫn gọi model tiếp"
     assert gia.so_lan == 1
@@ -218,7 +227,7 @@ def test_SO_LAN_THU_khong_bi_giau(monkeypatch):
     """
     gia = _GiaModel([_van_ban(5, 8), _van_ban(5, 8), _van_ban(26, 9)])
     monkeypatch.setattr("core.viet_truyen._xin_model", gia)
-    kq = viet_kich_ban("thu")
+    kq = viet_kich_ban(DE_KHOP_VAN_MAU)
     assert kq["trang_thai"] == "DAT"
     assert kq["so_lan_thu"] == 3, kq["so_lan_thu"]
     assert len(kq["lan"]) == 3, "phải ghi lại CẢ ba lượt, kể cả hai lượt trượt"
@@ -228,7 +237,7 @@ def test_SO_LAN_THU_khong_bi_giau(monkeypatch):
 def test_khong_qua_TRAN_SO_LAN(monkeypatch):
     gia = _GiaModel([_van_ban(5, 8)])
     monkeypatch.setattr("core.viet_truyen._xin_model", gia)
-    kq = viet_kich_ban("thu")
+    kq = viet_kich_ban(DE_KHOP_VAN_MAU)
     assert kq["trang_thai"] == "KHONG_DAT"
     assert gia.so_lan == DAC_TA_TRAN_SO_LAN, f"gọi model {gia.so_lan} lần"
     assert kq["van_ban"] == "", "không đạt thì không được trả văn bản ra"
@@ -238,7 +247,7 @@ def test_moi_luot_deu_hong_thi_la_KHONG_DO_DUOC(monkeypatch):
     """Ollama tắt ≠ 'đã đo, không đạt'. Gộp hai cái này là bệnh cũ."""
     gia = _GiaModel([RuntimeError("URLError: connection refused")])
     monkeypatch.setattr("core.viet_truyen._xin_model", gia)
-    kq = viet_kich_ban("thu")
+    kq = viet_kich_ban(DE_KHOP_VAN_MAU)
     assert kq["trang_thai"] == "KHONG_DO_DUOC", kq["trang_thai"]
     assert kq["so_lan_thu"] == DAC_TA_TRAN_SO_LAN
 
@@ -247,7 +256,7 @@ def test_mot_luot_hong_mot_luot_do_duoc_thi_KHONG_phai_khong_do_duoc(monkeypatch
     """Ca đối chứng: chỉ TẤT CẢ lượt hỏng mới là không đo được."""
     gia = _GiaModel([RuntimeError("mat mang"), _van_ban(5, 8), _van_ban(5, 8)])
     monkeypatch.setattr("core.viet_truyen._xin_model", gia)
-    kq = viet_kich_ban("thu")
+    kq = viet_kich_ban(DE_KHOP_VAN_MAU)
     assert kq["trang_thai"] == "KHONG_DAT", kq["trang_thai"]
 
 
@@ -255,7 +264,7 @@ def test_cau_qua_dai_thi_SINH_LAI_ngay_khong_phi_cong_cat(monkeypatch):
     """21 từ/câu thì cắt kiểu gì cũng trượt — đo trước, đừng cắt rồi mới biết."""
     gia = _GiaModel([_van_ban(21, 21), _van_ban(26, 9)])
     monkeypatch.setattr("core.viet_truyen._xin_model", gia)
-    kq = viet_kich_ban("thu")
+    kq = viet_kich_ban(DE_KHOP_VAN_MAU)
     assert kq["trang_thai"] == "DAT"
     assert kq["so_lan_thu"] == 2
     assert any("từ/câu" in l for l in kq["lan"][0]["vi_sao"]), kq["lan"][0]
@@ -269,7 +278,7 @@ def test_van_ban_tra_ve_PHAI_qua_duoc_phep_cham(monkeypatch):
     """
     gia = _GiaModel([_van_ban(26, 9)])
     monkeypatch.setattr("core.viet_truyen._xin_model", gia)
-    kq = viet_kich_ban("thu")
+    kq = viet_kich_ban(DE_KHOP_VAN_MAU)
     assert kq["trang_thai"] == "DAT"
     tt, ly, so = do_kich_ban(kq["van_ban"])
     assert tt == "DAT", f"vòng lặp trả về văn bản mà phép chấm BÁC: {ly}"
@@ -290,7 +299,7 @@ def test_tra_ve_ban_DA_CAT_chu_khong_phai_ban_tho(monkeypatch):
     assert len(tho.split()) > DAC_TA_TU_MAX, "văn bản thử phải QUÁ DÀI mới đo được"
     gia = _GiaModel([tho])
     monkeypatch.setattr("core.viet_truyen._xin_model", gia)
-    kq = viet_kich_ban("thu")
+    kq = viet_kich_ban(DE_KHOP_VAN_MAU)
 
     assert kq["trang_thai"] == "DAT", kq["lan"]
     assert kq["van_ban"] != tho, "trả về bản THÔ, chưa cắt"
@@ -304,3 +313,156 @@ def test_dem_dung_tu_moi_cau():
     so = _dem(["Mot hai ba bon.", "Nam sau bay tam chin muoi."])
     assert so["so_tu"] == 10 and so["so_cau"] == 2
     assert so["tu_moi_cau"] == 5.0
+
+
+# ---------------------------------------------------------------------------
+# CỬA NÊU ĐỀ (04/09/2026)
+#
+# Chạy thật 04/09: đề "Vì sao một bài test luôn xanh thì chưa chứng minh được
+# gì" cho ra một bài giảng về GIAN LẬN THI CỬ, và nó ĐẠT — vì `do_kich_ban`
+# không bao giờ nhận `chu_de`, nên về mặt cấu trúc nó không thể kiểm đề tài.
+# ---------------------------------------------------------------------------
+
+# Chép TAY từ KY_LUAT_THUC_THI.md mục 1b, "Cửa NÊU ĐỀ".
+DAC_TA_TU_DE_TRONG_CAU_MO_MIN = 1
+
+
+def test_hang_so_neu_de_khop_DAC_TA():
+    """Gieo hằng số trong mã thì bài này phải đỏ — không đọc nó từ mã ra."""
+    from core.viet_truyen import SO_TU_DE_TRONG_CAU_MO_MIN
+
+    assert SO_TU_DE_TRONG_CAU_MO_MIN == DAC_TA_TU_DE_TRONG_CAU_MO_MIN
+
+
+def test_tu_khoa_de_bo_hu_tu_va_giu_thu_tu():
+    from core.viet_truyen import tu_khoa_de
+
+    # `chứng` và `minh` ĐƯỢC GIỮ, dù `chúng` và `mình` nằm trong danh sách hư
+    # từ. Đây chính là chỗ giữ dấu trả công: bỏ dấu thì bốn chữ ấy thành hai,
+    # và "chứng minh" — từ nội dung thật của đề — bị vứt đi như hư từ.
+    assert tu_khoa_de("Vì sao một bài test luôn xanh thì chưa chứng minh được gì") \
+        == ["bài", "test", "xanh", "chứng", "minh"]
+    assert tu_khoa_de("Cách nấu phở bò truyền thống") \
+        == ["cách", "nấu", "phở", "bò", "truyền", "thống"]
+    # Không lặp, dù đề lặp chữ.
+    assert tu_khoa_de("phở bò và phở gà") == ["phở", "bò", "gà"]
+    # Đề toàn hư từ thì rỗng — đó là ca fail-closed.
+    assert tu_khoa_de("vì sao thì mà là") == []
+
+
+def test_neu_de_tach_BA_trang_thai():
+    from core.viet_truyen import kiem_neu_de
+
+    de = "Cách nấu phở bò truyền thống"
+    tt, _, so = kiem_neu_de(de, "Nồi nước phở ngon bắt đầu từ xương. Câu hai.")
+    assert tt == "DAT", so
+    assert so["so_tu_de_trong_cau_mo"] >= DAC_TA_TU_DE_TRONG_CAU_MO_MIN
+
+    tt, ly_do, _ = kiem_neu_de(de, "Trời hôm nay đẹp lắm. Câu hai.")
+    assert tt == "KHONG_DAT", "câu mở không nêu đề mà vẫn cho qua"
+    assert ly_do and "câu mở không nêu đề" in ly_do[0]
+
+    # Đề không còn từ nội dung -> KHÔNG ĐO ĐƯỢC, không phải ĐẠT. Gộp hai cái
+    # này là đúng bệnh cũ: "chưa đo được" đội lốt "đã đo, không sao".
+    tt, ly_do, _ = kiem_neu_de("vì sao thì mà là", "Bất cứ câu nào. Câu hai.")
+    assert tt == "KHONG_DO_DUOC", tt
+    assert ly_do
+
+
+def test_neu_de_GIU_DAU_khong_gop_bo_voi_bo():
+    """Bỏ dấu thì `bò` `bỏ` `bó` `bọ` cùng thành `bo` — bệnh `x in y` đổi áo.
+
+    Đây là ca duy nhất phân biệt được hai cách viết: câu mở có `bỏ` nhưng
+    KHÔNG có `bò`. Giữ dấu thì bác; bỏ dấu thì cho qua.
+    """
+    from core.viet_truyen import kiem_neu_de
+
+    tt, _, so = kiem_neu_de("nấu phở bò", "Tôi bỏ hết rau vào nồi. Câu hai.")
+    assert tt == "KHONG_DAT", (
+        f"`bỏ` được tính là `bò` — phép so đang bỏ dấu: {so}")
+
+
+def test_neu_de_so_NGUYEN_TU_khong_so_chuoi_con():
+    """`test` không được khớp bên trong `testing`."""
+    from core.viet_truyen import kiem_neu_de
+
+    tt, _, _ = kiem_neu_de("bài test xanh", "Một buổi testing kéo dài. Câu hai.")
+    assert tt == "KHONG_DAT"
+    tt, _, _ = kiem_neu_de("bài test xanh", "Một buổi test kéo dài. Câu hai.")
+    assert tt == "DAT"
+
+
+def test_neu_de_chi_doc_CAU_MO_chu_khong_doc_ca_bai():
+    """Đề nằm ở câu thứ ba thì vẫn là KHÔNG ĐẠT.
+
+    Cả hợp đồng nằm ở chữ *"câu mở đầu"*: với video dọc, câu đầu là câu móc —
+    người xem quyết định lướt tiếp trong vài giây. Nêu đề ở câu thứ ba là nêu
+    cho người đã bỏ đi rồi. Nếu cửa đọc cả bài thì nó đo một thứ khác hẳn.
+    """
+    from core.viet_truyen import kiem_neu_de
+
+    de = "nấu phở bò"
+    o_cau_ba = "Trời hôm nay đẹp. Tôi đi chợ sớm. Rồi tôi nấu một nồi phở."
+    tt, _, _ = kiem_neu_de(de, o_cau_ba)
+    assert tt == "KHONG_DAT", "cửa đang đọc cả bài chứ không đọc câu mở"
+
+    o_cau_mot = "Tôi nấu một nồi phở. Trời hôm nay đẹp. Tôi đi chợ sớm."
+    tt, _, _ = kiem_neu_de(de, o_cau_mot)
+    assert tt == "DAT", "cùng chữ ấy ở câu mở mà vẫn bác"
+
+
+def test_neu_de_BAC_dung_ca_da_do_duoc_ngoai_doi():
+    """Ca thật, đo được 04/09/2026 — cửa cũ cho nó ĐẠT.
+
+    Kịch bản này là thứ AURA trả về cho đề về bài test luôn xanh. Nó nói về
+    gian lận thi cử. `do_kich_ban` cho ĐẠT vì đủ từ, đủ câu khác nhau.
+    """
+    from core.viet_truyen import kiem_neu_de
+
+    de = "Vì sao một bài test luôn xanh thì chưa chứng minh được gì"
+    that = ("Bí mật thường ẩn sau những con số hoàn hảo. Nhưng thực ra đó chỉ "
+            "là ảo giác mù quáng. Việc làm này gọi là gian lận nghiêm trọng.")
+    tt, ly_do, _ = kiem_neu_de(de, that)
+    assert tt == "KHONG_DAT", "bài lạc đề vẫn lọt cửa nêu đề"
+    assert ly_do
+
+
+def test_phan_quyet_NEU_DE_di_toi_ket_qua_cua_viet_kich_ban(monkeypatch):
+    """Chấm được một hàm không chứng minh kết quả của nó đi tới đâu.
+
+    Gieo `if ly_do_nung:` -> `if False:` hôm 03/09 mà cả 30 bài vẫn xanh, vì
+    mọi bài đều gọi thẳng hàm thuần. Bài này chạy CẢ vòng `viet_kich_ban` với
+    một văn bản đủ dài, đủ câu — chỉ sai mỗi chỗ không nêu đề.
+    """
+    gia = _GiaModel([_van_ban(26, 9)])
+    monkeypatch.setattr("core.viet_truyen._xin_model", gia)
+
+    # Ca đối chứng TRƯỚC: cùng văn bản ấy, đề khớp thì phải ĐẠT. Thiếu ca này
+    # thì bài dưới có thể xanh chỉ vì `_van_ban` không bao giờ qua nổi cửa nào.
+    kq = viet_kich_ban(DE_KHOP_VAN_MAU)
+    assert kq["trang_thai"] == "DAT", kq.get("lan")
+
+    gia.so_lan = 0
+    kq = viet_kich_ban("khủng long bạo chúa")
+    assert kq["trang_thai"] == "KHONG_DAT", (
+        f"câu mở không nêu đề mà vòng vẫn trả {kq['trang_thai']} — "
+        "phán quyết của `kiem_neu_de` không đi tới kết quả")
+    assert kq["van_ban"] == "", "trả về văn bản dù không đạt"
+    assert any("câu mở không nêu đề" in l for m in kq["lan"]
+               for l in m.get("vi_sao", [])), kq["lan"]
+
+
+def test_de_khong_do_duoc_thi_KHONG_dot_mot_luot_model(monkeypatch):
+    """Fail-closed, và fail-closed TRƯỚC khi tốn tiền.
+
+    Mỗi lượt sinh tốn 64–96 giây; hỏi câu này sau ba lượt là đốt tới 4,8 phút
+    để nói ra thứ biết được ngay từ đầu.
+    """
+    gia = _GiaModel([_van_ban(26, 9)])
+    monkeypatch.setattr("core.viet_truyen._xin_model", gia)
+
+    kq = viet_kich_ban("vì sao thì mà là")
+    assert kq["trang_thai"] == "KHONG_DO_DUOC", kq["trang_thai"]
+    assert gia.so_lan == 0, f"đã gọi model {gia.so_lan} lần dù đề không đo được"
+    assert kq["so_lan_thu"] == 0
+    assert kq["van_ban"] == ""

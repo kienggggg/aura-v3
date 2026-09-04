@@ -537,7 +537,12 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
                 f"Mất {_kq['ms'] / 1000:.1f}s."
             )
         else:
-            _vi = "; ".join(str(l.get("vi_sao")) for l in _kq["lan"])
+            # `lan` RỖNG là trạng thái thật, không phải ca hiếm: từ 04/09/2026
+            # cửa nêu đề fail-closed TRƯỚC vòng lặp khi đề không còn từ nội dung
+            # nào, nên không có lượt sinh nào để kể. Đọc `lan[-1]` ở đó thì nổ
+            # IndexError — lý do bác biến thành sự cố 500.
+            _vi = ("; ".join(str(l.get("vi_sao")) for l in _kq["lan"])
+                   or "; ".join(_kq.get("vi_sao") or ["không rõ lý do"]))
             ket_qua = (f"⚡ **[AURA Writer]** {_kq['trang_thai']} sau "
                        f"{_kq['so_lan_thu']} lần sinh: {_vi}")
 
@@ -753,9 +758,13 @@ async def chay_chuoi_phong(ke_hoach: List[tuple], chu_de: str,
                        "sha256": hashlib.sha256(tep.read_bytes()).hexdigest(),
                        "type": "MARKDOWN", "kind": "kich_ban_cho_alpha"}]
             _so = _kq["so"]
+            # `lan` RỖNG khi cửa nêu đề fail-closed trước vòng lặp (04/09/2026).
+            # `_kq['lan'][-1]` ở đó là IndexError — cả chuỗi đổ 500 thay vì trả
+            # về một bước KHONG_CHAY_DUOC đọc được.
+            _cuoi = _kq["lan"][-1].get("vi_sao") if _kq["lan"] else _kq.get("vi_sao")
             mo_ta = (f"{_so.get('so_tu')} từ · {_so.get('so_cau_khac')} câu khác nhau · "
                      f"sinh {_kq['so_lan_thu']}/3 lần"
-                     if tt == "PASS" else f"{tt}: {_kq['lan'][-1].get('vi_sao')}")
+                     if tt == "PASS" else f"{tt}: {_cuoi}")
 
         elif phong_id == "alpha":
             # Chỗ dây chuyền THẬT SỰ nối: alpha ăn kịch bản của aura.

@@ -137,6 +137,79 @@ AURA viết kịch bản, Alpha dựng video. Mối nối là tham số `van_ban
 * **Giá phải nói ra:** mỗi lượt sinh 64–96 giây. Trần 3 lần = tới ~4,8 phút cho
   một kịch bản, chưa tính 30 giây dựng video.
 
+* **Cửa NÊU ĐỀ (thêm 04/09/2026):**
+  - **Câu mở đầu** của kịch bản phải chứa **≥ 1** từ nội dung của đề tài.
+  - So **nguyên từ**, không phân biệt hoa/thường, và **GIỮ DẤU**.
+  - Đề tài không còn từ nội dung nào sau khi bỏ hư từ → `KHONG_DO_DUOC`,
+    **fail-closed**: không đo được đề thì không dựng video nhận là về đề ấy.
+
+  > Vì sao cần. Chạy thật 04/09/2026, đề *"Vì sao một bài test luôn xanh thì
+  > chưa chứng minh được gì"*. AURA trả về một bài giảng về **gian lận thi cử
+  > và điểm số** — và nó **ĐẠT**, vì cửa cũ chỉ đếm từ, đếm câu, đếm lặp:
+  >
+  > ```
+  > chữ ký hàm: do_kich_ban(van_ban: str) -> ...
+  >                         ^ không nhận `chu_de`
+  > ```
+  >
+  > Cửa **về mặt cấu trúc** không thể kiểm đề tài — nó chưa bao giờ nhận đề.
+  > Ca đối chứng cứng: một bài về **nấu phở** chấm cho đề trên ra `DAT`
+  > (244 từ · 17 câu khác · lặp 1), trong khi một bài **đúng đề** ra
+  > `KHONG_DAT` vì 273 từ. Cửa nhận bài lạc đề và bác bài đúng đề.
+
+  > Ba thang đã CHẠY THỬ trước khi chọn — không thang nào dùng được:
+  >
+  > | thang | đo được gì |
+  > |---|---|
+  > | Embedding (cosine đề ↔ kịch bản) | `/api/embed` trả *"This server does not support embeddings"*. Máy chủ đang tắt. |
+  > | Trùng từ nội dung, chấm theo tỉ lệ | **Không tách được.** Đề "nấu phở bò": đúng đề **0,33**, lạc đề **0,17**. Đề "bài test": đúng đề **0,67**, bài AURA lạc **0,33**. Cùng con số **0,33** vừa là đúng vừa là sai tuỳ đề — không tồn tại ngưỡng chung. |
+  > | Hỏi model | Chính model vừa viết lại đi chấm bài mình. Đúng hình dạng đã ghi ở ca Hermes (*"asks itself"*, không có gì nói *không*) và DSPy. |
+  >
+  > Nên **đổi hợp đồng thay vì dựng cái cân**: không hỏi *"bài này có ĐÚNG đề
+  > không"* — câu ấy không có thang đo được trên máy này — mà hỏi *"bài này có
+  > NÊU đề ra không"*. Câu sau tất định, không có ngưỡng phải hiệu chuẩn, và
+  > cũng là cách viết đúng cho video dọc: câu đầu là câu móc, phải nói ngay
+  > video này về cái gì.
+
+  > **GIỮ DẤU là có chủ đích.** Bỏ dấu thì `bò`, `bỏ`, `bó`, `bọ` cùng thành
+  > `bo` — đúng họ bệnh `x in y` đã trả giá bảy lần trong `CLAUDE.md`, chỉ đổi
+  > lớp áo. Tiếng Việt đơn âm nên bỏ dấu là tự tạo va chạm. So nguyên từ có dấu
+  > thì `bò` chỉ khớp `bò`.
+
+  > **LỜI NHẮC GIỮ NGUYÊN — quyết định có số.** Việc đầu tiên nghĩ tới là bảo
+  > model nhắc đề ngay câu mở. Thử ba cách, mỗi cách 5 hạt giống cố định:
+  >
+  > ```
+  > lời cũ                            dài 4/5  đề 2/5  CẢ HAI 2/5
+  > "CÂU ĐẦU TIÊN phải nhắc tới ..."  dài 0/5  đề 0/5  CẢ HAI 0/5
+  > chèn vào mệnh đề đề tài           dài 2/5  đề 3/5  CẢ HAI 2/5
+  > mệnh đề ngắn ở cuối               dài 2/5  đề 3/5  CẢ HAI 2/5
+  > ```
+  >
+  > Không bản nào mua được gì: cái gì giúp cửa đề thì lấy đi đúng chừng ấy ở
+  > cửa dài. Bản viết hoa còn đẩy từ/câu từ ~19 lên **21,7–24,3**, quá trần
+  > 19,2 cả năm lượt. n=5 mỗi nhánh — `2/5` so `2/5` KHÔNG chứng minh bằng
+  > nhau, chỉ nói ở n=5 chưa thấy khác biệt. Đủ để KHÔNG đổi.
+
+  > **GIÁ PHẢI NÓI RA.** Tỉ lệ lọt CẢ HAI cửa là **2/5 mỗi lượt sinh**, nên với
+  > trần 3 lần: `1 − 0,6³ ≈ 78%`. Tức là **khoảng 1/5 yêu cầu nay trả về
+  > `KHONG_DAT`** thay vì trả một kịch bản lạc đề — và mỗi lượt tốn 49–110 giây,
+  > nên ca trượt tốn tới ~5,5 phút để nói "không viết được". Đó là giá của việc
+  > hỏng TO thay vì đạt SAI.
+
+* **CHƯA CHẶN ĐƯỢC — không viết là đã chặn.** Cửa nêu đề chỉ canh *có nêu đề
+  ra không*, **không** canh *nội dung có đúng đề không*. Một bài mở bằng
+  *"Bài test này nói về nấu phở"* rồi đi nói chuyện phở vẫn lọt. Trên máy này
+  chưa có thang nào đo được điều thứ hai — đã thử ba thang, ghi ở trên.
+
+  Và nó so **TỪ**, không so **NGHĨA** — bắt được ngay trong lượt đo lời nhắc
+  04/09. Hạt 3 trả về câu mở *"Một lá **bài** được lật ra màu **xanh** lá
+  cây."*: khớp hai từ khoá `bài` và `xanh`, cửa cho **ĐẠT**, trong khi `bài` ở
+  đó là **lá bài** và `xanh` là màu lá cây. Tiếng Việt đơn âm nên đồng âm khác
+  nghĩa là chuyện thường, không phải ca hiếm. (Lượt ấy vẫn bị bác — nhưng bởi
+  cửa ĐỘ DÀI, 175 từ, chứ không phải bởi cửa đề. Một cửa khác bắt hộ không
+  chứng minh được cửa này biết bắt.)
+
 ### 2. PHÒNG STUDIO (Sản xuất Video Dọc Offline)
 * **Đầu vào:** `STUDIO_FIXTURE.md` (**215–250 từ**, **≥13 câu khác nhau**) đã
   đóng băng kèm SHA-256 (nhãn `synthetic_fixture`).

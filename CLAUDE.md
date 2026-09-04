@@ -338,11 +338,18 @@ dọc 720×1280 / 60,6 s, giọng OneCore tiếng Việt, 6 hiện vật có SHA
 > `4.2/16.0 GB` (thật 6,98/12,61) · `714/714 tests` (thật 718) · `38.4 tok/s`
 > (thật 6,69 — **thổi 5,7 lần**) · `42 ms` (chưa từng đo).
 >
-> Và một món **CHƯA sửa**: `api_chay_pipeline` vẫn gõ tay `"trang_thai": "PASS"`
-> năm lần, không gọi phòng nào, nhưng **có ghi vào sổ cái** — tức để lại dấu vết
-> của việc chưa từng xảy ra. Đây là lỗ trong chính cửa fail-closed: nó thoả mãn
-> được bằng một phòng ghi tệp về việc nó không làm. `tests/test_phong_noi_bo.py`
-> đóng đinh con số 5 để món nợ ấy không lặng lẽ trôi đi.
+> `api_chay_pipeline` cũng đã sửa trong ngày: bản cũ gõ tay
+> `"trang_thai": "PASS"` năm lần, không gọi phòng nào, nhưng **có ghi vào sổ
+> cái** — dấu vết của việc chưa từng xảy ra, và là lỗ trong chính cửa
+> fail-closed. Bản mới nối thật (kịch bản `aura` → `van_ban` của `alpha`) và
+> chạy được `5/5 bước · 22 hiện vật · 166 s`, trong khi bản gõ tay chạy 0 ms.
+>
+> **Bốn cửa canh đầu của tôi cho nó thì MÙ.** Gieo 8 phép: 4 xanh, và cả bốn
+> đều đổi HÀNH VI mà không đổi chuỗi — vì tôi soi văn bản hàm bằng `ast.unparse`
+> thay vì gọi hàm rồi đọc kết quả. Đây là lần thứ **bảy** trong một ngày cùng
+> một hình dạng, và lần thứ hai đúng kiểu "dò chuỗi trong mã" đã ghi ở 02/09.
+> Viết lại thành phép đo hành vi — thay mọi phòng bằng bản giả rồi đếm cả *phòng
+> nào ĐƯỢC GỌI* — thì 8/8 đỏ.
 
 Ba chỗ đắt trên đường ấy:
 
@@ -394,6 +401,33 @@ Gieo lại 2/2 đỏ.
 Và ca đối chứng ấy suýt sai vì tiếc thời gian: dùng câu bốn mệnh đề cho nhanh
 thì bản trộn ra **−29,9 LUFS** (trần −18…−12), nên đối chứng đỏ vì độ ồn chứ
 không vì chuyện đang xét — rẻ hơn 2 phút, nhưng đo sai biến.
+
+### Máy đo có thể xoá công của người khác, và báo cáo là thành công
+
+Ngày 03/09/2026 tôi sửa chú thích đầu `core/phong_alpha.py` — đoạn ghi lại phép
+ngoại suy sai 40% — trong lúc một lượt `tools/gieo.py` đang chạy nền **trên
+chính tệp ấy**. `chay_gieo` cache nội dung gốc lúc khởi động, rồi ở `finally`
+ghi cache đè lên để "trả mã về nguyên byte".
+
+Bản sửa biến mất **không một tiếng động**, đi qua cả một lượt chạy bộ đủ, rồi
+được commit đi mất. Phát hiện một ngày sau, tình cờ, khi đọc lại tệp.
+
+Chua nhất là dòng công cụ in ra lúc ấy:
+
+```
+1 tệp: giống hệt TỪNG BYTE trước khi gieo
+```
+
+Đó chính là cơ chế vừa xoá công đang **báo cáo thành công**. Nó nói thật về việc
+nó làm; việc nó làm mới là thứ sai.
+
+Nay `gieo.py` so nội dung hiện tại với bản gốc trước khi ghi đè: khác thì **kêu
+to, không ghi**, giữ bản gốc ở `<tệp>.truoc_khi_gieo`, và trả mã thoát 2 —
+KHÔNG ĐO ĐƯỢC, không phải đạt. Gieo 6 phép vào chính bản vá ấy: 6/6 đỏ.
+
+**Đừng sửa tệp trong lúc có phép đo đang chạy trên nó.** Và rộng hơn: một công
+cụ khôi phục trạng thái phải hỏi *"trạng thái này còn là trạng thái tôi để lại
+không?"* trước khi khôi phục. Cùng họ với luật "verify trước, xoá sau".
 
 ### Test xanh không có nghĩa là app dùng được
 

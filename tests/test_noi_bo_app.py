@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import pytest
+
+from core.paths import PROJECT_ROOT
 from aiohttp import web
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 
@@ -59,6 +61,52 @@ class TestNoiBoApp(AioHTTPTestCase):
         Test xanh không có nghĩa app dùng được; ở đây nó còn tệ hơn — test xanh
         đang KHOÁ CHẶT cái giả, nên mọi lần sửa cho thật đều làm nó đỏ.
         """
+        # THAY PHÒNG BẰNG BẢN GIẢ (03/09/2026).
+        #
+        # Bảy phòng nay làm việc thật, và chạy hết một vòng qua đường này mất
+        # ~370 giây cho MỘT bài (aura 170s · beta 133s · alpha 34s · gamma 24s).
+        # Bài này canh LUẬT FAIL-CLOSED của `api_dieu_phoi_phong`, không canh
+        # phòng — nên nó không cần phòng thật, chỉ cần một phòng trả về cái gì.
+        #
+        # Phép đo đầu-cuối THẬT vẫn còn, ở `tools/do_trang_thai_phong.py`: nó
+        # gọi đúng đường này qua HTTP rồi soi đĩa. Chạy tay, không nằm trong bộ
+        # test — vì một bộ test 15 phút thì người ta thôi không chạy nữa.
+        import core.phong_alpha as _pa
+        import core.phong_noi_bo as _pnb
+        import core.viet_truyen as _vt
+
+        _goc = (_vt.viet_kich_ban, _pa.dung_video, _pnb.PHONG)
+
+        def _aura_gia(chu_de, *a, **k):
+            return {"trang_thai": "DAT", "van_ban": ("Cau mot. " * 30).strip(),
+                    "so": {"so_tu": 60, "so_cau_khac": 30}, "so_lan_thu": 1,
+                    "lan": [{"vi_sao": []}], "ms": 1.0}
+
+        def _alpha_gia(thu_muc, van_ban=None, *a, **k):
+            thu_muc.mkdir(parents=True, exist_ok=True)
+            (thu_muc / "video.mp4").write_bytes(b"x" * 16)
+            return {"trang_thai": "PASS",
+                    "artifacts": [{"name": "video.mp4", "size_bytes": 16}],
+                    "kiem": {"so": {}}, "ms": 1.0, "vi_sao": ""}
+
+        def _phong_gia(task_id, yeu_cau="", *a, **k):
+            d = PROJECT_ROOT / "data" / "thu_fail_closed" / task_id
+            d.mkdir(parents=True, exist_ok=True)
+            (d / "hien_vat.json").write_text("{}", encoding="utf-8")
+            return {"trang_thai": "PASS",
+                    "artifacts": [{"name": "hien_vat.json", "size_bytes": 2}],
+                    "so": {}, "vi_sao": "", "ms": 1.0}
+
+        _vt.viet_kich_ban = _aura_gia
+        _pa.dung_video = _alpha_gia
+        _pnb.PHONG = {k: _phong_gia
+                      for k in ("zeta", "omega", "gamma", "beta", "delta")}
+        try:
+            await self._quet_bay_phong()
+        finally:
+            _vt.viet_kich_ban, _pa.dung_video, _pnb.PHONG = _goc
+
+    async def _quet_bay_phong(self):
         for phong_id in ["aura", "alpha", "beta", "delta", "gamma", "omega", "zeta"]:
             payload = {
                 "phong_id": phong_id,
@@ -156,14 +204,60 @@ class TestNoiBoApp(AioHTTPTestCase):
 
     @unittest_run_loop
     async def test_api_chay_pipeline_lien_phong(self):
-        """API /api/pipeline/run phải kích hoạt chuỗi 5 bước phối hợp liên phòng ban."""
-        payload = {"chu_de": "Tạo kịch bản và video demo tự động"}
-        resp = await self.client.post("/api/pipeline/run", json=payload)
-        assert resp.status == 200
-        data = await resp.json()
-        assert data["status"] == "PASS"
+        """`/api/pipeline/run` phải gọi PHÒNG THẬT và báo trạng thái thật.
+
+        Bản trước 03/09/2026 của bài này khẳng định `data["status"] == "PASS"`
+        trên một hàm gõ tay 5 lần `"trang_thai": "PASS"` — nó **không bao giờ
+        trả gì khác**, nên bài test xanh hàng tuần mà không đo được gì. Đúng
+        loại khẳng định `CLAUDE.md` gọi là tautological.
+
+        Nay pipeline gọi phòng thật (166 giây, cần Ollama + mạng), nên bài này
+        thay mọi phòng bằng bản giả và đo đúng thứ nó phải đo: mỗi bước có
+        trạng thái thuộc bốn trạng thái hợp lệ, và trạng thái cả chuỗi khớp với
+        số bước đạt.
+        """
+        import core.phong_alpha as _pa
+        import core.phong_noi_bo as _pnb
+        import core.viet_truyen as _vt
+
+        goc = (_vt.viet_kich_ban, _pa.dung_video, _pnb.PHONG)
+
+        def _aura(chu_de, *a, **k):
+            return {"trang_thai": "DAT", "van_ban": ("Cau mot. " * 30).strip(),
+                    "so": {"so_tu": 60, "so_cau_khac": 30}, "so_lan_thu": 1,
+                    "lan": [{"vi_sao": []}], "ms": 1.0}
+
+        def _alpha(thu_muc, van_ban=None, *a, **k):
+            assert van_ban, "alpha phải nhận kịch bản của aura"
+            thu_muc.mkdir(parents=True, exist_ok=True)
+            return {"trang_thai": "PASS", "artifacts": [], "kiem": {"so": {}},
+                    "ms": 1.0, "vi_sao": ""}
+
+        def _phong(task_id, yeu_cau="", *a, **k):
+            return {"trang_thai": "PASS", "artifacts": [], "so": {},
+                    "vi_sao": "", "ms": 1.0}
+
+        _vt.viet_kich_ban = _aura
+        _pa.dung_video = _alpha
+        _pnb.PHONG = {k: _phong for k in ("zeta", "omega", "gamma", "beta", "delta")}
+        try:
+            resp = await self.client.post(
+                "/api/pipeline/run",
+                json={"chu_de": "Tạo kịch bản và video demo tự động"})
+            assert resp.status == 200
+            data = await resp.json()
+        finally:
+            _vt.viet_kich_ban, _pa.dung_video, _pnb.PHONG = goc
+
         assert data["tong_buoc"] == 5
         assert len(data["cac_buoc"]) == 5
+        HOP_LE = {"PASS", "FAIL", "KHONG_CHAY_DUOC", "CHUA_CHAY"}
+        for b in data["cac_buoc"]:
+            assert b["trang_thai"] in HOP_LE, b
+        # Trạng thái cả chuỗi phải KHỚP với số bước đạt, không phải hằng số.
+        dat = sum(1 for b in data["cac_buoc"] if b["trang_thai"] == "PASS")
+        assert data["buoc_dat"] == dat
+        assert (data["status"] == "PASS") == (dat == 5), (data["status"], dat)
 
     @unittest_run_loop
     async def test_api_doc_so_cai_va_evidence(self):

@@ -300,3 +300,58 @@ def test_boc_ten_bo_trung_lap():
         "FAILED tests/test_a.py::test_mot - van loi ay\n"
     )
     assert ra == ["tests/test_a.py::test_mot", "tests/test_b.py::test_hai"], ra
+
+
+def test_tep_bi_SUA_TRONG_LUC_GIEO_thi_KHONG_ghi_de(tmp_path, capsys):
+    """Ngày 03/09/2026 tôi sửa chú thích `core/phong_alpha.py` trong lúc một lượt
+    gieo đang chạy nền trên chính tệp ấy. `chay_gieo` cache nội dung gốc lúc khởi
+    động, rồi ở `finally` ghi cache đè lên — **bản sửa biến mất không một tiếng
+    động**, và commit đi mất luôn. Phát hiện một ngày sau, tình cờ.
+
+    Chua nhất: dòng *"1 tệp: giống hệt TỪNG BYTE trước khi gieo"* chính là cơ chế
+    ấy đang báo cáo THÀNH CÔNG. Một máy đo nói thật về việc nó làm, mà việc nó
+    làm là xoá công của người khác.
+
+    BÀN TAY THỨ HAI PHẢI GHI TRONG LÚC LỆNH CHẠY. Bản đầu của bài này bơm qua
+    `Phep(ham=...)` — chạy TRƯỚC lúc `chay_gieo` ghi bản gieo, nên bản "người
+    khác" bị đè ngay và không có gì để phát hiện. Sai chỗ bơm thì phép đo đo một
+    thứ khác.
+    """
+    goc = _du_an(tmp_path, "\n")
+    ma = goc / "ma.py"
+    NGUOI_KHAC = "GIA_TRI = 42\n# dong nguoi khac vua them\n"
+
+    # Lệnh này ĐÓNG VAI bàn tay thứ hai: nó ghi đè ma.py rồi thoát khác 0.
+    lenh_sua = [PY_EXE, "-c",
+                "import pathlib,sys;"
+                f"pathlib.Path({str(ma)!r}).write_text({NGUOI_KHAC!r}, encoding='utf-8');"
+                "sys.exit(1)"]
+
+    kq = chay_gieo(
+        lenh=lenh_sua, goc=goc,
+        cac_phep=[Phep("gieo rồi bị sửa chen ngang", "ma.py",
+                       "GIA_TRI = 42", "GIA_TRI = 99")],
+    )
+    assert kq.bi_sua_giua_chung == ["ma.py"], kq.bi_sua_giua_chung
+    assert ma.read_text(encoding="utf-8") == NGUOI_KHAC, (
+        "gieo.py đã GHI ĐÈ lên bản sửa của người khác")
+    assert kq.ma_thoat == 2, "bị sửa chen ngang là KHÔNG ĐO ĐƯỢC, không phải đạt"
+    assert "BỊ SỬA TRONG LÚC GIEO" in capsys.readouterr().out
+    # Bản gốc phải được giữ lại ở đâu đó, không được mất.
+    giu = goc / "ma.py.truoc_khi_gieo"
+    assert giu.is_file() and "GIA_TRI = 42" in giu.read_text(encoding="utf-8")
+
+
+def test_khong_bi_sua_thi_VAN_tra_ma_ve_binh_thuong(tmp_path):
+    """Ca đối chứng: bài trên phải xanh vì có bàn tay thứ hai, không phải vì
+    `gieo.py` từ nay không bao giờ trả mã về nữa."""
+    goc = _du_an(tmp_path, "\n")
+    truoc = hashlib.sha256((goc / "ma.py").read_bytes()).hexdigest()
+    kq = chay_gieo(
+        lenh=LENH, goc=goc, im_lang=True,
+        cac_phep=[Phep("đổi hằng số", "ma.py", "GIA_TRI = 42", "GIA_TRI = 99")],
+    )
+    assert kq.bi_sua_giua_chung == []
+    assert kq.ma_thoat == 0
+    assert hashlib.sha256((goc / "ma.py").read_bytes()).hexdigest() == truoc
+    assert not (goc / "ma.py.truoc_khi_gieo").exists(), "không có ai sửa thì đừng đẻ tệp thừa"

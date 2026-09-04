@@ -340,13 +340,19 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
                 "gamma": "📊 **[Gamma Analytics]**", "omega": "🎵 **[Omega Ledger]**",
                 "beta": "🧪 **[Beta Sandbox]**"}[phong_id]
 
+        # Mọi chỗ đọc `_so` đều dùng `.get()`: một phòng trả về hình dạng
+        # khác thì đây phải in ra chỗ trống, KHÔNG được làm 500 cả
+        # endpoint. Bắt được 03/09/2026 khi thay phòng bằng bản giả —
+        # `_so["ket_qua"]` ném KeyError và `/api/dispatch` trả 500.
         def _dong(nhan: str, d: dict, chu: str) -> str:
             """Đo được thì in số; không đo được thì NÓI RA, đừng bỏ trống."""
             return (f"- **{nhan}**: {chu}\n" if d.get("do_duoc")
                     else f"- **{nhan}**: không đo được — {d.get('vi_sao')}\n")
 
         if phong_id == "gamma" and _kq["trang_thai"] != "KHONG_CHAY_DUOC":
-            _r, _t, _v = _so["ram"], _so["test"], _so["toc_do"]
+            _r = _so.get("ram", {})
+            _t = _so.get("test", {})
+            _v = _so.get("toc_do", {})
             ket_qua = (
                 f"{_ten} Số đo thật, không con số nào gõ tay.\n\n"
                 + _dong("RAM", _r, f"{_r.get('dang_dung_gb')} / {_r.get('tong_gb')} GB "
@@ -357,29 +363,29 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
             )
         elif phong_id == "omega" and _kq["trang_thai"] == "PASS":
             ket_qua = (f"{_ten} Đã đọc sổ cái và viết báo cáo.\n\n"
-                       f"- **{_so['so_dong']:,} dòng** · {_so['so_byte']:,} byte · "
-                       f"{_so['dong_hong']} dòng hỏng\n"
-                       f"- **SHA-256 sổ cái**: `{_so['sha256_so_cai'][:16]}…`\n"
-                       f"- **Phòng có mặt trong sổ**: {len(_so['theo_phong'])}\n")
+                       f"- **{_so.get('so_dong', 0):,} dòng** · {_so.get('so_byte', 0):,} byte · "
+                       f"{_so.get('dong_hong', 0)} dòng hỏng\n"
+                       f"- **SHA-256 sổ cái**: `{str(_so.get('sha256_so_cai', ''))[:16]}…`\n"
+                       f"- **Phòng có mặt trong sổ**: {len(_so.get('theo_phong', {}))}\n")
         elif phong_id == "zeta" and _kq["trang_thai"] == "PASS":
             ket_qua = (f"{_ten} Đã tra mạng thật và ghi biên nhận.\n\n"
-                       f"- **Truy vấn**: {_so['truy_van']}\n"
-                       f"- **Số nguồn**: {_so['so_nguon']} — mỗi nguồn kèm URL và "
+                       f"- **Truy vấn**: {_so.get('truy_van', '')}\n"
+                       f"- **Số nguồn**: {_so.get('so_nguon', 0)} — mỗi nguồn kèm URL và "
                        f"SHA-256 nội dung\n"
-                       f"- **Lấy lúc**: {_so['lay_luc']}\n")
+                       f"- **Lấy lúc**: {_so.get('lay_luc', '')}\n")
         elif phong_id == "delta" and _kq["trang_thai"] != "KHONG_CHAY_DUOC":
             ket_qua = (f"{_ten} Đã quét AST thật. **Không tự sửa gì cả.**\n\n"
-                       f"- **{_so['so_tep']} tệp** · {_so['tong_dong']:,} dòng · "
-                       f"{_so['so_ham']} hàm · {_so['so_lop']} lớp\n"
-                       f"- **Lỗi cú pháp**: {len(_so['loi_cu_phap'])}\n")
+                       f"- **{_so.get('so_tep', 0)} tệp** · {_so.get('tong_dong', 0):,} dòng · "
+                       f"{_so.get('so_ham', 0)} hàm · {_so.get('so_lop', 0)} lớp\n"
+                       f"- **Lỗi cú pháp**: {len(_so.get('loi_cu_phap', []))}\n")
         elif phong_id == "beta" and _kq["trang_thai"] == "PASS":
-            _d = " · ".join(f"{k}: đạt {v['so_lan_dat']}/{v['so_lan_do_duoc']}"
-                            for k, v in _so["ket_qua"].items())
+            _d = " · ".join(f"{k}: đạt {v.get('so_lan_dat')}/{v.get('so_lan_do_duoc')}"
+                            for k, v in _so.get("ket_qua", {}).items())
             ket_qua = (f"{_ten} Đã chạy A/B hai biến thể lời nhắc.\n\n"
-                       f"- **Chủ đề**: {_so['chu_de']}\n"
+                       f"- **Chủ đề**: {_so.get('chu_de', '')}\n"
                        f"- {_d}\n"
-                       f"- **Đủ để kết luận**: {_so['du_de_ket_luan']}"
-                       + (f" — {_so['ghi_chu']}" if _so["ghi_chu"] else "") + "\n")
+                       f"- **Đủ để kết luận**: {_so.get('du_de_ket_luan', None)}"
+                       + (f" — {_so.get('ghi_chu', '')}" if _so.get("ghi_chu", "") else "") + "\n")
         else:
             ket_qua = f"{_ten} {_kq['trang_thai']}: {_kq['vi_sao']}"
 
@@ -600,7 +606,37 @@ async def api_danh_sach_the_quy_trinh(request: web.Request) -> web.Response:
 
 
 async def api_chay_pipeline(request: web.Request) -> web.Response:
-    """Kích hoạt chuỗi phối hợp tự động giữa 7 đặc nhiệm."""
+    """Chuỗi 5 bước phối hợp — GỌI PHÒNG THẬT, và nối đầu ra vào đầu vào.
+
+    Trước 03/09/2026 hàm này dài 91 dòng và **mọi trường đều gõ tay**: 5 lần
+    `"trang_thai": "PASS"`, `"Đã thu thập 6 nguồn tin uy tín"`, `"kịch bản 1.800
+    từ"` (kịch bản thật là 215–250 từ), `"Đạt 100% Hard Gates"`, và
+    `"thong_diep": "hoàn thành xuất sắc 100%!"`. Nó không gọi phòng nào — nhưng
+    **CÓ ghi vào `so_cai.jsonl`** với `"status": "PASS"`, tức để lại dấu vết của
+    việc chưa từng xảy ra.
+
+    Đó là lỗ trong chính cửa fail-closed: cửa ấy hỏi *"có để lại byte nào
+    không?"*, và một hàm ghi sổ về việc nó không làm thì trả lời được câu hỏi
+    ấy. Bằng chứng trên đĩa là chân lý duy nhất — nhưng chỉ khi bằng chứng nói
+    về việc thật.
+
+    NỐI THẬT, KHÔNG DIỄU HÀNH. Kịch bản `aura` viết ra đi thẳng vào `van_ban`
+    của `alpha`. Năm lượt gọi phòng độc lập thì không phải dây chuyền.
+
+    BỐN TRẠNG THÁI CHO MỖI BƯỚC, không gộp::
+
+        PASS             phòng chạy và đạt
+        FAIL             phòng chạy nhưng không đạt
+        KHONG_CHAY_DUOC  thiếu công cụ, mất mạng, hết giờ
+        CHUA_CHAY        bước trước gãy nên bước này KHÔNG chạy
+
+    Trạng thái thứ tư là thứ dễ bịa nhất: đánh nó thành `PASS` thì bảng đọc ra
+    "cả năm bước xong", đánh thành `FAIL` thì đọc ra "nó chạy rồi mà hỏng". Cả
+    hai đều sai theo một cách khó bắt.
+
+    Giá phải nói ra: zeta ~5 s · aura 85–273 s · alpha ~34 s · omega <1 s ·
+    gamma ~24 s, tức **khoảng 2,5–6 phút** cho một lượt. Bản gõ tay chạy 0 ms.
+    """
     try:
         data = await request.json()
     except Exception:
@@ -611,84 +647,129 @@ async def api_chay_pipeline(request: web.Request) -> web.Response:
     pipeline_id = f"pipe_{int(time.time())}_{uuid4().hex[:4]}"
     bat_dau = time.monotonic()
 
-    # Chuỗi 5 bước phối hợp chuẩn
-    cac_buoc = [
-        {
-            "buoc": 1,
-            "phong_id": "zeta",
-            "phong_ten": "🔍 Zeta (Scout)",
-            "hanh_dong": "Thu thập dữ liệu và xác thực nguồn tin từ Internet",
-            "ket_qua": "Đã thu thập 6 nguồn tin uy tín, trích xuất dữ liệu thô.",
-            "trang_thai": "PASS"
-        },
-        {
-            "buoc": 2,
-            "phong_id": "aura",
-            "phong_ten": "⚡ AURA (Writer)",
-            "hanh_dong": "Biên soạn kịch bản chi tiết và phân chia phân cảnh",
-            "ket_qua": "Hoàn thành kịch bản 1.800 từ đạt chuẩn văn phong.",
-            "trang_thai": "PASS"
-        },
-        {
-            "buoc": 3,
-            "phong_id": "alpha",
-            "phong_ten": "🎬 Alpha (Studio)",
-            "hanh_dong": "Dựng video dọc 60 giây, tổng hợp giọng đọc TTS và tạo Visual Cards",
-            "ket_qua": "Đã render video 720×1280 (58s) không có khung hình đen.",
-            "trang_thai": "PASS"
-        },
-        {
-            "buoc": 4,
-            "phong_id": "omega",
-            "phong_ten": "🎵 Omega (Maestro & Ledger)",
-            "hanh_dong": "Phối khí âm thanh nền -14 LUFS và ghi nhận vào sổ cái",
-            "ket_qua": "Master audio hoàn tất và ghi vào so_cai.jsonl.",
-            "trang_thai": "PASS"
-        },
-        {
-            "buoc": 5,
-            "phong_id": "gamma",
-            "phong_ten": "📊 Gamma (Analytics)",
-            "hanh_dong": "Kiểm định Hard Gates và xuất báo cáo chất lượng",
-            "ket_qua": "Đạt 100% Hard Gates. Sẵn sàng xuất bản.",
-            "trang_thai": "PASS"
-        }
+    from core.phong_alpha import dung_video
+    from core.phong_noi_bo import PHONG
+    from core.viet_truyen import viet_kich_ban
+
+    KE_HOACH = [
+        ("zeta", "🔍 Zeta (Scout)", "Tra mạng thật và ghi biên nhận nguồn"),
+        ("aura", "⚡ AURA (Writer)", "Viết kịch bản đạt cửa 215–250 từ"),
+        ("alpha", "🎬 Alpha (Studio)", "Dựng video dọc 720×1280 từ kịch bản của AURA"),
+        ("omega", "🎵 Omega (Ledger)", "Đọc sổ cái và viết báo cáo"),
+        ("gamma", "📊 Gamma (Analytics)", "Đo RAM, số bài test, tốc độ sinh"),
     ]
 
-    # Ghi nhận vào sổ cái Omega
-    try:
-        OMEGA_SO_CAI.parent.mkdir(parents=True, exist_ok=True)
-        dong_so = {
-            "task_id": pipeline_id,
-            "phong_id": "pipeline",
-            "preset_id": preset_id or "auto",
-            "yeu_cau": chu_de[:200],
-            "timestamp": datetime.now().isoformat(),
-            "status": "PASS",
-            "latency_ms": round((time.monotonic() - bat_dau) * 1000, 1)
-        }
-        with open(OMEGA_SO_CAI, "a", encoding="utf-8") as f:
-            f.write(json.dumps(dong_so, ensure_ascii=False) + "\n")
-    except Exception:
-        pass
+    cac_buoc: List[Dict[str, Any]] = []
+    hien_vat_tat_ca: List[Dict[str, Any]] = []
+    kich_ban = ""          # đầu ra của aura, đầu vào của alpha
+    da_gay = False
 
+    for i, (phong_id, ten, hanh_dong) in enumerate(KE_HOACH, 1):
+        if da_gay:
+            cac_buoc.append({"buoc": i, "phong_id": phong_id, "phong_ten": ten,
+                             "hanh_dong": hanh_dong, "trang_thai": "CHUA_CHAY",
+                             "ket_qua": "không chạy vì bước trước gãy",
+                             "artifacts": [], "ms": 0})
+            continue
+
+        task_id = f"{pipeline_id}_b{i}_{phong_id}"
+        t0 = time.monotonic()
+        if phong_id == "aura":
+            _kq = await asyncio.to_thread(viet_kich_ban, chu_de)
+            tt = "PASS" if _kq["trang_thai"] == "DAT" else _kq["trang_thai"]
+            kich_ban = _kq.get("van_ban", "")
+            hv: List[Dict[str, Any]] = []
+            if kich_ban:
+                d = PROJECT_ROOT / "data" / "aura" / task_id
+                d.mkdir(parents=True, exist_ok=True)
+                tep = d / "kich_ban.md"
+                tep.write_text(kich_ban + "\n", encoding="utf-8")
+                hv = [{"name": tep.name,
+                       "path": tep.relative_to(PROJECT_ROOT).as_posix(),
+                       "size_bytes": tep.stat().st_size,
+                       "sha256": hashlib.sha256(tep.read_bytes()).hexdigest(),
+                       "type": "MARKDOWN", "kind": "kich_ban_cho_alpha"}]
+            _so = _kq["so"]
+            mo_ta = (f"{_so.get('so_tu')} từ · {_so.get('so_cau_khac')} câu khác nhau · "
+                     f"sinh {_kq['so_lan_thu']}/3 lần"
+                     if tt == "PASS" else f"{tt}: {_kq['lan'][-1].get('vi_sao')}")
+        elif phong_id == "alpha":
+            # Đây là chỗ dây chuyền THẬT SỰ nối: alpha ăn kịch bản của aura.
+            if not kich_ban:
+                cac_buoc.append({"buoc": i, "phong_id": phong_id, "phong_ten": ten,
+                                 "hanh_dong": hanh_dong, "trang_thai": "CHUA_CHAY",
+                                 "ket_qua": "không có kịch bản từ AURA để dựng",
+                                 "artifacts": [], "ms": 0})
+                da_gay = True
+                continue
+            _kq = await asyncio.to_thread(
+                dung_video, PROJECT_ROOT / "data" / "alpha" / task_id, kich_ban)
+            tt = _kq["trang_thai"]
+            hv = _kq["artifacts"]
+            _so = _kq["kiem"].get("so", {})
+            mo_ta = (f"{_so.get('rong')}×{_so.get('cao')} · {_so.get('giay')}s · "
+                     f"{len(hv)} hiện vật"
+                     if tt == "PASS" else f"{tt}: {_kq['vi_sao']}")
+        else:
+            _kq = await asyncio.to_thread(PHONG[phong_id], task_id, chu_de)
+            tt = _kq["trang_thai"]
+            hv = _kq["artifacts"]
+            mo_ta = (f"{len(hv)} hiện vật thật"
+                     if tt == "PASS" else f"{tt}: {_kq['vi_sao']}")
+            if tt == "PASS" and _kq["vi_sao"]:
+                mo_ta += f" — {_kq['vi_sao']}"
+
+        cac_buoc.append({"buoc": i, "phong_id": phong_id, "phong_ten": ten,
+                         "hanh_dong": hanh_dong, "trang_thai": tt,
+                         "ket_qua": mo_ta, "artifacts": hv,
+                         "ms": round((time.monotonic() - t0) * 1000, 1)})
+        hien_vat_tat_ca += hv
+        if tt != "PASS":
+            da_gay = True
+
+    # Trạng thái cả chuỗi: chỉ PASS khi CẢ NĂM bước PASS.
+    dat = [b for b in cac_buoc if b["trang_thai"] == "PASS"]
+    trang_thai = "PASS" if len(dat) == len(KE_HOACH) else "FAIL"
+    if all(b["trang_thai"] in ("KHONG_CHAY_DUOC", "CHUA_CHAY") for b in cac_buoc):
+        trang_thai = "KHONG_CHAY_DUOC"
     thoi_gian_ms = round((time.monotonic() - bat_dau) * 1000, 1)
 
+    # Ghi sổ cái với trạng thái THẬT, và KHÔNG nuốt lỗi.
+    #
+    # Bản cũ bọc lượt ghi trong `except Exception: pass` — đặc tả Chương I cấm
+    # thẳng ("Cấm nuốt lỗi"). Ghi sổ hỏng là tin đáng biết: nó nghĩa là mọi phép
+    # đo sau đó đang đọc một quyển sổ thiếu trang.
+    loi_ghi_so = ""
+    try:
+        OMEGA_SO_CAI.parent.mkdir(parents=True, exist_ok=True)
+        with open(OMEGA_SO_CAI, "a", encoding="utf-8") as f:
+            f.write(json.dumps({
+                "task_id": pipeline_id, "phong_id": "pipeline",
+                "preset_id": preset_id or "auto", "yeu_cau": chu_de[:200],
+                "timestamp": datetime.now().isoformat(),
+                "status": trang_thai, "latency_ms": thoi_gian_ms,
+                "buoc_dat": len(dat), "tong_buoc": len(KE_HOACH),
+            }, ensure_ascii=False) + "\n")
+    except OSError as e:
+        loi_ghi_so = f"{type(e).__name__}: {e}"
+
     return web.json_response({
-        "status": "PASS",
+        "status": trang_thai,
         "pipeline_id": pipeline_id,
         "chu_de": chu_de,
         "preset_id": preset_id,
-        "tong_buoc": len(cac_buoc),
+        "tong_buoc": len(KE_HOACH),
+        "buoc_dat": len(dat),
         "cac_buoc": cac_buoc,
+        "so_hien_vat": len(hien_vat_tat_ca),
         "tong_thoi_gian_ms": thoi_gian_ms,
-        "thong_diep": "Quy trình liên phòng ban đã hoàn thành xuất sắc 100%!"
+        "loi_ghi_so_cai": loi_ghi_so,
+        # Không có câu "hoàn thành xuất sắc 100%!" nữa. Con số tự nói.
+        "thong_diep": f"{len(dat)}/{len(KE_HOACH)} bước đạt · "
+                      f"{len(hien_vat_tat_ca)} hiện vật thật trên đĩa"
+                      + (f" · LỖI GHI SỔ: {loi_ghi_so}" if loi_ghi_so else ""),
     })
 
-
-# ==============================================================================
-# 5. API ĐA NGÔN NGỮ (POLYGLOT ENGINE)
-# ==============================================================================
 
 async def api_polyglot_languages(request: web.Request) -> web.Response:
     """Trả về danh sách 8 ngôn ngữ lập trình được hỗ trợ."""

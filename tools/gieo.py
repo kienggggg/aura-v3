@@ -150,10 +150,12 @@ class KetQua:
     #              đo tạo ra nó".
     bai_do_nen: list[str] = field(default_factory=list)
     bai_do: dict[str, list[str]] = field(default_factory=dict)
+    # Tệp bị người khác sửa TRONG LÚC gieo — không ghi đè, và không im lặng.
+    bi_sua_giua_chung: list[str] = field(default_factory=list)
 
     @property
     def ma_thoat(self) -> int:
-        if self.khong_vao or self.khong_tra_duoc:
+        if self.khong_vao or self.khong_tra_duoc or self.bi_sua_giua_chung:
             return 2
         if not self.nen_xanh or self.cua_mu:
             return 1
@@ -330,6 +332,39 @@ def chay_gieo(
     finally:
         # Trả về, rồi CHỨNG MINH là đã trả về — so băm, không tin vào việc mình vừa ghi.
         for ten, d in duong.items():
+            # NGƯỜI KHÁC VỪA SỬA TỆP NÀY THÌ PHẢI KÊU, ĐỪNG GHI ĐÈ (04/09/2026).
+            #
+            # Ngày 03/09 tôi sửa chú thích của `core/phong_alpha.py` trong lúc
+            # một lượt gieo đang chạy nền trên chính tệp ấy. `chay_gieo` cache
+            # nội dung gốc lúc khởi động; đến `finally` nó ghi cache ấy đè lên —
+            # bản sửa biến mất **không một tiếng động**, rồi commit đi mất luôn.
+            # Phát hiện một ngày sau, tình cờ.
+            #
+            # Chua nhất: dòng "1 tệp: giống hệt TỪNG BYTE trước khi gieo" chính
+            # là cơ chế ấy đang báo cáo THÀNH CÔNG. Một máy đo nói thật về việc
+            # nó làm, mà việc nó làm là xoá công của người khác.
+            #
+            # Nay so với nội dung CHÍNH NÓ vừa ghi (bản đã gieo, hoặc bản gốc
+            # nếu phép gieo không vào). Khác nghĩa là có bàn tay khác.
+            try:
+                hien_tai = doc(d)[0]
+            except OSError:
+                hien_tai = None
+            # So với BẢN GỐC. Bản đầu còn theo dõi thêm "nội dung chính nó vừa
+            # ghi" (`da_ghi`), nhưng gieo lỗi cho thấy hai thứ ấy LUÔN bằng
+            # nhau ở thời điểm này — vòng gieo đã khôi phục xong trước khi tới
+            # đây. Mã thừa mà gieo không phân biệt được thì bỏ đi.
+            if hien_tai is not None and hien_tai != goc_chu[ten]:
+                kq.bi_sua_giua_chung.append(ten)
+                if not im_lang:
+                    _in(f"\n  *** {ten} BỊ SỬA TRONG LÚC GIEO — KHÔNG ghi đè. ***"
+                        f"\n      Bản gốc giữ ở {d.name}.truoc_khi_gieo")
+                try:
+                    ghi(d.with_suffix(d.suffix + ".truoc_khi_gieo"),
+                        goc_chu[ten], goc_kieu[ten])
+                except OSError:
+                    pass
+                continue
             try:
                 ghi(d, goc_chu[ten], goc_kieu[ten])
             except Exception as e:                           # noqa: BLE001

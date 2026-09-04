@@ -349,12 +349,42 @@ Latency    42 ms               chưa từng đo
   năm mô-đun riêng là 9 — vượt trần. Hàng rào ấy dựng cùng ngày và nó đang làm
   đúng việc: bắt người viết phải cố ý.
 
-* **CHƯA SỬA — `api_chay_pipeline` vẫn giả.** 91 dòng, gõ tay
+* **`api_chay_pipeline` — ĐÃ SỬA cùng ngày.** Bản cũ 91 dòng, gõ tay
   `"trang_thai": "PASS"` **5 lần**, không gọi phòng nào, nhưng CÓ ghi vào
-  `so_cai.jsonl` — tức để lại dấu vết của việc chưa từng xảy ra. Đây là lỗ trong
-  chính cửa fail-closed: nó có thể bị thoả mãn bởi một phòng ghi tệp về việc nó
-  không làm. `tests/test_phong_noi_bo.py` đóng đinh con số 5 để món nợ này không
-  lặng lẽ trôi đi.
+  `so_cai.jsonl` với `"status": "PASS"` — dấu vết của việc chưa từng xảy ra. Đó
+  là lỗ trong chính cửa fail-closed: cửa hỏi *"có để lại byte nào không?"*, và
+  một hàm ghi sổ về việc nó không làm thì trả lời được câu ấy.
+
+  Bản mới gọi phòng thật và **nối đầu ra vào đầu vào**: kịch bản `aura` viết ra
+  đi thẳng vào `van_ban` của `alpha`. Năm lượt gọi phòng độc lập thì không phải
+  dây chuyền. Chạy thật:
+
+  ```
+  status PASS · 5/5 bước đạt · 22 hiện vật · 166 s
+  1 zeta   PASS    8.165 ms   1 hiện vật thật
+  2 aura   PASS  106.406 ms   244 từ · 13 câu khác nhau · sinh 1/3 lần
+  3 alpha  PASS   28.484 ms   720×1280 · 58,55 s · 18 hiện vật
+  4 omega  PASS       23 ms   1 hiện vật thật
+  5 gamma  PASS   23.234 ms   1 hiện vật thật
+  ```
+
+  **BỐN trạng thái cho mỗi bước, không gộp:** `PASS` · `FAIL` · `KHONG_CHAY_DUOC`
+  · **`CHUA_CHAY`** (bước trước gãy nên bước này không chạy). Trạng thái thứ tư
+  là thứ dễ bịa nhất: đánh nó thành `PASS` thì bảng đọc ra "cả năm bước xong",
+  đánh thành `FAIL` thì đọc ra "nó chạy rồi mà hỏng" — cả hai sai theo một cách
+  khó bắt.
+
+  Lượt ghi sổ **không được nuốt lỗi**. Bản cũ bọc trong `except Exception: pass`;
+  ghi sổ hỏng là tin đáng biết, vì nó nghĩa là mọi phép đo sau đó đang đọc một
+  quyển sổ thiếu trang.
+
+  > Giá đo được: bản gõ tay **0 ms**, bản thật **166 s**.
+  >
+  > Và bốn cửa canh đầu tiên của tôi cho bản này **MÙ**: gieo 8 phép thì 4 xanh,
+  > cả bốn đều là phép đổi HÀNH VI mà không đổi chuỗi — vì bốn bài ấy soi văn
+  > bản hàm bằng `ast.unparse` thay vì gọi hàm rồi đọc kết quả. Đúng lỗi đã ghi
+  > ngày 02/09. Viết lại thành phép đo hành vi (thay mọi phòng bằng bản giả, rồi
+  > đếm cả *phòng nào ĐƯỢC GỌI*) thì **8/8 đỏ**.
 
 ## CHƯƠNG III: CƠ CHẾ BẢO MẬT & BỘ LỌC DỮ LIỆU NHẠY CẢM (REDACTION)
 - Mọi file log lỗi (`raw/error.txt`) phải đi qua bộ lọc tập trung (Centralized Redactor).

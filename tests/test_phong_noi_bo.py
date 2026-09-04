@@ -63,6 +63,31 @@ def _ma_khong_chu_thich(p: Path) -> str:
     return ast.unparse(ast.fix_missing_locations(cay))
 
 
+def _than_ham(ten_ham: str, tep: str = "interface/noi_bo_api.py") -> str:
+    """Phần MÃ của một hàm, đã gỡ chuỗi tài liệu của chính nó.
+
+    Cần gỡ vì chuỗi tài liệu CỐ Ý chép lại các chuỗi giả cũ để ghi bằng chứng —
+    đó là chỗ chúng NÊN xuất hiện. Bản đầu của mấy bài dưới đây đỏ đúng vì thế.
+    """
+    cay = ast.parse((PROJECT_ROOT / tep).read_text(encoding="utf-8"))
+    ham = next((n for n in ast.walk(cay)
+                if isinstance(n, (ast.AsyncFunctionDef, ast.FunctionDef))
+                and n.name == ten_ham), None)
+    assert ham is not None, f"không tìm thấy {ten_ham}"
+    d = ham.body[0]
+    if (isinstance(d, ast.Expr) and isinstance(d.value, ast.Constant)
+            and isinstance(d.value.value, str)):
+        ham.body.pop(0)
+    return ast.unparse(ast.fix_missing_locations(ham))
+
+
+def test_than_ham_that_su_go_duoc_chuoi_tai_lieu():
+    """Ca đối chứng cho chính bộ gỡ — gỡ nhầm cả mã thì mọi bài dưới vô nghĩa."""
+    t = _than_ham("api_chay_pipeline")
+    assert "PHONG[" in t, "bộ gỡ nuốt mất cả phần mã"
+    assert "6 nguồn tin uy tín" not in t, "bộ gỡ chưa bỏ được chuỗi tài liệu"
+
+
 def test_khong_con_con_so_nao_go_tay_trong_NAM_PHONG():
     """Bốn con số giả của `gamma` và ba của `beta`/`omega` phải biến mất."""
     than = _ma_khong_chu_thich(PROJECT_ROOT / "core" / "phong_noi_bo.py")
@@ -72,35 +97,74 @@ def test_khong_con_con_so_nao_go_tay_trong_NAM_PHONG():
 
 def test_duong_dispatch_khong_con_so_go_tay():
     """Chỉ soi hàm `api_dieu_phoi_phong` — đường mà bảy phòng đi qua."""
-    cay = ast.parse((PROJECT_ROOT / "interface" / "noi_bo_api.py").read_text(encoding="utf-8"))
-    ham = next((n for n in ast.walk(cay)
-                if isinstance(n, ast.AsyncFunctionDef) and n.name == "api_dieu_phoi_phong"),
-               None)
-    assert ham is not None, "không tìm thấy api_dieu_phoi_phong"
-    than = ast.unparse(ham)
+    than = _than_ham("api_dieu_phoi_phong")
     for s in SO_GO_TAY:
         assert s not in than, f"đường dispatch còn số gõ tay: {s!r}"
 
 
-def test_ghi_nhan_api_chay_pipeline_VAN_CON_GIA():
-    """`api_chay_pipeline` vẫn gõ tay `"trang_thai": "PASS"` — CHƯA sửa.
+def test_api_chay_pipeline_GOI_PHONG_THAT_khong_go_tay():
+    """Thay `test_ghi_nhan_api_chay_pipeline_VAN_CON_GIA` ngày 03/09/2026.
 
-    Đo 03/09/2026: 91 dòng, **5 lần** gõ tay `PASS`, không gọi phòng nào, nhưng
-    CÓ ghi vào `so_cai.jsonl` — tức nó để lại dấu vết của việc chưa từng xảy ra.
+    Bài cũ đóng đinh con số 5 — số lần gõ tay `"trang_thai": "PASS"` — và nói
+    thẳng: *"nếu vừa sửa nó thành thật thì xoá bài này đi"*. Nay đã sửa, nên nó
+    lỗi thời đúng như đã dự. Món nợ được ghi ra, rồi được trả, chứ không trôi.
 
-    Bài này không đòi nó phải thật. Nó ĐÓNG ĐINH con số 5, để lần sau ai sửa thì
-    phải sửa cả đây — và để món nợ này không lặng lẽ trôi đi. Xoá bài này mà
-    không sửa `api_chay_pipeline` là giấu nợ.
+    Bản cũ: 91 dòng, 5 lần gõ tay PASS, không gọi phòng nào, nhưng CÓ ghi vào
+    `so_cai.jsonl` — dấu vết của việc chưa từng xảy ra.
+    """
+    than = _than_ham("api_chay_pipeline")
+
+    assert "'trang_thai': 'PASS'" not in than, "còn gõ tay trạng thái PASS"
+    assert "PHONG[" in than, "không gọi phòng thật"
+    assert "viet_kich_ban" in than and "dung_video" in than, (
+        "không gọi hai phòng nặng nhất — aura và alpha")
+    for s_gia in ("6 nguồn tin uy tín", "1.800 từ", "100% Hard Gates",
+                  "xuất sắc 100%", "-14 LUFS", "58s"):
+        assert s_gia not in than, f"còn chuỗi gõ tay: {s_gia!r}"
+
+
+def test_pipeline_NOI_dau_ra_cua_aura_vao_alpha():
+    """Nối thật, không diễu hành.
+
+    Năm lượt gọi phòng độc lập thì không phải dây chuyền. Kịch bản `aura` viết
+    ra phải đi vào tham số `van_ban` của `dung_video`.
     """
     cay = ast.parse((PROJECT_ROOT / "interface" / "noi_bo_api.py").read_text(encoding="utf-8"))
-    ham = next((n for n in ast.walk(cay)
-                if isinstance(n, ast.AsyncFunctionDef) and n.name == "api_chay_pipeline"), None)
-    assert ham is not None
-    than = ast.unparse(ham)
-    assert than.count("'trang_thai': 'PASS'") == 5, (
-        "số lần gõ tay PASS trong api_chay_pipeline đã đổi — nếu vừa sửa nó "
-        "thành thật thì xoá bài này đi, còn nếu chưa thì cập nhật con số")
-    assert "PHONG[" not in than, "nếu nó đã gọi phòng thật thì bài này lỗi thời"
+    ham = next(n for n in ast.walk(cay)
+               if isinstance(n, ast.AsyncFunctionDef) and n.name == "api_chay_pipeline")
+    goi = [n for n in ast.walk(ham)
+           if isinstance(n, ast.Call) and any(
+               isinstance(a, ast.Name) and a.id == "dung_video" for a in ast.walk(n))]
+    assert goi, "không tìm thấy lượt gọi dung_video"
+    tham_so = ast.unparse(goi[0])
+    assert "kich_ban" in tham_so, (
+        f"`dung_video` không nhận kịch bản của aura: {tham_so}")
+
+
+def test_pipeline_co_trang_thai_CHUA_CHAY_cho_buoc_khong_chay():
+    """Bước không chạy phải mang trạng thái RIÊNG, không phải PASS cũng không FAIL.
+
+    Đánh nó thành PASS thì bảng đọc ra "cả năm bước xong"; đánh thành FAIL thì
+    đọc ra "nó chạy rồi mà hỏng". Cả hai đều sai theo một cách khó bắt.
+    """
+    than = _than_ham("api_chay_pipeline")
+    assert "CHUA_CHAY" in than, "thiếu trạng thái cho bước không chạy"
+    assert "KHONG_CHAY_DUOC" in than, "thiếu trạng thái không đo được"
+
+
+def test_pipeline_KHONG_nuot_loi_ghi_so_cai():
+    """`except Exception: pass` quanh lượt ghi sổ là điều đặc tả cấm thẳng.
+
+    Ghi sổ hỏng là tin đáng biết: nó nghĩa là mọi phép đo sau đó đang đọc một
+    quyển sổ thiếu trang.
+    """
+    cay = ast.parse((PROJECT_ROOT / "interface" / "noi_bo_api.py").read_text(encoding="utf-8"))
+    ham = next(n for n in ast.walk(cay)
+               if isinstance(n, ast.AsyncFunctionDef) and n.name == "api_chay_pipeline")
+    for n in ast.walk(ham):
+        if isinstance(n, ast.ExceptHandler) and len(n.body) == 1 and isinstance(n.body[0], ast.Pass):
+            raise AssertionError("còn một nhánh `except: pass` nuốt lỗi")
+    assert "loi_ghi_so" in ast.unparse(ham), "lỗi ghi sổ phải lọt ra ngoài phản hồi"
 
 
 def test_bo_loc_chu_thich_that_su_bo_duoc():
@@ -377,3 +441,131 @@ def test_doi_chung_delta_khong_bom_thi_PASS():
     kq = phong_delta("thu_delta_khong_bom")
     assert kq["trang_thai"] == "PASS", kq["vi_sao"]
     assert kq["so"]["loi_cu_phap"] == []
+
+
+# ---------------------------------------------------------------------------
+# PIPELINE — ĐO HÀNH VI, không dò chuỗi
+#
+# Bốn bài trên chỉ soi VĂN BẢN của hàm bằng `ast.unparse`. Gieo 8 phép thì
+# 4 XANH, và cả bốn đều là phép đổi HÀNH VI mà không đổi chuỗi:
+#
+#   trang_thai = "PASS" bất kể kết quả       -> vẫn xanh
+#   bước gãy không làm dừng dây chuyền       -> vẫn xanh
+#   ghi sổ cái luôn "PASS"                   -> vẫn xanh
+#   bỏ nhánh gộp CHUA_CHAY/KHONG_CHAY_DUOC   -> vẫn xanh
+#
+# Đúng lỗi `CLAUDE.md` ghi ngày 02/09: *"cả hai đều vì tôi dò chuỗi trong mã
+# thay vì gọi hàm rồi xem nó trả về gì"*. Lần thứ bảy cùng hình dạng.
+
+class _ReqGia:
+    def __init__(self, d): self._d = d
+
+    async def json(self): return self._d
+
+
+def _chay_pipeline(monkeypatch, aura="DAT", alpha="PASS", cac_phong=None, chu_de="thử"):
+    """Chạy `api_chay_pipeline` với mọi phòng bị thay bằng bản giả, rồi ĐỌC kết quả.
+
+    Đếm luôn phòng nào ĐƯỢC GỌI — để bắt được ca "bước gãy mà dây chuyền vẫn
+    chạy tiếp", thứ mà dò chuỗi không bao giờ thấy.
+    """
+    import asyncio
+    import json as _json
+
+    import interface.noi_bo_api as api
+
+    da_goi: list = []
+
+    def _aura(chu_de_, *a, **k):
+        da_goi.append("aura")
+        return {"trang_thai": aura,
+                "van_ban": ("Cau mot. " * 30).strip() if aura == "DAT" else "",
+                "so": {"so_tu": 60, "so_cau_khac": 30}, "so_lan_thu": 1,
+                "lan": [{"vi_sao": ["gieo"]}], "ms": 1.0}
+
+    def _alpha(thu_muc, van_ban=None, *a, **k):
+        da_goi.append("alpha")
+        assert van_ban, "alpha phải nhận kịch bản từ aura"
+        thu_muc.mkdir(parents=True, exist_ok=True)
+        return {"trang_thai": alpha, "artifacts": [], "kiem": {"so": {}},
+                "ms": 1.0, "vi_sao": "gieo"}
+
+    def _mot_phong(ten, tt):
+        def _f(task_id, yeu_cau="", *a, **k):
+            da_goi.append(ten)
+            return {"trang_thai": tt, "artifacts": [], "so": {}, "vi_sao": "", "ms": 1.0}
+        return _f
+
+    tt_phong = cac_phong or {"zeta": "PASS", "omega": "PASS", "gamma": "PASS"}
+    monkeypatch.setattr("core.viet_truyen.viet_kich_ban", _aura)
+    monkeypatch.setattr("core.phong_alpha.dung_video", _alpha)
+    monkeypatch.setattr("core.phong_noi_bo.PHONG",
+                        {k: _mot_phong(k, v) for k, v in tt_phong.items()})
+
+    r = asyncio.run(api.api_chay_pipeline(_ReqGia({"chu_de": chu_de})))
+    return _json.loads(r.body.decode("utf-8")), da_goi
+
+
+def test_pipeline_moi_buoc_dat_thi_ca_chuoi_PASS(monkeypatch):
+    """Ca đối chứng — máy đo phải chứng minh nó biết nói PASS."""
+    d, da_goi = _chay_pipeline(monkeypatch)
+    assert d["status"] == "PASS", d["thong_diep"]
+    assert d["buoc_dat"] == 5 and d["tong_buoc"] == 5
+    assert da_goi == ["zeta", "aura", "alpha", "omega", "gamma"], da_goi
+
+
+def test_pipeline_MOT_buoc_gay_thi_ca_chuoi_KHONG_duoc_PASS(monkeypatch):
+    d, _ = _chay_pipeline(monkeypatch, alpha="FAIL")
+    assert d["status"] != "PASS", "một bước FAIL mà cả chuỗi vẫn PASS"
+    assert d["buoc_dat"] < 5, d["buoc_dat"]
+
+
+def test_pipeline_buoc_gay_thi_DUNG_LAI_va_KHONG_goi_phong_sau(monkeypatch):
+    """Bước sau phụ thuộc bước trước — chạy tiếp là đo một thứ vô nghĩa.
+
+    Dò chuỗi không bắt được ca này: bỏ `da_gay = True` thì văn bản hàm vẫn còn
+    đủ mọi chữ mà bốn bài trên tìm.
+    """
+    d, da_goi = _chay_pipeline(monkeypatch, aura="KHONG_DAT")
+    assert "alpha" not in da_goi, f"aura gãy mà alpha vẫn được gọi: {da_goi}"
+    assert "gamma" not in da_goi, f"dây chuyền không dừng: {da_goi}"
+    sau = [b for b in d["cac_buoc"] if b["buoc"] > 2]
+    assert all(b["trang_thai"] == "CHUA_CHAY" for b in sau), (
+        f"bước sau phải mang CHUA_CHAY: {[(b['buoc'], b['trang_thai']) for b in sau]}")
+
+
+def test_pipeline_CHUA_CHAY_khong_bi_dem_thanh_dat(monkeypatch):
+    d, _ = _chay_pipeline(monkeypatch, aura="KHONG_DAT")
+    assert d["buoc_dat"] == 1, f"chỉ zeta đạt, mà đếm ra {d['buoc_dat']}"
+
+
+def test_pipeline_ghi_SO_CAI_dung_trang_thai_that(monkeypatch):
+    """Sổ cái phải mang trạng thái THẬT, không phải PASS cứng.
+
+    Đây là chỗ đắt nhất: bản cũ ghi `"status": "PASS"` cho mọi lượt, nên sổ cái
+    — thứ `omega` đọc để làm báo cáo — đầy những dòng PASS của việc chưa xảy ra.
+    """
+    import json as _json
+
+    from core.phong_noi_bo import SO_CAI
+
+    truoc = SO_CAI.read_text(encoding="utf-8").count("\n") if SO_CAI.is_file() else 0
+    d, _ = _chay_pipeline(monkeypatch, alpha="FAIL")
+    assert SO_CAI.is_file(), "không ghi sổ cái"
+    cac_dong = SO_CAI.read_text(encoding="utf-8").strip().splitlines()
+    assert len(cac_dong) > truoc, "không có dòng mới nào"
+    moi = _json.loads(cac_dong[-1])
+    assert moi["task_id"] == d["pipeline_id"], moi
+    assert moi["status"] == d["status"] != "PASS", (
+        f"sổ cái ghi {moi['status']!r} còn phản hồi là {d['status']!r}")
+    assert moi["buoc_dat"] == d["buoc_dat"]
+
+
+def test_pipeline_khong_buoc_nao_chay_duoc_thi_KHONG_CHAY_DUOC(monkeypatch):
+    """Ba trạng thái ở tầng chuỗi: hỏng hết ≠ 'đã chạy, không đạt'."""
+    d, _ = _chay_pipeline(monkeypatch,
+                          cac_phong={"zeta": "KHONG_CHAY_DUOC", "omega": "PASS",
+                                     "gamma": "PASS"})
+    assert d["cac_buoc"][0]["trang_thai"] == "KHONG_CHAY_DUOC"
+    assert d["status"] == "KHONG_CHAY_DUOC", (
+        f"mọi bước đều KHONG_CHAY_DUOC/CHUA_CHAY mà cả chuỗi báo {d['status']!r}")

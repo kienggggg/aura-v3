@@ -27,12 +27,30 @@ NĂM THỨ NÓ CẦN, ĐÃ CHẠY THỬ TRƯỚC KHI VIẾT DÒNG NÀO (mục 7 
     MSTTS_V110_viVN_An  CÓ — nhưng chỉ ở nhánh registry Speech_OneCore.
                         `System.Speech` báo "không có giọng tiếng Việt", và
                         câu ấy SAI: nó chỉ nhìn nhánh cũ. Xem tools/tts_onecore.ps1.
-    STUDIO_FIXTURE.md CÓ · 924 byte · 154 từ
-                        sha256 33887b979f8c0be04b299281105b90740e01dbe1f8fc0eb725e29e61eeeb31b5
+    STUDIO_FIXTURE.md CÓ · 1403 byte · 235 từ · 15 câu khác nhau
+                        sha256 a64eb0873ec065f48a8820cb3596383502d592a68b69d90f3be47cacf910fca9
 
-Đo thêm một nhịp để biết thời lượng có rơi vào cửa sổ không: 13 từ đọc hết
-4,875 s, nên 154 từ ≈ 58 s — nằm giữa 55 và 65. Không phải may: nếu lệch thì
-`_dai_ngan_lai()` cắt/đệm cho vừa, và verifier vẫn là thứ nói lời cuối.
+CÂU ƯỚC LƯỢNG CŨ Ở ĐÂY ĐÃ SAI 40%, và đó là gốc của mọi chuyện sau. Nguyên văn:
+*"13 từ đọc hết 4,875 s, nên 154 từ ≈ 58 s"*. Ngoại suy từ **một điểm duy nhất**,
+ra 2,67 từ/s. Đo lại 03/09/2026 trên năm mẫu:
+
+    80 từ (lặp)  22,38 s      179 từ (văn)  46,38 s
+   154 từ (lặp)  42,05 s      266 từ (văn)  67,30 s
+   240 từ (lặp)  65,93 s
+
+Tức 3,58–3,95 từ/s, và đề 154 từ đọc hết **41,27 s**, không phải 58 s. Không ai
+phát hiện suốt một tháng vì `_dai_ngan_lai()` đệm im lặng cho đủ cửa sổ —
+**15,23 s / 56,50 s (27%) của video không có giọng nói**, và mọi cửa vẫn xanh.
+Đề mới 235 từ tự nó lấp đầy cửa sổ, không cần đệm.
+
+Cùng họ với luật *"ba điểm khớp một quy luật không chứng minh được điểm thứ
+tư"* — ở đây còn tệ hơn: một điểm.
+
+> Đoạn này đã bị MẤT một lần. Ngày 03/09 tôi sửa nó trong lúc `tools/gieo.py`
+> đang gieo chính tệp này ở tiến trình nền; `gieo.py` cache nội dung gốc lúc
+> khởi động rồi ghi đè trả lại ở `finally`, nên bản sửa biến mất không một tiếng
+> động — và dòng *"1 tệp: giống hệt TỪNG BYTE"* chính là cơ chế ấy đang báo cáo
+> thành công. Nay `gieo.py` phát hiện và kêu; xem `tests/test_gieo.py`.
 
 BA TRẠNG THÁI, không gộp: `PASS` (dựng xong và qua verifier) · `FAIL` (dựng
 xong nhưng verifier bác) · `KHONG_CHAY_DUOC` (thiếu công cụ, hết giờ, TTS gãy).
@@ -793,8 +811,38 @@ def _don_luot_cu(goc: Path) -> int:
 
 
 def dung_video(thu_muc_ra: Path, van_ban: str | None = None) -> Dict[str, Any]:
-    """Chạy cả dây chuyền. Trả về `{trang_thai, artifacts, kiem, ms, vi_sao}`."""
+    """Chạy cả dây chuyền. Trả về `{trang_thai, artifacts, kiem, ms, vi_sao}`.
+
+    HẾT GIỜ LÀ `KHONG_CHAY_DUOC`, KHÔNG PHẢI NGOẠI LỆ (thêm 04/09/2026).
+
+    Tệp này có 16 lệnh con mang trần thời gian cứng (60–300 s) mà chỉ MỘT chỗ
+    bắt `TimeoutExpired` — `doc_giong`. Mười lăm chỗ còn lại, dưới tải nặng, ném
+    ngoại lệ thẳng ra ngoài: bài test đỏ với một traceback, đọc y hệt "dây chuyền
+    hỏng" trong khi thật ra là "máy bận, chưa đo được".
+
+    Đó chính là ba trạng thái bị gộp còn hai, ở chỗ khó thấy nhất.
+
+    CHƯA CHỨNG MINH ĐƯỢC đây là nguyên nhân của mẫu chập chờn cả ngày 03/09::
+
+        >= 15 phút  ->  ĐỎ    (30:37 · 19:17 · 16:49 · 15:14)
+        <  12 phút  ->  XANH  (11:11 · 6:38 · 6:14 · 5:24 · 5:16 · 3:54 · 3:45)
+
+    Không lượt nào phá mẫu, nhưng tôi chưa bắt được ngoại lệ tận tay — bốn lần
+    thử tái hiện đều xanh. Bản vá này đúng bất kể nguyên nhân là gì, và nó làm
+    lần sau TỰ KHAI: thay vì một traceback, sổ sẽ ghi rõ lệnh nào hết giờ.
+    """
     t0 = time.monotonic()
+    try:
+        return _dung_video(thu_muc_ra, van_ban, t0)
+    except subprocess.TimeoutExpired as e:
+        lenh = e.cmd[0] if isinstance(e.cmd, (list, tuple)) and e.cmd else str(e.cmd)
+        return {"trang_thai": "KHONG_CHAY_DUOC", "artifacts": [], "kiem": {},
+                "ms": round((time.monotonic() - t0) * 1000, 1),
+                "vi_sao": f"hết giờ: `{lenh}` quá {e.timeout}s "
+                          f"(máy bận — chưa đo được, không phải dây chuyền hỏng)"}
+
+
+def _dung_video(thu_muc_ra: Path, van_ban: str | None, t0: float) -> Dict[str, Any]:
     _don_luot_cu(thu_muc_ra.parent)
     thieu = [t for t in ("ffmpeg", "ffprobe") if not shutil.which(t)]
     try:

@@ -15,12 +15,14 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime
 import hashlib
+import hmac
 import json
 import os
+import secrets
 from pathlib import Path
 import sys
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Mapping, Optional
 from uuid import uuid4
 
 from aiohttp import web
@@ -110,6 +112,79 @@ def _bang_chung_moi(truoc: Dict[str, tuple], sau: Dict[str, tuple]) -> List[str]
 def _artifact_co_that(ten: str) -> bool:
     """Tệp phòng KHAI là đã tạo — có trên đĩa không?"""
     return any(f.is_file() for f in PROJECT_ROOT.rglob(ten))
+
+
+# ---------------------------------------------------------- CỔNG VÀO CHẠY MÃ
+#
+# `/api/polyglot/run` chạy MÃ TUỲ Ý trong tiến trình con. Đo 04/09/2026 bằng một
+# POST không mang gì cả::
+#
+#     HTTP 200 · status PASS
+#     HOME = C:\Users\baloa      cwd = D:\AURA_v3
+#     ghi được D:\AURA_v3\CHUNG_MINH_LO.txt — RA NGOÀI thư mục tạm
+#
+# Bốn lớp dưới đây chép từ `KY_LUAT_THUC_THI.md` Chương III — đăng ký ở đó TRƯỚC
+# khi có mã này. Mọi lớp FAIL-CLOSED: thiếu là chặn.
+#
+# CHƯA CHẶN ĐƯỢC, và không được viết là đã chặn: bốn lớp này canh **ai gọi
+# được**, KHÔNG canh **mã làm được gì**. Không có hộp cát — mã vẫn ghi ra ngoài
+# thư mục tạm, đọc được HOME, gọi được mạng. `resource.setrlimit` là API Unix,
+# đã thử 19/08 và `ModuleNotFoundError` trên Windows.
+BIEN_BAT_CHAY_MA = "AURA_CHO_CHAY_MA"
+HEADER_MA_THONG_HANH = "X-Aura-Token"
+
+# Sinh một lần cho mỗi tiến trình. In ra console lúc khởi động (xem noi_bo_app).
+MA_THONG_HANH = secrets.token_urlsafe(32)
+
+# Máy chủ bind vào đâu. `noi_bo_app.main()` ghi vào đây trước khi chạy; còn None
+# nghĩa là chưa ai khai — và chưa khai thì KHÔNG cho chạy mã.
+DIA_CHI_BIND: Optional[str] = None
+
+_LOOPBACK = {"127.0.0.1", "::1", "localhost"}
+
+
+def dat_dia_chi_bind(host: str) -> None:
+    """`noi_bo_app` gọi hàm này trước `web.run_app`."""
+    global DIA_CHI_BIND
+    DIA_CHI_BIND = host
+
+
+def _la_loopback(host: Optional[str]) -> bool:
+    return host is not None and host.strip().lower() in _LOOPBACK
+
+
+def cua_chay_ma(headers: Mapping[str, str]) -> Optional[str]:
+    """Trả lý do CHẶN, hoặc `None` nếu cho đi qua.
+
+    Thứ tự cố ý: lớp 4 (loopback) đứng TRƯỚC lớp 1 (cờ bật), vì mở ra LAN và cho
+    chạy mã là hai việc không được phép xảy ra cùng lúc — bật cờ cũng không cứu.
+    """
+    if not _la_loopback(DIA_CHI_BIND):
+        return (f"máy chủ đang bind {DIA_CHI_BIND!r}, không phải loopback — "
+                f"chạy mã bị TẮT vĩnh viễn ở chế độ này")
+    if os.environ.get(BIEN_BAT_CHAY_MA) != "1":
+        return (f"chạy mã đang TẮT. Đặt {BIEN_BAT_CHAY_MA}=1 để bật — "
+                f"và đọc phần 'CHƯA CHẶN ĐƯỢC' trước khi bật")
+    gui = headers.get(HEADER_MA_THONG_HANH, "")
+    # So bằng BYTE, không bằng str.
+    #
+    # `hmac.compare_digest` ném `TypeError` khi chuỗi có ký tự ngoài ASCII —
+    # nên một mã thông hành có dấu làm cổng NỔ 500 thay vì chặn 403. Sai chiều
+    # fail-closed: lỗi phải dẫn tới chặn, không dẫn tới một trang lỗi. Bắt được
+    # 04/09/2026 bởi chính bài test gửi "sai-be-bét".
+    if not gui or not hmac.compare_digest(
+            gui.encode("utf-8", "surrogatepass"),
+            MA_THONG_HANH.encode("utf-8")):
+        return f"thiếu hoặc sai {HEADER_MA_THONG_HANH}"
+    # Origin chỉ có khi trình duyệt gọi. Không có Origin (curl, script) thì đã
+    # qua được mã thông hành rồi, không cần chặn thêm.
+    goc = headers.get("Origin", "")
+    if goc:
+        from urllib.parse import urlparse
+        ten = (urlparse(goc).hostname or "").lower()
+        if ten not in _LOOPBACK:
+            return f"Origin {goc!r} không phải máy này"
+    return None
 
 
 # Danh mục 7 Đặc Nhiệm AURA v3
@@ -823,6 +898,11 @@ async def api_polyglot_run(request: web.Request) -> web.Response:
     định bind 127.0.0.1 nhưng đọc biến `AURA_NOI_BO_HOST`, nên một biến môi
     trường là mở ra LAN.
     """
+    ly_do = cua_chay_ma(request.headers)
+    if ly_do is not None:
+        return web.json_response(
+            {"status": "BLOCKED", "error": ly_do}, status=403)
+
     try:
         data = await request.json()
     except Exception:

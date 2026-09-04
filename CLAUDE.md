@@ -402,6 +402,65 @@ Và ca đối chứng ấy suýt sai vì tiếc thời gian: dùng câu bốn m�
 thì bản trộn ra **−29,9 LUFS** (trần −18…−12), nên đối chứng đỏ vì độ ồn chứ
 không vì chuyện đang xét — rẻ hơn 2 phút, nhưng đo sai biến.
 
+### Một cổng chưa từng cho ai đi qua thì chưa chứng minh được gì
+
+Ngày 04/09/2026 vá `/api/polyglot/run` — đường **chạy mã tuỳ ý**. Đo cái lỗ
+trước, bằng một `POST` không mang gì cả:
+
+```
+HTTP 200 · status PASS
+HOME = C:\Users\baloa      cwd = D:\AURA_v3
+ghi được D:\AURA_v3\CHUNG_MINH_LO.txt — RA NGOÀI thư mục tạm
+```
+
+Bốn lớp, fail-closed, đăng ký vào `KY_LUAT_THUC_THI.md` trước khi viết: **chỉ
+loopback** · **cờ bật `AURA_CHO_CHAY_MA=1`** · **mã thông hành 32 byte** ·
+**kiểm Origin**. Lớp loopback đứng TRƯỚC cờ bật — mở ra LAN và cho chạy mã là
+hai việc không được xảy ra cùng lúc.
+
+**Mỗi lớp phải có một ca CHẶN và một ca ĐI QUA.** Một cổng chưa từng cho ai đi
+qua thì không chứng minh được nó chặn đúng người — nó chỉ chứng minh nó chặn
+tất cả, mà `return "chặn"` vô điều kiện cũng làm được thế.
+
+```
+don y het luc chua va          403 BLOCKED · ghi duoc tep: False
+co bat, khong ma thong hanh    403 BLOCKED · False
+co bat + ma SAI                403 BLOCKED · False
+du het + Origin trang ngoai    403 BLOCKED · False
+du het nhung bind 0.0.0.0      403 BLOCKED · False
+du bon lop  (ca doi chung)     200 PASS    · True
+```
+
+Gieo 10 phép: 10/10 đỏ.
+
+Ba thứ bắt được trên đường, cả ba đều do phép đo chứ không do đọc mã:
+
+*`hmac.compare_digest` ném `TypeError` với chuỗi ngoài ASCII.* Gửi mã thông hành
+có dấu thì cổng **nổ 500 thay vì chặn 403** — sai chiều fail-closed. Sửa: so
+bằng byte.
+
+*Bài canh chú thích của tôi mù.* Nó kiểm `"CHƯA CHẶN ĐƯỢC" in khoi`, nhưng cụm
+ấy xuất hiện **hai lần** — lần thứ hai nằm trong câu thông báo lúc chạy. Gieo bỏ
+hẳn đoạn giải thích mà bài vẫn xanh. Bệnh `x in y` lần nữa. Sửa: chỉ soi dòng
+bắt đầu bằng `#`.
+
+*Và một bài test cũ đang KHOÁ CHẶT cái lỗ.* `test_api_polyglot_run` khẳng định
+endpoint chạy mã **không cần mã thông hành**, với chú thích *"thực thi mã trong
+sandbox"* — không có hộp cát nào cả. Nó xanh suốt, và sửa cho thật thì nó đỏ.
+Cùng ca với `/api/dispatch` hôm 02/09. Nay tách thành hai bài: một ca chặn, một
+ca đi qua.
+
+**CHƯA CHẶN ĐƯỢC, và không được viết là đã chặn:** bốn lớp này canh *ai gọi
+được*, không canh *mã làm được gì*. Không có hộp cát — mã vẫn ghi ra ngoài thư
+mục tạm, đọc được `HOME`, gọi được mạng. `resource.setrlimit` là API Unix, đã
+thử 19/08 và `ModuleNotFoundError` trên máy này.
+
+> Và mục này suýt không tồn tại. Lượt viết đầu tiên gãy cú pháp vì dấu chéo
+> trong `C:\Users\baloa` bị vỏ shell nuốt — tôi **báo cáo là đã ghi mà không
+> kiểm đầu ra**. Đúng bệnh cả tệp này sinh ra để chống, mắc ngay khi đang viết
+> về nó. Lần thứ tư trong hai ngày dấu chéo bị nuốt qua heredoc; đường an toàn
+> là ghi tệp bằng công cụ ghi tệp, đừng nhét mã qua vỏ shell.
+
 ### Máy đo có thể xoá công của người khác, và báo cáo là thành công
 
 Ngày 03/09/2026 tôi sửa chú thích đầu `core/phong_alpha.py` — đoạn ghi lại phép

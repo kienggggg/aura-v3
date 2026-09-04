@@ -77,6 +77,24 @@ def main(argv: Sequence[str] | None = None) -> int:
     print("  🏛️  AURA COMMAND CENTER — APP ĐIỀU HÀNH 7 ĐẶC NHIỆM v3")
     print(f"  ⚡ Máy chủ đang chạy tại: http://{args.host}:{args.port}/")
     print("  🛡️ 7 Phòng ban sẵn sàng: AURA, Alpha, Beta, Delta, Gamma, Omega, Zeta")
+
+    # KHAI ĐỊA CHỈ BIND cho cổng chạy mã, TRƯỚC khi máy chủ lên.
+    #
+    # `noi_bo_api.cua_chay_ma` mặc định CHẶN khi chưa ai khai — nên quên gọi dòng
+    # này thì `/api/polyglot/run` tắt, chứ không phải mở. Fail-closed đặt đúng
+    # chiều: lỗi của người viết mã dẫn tới AN TOÀN HƠN, không phải nguy hơn.
+    from interface import noi_bo_api
+
+    noi_bo_api.dat_dia_chi_bind(args.host)
+    if noi_bo_api.cua_chay_ma({noi_bo_api.HEADER_MA_THONG_HANH:
+                               noi_bo_api.MA_THONG_HANH}) is None:
+        print(f"  🔑 CHẠY MÃ ĐANG BẬT. Mã thông hành phiên này:")
+        print(f"     {noi_bo_api.MA_THONG_HANH}")
+        print(f"     Gửi ở header {noi_bo_api.HEADER_MA_THONG_HANH}. "
+              f"KHÔNG có hộp cát — mã chạy với đủ quyền tài khoản.")
+    else:
+        print(f"  🔒 Chạy mã đang TẮT: "
+              f"{noi_bo_api.cua_chay_ma({noi_bo_api.HEADER_MA_THONG_HANH: noi_bo_api.MA_THONG_HANH})}")
     print("=" * 60)
 
     app = build_noi_bo_app()

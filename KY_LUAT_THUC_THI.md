@@ -390,3 +390,43 @@ Latency    42 ms               chưa từng đo
 - Mọi file log lỗi (`raw/error.txt`) phải đi qua bộ lọc tập trung (Centralized Redactor).
 - Tự động che giấu mọi dạng key/token: Bearer tokens, OpenAI/Gemini/Anthropic/OpenRouter API keys, Basic Auth credentials trong URL.
 - Test bộ lọc bằng token giả; tuyệt đối không đưa key thật vào test fixture hoặc log commit.
+
+### Cổng vào của `/api/polyglot/run` (04/09/2026)
+
+Đường này **chạy mã tuỳ ý** trong tiến trình con. Đo trước khi vá, bằng một
+`POST` không mang gì cả:
+
+```
+HTTP 200 · status PASS
+HOME = C:\Users\baloa      cwd = D:\AURA_v3
+ghi được D:\AURA_v3\CHUNG_MINH_LO.txt — RA NGOÀI thư mục tạm
+```
+
+Không mã thông hành, không kiểm Origin, không cờ bật. `noi_bo_app.py` mặc định
+bind `127.0.0.1` nhưng đọc `AURA_NOI_BO_HOST`, nên **một biến môi trường là mở
+ra LAN**.
+
+**Bốn lớp, đăng ký TRƯỚC khi viết mã. Mọi lớp fail-closed — thiếu là chặn.**
+
+1. **Tắt mặc định.** Không có `AURA_CHO_CHAY_MA=1` thì trả **403**. Chạy mã là
+   việc phải bật có ý thức, không phải mặc định của một máy chủ nội bộ.
+2. **Mã thông hành.** Sinh ngẫu nhiên 32 byte lúc tiến trình khởi động, in ra
+   console một lần. Client phải gửi đúng ở `X-Aura-Token`, so bằng
+   `hmac.compare_digest`. Sai hoặc thiếu -> **403**.
+3. **Kiểm Origin.** Có `Origin` mà khác gốc của chính máy chủ -> **403**. Đây là
+   lớp chặn trang web bất kỳ trong trình duyệt của Sếp gọi sang localhost.
+4. **Chỉ loopback.** Máy chủ bind địa chỉ KHÔNG phải loopback thì lớp 1 bị vô
+   hiệu hoá vĩnh viễn — bật cờ cũng không chạy được mã. Mở ra LAN và cho chạy mã
+   là hai việc không được phép xảy ra cùng lúc.
+
+**CHƯA CHẶN ĐƯỢC — không viết là đã chặn:**
+
+- **Không có hộp cát.** Mã vẫn chạy với đủ quyền tài khoản Windows: ghi được ra
+  ngoài thư mục tạm, đọc được `HOME`, gọi được mạng. Bốn lớp trên chặn *ai gọi
+  được*, không chặn *mã làm được gì*. `resource.setrlimit` là API Unix — đã thử
+  ngày 19/08, `ModuleNotFoundError` trên Windows.
+- Chỉ có `timeout`, không có trần RAM, không có trần ghi đĩa.
+
+**Phép đo phải chứng minh cả hai chiều.** Mỗi lớp một ca CHẶN và một ca ĐI QUA
+— một cổng chưa từng cho ai đi qua thì không chứng minh được nó đang chặn đúng
+người, mà chỉ chứng minh nó chặn tất cả.

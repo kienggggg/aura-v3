@@ -686,9 +686,60 @@ def test_provider_exception_becomes_structured_error_without_details():
     assert store.appended == []
 
 
-@pytest.mark.timing   # phụ thuộc ĐỒNG HỒ THẬT: timeout_s=0.02 chỉ bắn đúng khi
-                      # máy rảnh. Máy bận thì trượt. Bỏ qua bằng: -m "not timing"
-def test_timeout_cancels_provider_and_never_appends_late_transcript():
+class DongHoDongDinh:
+    """Đồng hồ do BÀI TEST cầm, không do MÁY cầm.
+
+    04/09/2026 — đây là chỗ sinh ra mẫu *"chạy ≥15 phút thì đỏ, <12 phút thì
+    xanh"* đứng suốt 12 lượt mà 4 lần thử tái hiện đều xanh. Thời lượng chưa bao
+    giờ là nguyên nhân; nó là **hệ quả**. Biến thật là TẢI MÁY, và nó đẩy cả hai:
+    lượt chạy dài ra, và bài này đỏ.
+
+    Đo có đối chứng (24 tiến trình quay CPU trên 8 luồng logic):
+
+        máy rảnh   timing 5/5 XANH    đối chứng 5/5 XANH   19,2 s
+        máy bận    timing 5/5 ĐỎ      đối chứng 5/5 XANH   28,8 s
+
+    Đối chứng là **toàn bộ phần còn lại của chính tệp này** (`-m "not timing"`) —
+    cùng import, cùng asyncio, cùng fixture. Nó chậm đi 50% mà vẫn xanh, nên thứ
+    gãy không phải "tải máy làm vỡ mọi thứ".
+
+    Bọc `_before_deadline` đọc ngân sách còn lại ĐÚNG LÚC gọi model:
+
+        máy rảnh   +17,0  +17,3  +17,0  +17,0  +17,1 ms   model chạy 5/5
+        máy bận    +13,5  −59,4  −46,6   +2,8  −31,7 ms   model chạy 2/5
+
+    Số âm nghĩa là việc TRƯỚC bước model đã ăn hết trần 20 ms, nên
+    `_before_deadline` gặp `remaining <= 0`, `close()` luôn coroutine và model
+    **chưa từng chạy** — `started` không được set. Sản phẩm làm ĐÚNG: không mở
+    việc mà hạn đã cháy. Thứ sai là bài test đòi một cuộc đua ngã về một phía.
+
+    Sửa ở GỐC, không nới trần — cùng cách đã chữa lỗi "xanh theo lịch" ở
+    `tests/test_dong_ho.py`: đóng đinh đồng hồ. `cac_buoc[i]` là số giây mà lần
+    hỏi giờ thứ i+1 tiêu tốn, nên NGÂN SÁCH DO BÀI TEST QUYẾT, máy không quyết
+    nữa. Thứ tự hỏi giờ đo được, không đoán: 1 = `started` trong `reply()`,
+    2 = bọc `store.load`, 3 = bọc `model.generate`, 4–6 = ghi sổ.
+    """
+
+    def __init__(self, cac_buoc: tuple[float, ...] = ()):
+        self.gio = 1000.0
+        self.cac_buoc = list(cac_buoc)
+        self.so_lan = 0
+
+    def __call__(self) -> float:
+        self.so_lan += 1
+        if self.cac_buoc:
+            self.gio += self.cac_buoc.pop(0)
+        return self.gio
+
+
+# Cửa sổ THẬT cho model kịp được xếp lịch một nhịp. Đồng hồ đã đóng đinh nên
+# con số này KHÔNG còn là trần quá giờ của sản phẩm — nó chỉ là khoảng thời gian
+# thật mà `asyncio.wait` chờ. Việc trước bước model, lúc máy bận nhất đo được,
+# tốn ~80 ms; 0,5 s là hơn sáu lần chỗ ấy.
+CUA_SO_XEP_LICH_GIAY = 0.5
+
+
+def test_timeout_cancels_provider_and_never_appends_late_transcript(monkeypatch):
     class CancellableModel:
         def __init__(self):
             self.started = asyncio.Event()
@@ -702,23 +753,40 @@ def test_timeout_cancels_provider_and_never_appends_late_transcript():
                 self.cancelled.set()
                 raise
 
+    monkeypatch.setattr("core.chat_service.monotonic", DongHoDongDinh())
+
     async def scenario():
         request = _request(text=KHONG_CAN_MANG)
         store = FakeStore()
         model = CancellableModel()
         guard = FakeGuard(output_prefix="SAFE: ")
         result = await _service(
-            model=model, store=store, guard=guard, timeout_s=0.02
+            model=model, store=store, guard=guard,
+            timeout_s=CUA_SO_XEP_LICH_GIAY,
         ).reply(request)
-        await asyncio.sleep(0.03)
-        return request, store, model, guard, result
+        # CHỜ ĐIỀU KIỆN, KHÔNG CHỜ ĐỒNG HỒ. Bản cũ là `await asyncio.sleep(0.03)`
+        # — một cửa sổ ân hạn đặt tay để nhánh `except CancelledError` kịp chạy.
+        # Đặt tay thì máy bận là trượt. `wait_for` trả về NGAY khi cờ bật, còn
+        # trần 2 s chỉ là van an toàn: không bật thì khẳng định dưới đây đỏ to,
+        # chứ không treo.
+        try:
+            await asyncio.wait_for(model.cancelled.wait(), timeout=2.0)
+        except asyncio.TimeoutError:
+            pass
+        # CHỐT BÊN TRONG VÒNG LẶP. Gieo bỏ `task.cancel()` khỏi `_before_deadline`
+        # mà bài vẫn XANH: `asyncio.run()` huỷ mọi tác vụ còn treo lúc đóng vòng
+        # lặp, nhánh `except CancelledError` của model chạy ở đó và bật cờ. Đọc
+        # cờ SAU `asyncio.run` là đọc công của vòng lặp rồi ghi cho dịch vụ —
+        # khẳng định ấy chưa bao giờ chứng minh được điều nó nói, từ bản cũ.
+        da_huy = model.cancelled.is_set()
+        return request, store, model, guard, result, da_huy
 
-    request, store, model, guard, result = asyncio.run(scenario())
+    request, store, model, guard, result, da_huy = asyncio.run(scenario())
     assert result.status is ChatStatus.TIMEOUT
     assert result.request_id == request.request_id
     assert result.session_id == request.session_id
     assert model.started.is_set()
-    assert model.cancelled.is_set()
+    assert da_huy, "dịch vụ không huỷ bộ nối khi quá giờ"
     # Đúng MỘT bản ghi, và là lượt quá giờ — không có gì từ model lọt vào, vì
     # model bị huỷ trước khi kịp trả chữ nào.
     assert len(store.appended) == 1
@@ -727,22 +795,77 @@ def test_timeout_cancels_provider_and_never_appends_late_transcript():
     assert len(guard.outputs) == 1
 
 
-@pytest.mark.timing   # khẳng định về THỜI GIAN THỰC: đúng khi máy rảnh,
-                      # trượt khi máy bận. Bỏ qua bằng: -m "not timing"
-@pytest.mark.timing   # phụ thuộc ĐỒNG HỒ THẬT: timeout_s=0.02 chỉ bắn đúng khi
-                      # máy rảnh. Máy bận thì trượt. Bỏ qua bằng: -m "not timing"
-def test_timeout_ignores_adapter_that_swallows_cancel_and_returns_late_ok():
+def test_han_chay_TRUOC_buoc_model_thi_model_KHONG_duoc_mo(monkeypatch):
+    """Nhánh `remaining <= 0` của `_before_deadline`: đóng coroutine, không chạy.
+
+    NHÁNH NÀY TRƯỚC 04/09/2026 KHÔNG CÓ BÀI NÀO CANH. Nó vẫn chạy thật — nhưng
+    chỉ khi máy bận, và mỗi lần nó chạy thì bộ test ĐỎ, vì bài ở trên đòi
+    `model.started.is_set()`. Tức là đường bảo vệ Sếp (không mở việc mà hạn đã
+    cháy) đang bị báo cáo như một lỗi hồi quy, suốt 12 lượt.
+
+    Đóng đinh đồng hồ nên nay gọi được nhánh ấy CỐ Ý: lần hỏi giờ thứ ba — đúng
+    lúc bọc `model.generate` — nhảy 1,0 s trong khi trần là 0,5 s.
+    """
+    monkeypatch.setattr("core.chat_service.monotonic",
+                        DongHoDongDinh((0.0, 0.0, 1.0)))
+
+    class ModelKhongDuocMo:
+        def __init__(self):
+            self.started = asyncio.Event()
+
+        async def generate(self, request, *, history, sources=()):
+            self.started.set()
+            await asyncio.sleep(5)
+            return ModelReply(text="không bao giờ tới đây")
+
+    model = ModelKhongDuocMo()
+    store = FakeStore()
+    result = asyncio.run(
+        _service(model=model, store=store, guard=FakeGuard(output_prefix="SAFE: "),
+                 timeout_s=CUA_SO_XEP_LICH_GIAY).reply(_request(text=KHONG_CAN_MANG))
+    )
+
+    assert result.status is ChatStatus.TIMEOUT
+    # Đã ĐI TỚI bước model — nếu hạn cháy sớm hơn thì `stage` sẽ là bước nạp sổ,
+    # và bài này phải đỏ chứ không được lặng lẽ đo sang chuyện khác.
+    assert result.stage == CHAT_STAGE_MODEL, result.stage
+    # ...nhưng model chưa từng chạy một dòng nào.
+    assert not model.started.is_set(), "hạn đã cháy mà vẫn mở việc cho model"
+    assert result.used_web is False
+    # Lượt hỏng vẫn phải vào sổ, đúng một bản ghi.
+    assert len(store.appended) == 1, store.appended
+    assert store.appended[0][1].status is ChatStatus.TIMEOUT
+    assert "không bao giờ tới đây" not in store.appended[0][1].text
+
+
+def test_timeout_ignores_adapter_that_swallows_cancel_and_returns_late_ok(monkeypatch):
+    """Bộ nối nuốt lệnh huỷ rồi trả kết quả MUỘN — kết quả ấy không được vào sổ.
+
+    04/09/2026: bài này từng khẳng định `elapsed < 0.06` — một khoảng ĐỒNG HỒ
+    THẬT. Dưới tải 24 tiến trình nó xanh 5/5, nên lần vá đầu em ghi là "chưa có
+    bằng chứng nó mong manh"; nâng lên **64 tiến trình** thì nó đỏ **5/6**. Câu
+    ấy sai, và nó sai theo đúng kiểu tệ nhất: một phép đo chạy được ở vài ca
+    không chứng minh nó đúng ở ca thứ ba.
+
+    Thứ bài này thật sự cần chứng minh là một THỨ TỰ, không phải một thời lượng:
+    *`reply()` trả về TRƯỚC khi bộ nối kịp trả bản muộn*. Nên bản muộn nay không
+    hẹn giờ nữa mà chờ một cờ **do bài test bật** — lúc `reply()` đã trả về rồi.
+    Không còn con số giây nào đứng giữa hai mốc, nên tải máy không lật được nó.
+    """
+    monkeypatch.setattr("core.chat_service.monotonic", DongHoDongDinh())
+
     class AdversarialModel:
         def __init__(self):
             self.cancelled = asyncio.Event()
             self.returned_late = asyncio.Event()
+            self.cho_phep_tra_muon = asyncio.Event()
 
         async def generate(self, request, *, history, sources=()):
             try:
-                await asyncio.sleep(5)   # 5s là "treo" so với timeout_s=0.02 nhưng CÓ TRẦN — van an toàn khi timeout không bắn. Bản 18/08 thay bằng Event().wait() (chờ mãi) và cả bộ test treo hẳn.
+                await asyncio.sleep(5)   # 5s là "treo" so với trần nhưng CÓ TRẦN — van an toàn khi timeout không bắn. Bản 18/08 thay bằng Event().wait() (chờ mãi) và cả bộ test treo hẳn.
             except asyncio.CancelledError:
                 self.cancelled.set()
-                await asyncio.sleep(0.08)
+                await self.cho_phep_tra_muon.wait()
                 self.returned_late.set()
                 return ModelReply("OK nhưng đã quá hạn")
 
@@ -751,28 +874,32 @@ def test_timeout_ignores_adapter_that_swallows_cancel_and_returns_late_ok():
         store = FakeStore()
         model = AdversarialModel()
         guard = FakeGuard(output_prefix="SAFE: ")
-        loop = asyncio.get_running_loop()
-        started = loop.time()
         result = await _service(
-            model=model, store=store, guard=guard, timeout_s=0.02
+            model=model, store=store, guard=guard,
+            timeout_s=CUA_SO_XEP_LICH_GIAY,
         ).reply(request)
-        elapsed_at_return = loop.time() - started
+        # Chốt hiện trường NGAY lúc trả về: bản muộn chưa được phép ra, nên nếu
+        # nó đã ra thì `reply()` đã ngồi chờ bộ nối — đúng thứ bài này cấm.
+        chua_tra_muon = not model.returned_late.is_set()
         appended_at_return = tuple(store.appended)
-        await asyncio.sleep(0.12)
-        return (
-            store,
-            model,
-            guard,
-            result,
-            elapsed_at_return,
-            appended_at_return,
-        )
+        model.cho_phep_tra_muon.set()
+        try:
+            await asyncio.wait_for(model.returned_late.wait(), timeout=2.0)
+        except asyncio.TimeoutError:
+            pass
+        await asyncio.sleep(0)
+        # Chốt bên trong vòng lặp, cùng lý do với bài ở trên: đọc hai cờ này SAU
+        # `asyncio.run` là đọc công của lượt huỷ lúc đóng vòng lặp.
+        da_huy, da_tra_muon = model.cancelled.is_set(), model.returned_late.is_set()
+        return (store, model, guard, result, chua_tra_muon, appended_at_return,
+                da_huy, da_tra_muon)
 
-    store, model, guard, result, elapsed, appended_at_return = asyncio.run(scenario())
+    (store, model, guard, result, chua_tra_muon, appended_at_return,
+     da_huy, da_tra_muon) = asyncio.run(scenario())
     assert result.status is ChatStatus.TIMEOUT
-    assert elapsed < 0.06, f"deadline response was late: {elapsed:.3f}s"
-    assert model.cancelled.is_set()
-    assert model.returned_late.is_set()
+    assert chua_tra_muon, "reply() đã ngồi chờ bản muộn của bộ nối"
+    assert da_huy, "dịch vụ không huỷ bộ nối khi quá giờ"
+    assert da_tra_muon, "bộ nối chưa kịp trả bản muộn — chưa dựng được ca cần đo"
     # 10/08/2026: lượt quá giờ GIỜ CÓ vào sổ — Sếp nhìn thấy nó trên màn hình
     # nên trí nhớ của AURA cũng phải có.  Thứ test này canh KHÔNG đổi: bản nháp
     # về muộn của model tuyệt đối không được chạm vào sổ.
@@ -943,8 +1070,13 @@ def test_external_cancellation_during_append_never_returns_ok():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.timing   # phụ thuộc ĐỒNG HỒ THẬT: timeout_s=0.02 chỉ bắn đúng khi
-                      # máy rảnh. Máy bận thì trượt. Bỏ qua bằng: -m "not timing"
+@pytest.mark.timing   # Bài DUY NHẤT còn giữ đồng hồ thật, và giữ có chủ đích:
+                      # `latency_ms >= 20` phải là con số MÁY đo, không phải con
+                      # số bài test bơm vào — đóng đinh đồng hồ ở đây là quay lại
+                      # bẫy tautological. Đo 04/09/2026: xanh 6/6 dưới tải 64
+                      # tiến trình trên 8 luồng, nên chưa có bằng chứng nó mong
+                      # manh; nhãn giữ vì hình dạng khẳng định vẫn là đồng hồ
+                      # thật. Bỏ qua bằng: -m "not timing"
 def test_timeout_ghi_ro_gay_o_buoc_goi_model():
     """Quá giờ ở lượt gọi model thì sổ phải nói ĐÚNG bước đó, không nói chung chung."""
 

@@ -655,6 +655,82 @@ theo lịch máy.
 **Thấy một phép đo dùng `datetime.now()`, `random` không hạt giống, hay thứ tự
 tệp trên đĩa — hỏi ngay: chạy ngày mai nó còn ra số này không?**
 
+### Thời lượng không phải nguyên nhân, nó là hệ quả
+
+Suốt 12 lượt chạy bộ đủ, một mẫu đứng vững không ngoại lệ: **≥15 phút thì đỏ,
+<12 phút thì xanh**. Bốn lần thử tái hiện đều xanh, nên nó nằm trong sổ nợ với
+nhãn "chưa chứng minh được nguyên nhân" hai ngày.
+
+Sai ngay ở câu hỏi. Tôi đi tìm *"chạy lâu làm hỏng cái gì"* — coi thời lượng là
+biến độc lập. Nó là **biến phụ thuộc**. Cả hai đều là hệ quả của một biến thứ
+ba: **tải máy**.
+
+Đo có đối chứng, 24 tiến trình quay CPU trên 8 luồng logic:
+
+```
+                     máy rảnh              máy bận
+bài `timing`         5/5 XANH              5/5 ĐỎ
+đối chứng            5/5 XANH  19,2 s      5/5 XANH  28,8 s
+```
+
+Đối chứng là **toàn bộ phần còn lại của chính tệp ấy** (`-m "not timing"`) —
+cùng import, cùng asyncio, cùng fixture, khác đúng một biến. Nó chậm đi 50% mà
+vẫn xanh, nên không phải "tải máy làm vỡ mọi thứ".
+
+Bọc `_before_deadline` đọc ngân sách còn lại **đúng lúc gọi model**:
+
+```
+máy rảnh   +17,0  +17,3  +17,0  +17,0  +17,1 ms     model chạy 5/5
+máy bận    +13,5  −59,4  −46,6   +2,8  −31,7 ms     model chạy 2/5
+```
+
+Số âm nghĩa là việc TRƯỚC bước model đã ăn hết trần 20 ms. `_before_deadline`
+gặp `remaining <= 0` thì `close()` luôn coroutine — model **chưa từng chạy một
+dòng nào**, nên `assert model.started.is_set()` đỏ.
+
+**Mã sản phẩm làm đúng.** Không mở việc mà hạn đã cháy là đúng thứ Sếp cần. Thứ
+sai là bài test đòi một cuộc đua ngã về một phía, rồi khi nó ngã phía kia thì
+báo cáo như một lỗi hồi quy.
+
+Ba thứ đắt trên đường này:
+
+*Nhánh bảo vệ bị báo cáo là lỗi.* Nhánh `remaining <= 0` **không có bài nào
+canh**. Nó vẫn chạy thật — chỉ khi máy bận — và mỗi lần chạy thì bộ test đỏ. Một
+đường bảo vệ chỉ được thi hành lúc không ai nhìn, và lúc ấy nó bị chấm là hỏng.
+Nay có bài gọi nó cố ý.
+
+*Đo được ở tải này không chứng minh gì ở tải kia.* Vá xong bài thứ nhất, tôi ghi
+vào chú thích rằng bài thứ hai (`assert elapsed < 0.06`) "xanh 5/5 dưới tải 24
+tiến trình, chưa có bằng chứng nó mong manh". Nâng lên **64 tiến trình** thì nó
+đỏ **5/6**. Câu tôi vừa viết sai trong vòng mười phút. Sửa: thay khẳng định về
+**thời lượng** bằng khẳng định về **thứ tự** — bản trả muộn của bộ nối nay chờ
+một cờ *do bài test bật*, sau khi `reply()` đã trả về. Không còn con số giây nào
+đứng giữa hai mốc thì tải máy không lật được nó.
+
+*Và một cửa mù có sẵn từ bản cũ, gieo mới lộ.* Bỏ hẳn `task.cancel()` khỏi
+`_before_deadline` mà `assert model.cancelled.is_set()` **vẫn xanh**:
+`asyncio.run()` huỷ mọi tác vụ còn treo lúc đóng vòng lặp, nhánh
+`except CancelledError` của model chạy ở đó và bật cờ. Đọc cờ **sau**
+`asyncio.run` là đọc công của vòng lặp rồi ghi cho dịch vụ. Khẳng định ấy chưa
+bao giờ chứng minh được điều nó nói. Sửa: chốt cờ **bên trong** vòng lặp rồi trả
+ra ngoài. Gieo lại 6/6 đỏ.
+
+Sửa ở GỐC, không nới trần: **đóng đinh đồng hồ**, đúng cách đã chữa lỗi "xanh
+theo lịch" ở `tests/test_dong_ho.py`. `DongHoDongDinh` cho bài test cầm đồng hồ,
+mỗi lần hỏi giờ tiêu đúng số giây bài test định — ngân sách do bài test quyết,
+máy không quyết nữa. Sau vá: **6/6 xanh dưới tải 64 tiến trình**, đúng chỗ trước
+đó 5/6 đỏ.
+
+Và một mẫu chờ đã thay ở cả hai bài: **chờ ĐIỀU KIỆN, đừng chờ ĐỒNG HỒ.** Bản cũ
+là `await asyncio.sleep(0.03)` — một cửa sổ ân hạn đặt tay cho nhánh `except`
+kịp chạy. Nay là `wait_for(cờ.wait(), timeout=2.0)`: trả về ngay khi cờ bật, còn
+trần chỉ là van an toàn để không treo.
+
+**Thấy một phép đo tương quan với thời lượng chạy, hỏi ngay: thời lượng là
+nguyên nhân, hay cả hai cùng là hệ quả của thứ thứ ba?** Câu ấy rẻ, và nó bắt
+được thứ mà bốn lần thử tái hiện không bắt được — vì tái hiện trên máy rảnh là
+đo đúng cái biến đã tắt.
+
 ---
 
 ## 5. Viết mã ở đây

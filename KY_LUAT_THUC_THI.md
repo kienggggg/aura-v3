@@ -258,6 +258,44 @@ AURA viết kịch bản, Alpha dựng video. Mối nối là tham số `van_ban
   > Ba ngưỡng này đặt **TRƯỚC** khi sửa mã, và chúng làm đề đóng băng hiện tại
   > **RỚT**. Rớt là đúng.
 
+* **Cửa PHỦ KÍN KỊCH BẢN (thêm 04/09/2026):**
+  - Mọi câu của kịch bản **phải** có mặt trong phụ đề. Số câu mất: **0**.
+    Không có ngưỡng phần trăm — mất một câu là hỏng.
+
+  > Vì sao thêm. Chạy thật một lượt `aura` → `alpha` ngày 04/09/2026, kịch bản
+  > 245 từ / **17 câu**. Video ra **PASS**, sạch cả hai chục cửa trên:
+  >
+  > ```
+  > 720×1280 · 61,32 s · 19 lần đổi cảnh · 0 đoạn tĩnh · 0 khung đen
+  > lufs_giong −17,34 · lufs_nhac −33,82 · chênh 16,48 dB
+  > 14 khối phụ đề · 14 khối khác nhau (tỉ lệ 1,00)
+  > quãng câm dài nhất 0,76 s
+  >
+  > GIỌNG ĐỌC   17 câu (toàn bộ kịch bản)
+  > LÊN MÀN HÌNH 14 câu
+  > MẤT          3 câu   <- và là ba câu KẾT của kịch bản
+  > ```
+  >
+  > Gốc ở `_cat_doan`: `moi = len(cau) // so_the` rồi lấy `so_the` lát liên
+  > tiếp, nên phần dư ở ĐUÔI rơi ra ngoài. Bảng đo trên hàm thuần:
+  >
+  > ```
+  > 17 câu / 13 thẻ  -> 13 câu lên hình, MẤT 4
+  > 20 câu / 13 thẻ  -> 13 câu lên hình, MẤT 7
+  > 25 câu / 13 thẻ  -> 13 câu lên hình, MẤT 12
+  > 13 câu / 13 thẻ  -> đủ 13, MẤT 0        <- chỉ khi chia hết mới không mất
+  > ```
+  >
+  > `viet_kich_ban` chỉ ép **≥ 13** câu, không có trần trên; `so_the` thì bằng
+  > `round(dài_giọng / 4,5)`. Hai con số ấy không có lý do gì trùng nhau, nên
+  > mất câu là trạng thái THƯỜNG, không phải ca hiếm.
+  >
+  > Không cửa nào cũ kêu được, vì mỗi cửa đo đúng phần nó đo: phụ đề vẫn đủ
+  > dòng (14 ≥ số thẻ), vẫn khác nhau hết, vẫn không chạy quá phim. Cùng một
+  > bài học với cửa nội dung hôm 03/09 — **cửa hình dạng không thay được cửa
+  > nội dung** — chỉ khác là lần này thứ bị mất nằm ở khúc KẾT, tức là phần
+  > khán giả cần nhất.
+
 ### 3. PHÒNG SCOUT (Tra cứu Dữ kiện Mới & Source Receipt)
 * **Đầu vào:** Tối thiểu 3 câu hỏi cần dữ kiện mới.
 * **Quy trình Tra cứu & Biên nhận Nguồn:**

@@ -984,3 +984,104 @@ def test_do_quang_cam_SINH_RA_khong_do_duoc_khi_ffmpeg_gay(tmp_path):
         "tệp wav thật phải đo ra số không âm — nếu không thì bài trên xanh "
         "chỉ vì hàm luôn trả số âm"
     )
+
+
+# ---------------------------------------------------------------------------
+# CỬA PHỦ KÍN KỊCH BẢN (04/09/2026)
+#
+# Mọi cửa phía trên đối chiếu phụ đề với CHÍNH NÓ — đủ dòng, khác nhau, không
+# chạy quá phim. Không cửa nào nhìn ngược về kịch bản gốc, nên một lượt chạy
+# thật ngày 04/09 ra PASS sạch trong khi giọng đọc 17 câu mà màn hình chỉ có 14,
+# và ba câu mất là ba câu KẾT.
+# ---------------------------------------------------------------------------
+
+# Chép TAY từ KY_LUAT_THUC_THI.md, mục "Cửa PHỦ KÍN KỊCH BẢN": số câu được phép
+# mất là 0. Không đọc hằng số từ mã — gieo `8 -> 999` hôm 04/09 cho thấy đọc từ
+# mã thì hai vế cùng đổi và cửa không bao giờ mâu thuẫn được với mã.
+DAC_TA_SO_CAU_DUOC_PHEP_MAT = 0
+
+
+@pytest.mark.parametrize("so_cau,so_the", [
+    (13, 13),   # chia hết — ca DUY NHẤT bản cũ không mất câu
+    (17, 13),   # đúng ca đo được ngày 04/09: bản cũ mất 4
+    (20, 13),   # bản cũ mất 7
+    (25, 13),   # bản cũ mất 12
+    (14, 12), (15, 14), (31, 12),
+])
+def test_cat_doan_KHONG_bo_sot_cau_nao(so_cau, so_the):
+    """Chia thẻ phải phủ kín kịch bản với MỌI cặp (số câu, số thẻ).
+
+    `viet_kich_ban` chỉ ép ≥13 câu, không có trần trên; `so_the` thì bằng
+    `round(dài_giọng / 4,5)`. Hai con số ấy không có lý do gì trùng nhau, nên
+    ca "không chia hết" là ca THƯỜNG.
+    """
+    from core.phong_alpha import _cat_doan
+
+    cau = [f"Câu số {i} nói một chuyện riêng." for i in range(1, so_cau + 1)]
+    doan = _cat_doan(" ".join(cau), so_the)
+    assert len(doan) == so_the, f"{len(doan)} đoạn, cần đúng {so_the}"
+    tren_man = " ".join(doan)
+    mat = [c for c in cau if c not in tren_man]
+    assert len(mat) == DAC_TA_SO_CAU_DUOC_PHEP_MAT, (
+        f"{so_cau} câu / {so_the} thẻ: mất {len(mat)} câu — {mat[:3]}"
+    )
+
+
+def test_kiem_phu_kin_biet_noi_KHONG():
+    """Cửa chưa từng nói không thì chưa chứng minh được gì.
+
+    `return []` vô điều kiện cũng cho mọi ca hợp lệ đi qua.
+    """
+    from core.phong_alpha import kiem_phu_kin
+
+    van = "Câu một nói chuyện này. Câu hai nói chuyện khác. Câu ba kết lại."
+    du = ["Câu một nói chuyện này.", "Câu hai nói chuyện khác.", "Câu ba kết lại."]
+    assert kiem_phu_kin(van, du) == [], "kịch bản phủ kín mà vẫn bị bác"
+
+    thieu = du[:2]                      # bỏ đúng câu KẾT, như lỗi thật
+    ly_do = kiem_phu_kin(van, thieu)
+    assert ly_do, "mất câu kết mà cửa im lặng"
+    assert "Câu ba kết lại." in ly_do[0], f"lý do không nói câu nào mất: {ly_do}"
+
+    assert kiem_phu_kin("", du), "không có kịch bản thì phải là lý do bác"
+
+
+@can_ffmpeg
+@pytest.mark.slow
+def test_day_chuyen_NGHE_phan_quyet_cua_cua_phu_kin(tmp_path):
+    """Chấm được một hàm không chứng minh kết quả của nó đi tới đâu.
+
+    Gieo `if ly_do_nung:` -> `if False:` hôm 03/09 mà cả 30 bài vẫn xanh, vì mọi
+    bài đều gọi thẳng hàm thuần. Đây là lần thứ tư trong tệp này, nên bài viết
+    theo đúng khuôn ấy ngay từ đầu: bơm một phán quyết BÁC rồi chạy CẢ dây
+    chuyền, kèm ca đối chứng không bơm.
+    """
+    import core.phong_alpha as pa
+
+    goc = pa.kiem_phu_kin
+    try:
+        pa.kiem_phu_kin = lambda van_ban, khoi: ["gieo: kịch bản chưa phủ kín"]
+        kq = pa.dung_video(tmp_path / "bom_bac")
+    finally:
+        pa.kiem_phu_kin = goc
+
+    if kq["trang_thai"] == "KHONG_CHAY_DUOC":
+        pytest.skip(f"không đo được: {kq['vi_sao']}")
+    assert kq["trang_thai"] == "FAIL", (
+        f"cửa phủ kín BÁC mà dây chuyền vẫn {kq['trang_thai']} — "
+        "phán quyết không đi tới `trang_thai`"
+    )
+    assert "gieo: kịch bản chưa phủ kín" in kq["vi_sao"], kq["vi_sao"]
+
+    # Ca đối chứng: cùng đường ấy, không bơm gì thì phải PASS. Dùng ĐÚNG văn bản
+    # mặc định chứ không dùng câu ngắn cho nhanh — đo 03/09 thì câu bốn mệnh đề
+    # cho bản trộn −29,9 LUFS, nên đối chứng đỏ vì độ ồn chứ không vì chuyện
+    # đang xét.
+    sach = pa.dung_video(tmp_path / "khong_bom")
+    if sach["trang_thai"] == "KHONG_CHAY_DUOC":
+        pytest.skip(f"đối chứng không đo được: {sach['vi_sao']}")
+    assert sach["trang_thai"] == "PASS", (
+        f"đối chứng phải PASS mới chứng minh được bài trên: {sach['vi_sao']}"
+    )
+    assert sach["kiem"]["so"]["so_cau_len_man_hinh"] == \
+        sach["kiem"]["so"]["so_cau_kich_ban"], sach["kiem"]["so"]

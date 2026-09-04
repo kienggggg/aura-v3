@@ -193,12 +193,40 @@ def _tim_phong():
     return ImageFont.load_default(), "(mặc định — có thể mất dấu)"
 
 
+def tach_cau(van_ban: str) -> List[str]:
+    """Tách câu — dùng chung cho cả khâu chia thẻ lẫn cửa phủ kín.
+
+    Hai bên phải tách GIỐNG HỆT nhau, nếu không cửa sẽ báo mất câu chỉ vì hai
+    phép tách khác nhau, chứ không vì thật sự mất.
+    """
+    return [c.strip() for c in re.split(r"(?<=[.!?])\s+", van_ban.strip()) if c.strip()]
+
+
 def _cat_doan(van_ban: str, so_the: int) -> List[str]:
-    cau = [c.strip() for c in re.split(r"(?<=[.!?])\s+", van_ban.strip()) if c.strip()]
+    """Chia kịch bản thành `so_the` đoạn, KHÔNG BỎ SÓT CÂU NÀO.
+
+    Bản trước 04/09/2026 tính `moi = len(cau) // so_the` rồi lấy `so_the` lát
+    liên tiếp, nên phần dư ở ĐUÔI rơi ra ngoài. Đo trên hàm thuần:
+
+        17 câu / 13 thẻ  -> 13 câu lên hình, MẤT 4
+        20 câu / 13 thẻ  -> 13 câu lên hình, MẤT 7
+        25 câu / 13 thẻ  -> 13 câu lên hình, MẤT 12
+        13 câu / 13 thẻ  -> MẤT 0   (chỉ khi chia hết mới không mất)
+
+    Chạy thật một lượt `aura` → `alpha`: kịch bản 17 câu, giọng đọc HẾT 17,
+    màn hình chỉ có 14 — và ba câu mất là ba câu KẾT. Video vẫn PASS sạch hai
+    chục cửa, vì mọi cửa cũ chỉ đo phụ đề với CHÍNH NÓ (đủ dòng, khác nhau,
+    không chạy quá phim), không cửa nào đối chiếu ngược lại kịch bản.
+
+    Nay chia theo mốc `i * n // so_the`: hai mốc liền nhau khít nhau nên phủ
+    đúng `[0, n)`, không chồng, không hở.
+    """
+    cau = tach_cau(van_ban)
     if len(cau) < so_the:
         cau = (cau * so_the)[:so_the]
-    moi = max(1, len(cau) // so_the)
-    return [" ".join(cau[i * moi:(i + 1) * moi]) or cau[-1] for i in range(so_the)]
+    n = len(cau)
+    return [" ".join(cau[i * n // so_the:(i + 1) * n // so_the]) or cau[-1]
+            for i in range(so_the)]
 
 
 def sinh_the_hinh(van_ban: str, thu_muc: Path, so_the: int = 4) -> List[Path]:
@@ -732,6 +760,33 @@ def kiem_lap_phu_de(khoi: List[str]) -> List[str]:
     return ra
 
 
+def kiem_phu_kin(van_ban: str, khoi: List[str]) -> List[str]:
+    """Mọi câu của kịch bản phải có mặt trong phụ đề. Trả lý do BÁC; rỗng là đạt.
+
+    KHÔNG có ngưỡng phần trăm: mất một câu là hỏng. Đặc tả ở
+    `KY_LUAT_THUC_THI.md`, mục "Cửa PHỦ KÍN KỊCH BẢN".
+
+    Hàm thuần, cùng lý do với `kiem_am_thanh`/`kiem_nung`: để phép chấm nằm rải
+    trong `_dung_video` thì cửa canh không cách nào đưa ca XẤU vào — đã mắc bốn
+    lần trong chính tệp này.
+
+    So bằng `in` là CÓ CHỦ ĐÍCH ở đây, và an toàn theo một nghĩa hẹp: vế trái là
+    NGUYÊN một câu đã tách (có dấu chấm), vế phải là toàn bộ chữ trên phụ đề nối
+    lại. Đây không phải bệnh `x in y` của việc dò chuỗi con — chỗ ấy nguy vì `x`
+    là mảnh vụn ("ai" lọt giữa "thứ hai"); ở đây `x` là một câu trọn vẹn, và cái
+    ta hỏi đúng là "câu này có nằm trên màn hình không".
+    """
+    cau = tach_cau(van_ban)
+    if not cau:
+        return ["không tách được câu nào từ kịch bản"]
+    tren_man = " ".join(khoi)
+    mat = [c for c in cau if c not in tren_man]
+    if mat:
+        return [f"{len(mat)}/{len(cau)} câu của kịch bản KHÔNG lên màn hình — "
+                f"giọng đọc hết mà phụ đề thiếu; câu đầu bị mất: {mat[0][:60]!r}"]
+    return []
+
+
 def _quang_cam_dai_nhat(wav: Path) -> float:
     """Quãng KHÔNG CÓ GIỌNG dài nhất trong tệp, tính bằng giây.
 
@@ -941,6 +996,17 @@ def _dung_video(thu_muc_ra: Path, van_ban: str | None, t0: float) -> Dict[str, A
     ly_do_lap = kiem_lap_phu_de(khoi)
     if ly_do_lap:
         kiem["vi_sao"] += ly_do_lap
+        kiem["dat"] = False
+
+    # Phụ đề phải PHỦ KÍN kịch bản. Mọi cửa trên chỉ đối chiếu phụ đề với CHÍNH
+    # NÓ; cửa này là cửa duy nhất nhìn ngược về kịch bản gốc.
+    cau_kich_ban = tach_cau(van_ban)
+    kiem["so"]["so_cau_kich_ban"] = len(cau_kich_ban)
+    kiem["so"]["so_cau_len_man_hinh"] = sum(
+        1 for c in cau_kich_ban if c in " ".join(khoi))
+    ly_do_kin = kiem_phu_kin(van_ban, khoi)
+    if ly_do_kin:
+        kiem["vi_sao"] += ly_do_kin
         kiem["dat"] = False
 
     quang = _quang_cam_dai_nhat(wav)

@@ -798,3 +798,104 @@ def test_dispatch_aura_lan_RONG_van_noi_ro_ly_do(monkeypatch):
     noi_dung = str(d)
     assert "không còn từ nội dung nào" in noi_dung, (
         f"lý do bác không lọt ra ngoài: {noi_dung[:300]}")
+
+
+# ---------------------------------------------------------------------------
+# THẺ KHAI THỂ LOẠI (05/09/2026)
+#
+# Đo 2×2: `lời truyện × đề giải thích` chỉ đạt 1/5, `lời bài nói × đề giải
+# thích` đạt 3/5. Thẻ đã biết mình làm gì, nên nó khai — không cần máy đoán.
+#
+# `preset_id` TRƯỚC 05/09 chỉ được ghi vào sổ cái rồi vứt: đo bằng cách gọi
+# `api_chay_pipeline` với cả 8 `preset_id` thì cả 8 chạy Y MỘT chuỗi 5 phòng.
+# Khai thêm một trường mà không ai đọc là thêm trường trang trí thứ chín.
+# ---------------------------------------------------------------------------
+
+# Chép TAY từ KY_LUAT_THUC_THI.md mục 1b, "HAI THỂ LOẠI LỜI NHẮC".
+DAC_TA_THE_LOAI_HOP_LE = ("bai_noi", "truyen")
+
+
+def test_moi_the_goi_aura_deu_KHAI_the_loai():
+    """Thẻ nào dùng `aura` mà không khai thì đang chạy mặc định trong im lặng."""
+    import interface.noi_bo_api as _api
+
+    thieu = [t["id"] for t in _api.DANH_SACH_THE_QUY_TRINH
+             if "aura" in t["cac_phong"] and "the_loai" not in t]
+    assert not thieu, f"thẻ gọi aura mà chưa khai thể loại: {thieu}"
+
+
+def test_the_loai_khai_deu_NAM_TRONG_danh_sach_hop_le():
+    """Gõ nhầm `"bainoi"` trong thẻ thì `viet_kich_ban` sẽ NÉM — bắt sớm ở đây."""
+    import interface.noi_bo_api as _api
+
+    for t in _api.DANH_SACH_THE_QUY_TRINH:
+        if "the_loai" in t:
+            assert t["the_loai"] in DAC_TA_THE_LOAI_HOP_LE, (
+                f"{t['id']} khai {t['the_loai']!r}")
+
+
+def test_tra_the_loai_KHONG_no_voi_preset_la():
+    """Đường của giao diện: `preset_id` lạ không được làm đổ cả chuỗi.
+
+    Khác hẳn `viet_kich_ban`, nơi thể loại lạ NÉM — ở đó là lập trình viên gõ
+    sai nên phải nổ to; ở đây là dữ liệu từ ngoài vào.
+    """
+    from interface.noi_bo_api import the_loai_cua_the
+
+    assert the_loai_cua_the(None) == "truyen"
+    assert the_loai_cua_the("") == "truyen"
+    assert the_loai_cua_the("khong_co_that") == "truyen"
+    assert the_loai_cua_the("card_video_shorts") == "bai_noi"
+
+
+def test_the_loai_DI_TOI_viet_kich_ban_that_su(monkeypatch):
+    """Chấm được một hàm không chứng minh kết quả của nó đi tới đâu.
+
+    Bài này bắt THAM SỐ THẬT mà `viet_kich_ban` nhận được khi chạy cả chuỗi,
+    chứ không gọi `the_loai_cua_the` rồi tự khen. Gieo bỏ khâu truyền tham số
+    thì soi văn bản hàm vẫn xanh — đó là cửa mù.
+    """
+    import asyncio
+
+    import core.phong_alpha as _pa
+    import core.phong_noi_bo as _pnb
+    import core.viet_truyen as _vt
+    import interface.noi_bo_api as _api
+
+    da_thay = []
+
+    def _aura(chu_de, *a, the_loai="truyen", **k):
+        da_thay.append(the_loai)
+        return {"trang_thai": "DAT", "van_ban": ("Cau mot. " * 30).strip(),
+                "so": {"so_tu": 60, "so_cau_khac": 30}, "so_lan_thu": 1,
+                "lan": [{"vi_sao": []}], "ms": 1.0}
+
+    def _alpha(thu_muc, van_ban=None, *a, **k):
+        thu_muc.mkdir(parents=True, exist_ok=True)
+        return {"trang_thai": "PASS", "artifacts": [], "kiem": {"so": {}},
+                "ms": 1.0, "vi_sao": ""}
+
+    def _phong(task_id, yeu_cau="", *a, **k):
+        return {"trang_thai": "PASS", "artifacts": [], "so": {}, "vi_sao": "",
+                "ms": 1.0}
+
+    monkeypatch.setattr(_vt, "viet_kich_ban", _aura)
+    monkeypatch.setattr(_pa, "dung_video", _alpha)
+    monkeypatch.setattr(_pnb, "PHONG",
+                        {k: _phong for k in ("zeta", "omega", "gamma", "beta", "delta")})
+
+    asyncio.run(_api.api_chay_pipeline(
+        _ReqGia({"chu_de": "thử", "preset_id": "card_video_shorts"})))
+    assert da_thay == ["bai_noi"], da_thay
+
+    # Ca đối chứng: thẻ truyện phải ra "truyen", nếu không bài trên chỉ chứng
+    # minh rằng một hằng số nào đó luôn là "bai_noi".
+    da_thay.clear()
+    asyncio.run(_api.api_chay_pipeline(
+        _ReqGia({"chu_de": "thử", "preset_id": "card_novel_writer"})))
+    assert da_thay == ["truyen"], da_thay
+
+    # Không gửi preset_id thì giữ hành vi cũ.
+    da_thay.clear()
+    asyncio.run(_api.api_chay_pipeline(_ReqGia({"chu_de": "thử"})))
+    assert da_thay == ["truyen"], da_thay

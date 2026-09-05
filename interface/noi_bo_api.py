@@ -604,6 +604,7 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
 DANH_SACH_THE_QUY_TRINH = [
     {
         "id": "card_video_shorts",
+        "the_loai": "bai_noi",  # video 60s giải thích/khám phá
         "ten": "🎬 Video Shorts 60s Tự Động",
         "bieu_tuong": "🎬",
         "mau_sac": "#EC4899",
@@ -631,6 +632,7 @@ DANH_SACH_THE_QUY_TRINH = [
     },
     {
         "id": "card_deep_scout",
+        "the_loai": "bai_noi",  # báo cáo đối chiếu nguồn
         "ten": "🔬 Trinh Sát & Kiểm Chứng Sự Thật",
         "bieu_tuong": "🔍",
         "mau_sac": "#6366F1",
@@ -640,6 +642,7 @@ DANH_SACH_THE_QUY_TRINH = [
     },
     {
         "id": "card_novel_writer",
+        "the_loai": "truyen",  # sáng tác truyện đời thường
         "ten": "✍️ Viết Truyện Đời Thường Dài Hơi",
         "bieu_tuong": "📖",
         "mau_sac": "#3B82F6",
@@ -649,6 +652,15 @@ DANH_SACH_THE_QUY_TRINH = [
     },
     {
         "id": "card_fullstack_builder",
+        # CHƯA ĐÚNG, và cố ý để nguyên mặc định thay vì đoán một thể
+        # loại cho có. Thẻ này hứa "thiết kế giao diện HTML5/CSS3 kèm
+        # API aiohttp", nhưng đo 05/09/2026 thì chuỗi thật là:
+        #   aura viết TRUYỆN NGẮN về "bảng điều khiển tài chính"
+        #   delta quét AST của chính core/*.py — BỎ QUA đề tài
+        #   alpha dựng video dọc 60 giây từ truyện ấy
+        # Không bước nào thiết kế giao diện. Gán `bai_noi` cho nó là
+        # làm cho một thẻ hỏng trông đỡ hỏng hơn.
+        "the_loai": "truyen",
         "ten": "⚡ Sinh App Fullstack Web",
         "bieu_tuong": "💻",
         "mau_sac": "#06B6D4",
@@ -690,8 +702,25 @@ async def api_danh_sach_the_quy_trinh(request: web.Request) -> web.Response:
 TRAN_BUOC_TUY_BIEN = 8
 
 
+def the_loai_cua_the(preset_id) -> str:
+    """Thể loại lời nhắc mà một thẻ quy trình khai. Không khai thì `"truyen"`.
+
+    05/09/2026. Đo 2×2 cho thấy lời nhắc phải khớp THỂ LOẠI đề tài: `lời truyện
+    × đề giải thích` chỉ đạt 1/5, trong khi `lời bài nói × đề giải thích` đạt
+    3/5. Không cần máy đoán — thẻ đã biết mình làm gì.
+
+    TRẢ `"truyen"` KHI KHÔNG TÌM THẤY, có chủ đích: đây là đường của giao diện,
+    một `preset_id` lạ không được làm đổ cả chuỗi. Khác hẳn `viet_kich_ban`, nơi
+    thể loại lạ NÉM lỗi — ở đó là lập trình viên gõ sai, phải nổ to.
+    """
+    if not preset_id:
+        return "truyen"
+    the = next((t for t in DANH_SACH_THE_QUY_TRINH if t["id"] == preset_id), None)
+    return (the or {}).get("the_loai", "truyen")
+
+
 async def chay_chuoi_phong(ke_hoach: List[tuple], chu_de: str,
-                           pipeline_id: str) -> tuple:
+                           pipeline_id: str, the_loai: str = "truyen") -> tuple:
     """Chạy một chuỗi phòng theo thứ tự. Trả `(các bước, hiện vật, số bước đạt)`.
 
     TÁCH RA VÌ CÓ HAI NGƯỜI GỌI. `api_chay_pipeline` (chuỗi 5 bước cố định) và
@@ -743,7 +772,7 @@ async def chay_chuoi_phong(ke_hoach: List[tuple], chu_de: str,
         t0 = time.monotonic()
 
         if phong_id == "aura":
-            _kq = await asyncio.to_thread(viet_kich_ban, chu_de)
+            _kq = await asyncio.to_thread(viet_kich_ban, chu_de, the_loai=the_loai)
             tt = "PASS" if _kq["trang_thai"] == "DAT" else _kq["trang_thai"]
             kich_ban = _kq.get("van_ban", "")
             hv: List[Dict[str, Any]] = []
@@ -859,7 +888,10 @@ async def api_chay_pipeline(request: web.Request) -> web.Response:
         ("omega", "🎵 Omega (Ledger)", "Đọc sổ cái và viết báo cáo"),
         ("gamma", "📊 Gamma (Analytics)", "Đo RAM, số bài test, tốc độ sinh"),
     ]
-    cac_buoc, hien_vat, dat = await chay_chuoi_phong(KE_HOACH, chu_de, pipeline_id)
+    # Thẻ khai thể loại; không khai thì `"truyen"` như cũ. `preset_id` trước
+    # 05/09/2026 chỉ được ghi vào sổ cái rồi vứt — nay nó quyết định một thứ.
+    cac_buoc, hien_vat, dat = await chay_chuoi_phong(
+        KE_HOACH, chu_de, pipeline_id, the_loai_cua_the(preset_id))
     trang_thai = trang_thai_chuoi(cac_buoc, len(KE_HOACH))
     thoi_gian_ms = round((time.monotonic() - bat_dau) * 1000, 1)
 

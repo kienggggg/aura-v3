@@ -483,3 +483,102 @@ def test_de_khong_do_duoc_thi_KHONG_dot_mot_luot_model(monkeypatch):
     assert gia.so_lan == 0, f"đã gọi model {gia.so_lan} lần dù đề không đo được"
     assert kq["so_lan_thu"] == 0
     assert kq["van_ban"] == ""
+
+
+# ---------------------------------------------------------------------------
+# HAI THỂ LOẠI LỜI NHẮC (05/09/2026)
+#
+# Đo 2×2, biến là thể loại lời nhắc × loại đề tài, cùng 5 hạt giống:
+#     CẢ HAI cửa /5        đề GIẢI THÍCH   đề HƯ CẤU
+#     lời TRUYỆN                1/5            4/5
+#     lời BÀI NÓI               3/5            3/5
+# Mỗi lời thắng trên thể loại của chính nó — đường chéo, không phải một bên
+# thắng tuốt. Ba bản vá lời nhắc TRƯỚC đó đều ròng bằng 0, vì chúng sửa CÂU CHỮ
+# trong cùng một thể loại; cái này đổi THỂ LOẠI.
+# ---------------------------------------------------------------------------
+
+# Chép TAY từ KY_LUAT_THUC_THI.md mục 1b, "HAI THỂ LOẠI LỜI NHẮC".
+DAC_TA_THE_LOAI = ("bai_noi", "truyen")
+DAC_TA_THE_LOAI_MAC_DINH = "truyen"
+
+
+def test_danh_sach_the_loai_khop_DAC_TA():
+    """Danh sách ĐÓNG. Thêm thể loại thì phải đo lại 2×2, không được đoán."""
+    import core.viet_truyen as vt
+
+    assert tuple(sorted(vt._LOI_THEO_THE_LOAI)) == DAC_TA_THE_LOAI
+    assert vt.THE_LOAI_MAC_DINH == DAC_TA_THE_LOAI_MAC_DINH
+
+
+def test_mac_dinh_KHONG_doi_hanh_vi_cu():
+    """Người gọi cũ không được đổi hành vi vì một tính năng mình không bật.
+
+    Ca đối chứng cho chính bản vá: nếu mặc định đổi sang bài nói thì cả dây
+    chuyền video hiện tại đổi giọng văn mà không ai yêu cầu.
+    """
+    from core.viet_truyen import _loi_nhac
+
+    assert _loi_nhac("X") == _loi_nhac("X", "truyen")
+    assert "truyện ngắn" in _loi_nhac("X")
+
+
+def test_hai_the_loai_ra_hai_loi_nhac_KHAC_nhau():
+    """Không có bài này thì `_loi_bai_noi = _loi_truyen` cũng xanh hết."""
+    from core.viet_truyen import _loi_nhac
+
+    truyen, bai_noi = _loi_nhac("X", "truyen"), _loi_nhac("X", "bai_noi")
+    assert truyen != bai_noi
+    # Thứ phân biệt hai thể loại, không phải chữ bất kỳ.
+    assert "truyện ngắn" in truyen and "truyện ngắn" not in bai_noi
+    assert "không dựng nhân vật" in bai_noi
+    assert "X" in truyen and "X" in bai_noi, "đề tài phải vào cả hai"
+
+
+@pytest.mark.parametrize("xau", ["bainoi", "BAI_NOI", "", "van_xuoi", None])
+def test_the_loai_la_thi_NO_NGAY_khong_am_tham_ve_mac_dinh(xau):
+    """FAIL-CLOSED. Gõ nhầm mà chạy ra truyện thì hỏng LẶNG.
+
+    Kịch bản vẫn ra, vẫn lọt cửa dài, chỉ lạc đề — và không ai biết vì sao.
+    """
+    from core.viet_truyen import _loi_nhac
+
+    with pytest.raises(ValueError):
+        _loi_nhac("X", xau)
+
+
+def test_viet_kich_ban_NO_voi_the_loai_la_KE_CA_khi_tran_bang_0(monkeypatch):
+    """Bịt khe `tran=0`: vòng lặp không chạy thì `_loi_nhac` không được gọi.
+
+    Không có phép kiểm ở đầu `viet_kich_ban` thì thể loại sai lọt qua im lặng.
+    """
+    gia = _GiaModel([_van_ban(26, 9)])
+    monkeypatch.setattr("core.viet_truyen._xin_model", gia)
+
+    with pytest.raises(ValueError):
+        viet_kich_ban(DE_KHOP_VAN_MAU, tran=0, the_loai="bainoi")
+    assert gia.so_lan == 0, "đã gọi model dù thể loại sai"
+
+    # Ca đối chứng: thể loại ĐÚNG với `tran=0` thì không nổ.
+    viet_kich_ban(DE_KHOP_VAN_MAU, tran=0, the_loai="bai_noi")
+
+
+def test_the_loai_DI_TOI_loi_nhac_that_su_goi_len_model(monkeypatch):
+    """Chấm được một hàm không chứng minh kết quả của nó đi tới đâu.
+
+    Bài này bắt LỜI NHẮC THẬT mà `_xin_model` nhận được, chứ không gọi
+    `_loi_nhac` rồi tự khen.
+    """
+    da_thay = []
+
+    def bat(loi, hat):
+        da_thay.append(loi)
+        return _van_ban(26, 9), 1.0
+
+    monkeypatch.setattr("core.viet_truyen._xin_model", bat)
+
+    viet_kich_ban(DE_KHOP_VAN_MAU, the_loai="bai_noi")
+    assert da_thay and "không dựng nhân vật" in da_thay[0], da_thay[:1]
+
+    da_thay.clear()
+    viet_kich_ban(DE_KHOP_VAN_MAU)
+    assert da_thay and "truyện ngắn" in da_thay[0], da_thay[:1]

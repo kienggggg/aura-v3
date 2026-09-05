@@ -127,6 +127,52 @@ AURA viết kịch bản, Alpha dựng video. Mối nối là tham số `van_ban
   ràng buộc **không thể cùng đúng**, và không cách cắt nào cứu được. Máy phải đo
   từ/câu **trước khi cắt** và sinh lại ngay, khỏi phí công.
 
+* **HAI THỂ LOẠI LỜI NHẮC (thêm 05/09/2026):**
+  - `viet_kich_ban(chu_de, the_loai="truyen")` — thêm `the_loai`, nhận đúng
+    `"truyen"` hoặc `"bai_noi"`.
+  - **Mặc định `"truyen"`**: người gọi cũ không đổi hành vi.
+  - Thể loại lạ → **fail-closed**, ném lỗi. Không được âm thầm quay về mặc
+    định: gõ nhầm `"bainoi"` mà chạy ra truyện thì hỏng LẶNG.
+
+  > **Vì sao. Đo 2×2, biến là THỂ LOẠI của lời nhắc × LOẠI ĐỀ TÀI**, cùng 5 hạt
+  > giống, cùng model, cùng tham số:
+  >
+  > ```
+  > CẢ HAI cửa /5              đề GIẢI THÍCH   đề HƯ CẤU
+  > lời TRUYỆN                      1/5             4/5
+  > lời BÀI NÓI                     3/5             3/5
+  >
+  > riêng cửa ĐỀ, trên lượt thật sự được chấm:
+  > lời TRUYỆN                      1/5             4/4
+  > lời BÀI NÓI                     3/3             3/3
+  > ```
+  >
+  > Ba ô đạt 100%. Ô duy nhất hỏng là `lời truyện × đề giải thích`. Nhìn được
+  > cả cơ chế trong câu mở: *"Ánh nắng trưa chiếu xuống bàn học…"*, *"Đêm xuống
+  > dần trong phòng thí nghiệm của cô gái tên Linh."* — model làm ĐÚNG thứ nó
+  > được bảo. Truyện ngắn mở bằng dựng cảnh, mà dựng cảnh thì không nêu đề.
+  >
+  > Lời bài nói có giá của nó: nó viết câu dài hơn nên rụng 2/5 ở cửa độ dài
+  > (đo được 3/5 so với 5/5). Vì thế **đường chéo là thật, không phải một bên
+  > thắng tuốt**: đề giải thích `3/5 > 1/5` (gấp ba), đề hư cấu `4/5 > 3/5`.
+  > Mỗi lời nhắc thắng trên thể loại của chính nó.
+
+  > **KHÔNG có máy đoán thể loại — người gọi đã biết.** `card_novel_writer` là
+  > truyện; `card_video_shorts` và `card_deep_scout` là bài nói. Dựng thêm một
+  > bộ đoán là dựng thêm một chỗ đoán sai, cho một dữ kiện đã có sẵn.
+
+  > **PHÉP ĐO NÀY TỪNG KHÔNG KẾT LUẬN ĐƯỢC, và lý do đáng ghi.** Lần chạy
+  > 04/09 cho `0/5 · 2/5 · 0/5 · 2/5` — không có đường chéo. Nguyên nhân là
+  > **cái trần 19,2 làm nhiễu**: lời bài nói bị bác **9/10 lượt vì ĐỘ DÀI**
+  > (21,0–25,4 từ/câu), tức phần lớn lượt chưa bao giờ đi tới được cửa đề. Hạ
+  > sàn câu 13→11 hôm 04/09 đẩy trần lên 22,7, và chạy lại thì đường chéo hiện
+  > ra ngay. **Một phép đo có thể không sai mà vẫn vô nghĩa, nếu một cửa khác
+  > chặn mất phần lớn mẫu trước khi tới chỗ đang đo.**
+
+  > **Giới hạn:** n=5 mỗi ô, và bốn ô có số lượt đo được khác nhau (5·4·3·3).
+  > `1/5` so `3/5` là chênh gấp ba nhưng vẫn n=5 — đủ để đổi, chưa đủ để gọi
+  > là chứng minh.
+
 * **Sàn 11 câu, trần 22,7 từ/câu (đổi 04/09/2026, trước đó 13 và 19,2):**
   - `SO_CAU_KHAC_MIN` **13 → 11**.
   - `TRAN_TU_MOI_CAU = 250 / 11 = 22,7` (vẫn là hệ quả, không phải phép đo).

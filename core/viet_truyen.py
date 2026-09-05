@@ -281,7 +281,7 @@ def _xin_model(loi: str, hat: int) -> Tuple[str, float]:
     return txt.strip(), time.monotonic() - t0
 
 
-def _loi_nhac(chu_de: str) -> str:
+def _loi_nhac(chu_de: str, the_loai: str = "truyen") -> str:
     """Lời nhắc này ĐÃ ĐƯỢC ĐO. Sửa một chữ là phải đo lại.
 
     Bản đầu của tôi thêm *"mỗi câu KHÔNG quá 15 từ"* để chữa trần 19,2 từ/câu.
@@ -314,14 +314,69 @@ def _loi_nhac(chu_de: str) -> str:
     Nói rõ giới hạn của phép đo: n=5 mỗi nhánh. `2/5` so với `2/5` KHÔNG chứng
     minh hai bản bằng nhau — nó chỉ nói ở n=5 chưa thấy khác biệt nào. Đủ để
     KHÔNG đổi; chưa đủ để nói đổi thì vô ích.
+
+    05/09/2026 — THÊM `the_loai`, và lần này lời nhắc thứ hai MUA ĐƯỢC thật. Đo
+    2×2, biến là thể loại lời nhắc × loại đề tài, cùng 5 hạt giống:
+
+        CẢ HAI cửa /5              đề GIẢI THÍCH   đề HƯ CẤU
+        lời TRUYỆN                      1/5             4/5
+        lời BÀI NÓI                     3/5             3/5
+
+    Khác hẳn ba bản vá hỏng ở trên: chúng sửa CÂU CHỮ trong cùng một thể loại,
+    nên cái gì được ở cửa này mất ở cửa kia. Cái này đổi THỂ LOẠI, và mỗi lời
+    thắng trên thể loại của chính nó — đường chéo, không phải một bên thắng
+    tuốt.
+
+    Phép đo ấy từng KHÔNG kết luận được, hôm 04/09 cho `0/5 · 2/5 · 0/5 · 2/5`.
+    Nguyên nhân là trần 19,2 chặn mất 9/10 lượt bài nói TRƯỚC khi tới cửa đề.
+    Hạ sàn câu 13→11 đẩy trần lên 22,7, chạy lại thì đường chéo hiện ngay.
+
+    Giới hạn: n=5 mỗi ô, bốn ô có số lượt đo được khác nhau (5·4·3·3). `1/5` so
+    `3/5` là chênh gấp ba nhưng vẫn n=5 — đủ để đổi, chưa đủ để gọi là chứng
+    minh.
     """
+    if the_loai not in _LOI_THEO_THE_LOAI:
+        # FAIL-CLOSED. Gõ nhầm `"bainoi"` mà âm thầm chạy ra truyện thì hỏng
+        # LẶNG: kịch bản vẫn ra, vẫn lọt cửa dài, chỉ lạc đề — và không ai biết
+        # vì sao. Thà nổ to ngay tại chỗ gọi.
+        raise ValueError(
+            f"thể loại {the_loai!r} không có; chỉ nhận "
+            f"{sorted(_LOI_THEO_THE_LOAI)}")
+    return _LOI_THEO_THE_LOAI[the_loai](chu_de)
+
+
+def _loi_truyen(chu_de: str) -> str:
+    """Văn kể chuyện — mở bằng dựng cảnh. Bản chạy từ 03/09/2026."""
     return (f"Viết một truyện ngắn tiếng Việt hoàn chỉnh về: {chu_de}. "
             f"Có mở đầu và kết thúc rõ ràng, dài khoảng {SO_TU_XIN} từ, "
             f"chia thành ít nhất 18 câu. "
             f"Chỉ trả về truyện, không giải thích, không tiêu đề.")
 
 
-def viet_kich_ban(chu_de: str, tran: int = TRAN_SO_LAN, hat_dau: int = 1) -> Dict[str, Any]:
+def _loi_bai_noi(chu_de: str) -> str:
+    """Lời thoại video giải thích — nói thẳng vào đề, không dựng nhân vật.
+
+    Câu mở đo được: *"Chúng ta đang nói về việc tại sao một bài kiểm tra luôn
+    hiển màu xanh lá…"* — so với lời truyện: *"Đêm xuống dần trong phòng thí
+    nghiệm nhỏ hẹp của cô gái tên Linh."*
+
+    GIÁ CỦA NÓ, nói ra cùng lúc: nó viết câu DÀI hơn, nên rụng 2/5 ở cửa độ dài
+    (đo được 3/5 so với 5/5 của lời truyện). Đổi lại cửa đề lên 3/3.
+    """
+    return (f"Viết kịch bản lời thoại tiếng Việt cho một video ngắn giải thích: "
+            f"{chu_de}. Nói thẳng vào chủ đề, không dựng nhân vật, không kể "
+            f"chuyện. Mở bằng một câu nêu rõ đang nói về cái gì, dài khoảng "
+            f"{SO_TU_XIN} từ, chia thành ít nhất 18 câu. "
+            f"Chỉ trả về nội dung, không giải thích thêm, không tiêu đề.")
+
+
+# Danh sách ĐÓNG. Thêm thể loại thì phải đo lại 2×2, không được đoán.
+_LOI_THEO_THE_LOAI = {"truyen": _loi_truyen, "bai_noi": _loi_bai_noi}
+THE_LOAI_MAC_DINH = "truyen"
+
+
+def viet_kich_ban(chu_de: str, tran: int = TRAN_SO_LAN, hat_dau: int = 1,
+                  the_loai: str = THE_LOAI_MAC_DINH) -> Dict[str, Any]:
     """Sinh một kịch bản đạt chuẩn cho Alpha.
 
     Luôn trả về `so_lan_thu` — một kịch bản đạt sau 1 lần và sau 3 lần là hai
@@ -341,6 +396,14 @@ def viet_kich_ban(chu_de: str, tran: int = TRAN_SO_LAN, hat_dau: int = 1) -> Dic
     """
     t0 = time.monotonic()
 
+    # Thể loại lạ thì NỔ NGAY, không đợi vào vòng lặp. `_loi_nhac` cũng ném, và
+    # ném đúng — nhưng chỉ khi vòng lặp chạy. Gọi với `tran=0` thì thể loại sai
+    # lọt qua im lặng. Kiểm ở đây bịt đúng khe ấy.
+    if the_loai not in _LOI_THEO_THE_LOAI:
+        raise ValueError(
+            f"thể loại {the_loai!r} không có; chỉ nhận "
+            f"{sorted(_LOI_THEO_THE_LOAI)}")
+
     # FAIL-CLOSED TRƯỚC KHI TỐN MỘT LƯỢT MODEL. Đề không còn từ nội dung nào thì
     # không có gì để đối chiếu — và mỗi lượt sinh tốn 64–96 giây, nên hỏi câu
     # này sau ba lượt là đốt tới 4,8 phút để nói ra thứ biết ngay từ đầu.
@@ -353,7 +416,7 @@ def viet_kich_ban(chu_de: str, tran: int = TRAN_SO_LAN, hat_dau: int = 1) -> Dic
     lan: List[Dict[str, Any]] = []
     for i in range(tran):
         try:
-            tho, giay = _xin_model(_loi_nhac(chu_de), hat_dau + i)
+            tho, giay = _xin_model(_loi_nhac(chu_de, the_loai), hat_dau + i)
         except RuntimeError as e:
             lan.append({"hat": hat_dau + i, "trang_thai": "KHONG_DO_DUOC", "vi_sao": str(e)})
             continue

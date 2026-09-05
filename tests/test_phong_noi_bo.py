@@ -923,3 +923,181 @@ def test_the_loai_DI_TOI_viet_kich_ban_that_su(monkeypatch):
     da_thay.clear()
     asyncio.run(_api.api_chay_pipeline(_ReqGia({"chu_de": "thử"})))
     assert da_thay == ["truyen"], da_thay
+
+
+# ---------------------------------------------------------------------------
+# SỔ TIẾN ĐỘ — VỎ TRONG SUỐT (05/09/2026)
+#
+# Trước hôm nay: bấm một thẻ thì màn hình trắng 166 giây, tới 330 giây nếu AURA
+# phải sinh lại. Quét cả `interface/` cho SSE/WebSocket/stream: 0 kết quả.
+#
+# Ngưỡng đăng ký trước ở `KE_HOACH_VO_TRONG_SUOT_2026-09-05.md`.
+# ---------------------------------------------------------------------------
+
+def _tien_do(pid):
+    import asyncio
+    import json as _json
+
+    import interface.noi_bo_api as _api
+
+    class _R:
+        match_info = {"pipeline_id": pid}
+
+        async def json(self):
+            return {}
+
+    r = asyncio.run(_api.api_doc_tien_do(_R()))
+    return _json.loads(r.body.decode("utf-8"))
+
+
+def test_moi_buoc_deu_len_so_tien_do(monkeypatch, tmp_path):
+    """Không bước nào được vào `cac_buoc` mà vắng mặt trên sổ tiến độ.
+
+    Bảo đảm bằng CẤU TRÚC: ba đường ghi bước (bỏ qua · phòng lạ · chạy thật)
+    đều đi qua phễu `_xong_buoc`. Kỷ luật thì lần sau thêm một nhánh là vỡ.
+    """
+    import asyncio
+    import json as _json
+
+    import interface.noi_bo_api as _api
+
+    monkeypatch.setattr(_api, "THU_MUC_TIEN_DO", tmp_path)
+    d, goi = _chay_pipeline(monkeypatch)
+    td = _tien_do(d["pipeline_id"])
+
+    dang = [x for x in td["cac_dong"] if x["trang_thai"] == "DANG_CHAY"]
+    ket = [x for x in td["cac_dong"]
+           if x["trang_thai"] not in ("DANG_CHAY", "XONG")]
+    xong = [x for x in td["cac_dong"] if x["trang_thai"] == "XONG"]
+
+    assert len(ket) == d["tong_buoc"], f"{len(ket)} dòng kết / {d['tong_buoc']} bước"
+    assert len(dang) == d["tong_buoc"], "thiếu dòng DANG_CHAY"
+    assert len(xong) == 1, "phải có ĐÚNG một dòng XONG"
+    assert td["trang_thai"] == "XONG"
+
+
+def test_buoc_TREO_nhin_khac_han_buoc_CHUA_BAT_DAU(monkeypatch, tmp_path):
+    """CA ĐỐI CHỨNG QUAN TRỌNG NHẤT của cả việc này.
+
+    Một thanh tiến trình trông như đang chạy trong khi tiến trình đã chết còn
+    TỆ HƠN không có gì. Nên bơm một sổ có `DANG_CHAY` mà chưa có dòng kết, rồi
+    đòi API nói rõ *bước nào* và *đã trôi bao lâu*.
+    """
+    import json as _json
+    from datetime import datetime, timedelta
+
+    import interface.noi_bo_api as _api
+
+    monkeypatch.setattr(_api, "THU_MUC_TIEN_DO", tmp_path)
+    luc = (datetime.now().astimezone() - timedelta(seconds=6)).isoformat()
+    (tmp_path / "pipe_treo.jsonl").write_text(
+        _json.dumps({"buoc": 1, "phong_id": "zeta", "phong_ten": "Zeta",
+                     "trang_thai": "DANG_CHAY", "luc": luc},
+                    ensure_ascii=False) + "\n", encoding="utf-8")
+
+    td = _tien_do("pipe_treo")
+    assert td["trang_thai"] == "DANG_CHAY", td["trang_thai"]
+    assert td["buoc_dang_chay"]["phong_id"] == "zeta"
+    assert td["giay_da_troi"] >= 5.0, td["giay_da_troi"]
+
+    # Ca đối chứng: CHƯA có sổ nào thì phải là KHÔNG ĐO ĐƯỢC, không phải
+    # "đang chạy". Ba trạng thái, không gộp.
+    trong = _tien_do("pipe_chua_co")
+    assert trong["trang_thai"] == "KHONG_DO_DUOC"
+    assert trong["buoc_dang_chay"] is None
+    assert trong["giay_da_troi"] is None
+
+
+def test_buoc_da_XONG_thi_khong_con_bao_dang_chay(monkeypatch, tmp_path):
+    """Có dòng kết đôi thì bước ấy phải thôi được tính là đang chạy."""
+    import json as _json
+    from datetime import datetime
+
+    import interface.noi_bo_api as _api
+
+    monkeypatch.setattr(_api, "THU_MUC_TIEN_DO", tmp_path)
+    luc = datetime.now().astimezone().isoformat()
+    (tmp_path / "pipe_xong.jsonl").write_text("\n".join(
+        _json.dumps(x, ensure_ascii=False) for x in [
+            {"buoc": 1, "phong_id": "zeta", "trang_thai": "DANG_CHAY", "luc": luc},
+            {"buoc": 1, "phong_id": "zeta", "trang_thai": "PASS", "luc": luc,
+             "ket_qua": "", "ms": 10, "so_hien_vat": 0},
+        ]) + "\n", encoding="utf-8")
+
+    td = _tien_do("pipe_xong")
+    assert td["buoc_dang_chay"] is None, td["buoc_dang_chay"]
+
+
+@pytest.mark.parametrize("xau", ["../../etc/passwd", "a/b", "", "x" * 200, "a b"])
+def test_pipeline_id_la_bi_CHAN_truoc_khi_cham_dia(monkeypatch, tmp_path, xau):
+    """`pipeline_id` đi từ URL thẳng vào tên tệp — phải chặn đường dẫn.
+
+    BẢN ĐẦU CỦA BÀI NÀY MÙ. Nó chỉ đòi `KHONG_DO_DUOC`, mà bỏ hẳn hàng rào thì
+    `../../etc/passwd.jsonl` VẪN không tồn tại nên VẪN trả `KHONG_DO_DUOC` —
+    khẳng định được thoả bởi *tệp không có*, không phải bởi *hàng rào chặn*.
+    Gieo `if False:` vào chỗ chặn mà bài vẫn xanh.
+
+    Nay bài đòi thêm LÝ DO phải là "không hợp lệ", và có ca dưới đặt một tệp mà
+    đường vòng thật sự với tới được.
+    """
+    import interface.noi_bo_api as _api
+
+    monkeypatch.setattr(_api, "THU_MUC_TIEN_DO", tmp_path)
+    td = _tien_do(xau)
+    assert td["trang_thai"] == "KHONG_DO_DUOC", (xau, td)
+    assert "không hợp lệ" in td["vi_sao"], (xau, td["vi_sao"])
+
+
+def test_duong_vong_KHONG_doc_duoc_tep_ngoai_thu_muc(monkeypatch, tmp_path):
+    """Ca đối chứng CÓ MỒI: đặt một tệp mà `..` sẽ với tới, rồi đòi KHÔNG đọc nó.
+
+    Không có mồi thì bài trên chỉ chứng minh "tệp không tồn tại". Có mồi thì nó
+    phân biệt được hàng rào với sự may mắn.
+    """
+    import json as _json
+
+    import interface.noi_bo_api as _api
+
+    ngoai = tmp_path / "ngoai"
+    ngoai.mkdir()
+    (ngoai / "bimat.jsonl").write_text(
+        _json.dumps({"buoc": 1, "trang_thai": "XONG", "bi_mat": "KHONG_DUOC_LO"},
+                    ensure_ascii=False) + "\n", encoding="utf-8")
+    trong = tmp_path / "trong"
+    trong.mkdir()
+    monkeypatch.setattr(_api, "THU_MUC_TIEN_DO", trong)
+
+    # Ca đối chứng THUẬN: mồi đọc được khi đặt ĐÚNG chỗ — nếu không thì bài này
+    # xanh chỉ vì đường dẫn sai, không vì hàng rào.
+    (trong / "that.jsonl").write_text(
+        _json.dumps({"buoc": 1, "trang_thai": "XONG"}, ensure_ascii=False) + "\n",
+        encoding="utf-8")
+    assert _tien_do("that")["cac_dong"], "mồi đặt đúng chỗ mà vẫn không đọc được"
+
+    td = _tien_do("../ngoai/bimat")
+    assert td["cac_dong"] == [], "ĐỌC ĐƯỢC tệp ngoài thư mục qua đường vòng"
+    assert "KHONG_DUOC_LO" not in _json.dumps(td, ensure_ascii=False)
+
+
+def test_ghi_tien_do_HONG_thi_khong_lam_do_ca_chuoi(monkeypatch, tmp_path):
+    """Nuốt `OSError` là có chủ đích — nhưng phải kiểm nó nuốt ĐÚNG chỗ.
+
+    Đổ cả một chuỗi 166 giây vì không ghi được một dòng nhật ký hiển thị thì
+    tệ hơn. Và nó không hỏng lặng: phía đọc trả `KHONG_DO_DUOC`.
+    """
+    import interface.noi_bo_api as _api
+
+    # Trỏ thư mục tiến độ vào một chỗ KHÔNG mkdir được: con của một TỆP.
+    # Bản đầu vá `Path.mkdir` toàn cục, nên nó làm hỏng luôn bước `aura` —
+    # phép gieo rộng hơn thứ định gieo, và bài đỏ vì lý do khác hẳn.
+    chan = tmp_path / "day.txt"
+    chan.write_text("khong phai thu muc", encoding="utf-8")
+    monkeypatch.setattr(_api, "THU_MUC_TIEN_DO", chan / "khong_the_tao")
+
+    d, goi = _chay_pipeline(monkeypatch)
+    assert d["status"] == "PASS", "chuỗi đổ chỉ vì không ghi được tiến độ"
+    assert len(goi) == 5, f"chuỗi phải vẫn chạy đủ phòng: {goi}"
+
+    # Và KHÔNG hỏng lặng: phía đọc phải nói KHÔNG ĐO ĐƯỢC.
+    td = _tien_do(d["pipeline_id"])
+    assert td["trang_thai"] == "KHONG_DO_DUOC", td["trang_thai"]

@@ -17,6 +17,7 @@ from datetime import datetime
 import hashlib
 import hmac
 import json
+import re
 import os
 import secrets
 from pathlib import Path
@@ -722,6 +723,92 @@ async def api_danh_sach_the_quy_trinh(request: web.Request) -> web.Response:
 TRAN_BUOC_TUY_BIEN = 8
 
 
+THU_MUC_TIEN_DO = PROJECT_ROOT / "data" / "tien_do"
+
+
+def _ghi_tien_do(pipeline_id: str, dong: Dict[str, Any]) -> None:
+    """Ghi MỘT dòng vào sổ tiến độ của một lượt chạy.
+
+    VÌ SAO GHI RA TỆP CHỨ KHÔNG GIỮ TRONG RAM. Cùng lý do sổ cái là tệp: tiến
+    trình chết thì RAM mất, tệp còn. Và nó kiểm được bằng cách đọc đĩa — đúng
+    nguyên tắc *"bằng chứng trên đĩa là chân lý duy nhất"*.
+
+    NUỐT `OSError` LÀ CÓ CHỦ ĐÍCH VÀ CÓ GIÁ. Đổ cả một chuỗi 166 giây vì không
+    ghi được một dòng nhật ký hiển thị thì tệ hơn. Nhưng nó KHÔNG hỏng lặng:
+    `/api/tien_do` trả `KHONG_DO_DUOC` khi không có tệp, nên phía đọc nhìn thấy
+    "không có tiến độ" chứ không thấy "chưa chạy". Ba trạng thái, không gộp.
+    """
+    try:
+        THU_MUC_TIEN_DO.mkdir(parents=True, exist_ok=True)
+        with (THU_MUC_TIEN_DO / f"{pipeline_id}.jsonl").open(
+                "a", encoding="utf-8") as f:
+            f.write(json.dumps(dong, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+
+async def api_doc_tien_do(request: web.Request) -> web.Response:
+    """Đọc sổ tiến độ của một lượt. Giao diện poll đường này 1 giây/lần.
+
+    BA TRẠNG THÁI, KHÔNG GỘP:
+        chưa có tệp        -> `KHONG_DO_DUOC`, và nói rõ là chưa có tiến độ
+        có tệp, chưa XONG  -> `DANG_CHAY`, kèm giây đã trôi của bước hiện tại
+        có dòng XONG       -> `XONG`
+
+    Trạng thái thứ hai là thứ Sếp cần nhất: một bước treo 60 giây phải nhìn KHÁC
+    HẲN một bước chưa bắt đầu. Thanh tiến trình trông như đang chạy trong khi
+    tiến trình đã chết còn tệ hơn không có gì.
+    """
+    pid = request.match_info.get("pipeline_id", "")
+    # Chặn đường dẫn: `pipeline_id` đi từ URL vào tên tệp.
+    if not pid or not re.fullmatch(r"[A-Za-z0-9_-]{1,120}", pid):
+        return web.json_response(
+            {"trang_thai": "KHONG_DO_DUOC", "vi_sao": "pipeline_id không hợp lệ",
+             "buoc_dang_chay": None, "giay_da_troi": None,
+             "tong_ket": None, "cac_dong": []}, status=400)
+
+    tep = THU_MUC_TIEN_DO / f"{pid}.jsonl"
+    if not tep.is_file():
+        return web.json_response(
+            {"trang_thai": "KHONG_DO_DUOC", "pipeline_id": pid,
+             "vi_sao": "chưa có tiến độ nào cho lượt này",
+             "buoc_dang_chay": None, "giay_da_troi": None,
+             "tong_ket": None, "cac_dong": []})
+
+    dong: List[Dict[str, Any]] = []
+    try:
+        for d in tep.read_text(encoding="utf-8").splitlines():
+            if d.strip():
+                dong.append(json.loads(d))
+    except (OSError, json.JSONDecodeError) as e:
+        return web.json_response(
+            {"trang_thai": "KHONG_DO_DUOC", "pipeline_id": pid,
+             "vi_sao": f"{type(e).__name__}: {e}",
+             "buoc_dang_chay": None, "giay_da_troi": None,
+             "tong_ket": None, "cac_dong": []})
+
+    xong = next((d for d in dong if d.get("trang_thai") == "XONG"), None)
+    dang = None
+    if not xong:
+        # Bước đang chạy = bước có DANG_CHAY mà chưa có dòng kết đôi.
+        da_xong = {d["buoc"] for d in dong
+                   if d.get("trang_thai") not in ("DANG_CHAY", "XONG")}
+        dang = next((d for d in dong
+                     if d.get("trang_thai") == "DANG_CHAY"
+                     and d["buoc"] not in da_xong), None)
+    return web.json_response({
+        "trang_thai": "XONG" if xong else ("DANG_CHAY" if dang else "KHONG_DO_DUOC"),
+        "pipeline_id": pid,
+        "buoc_dang_chay": dang,
+        "giay_da_troi": (round(
+            (datetime.now().astimezone()
+             - datetime.fromisoformat(dang["luc"])).total_seconds(), 1)
+            if dang else None),
+        "tong_ket": xong,
+        "cac_dong": dong,
+    })
+
+
 def the_loai_cua_the(preset_id) -> str:
     """Thể loại lời nhắc mà một thẻ quy trình khai. Không khai thì `"truyen"`.
 
@@ -767,10 +854,27 @@ async def chay_chuoi_phong(ke_hoach: List[tuple], chu_de: str,
     kich_ban = ""          # đầu ra của aura, đầu vào của alpha
     da_gay = False
 
+    def _xong_buoc(buoc: Dict[str, Any]) -> None:
+        """PHỄU DUY NHẤT để ghi nhận một bước đã kết thúc.
+
+        Gom ba đường (bỏ qua · phòng lạ · chạy thật) về một chỗ, nên KHÔNG bước
+        nào có thể vào `cac_buoc` mà không hiện lên sổ tiến độ. Đó là tiêu chí
+        "không bước nào bị bỏ sót" được bảo đảm bằng CẤU TRÚC, không bằng kỷ
+        luật của người viết — kỷ luật thì lần sau thêm một nhánh là vỡ.
+        """
+        cac_buoc.append(buoc)
+        _ghi_tien_do(pipeline_id, {
+            "buoc": buoc["buoc"], "phong_id": buoc["phong_id"],
+            "phong_ten": buoc["phong_ten"], "trang_thai": buoc["trang_thai"],
+            "ket_qua": buoc["ket_qua"], "ms": buoc["ms"],
+            "so_hien_vat": len(buoc["artifacts"]),
+            "luc": datetime.now().astimezone().isoformat(),
+        })
+
     def _bo_qua(i, phong_id, ten, hanh_dong, vi_sao):
-        cac_buoc.append({"buoc": i, "phong_id": phong_id, "phong_ten": ten,
-                         "hanh_dong": hanh_dong, "trang_thai": "CHUA_CHAY",
-                         "ket_qua": vi_sao, "artifacts": [], "ms": 0})
+        _xong_buoc({"buoc": i, "phong_id": phong_id, "phong_ten": ten,
+                    "hanh_dong": hanh_dong, "trang_thai": "CHUA_CHAY",
+                    "ket_qua": vi_sao, "artifacts": [], "ms": 0})
 
     for i, (phong_id, ten, hanh_dong) in enumerate(ke_hoach, 1):
         if da_gay:
@@ -781,15 +885,22 @@ async def chay_chuoi_phong(ke_hoach: List[tuple], chu_de: str,
         # `phong_id` từ người gọi, nên đây là chỗ duy nhất một cái tên bịa có thể
         # đi vào — và nó phải kêu.
         if phong_id not in ("aura", "alpha") and phong_id not in PHONG:
-            cac_buoc.append({"buoc": i, "phong_id": phong_id, "phong_ten": ten,
-                             "hanh_dong": hanh_dong, "trang_thai": "FAIL",
-                             "ket_qua": f"không có phòng nào tên {phong_id!r}",
-                             "artifacts": [], "ms": 0})
+            _xong_buoc({"buoc": i, "phong_id": phong_id, "phong_ten": ten,
+                        "hanh_dong": hanh_dong, "trang_thai": "FAIL",
+                        "ket_qua": f"không có phòng nào tên {phong_id!r}",
+                        "artifacts": [], "ms": 0})
             da_gay = True
             continue
 
         task_id = f"{pipeline_id}_b{i}_{phong_id}"
         t0 = time.monotonic()
+        # Ghi TRƯỚC khi gọi phòng. Ghi sau thì màn hình trắng suốt lúc phòng
+        # chạy — đúng thứ cả việc này sinh ra để chữa.
+        _ghi_tien_do(pipeline_id, {
+            "buoc": i, "phong_id": phong_id, "phong_ten": ten,
+            "hanh_dong": hanh_dong, "trang_thai": "DANG_CHAY",
+            "luc": datetime.now().astimezone().isoformat(),
+        })
 
         if phong_id == "aura":
             _kq = await asyncio.to_thread(viet_kich_ban, chu_de, the_loai=the_loai)
@@ -840,15 +951,22 @@ async def chay_chuoi_phong(ke_hoach: List[tuple], chu_de: str,
             if tt == "PASS" and _kq["vi_sao"]:
                 mo_ta += f" — {_kq['vi_sao']}"
 
-        cac_buoc.append({"buoc": i, "phong_id": phong_id, "phong_ten": ten,
-                         "hanh_dong": hanh_dong, "trang_thai": tt,
-                         "ket_qua": mo_ta, "artifacts": hv,
-                         "ms": round((time.monotonic() - t0) * 1000, 1)})
+        _xong_buoc({"buoc": i, "phong_id": phong_id, "phong_ten": ten,
+                    "hanh_dong": hanh_dong, "trang_thai": tt,
+                    "ket_qua": mo_ta, "artifacts": hv,
+                    "ms": round((time.monotonic() - t0) * 1000, 1)})
         hien_vat_tat_ca += hv
         if tt != "PASS":
             da_gay = True
 
     dat = sum(1 for b in cac_buoc if b["trang_thai"] == "PASS")
+    # DÒNG KẾT. Không có nó thì giao diện poll mãi mãi, và một tiến trình CHẾT
+    # nhìn y hệt một tiến trình chậm — đúng chỗ dễ hỏng nhất của cả việc này.
+    _ghi_tien_do(pipeline_id, {
+        "buoc": 0, "trang_thai": "XONG", "tong_buoc": len(ke_hoach),
+        "buoc_dat": dat, "so_hien_vat": len(hien_vat_tat_ca),
+        "luc": datetime.now().astimezone().isoformat(),
+    })
     return cac_buoc, hien_vat_tat_ca, dat
 
 

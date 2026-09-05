@@ -33,6 +33,7 @@ def build_noi_bo_app() -> web.Application:
     app.router.add_get("/api/pipeline/presets", noi_bo_api.api_danh_sach_the_quy_trinh)
     app.router.add_post("/api/pipeline/run", noi_bo_api.api_chay_pipeline)
     app.router.add_post("/api/pipeline/custom", noi_bo_api.api_pipeline_custom)
+    app.router.add_get("/api/tien_do/{pipeline_id}", noi_bo_api.api_doc_tien_do)
     app.router.add_get("/api/polyglot/languages", noi_bo_api.api_polyglot_languages)
     app.router.add_post("/api/polyglot/translate", noi_bo_api.api_polyglot_translate)
     app.router.add_post("/api/polyglot/validate", noi_bo_api.api_polyglot_validate)

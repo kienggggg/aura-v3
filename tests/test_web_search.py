@@ -235,12 +235,62 @@ def test_thanh_cong_thi_LUON_co_url_va_gio(run):
 
 
 def test_cong_khong_bao_gio_goi_model(run):
-    """Cổng này chỉ lấy nguyên liệu. Có model chen vào là sai thiết kế."""
+    """Cổng này chỉ lấy nguyên liệu. Có model chen vào là sai thiết kế.
+
+    04/09/2026 — VIẾT LẠI. Bản cũ dò chuỗi con trên NGUYÊN VĂN mã nguồn:
+
+        for cam in ("openai", "gemini", "ollama", ...):
+            assert cam not in src.lower()
+
+    Nó đỏ khi một **chú thích** nhắc tên model. Ca thật: docstring của
+    `la_phep_tinh` lấy ví dụ *"Gemini 3.8 flash có tốt hơn Antigravity 2.0
+    không"* — một bình luận có thật — và cửa chấm đó là gọi model.
+
+    Đây là bệnh `x in y` đã trả giá bảy lần trong `CLAUDE.md`, lần này nằm ngay
+    trong cửa sinh ra để canh. Sửa cửa, không sửa văn: hỏi **mã làm gì** chứ
+    không hỏi **mã chứa chữ gì**. Đi bằng `ast` nên chú thích và docstring
+    không lọt vào tầm mắt, còn một lời gọi thật thì vẫn bị bắt — kể cả khi tên
+    model chỉ nằm trong một chuỗi URL.
+    """
+    import ast
     import inspect
 
-    src = inspect.getsource(web_search)
-    for cam in ("openai", "gemini", "ollama", "complete(", "chat_completion"):
-        assert cam not in src.lower(), f"cổng tra mạng không được gọi model ({cam})"
+    cay = ast.parse(inspect.getsource(web_search))
+
+    # 1. Không được IMPORT thư viện model nào.
+    CAM_IMPORT = ("openai", "google.generativeai", "genai", "anthropic",
+                  "ollama", "litellm", "transformers")
+    for nut in ast.walk(cay):
+        ten = []
+        if isinstance(nut, ast.Import):
+            ten = [a.name for a in nut.names]
+        elif isinstance(nut, ast.ImportFrom):
+            ten = [nut.module or ""]
+        for t in ten:
+            assert not any(t == c or t.startswith(c + ".") for c in CAM_IMPORT), (
+                f"cổng tra mạng import thư viện model: {t}")
+
+    # 2. Không được GỌI hàm sinh chữ.
+    CAM_GOI = ("complete", "completion", "chat_completion", "generate",
+               "create_completion", "invoke")
+    for nut in ast.walk(cay):
+        if not isinstance(nut, ast.Call):
+            continue
+        f = nut.func
+        ten = f.attr if isinstance(f, ast.Attribute) else (
+            f.id if isinstance(f, ast.Name) else "")
+        assert ten.lower() not in CAM_GOI, f"cổng tra mạng gọi model: {ten}()"
+
+    # 3. Ca đối chứng: cửa phải BIẾT NÓI KHÔNG. Không có nó thì hai phép trên
+    #    có thể xanh chỉ vì `ast.walk` không đi tới đâu cả.
+    xau = ast.parse("import openai\nx = openai.chat.complete(prompt='hi')\n")
+    thay_import = any(
+        isinstance(n, ast.Import) and any(a.name == "openai" for a in n.names)
+        for n in ast.walk(xau))
+    thay_goi = any(
+        isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+        and n.func.attr in CAM_GOI for n in ast.walk(xau))
+    assert thay_import and thay_goi, "phép đo mù: không bắt được cả mã cố ý xấu"
 
 
 # ---------------------------------------------------------------------------
@@ -335,3 +385,87 @@ def test_duong_BAT_DONG_BO_cung_khong_dung_cua_so():
 
     nguon = inspect.getsource(chat_adapters.ReadOnlySearchGateway)
     assert "creationflags" in nguon, "đường async còn thiếu cờ"
+
+
+# ---------------------------------------------------------------------------
+# CHẾ ĐỘ ĐỊNH TUYẾN CHO BÌNH LUẬN (04/09/2026)
+#
+# Năm bình luận dưới đây là THẬT, Sếp lấy về từ các nhóm AI/lập trình, và tôi
+# KHÔNG được thấy chúng khi viết `is_search_request`. Đo trên cả 10 câu:
+#     is_search_request        1/10   (câu duy nhất nổ chỉ vì trong nó có chữ
+#                                      "google" — trúng lệnh tra thẳng, không
+#                                      phải định tuyến đúng)
+#     nen_tra_cho_binh_luan   10/10
+# ---------------------------------------------------------------------------
+
+BINH_LUAN_THAT = (
+    "nhưng sao nó đắt thế nhỉ? mình chạy 1 promt vừa phải chọn Astrra medium "
+    "nhưng hết limit 5h luôn. API thì chưa thử",
+    "Các pro cho em hỏi auto accept submit trên AG 2.0 có plugin hay exten nào "
+    "không ạ, còn IDE thì em biết rồi",
+    "Cho mình hỏi dùng Model Gemini 3.8 flash trong Opencode có tốt hơn "
+    "Antigravity 2.0 không các bác",
+    "Mọi người cho mình xin vài cách để cho anti code tốt hơn với, chứ cứ được "
+    "cái này lại lỗi cái kia",
+    "Cho mình hỏi có tips nào cho con gehihi nó nhớ lâu nhớ dai không chứ mỗi "
+    "lần mở lên là như nói chuyện với người lạ vậy",
+)
+
+KHONG_TRA_DU_O_CHE_DO_BINH_LUAN = (
+    "Chào em",
+    "Em là ai",
+    "1247 nhân 38 bằng bao nhiêu",
+    "Viết giúp tôi hàm sắp xếp nổi bọt",
+    "Xe đạp của tôi màu gì",
+    "Hôm nay là thứ mấy",
+)
+
+
+@pytest.mark.parametrize("cau", BINH_LUAN_THAT)
+def test_che_do_binh_luan_TRA_cho_binh_luan_that(cau):
+    from core.web_search import nen_tra_cho_binh_luan
+
+    assert nen_tra_cho_binh_luan(cau) is True, cau
+
+
+@pytest.mark.parametrize("cau", KHONG_TRA_DU_O_CHE_DO_BINH_LUAN)
+def test_che_do_binh_luan_KHONG_tra_bon_nhom_may_da_co_dap_an(cau):
+    """Cửa phải BIẾT NÓI KHÔNG — `return True` vô điều kiện cũng qua bài trên.
+
+    Bốn nhóm này không phải "model chắc biết" mà là **máy đã có sẵn đáp án**:
+    việc tự làm · chuyện riêng của Sếp (tra là đẩy nó ra ngoài) · ngày giờ
+    (`core/dong_ho.py`) · số học (`core/may_tinh.py`).
+    """
+    from core.web_search import nen_tra_cho_binh_luan
+
+    assert nen_tra_cho_binh_luan(cau) is False, cau
+
+
+def test_la_phep_tinh_doi_CA_HAI_chu_so_va_dau_phep():
+    """Chỉ một trong hai thì một bình luận thật bị chấm nhầm là phép tính.
+
+    "Gemini 3.8 flash có tốt hơn Antigravity 2.0 không" có chữ số VÀ có dấu
+    chấm. Đòi cả hai điều kiện thì nó không lọt.
+    """
+    from core.web_search import la_phep_tinh
+
+    assert la_phep_tinh("1247 nhân 38 bằng bao nhiêu") is True
+    assert la_phep_tinh("12 + 30 * 2") is True
+    assert la_phep_tinh("Gemini 3.8 flash có tốt hơn Antigravity 2.0 không") is False
+    assert la_phep_tinh("cộng tác với nhau thế nào") is False   # chữ, không số
+
+
+def test_che_do_binh_luan_KHAC_luat_chat_tren_dung_bo_nay():
+    """Hai luật phải THẬT SỰ khác nhau trên bộ này.
+
+    Không có bài này thì `nen_tra_cho_binh_luan = is_search_request` cũng xanh
+    hết — và cả chế độ mới thành mã chết trông giống mã thật.
+    """
+    from core.web_search import is_search_request, nen_tra_cho_binh_luan
+
+    cu = sum(is_search_request(c) for c in BINH_LUAN_THAT)
+    moi = sum(nen_tra_cho_binh_luan(c) for c in BINH_LUAN_THAT)
+    assert moi == len(BINH_LUAN_THAT), f"luật mới chỉ {moi}/{len(BINH_LUAN_THAT)}"
+    assert cu < moi, (
+        f"luật cũ cũng cho {cu}/{len(BINH_LUAN_THAT)} — hai luật không khác nhau, "
+        "chế độ mới không mua được gì")

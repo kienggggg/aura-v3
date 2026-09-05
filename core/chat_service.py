@@ -36,6 +36,7 @@ from core.web_search import (
     is_search_request,
     la_chuyen_rieng_cua_sep,
     la_viec_tu_lam,
+    nen_tra_cho_binh_luan,
 )
 
 
@@ -119,6 +120,34 @@ class DeterministicFreshnessPolicy:
     )
     _INHERENTLY_LIVE_DOMAINS = ("thời tiết", "weather")
 
+    def __init__(self, che_do_binh_luan: bool = False) -> None:
+        """`che_do_binh_luan` ĐỔI HÀM CHI PHÍ, không đổi sự thật.
+
+        Chat riêng của Sếp: cái đắt là *tra thừa* — 23–43 giây, và một câu riêng
+        tư bị đẩy ra máy chủ tìm kiếm. Soạn trả lời bình luận công khai: cái đắt
+        là *nói sai trước mặt người lạ*. Đo 04/09/2026 trên 10 bình luận THẬT:
+
+            is_search_request        1/10   — và câu duy nhất nổ chỉ vì trong nó
+                                             có chữ "google", tức trúng lệnh tra
+                                             thẳng, không phải định tuyến đúng
+            nen_tra_cho_binh_luan   10/10   — bộ đối chứng 0/6
+
+        Chế độ nằm ở CHÍNH SÁCH chứ không ở `ChatService`, nên hợp đồng của dịch
+        vụ không đổi: nó vốn đã nhận `freshness_policy`. Bản vá đầu của tôi đặt
+        nhầm vào `ChatService` — thấy `self._EXPLICIT_COMMANDS` rồi đoán là lớp
+        ấy — và `self._dinh_tuyen` trong lớp này ném `AttributeError`, bị nuốt
+        thành `BACKEND_ERROR`. Đặt nhầm chỗ thì chính chỗ đúng lộ ra.
+
+        Mặc định `False`: chat vẫn là chat, không ai bị đổi hành vi vì một tính
+        năng mình không bật.
+        """
+        self._che_do_binh_luan = bool(che_do_binh_luan)
+
+    def _dinh_tuyen(self, text: str) -> bool:
+        """Luật định tuyến đang dùng — chat hay bình luận."""
+        return (nen_tra_cho_binh_luan(text) if self._che_do_binh_luan
+                else is_search_request(text))
+
     def requires_web(self, request: ChatRequest) -> bool:
         # TRỤC THỨ HAI: câu này có đáp án KIỂM CHỨNG ĐƯỢC ngoài đời không.
         #
@@ -163,10 +192,10 @@ class DeterministicFreshnessPolicy:
         # Việc phải TỰ LÀM thì thắng, kể cả khi câu có chữ gợi tra cứu.  Trừ
         # khi Sếp bảo tra thẳng ("tra mạng", "google") — lúc đó Sếp nói gì thì
         # làm nấy, và `is_search_request` giữ nguyên quyền đó.
-        if la_viec_tu_lam(request.text) and not is_search_request(request.text):
+        if la_viec_tu_lam(request.text) and not self._dinh_tuyen(request.text):
             return False
         return (
-            is_search_request(request.text)
+            self._dinh_tuyen(request.text)
             or any(command in normalized for command in self._EXPLICIT_COMMANDS)
             or any(
                 domain in normalized for domain in self._INHERENTLY_LIVE_DOMAINS

@@ -1146,3 +1146,30 @@ def test_stage_la_danh_sach_dong():
     assert _replace(hop_le, stage="").validation_errors() == ()
     loi = _replace(hop_le, stage="buoc_khong_co_that").validation_errors()
     assert any("stage must be one of" in e for e in loi)
+
+
+def test_chinh_sach_NGHE_co_che_do_binh_luan():
+    """Phán quyết của `nen_tra_cho_binh_luan` phải đi tới `requires_web`.
+
+    Chấm được một hàm không chứng minh kết quả của nó đi tới đâu — bài học đã
+    trả giá năm lần trong `core/phong_alpha.py`. Nên bài này gọi CHÍNH SÁCH,
+    không gọi hàm thuần, và có ca đối chứng ở chế độ mặc định.
+    """
+    cau = ("Các pro cho em hỏi auto accept submit trên AG 2.0 có plugin hay "
+           "exten nào không ạ, còn IDE thì em biết rồi")
+    from core.chat_service import DeterministicFreshnessPolicy
+
+    yc = _request(text=cau)
+
+    mac_dinh = DeterministicFreshnessPolicy()
+    binh_luan = DeterministicFreshnessPolicy(che_do_binh_luan=True)
+
+    assert binh_luan.requires_web(yc) is True, "chế độ bình luận không ra mạng"
+    assert mac_dinh.requires_web(yc) is False, (
+        "chế độ mặc định cũng ra mạng — hai chế độ không khác nhau, "
+        "nên bài trên không chứng minh được gì")
+
+    # Chuyện riêng thì KHÔNG chế độ nào được tra: tra là đẩy nó ra ngoài.
+    rieng = _request(text="Xe đạp của tôi màu gì")
+    assert binh_luan.requires_web(rieng) is False
+    assert mac_dinh.requires_web(rieng) is False

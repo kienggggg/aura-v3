@@ -289,6 +289,75 @@ def is_search_request(text: str) -> bool:
     return _khop(low, moc, _FRESH_WORDS)
 
 
+# Phép dò số học TẠI CHỖ, cố ý hẹp. Nó KHÔNG thay `core/may_tinh.py` — nó chỉ
+# trả lời "câu này có phải một phép tính không".
+#
+# VÌ SAO KHÔNG IMPORT `core/may_tinh.py`. Hàng rào `tests/test_v3_ranh_gioi.py`
+# cho chat và phòng dùng chung ĐÚNG hai tệp: `paths.py` và tệp này. Thêm cạnh
+# `web_search -> may_tinh` là kéo `may_tinh` sang phía phòng, và hàng rào đỏ.
+_DAU_PHEP_TINH = ("cộng", "trừ", "nhân", "chia", "luỹ thừa", "lũy thừa",
+                  "căn bậc", "bằng bao nhiêu", "+", "-", "*", "/", "^", "×", "÷")
+_CO_CHU_SO = re.compile(r"\d")
+
+
+def la_phep_tinh(text: str) -> bool:
+    """Câu này là một phép tính — `core/may_tinh.py` lo, đừng tra mạng.
+
+    Đòi CẢ HAI: có chữ số VÀ có dấu/chữ chỉ phép tính. Chỉ một trong hai thì
+    "Gemini 3.8 flash có tốt hơn Antigravity 2.0 không" — một bình luận thật —
+    sẽ bị chấm là phép tính vì nó có chữ số và có dấu chấm.
+    """
+    low = loi_sep_noi(text).lower()
+    if not _CO_CHU_SO.search(low):
+        return False
+    return any(d in low for d in _DAU_PHEP_TINH)
+
+
+def nen_tra_cho_binh_luan(text: str) -> bool:
+    """Định tuyến cho CHẾ ĐỘ BÌNH LUẬN: mặc định TRA, trừ bốn nhóm.
+
+    `is_search_request` KHÔNG hỏng — nó chỉnh cho chat riêng của Sếp, nơi cái
+    đắt là *tra thừa*: 23–43 giây, và một câu riêng tư bị đẩy ra máy chủ tìm
+    kiếm. Đo trên bộ đối chứng: **0 sai dương**.
+
+    Bình luận công khai có hàm chi phí NGƯỢC LẠI — nói sai trước mặt người lạ
+    đắt hơn nhiều so với một lượt tra 4 giây. Đo 04/09/2026 trên 10 bình luận
+    THẬT Sếp lấy về:
+
+        is_search_request        1/10   — và câu duy nhất nổ chỉ vì trong nó có
+                                          chữ "google", tức trúng lệnh tra
+                                          thẳng, không phải định tuyến đúng
+        nen_tra_cho_binh_luan   10/10
+
+    Bốn nhóm KHÔNG tra, tất cả đều là thứ máy đã có sẵn đáp án — không phải
+    thứ "model chắc biết":
+
+        la_viec_tu_lam            bảo AURA làm một việc; internet không làm hộ
+        la_chuyen_rieng_cua_sep   tra là ĐẨY chuyện riêng ra ngoài
+        về chính AURA/chào/ngày giờ   `core/dong_ho.py` đã đưa giờ máy vào
+        la_phep_tinh              `core/may_tinh.py` lo, model không được đoán
+
+    CHƯA CHẶN ĐƯỢC: 4/10 bình luận hỏi KINH NGHIỆM cộng đồng ("mọi người vẫn
+    để sol hay đổi sang luna", "có tips nào cho nó nhớ lâu"). Tra mạng ra bài
+    viết chung, không ra được câu "nhóm này đang làm thế nào". Định tuyến đúng
+    cũng không đổi được điều đó.
+    """
+    if is_search_request(text):
+        return True
+    low = loi_sep_noi(text).lower()
+    moc = bo_dau(low)
+    if (
+        la_viec_tu_lam(text)
+        or la_chuyen_rieng_cua_sep(text)
+        or la_phep_tinh(text)
+        or _khop(low, moc, _VE_CHINH_MINH)
+        or any(low.startswith(w) or moc.startswith(bo_dau(w)) for w in _CHAO_HOI)
+        or _khop(low, moc, _HOI_NGAY_GIO)
+    ):
+        return False
+    return True
+
+
 # --------------------------------------------------------------------------- #
 def _public_http_url(value: str) -> str | None:
     """Return a canonical public HTTP(S) URL, otherwise ``None``.

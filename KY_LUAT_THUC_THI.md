@@ -260,6 +260,72 @@ AURA viết kịch bản, Alpha dựng video. Mối nối là tham số `van_ban
   cửa ĐỘ DÀI, 175 từ, chứ không phải bởi cửa đề. Một cửa khác bắt hộ không
   chứng minh được cửa này biết bắt.)
 
+### 1c. CHẾ ĐỘ ĐỊNH TUYẾN CHO BÌNH LUẬN (04/09/2026)
+
+Sếp soạn câu trả lời cho bình luận trong các nhóm AI/lập trình. Đo trên **10
+bình luận THẬT do Sếp lấy về** (em không được thấy trước khi đo):
+
+```
+is_search_request định tuyến ra mạng   1/10
+   — và câu duy nhất nổ (#9) nổ vì trong câu có chữ "google",
+     tức trúng lệnh tra thẳng, KHÔNG phải định tuyến đúng. Thực chất 0/10.
+```
+
+**Luật cũ KHÔNG hỏng.** Nó được chỉnh cho chat riêng của Sếp, nơi cái đắt là
+*tra thừa*: 23–43 giây, và một câu riêng tư bị đẩy ra máy chủ tìm kiếm. Nó làm
+tốt đúng việc ấy — **0 sai dương** trên bộ đối chứng. Bình luận công khai có
+hàm chi phí **ngược lại**: nói sai trước mặt người lạ đắt hơn nhiều so với một
+lượt tra 4 giây. Cùng một luật, hai bài toán, hai hướng sai.
+
+* **Ngưỡng, đặt TRƯỚC khi viết mã:**
+  - `nen_tra_cho_binh_luan(text)` — **mặc định TRA**, chỉ không tra khi câu
+    thuộc một trong bốn nhóm máy đã có sẵn đáp án:
+    1. `la_viec_tu_lam` — bảo AURA làm một việc (viết hàm, sửa lỗi, dịch).
+    2. `la_chuyen_rieng_cua_sep` — dữ kiện riêng, internet không đời nào biết,
+       và tra là **đẩy chuyện riêng ra ngoài**.
+    3. hỏi về chính AURA · chào hỏi · hỏi ngày giờ — `core/dong_ho.py` đã đưa
+       giờ máy vào lời dặn mỗi lượt.
+    4. phép tính số học — `core/may_tinh.py` lo, model không được đoán.
+
+  - **Tiêu chí nghiệm thu, đăng ký trước khi chạy:**
+    - 10 bình luận thật của Sếp → **10/10** ra mạng.
+    - Bộ đối chứng (chào hỏi · "em là ai" · `1247 nhân 38` · "viết giúp tôi
+      hàm sắp xếp" · chuyện riêng) → **0** ra mạng.
+
+  > **MỘT NHÃN ĐỔI CÓ CHỦ Ý, nói ra trước khi đo.** Câu *"Giải thích cho tôi
+  > decorator trong Python là gì"* ở chế độ chat gắn nhãn **không cần tra** —
+  > model biết, tra là phí 4 giây. Ở chế độ bình luận em gắn nhãn **được phép
+  > tra**: câu trả lời công khai kèm một đường dẫn tốt hơn câu không kèm, và
+  > 4 giây là rẻ. Đây là **đổi hàm chi phí, không phải đổi sự thật** — và em
+  > ghi ra đây trước khi chạy để nó không thành việc dán nhãn lại sau khi thấy
+  > kết quả.
+
+  > **Vì sao KHÔNG import `core/may_tinh.py` vào `core/web_search.py`.** Hàng
+  > rào `tests/test_v3_ranh_gioi.py` cho chat và phòng dùng chung ĐÚNG hai tệp:
+  > `paths.py` và `web_search.py`. Thêm cạnh ấy là kéo `may_tinh` sang phía
+  > phòng. Nên phép dò số học ở đây là một phép dò TẠI CHỖ, cố ý hẹp, và nó
+  > không thay `may_tinh` — nó chỉ trả lời "câu này có phải phép tính không".
+
+* **ĐO ĐƯỢC TRƯỚC KHI DỰNG — tra mạng CÓ ăn thua trên loại câu này:**
+
+  ```
+  20 nguồn / 5 truy vấn · 2,3–15,1 s
+  #3 "AG 2.0 có plugin auto accept không"
+       -> github.com/nextcortex/antigravity-auto-accept
+       -> github.com/zixfelw/ag-auto-click-scroll
+  ```
+
+  Và ca đối chứng đắt nhất: **nguyên văn bình luận tra ra TỐT NGANG HOẶC HƠN**
+  truy vấn tự viết lại — kể cả tiếng lóng *"AG 2.0"*, *"anti IDE"*. Nên không
+  cần khâu viết lại câu. Thiếu ca này thì đã ghi công cho tra mạng đúng cái
+  việc người đo tự làm.
+
+* **CHƯA CHẶN ĐƯỢC — không viết là đã chặn.** 4/10 bình luận (#2, #6, #8, #10)
+  hỏi **kinh nghiệm cộng đồng**, không hỏi dữ kiện: *"mọi người vẫn để sol hay
+  đổi sang luna"*, *"có tips nào cho nó nhớ lâu"*. Tra mạng ra bài viết chung,
+  **không ra được câu "nhóm này đang làm thế nào"**. Định tuyến đúng cũng không
+  đổi được điều đó.
+
 ### 2. PHÒNG STUDIO (Sản xuất Video Dọc Offline)
 * **Đầu vào:** `STUDIO_FIXTURE.md` (**215–250 từ**, **≥13 câu khác nhau**) đã
   đóng băng kèm SHA-256 (nhãn `synthetic_fixture`).

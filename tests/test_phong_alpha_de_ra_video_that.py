@@ -918,6 +918,11 @@ def test_de_dong_bang_du_dai_va_du_cau_khac_nhau():
     cau = [c.strip() for c in re.split(r"(?<=[.!?])\s+", van) if c.strip()]
 
     assert 215 <= so_tu <= 250, f"đề {so_tu} từ, đặc tả đòi 215–250"
+    # 13 ở đây CỐ Ý không đi theo `SO_CAU_KHAC_MIN` (hạ 13 → 11 ngày 04/09/2026).
+    # Đó là hai thứ khác nhau: kia là SÀN cho mọi kịch bản model viết ra, còn đây
+    # là bar cho ĐỀ ĐÓNG BĂNG — thứ dùng làm đầu vào chuẩn của mọi phép đo Alpha,
+    # nên nó phải TỐT HƠN mức tối thiểu, không phải bằng. Đừng "dọn" cho hai số
+    # bằng nhau.
     assert len(set(cau)) >= 13, (
         f"đề chỉ có {len(set(cau))} câu khác nhau trên {len(cau)}, cần ≥ 13"
     )
@@ -1011,9 +1016,9 @@ DAC_TA_SO_CAU_DUOC_PHEP_MAT = 0
 def test_cat_doan_KHONG_bo_sot_cau_nao(so_cau, so_the):
     """Chia thẻ phải phủ kín kịch bản với MỌI cặp (số câu, số thẻ).
 
-    `viet_kich_ban` chỉ ép ≥13 câu, không có trần trên; `so_the` thì bằng
-    `round(dài_giọng / 4,5)`. Hai con số ấy không có lý do gì trùng nhau, nên
-    ca "không chia hết" là ca THƯỜNG.
+    `viet_kich_ban` chỉ ép ≥11 câu (13 → 11 ngày 04/09/2026), không có trần
+    trên; `so_the` thì bằng `round(dài_giọng / 4,5)`. Hai con số ấy không có lý
+    do gì trùng nhau, nên ca "không chia hết" là ca THƯỜNG.
     """
     from core.phong_alpha import _cat_doan
 
@@ -1102,9 +1107,10 @@ def _cau_khac_nhau(n: int) -> str:
 
 
 @pytest.mark.parametrize("so_cau,giay", [
-    (13, 61.0),   # CA THẬT đã đo: 13 câu là sàn đặc tả, 61s giữa cửa sổ 55–65s
+    (13, 61.0),   # CA THẬT đã đo hôm phát hiện lỗi, khi 13 còn là sàn đặc tả
     (13, 65.0),
     (13, 58.0),   # ca đối chứng: cùng số câu, giọng ngắn hơn -> chưa bao giờ lặp
+    (11, 61.0),   # sàn đặc tả TỪ 04/09/2026 — giữ ca cũ để không mất phép đo cũ
     (11, 65.0), (9, 65.0), (3, 65.0), (17, 65.0), (22, 55.0),
     # 1 và 2 câu là ca DUY NHẤT chạm tới sàn `SO_THE_TOI_THIEU`. Lưới đầu của
     # tôi bắt đầu từ 3, nên gieo "bỏ sàn" vẫn XANH — cửa mù, bắt được bằng phép

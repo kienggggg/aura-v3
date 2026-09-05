@@ -43,12 +43,15 @@ Cùng tỉ lệ, khác hẳn kết quả. Cắt dưới cho câu cuối *"Sự i
 không nặng nề mà đầy chất thơ"* — cắt ngang. Cắt giữa cho *"Mỗi giọt mưa rơi
 xuống đất đều là một lời cầu nguyện"* — kết thật.
 
-TRẦN CỨNG 19,2 TỪ/CÂU
+TRẦN CỨNG TỪ/CÂU — 19,2 cho tới 04/09/2026, nay 22,7
 
 Lượt trượt duy nhất không hỏng vì dài: sau khi cắt nó đúng 237 từ, nhưng chỉ còn
-**11 câu**. Nó viết 442 từ trong 21 câu = 21 từ/câu, mà ``250 / 13 = 19,2`` là
-trần. Câu dài hơn thế thì hai ràng buộc KHÔNG THỂ cùng đúng, và không cách cắt
-nào cứu được. Nên đo từ/câu TRƯỚC khi cắt rồi sinh lại luôn.
+**11 câu**. Nó viết 442 từ trong 21 câu = 21 từ/câu, mà trần khi ấy là
+``250 / 13 = 19,2``. Câu dài hơn trần thì hai ràng buộc KHÔNG THỂ cùng đúng, và
+không cách cắt nào cứu được. Nên đo từ/câu TRƯỚC khi cắt rồi sinh lại luôn.
+
+Ngày 04/09/2026 sàn số câu hạ 13 → 11, nên trần thành ``250 / 11 = 22,7``. Lý
+do và bảng đo nằm ngay trên hằng số ``SO_CAU_KHAC_MIN``.
 
 CHƯA CHẶN ĐƯỢC — đừng đọc thành đã chặn
 
@@ -68,12 +71,37 @@ from typing import Any, Dict, List, Tuple
 # Ngưỡng chép tay từ `KY_LUAT_THUC_THI.md` Chương II mục 1b — đăng ký ở đó
 # TRƯỚC khi có tệp này.
 SO_TU_MIN, SO_TU_MAX = 215, 250
-SO_CAU_KHAC_MIN = 13
+# 13 -> 11 ngày 04/09/2026. Con số 13 cũ suy từ `round(60 / 4,5) = 13` thẻ rồi
+# giả định mỗi thẻ một câu, và giả định thêm 13 thẻ cho 12 lần đổi cảnh. Dựng
+# video THẬT ở từng mức, biến duy nhất là số thẻ:
+#
+#    thẻ  đổi cảnh  s/thẻ  trạng thái        thẻ  đổi cảnh  s/thẻ  trạng thái
+#     13        20    4,6        PASS          8         9    7,4        PASS
+#     11        19    5,4        PASS          7        10    8,5        PASS
+#     10        16    5,9        PASS          6         9    9,9        PASS
+#      9        12    6,6        PASS
+#
+# `scdet` đếm 20 ở 13 thẻ, không phải 12 — Ken Burns tạo thêm. Phép tính
+# `số thẻ − 1` sai hẳn hướng, và MỌI mức 6–13 đều PASS.
+#
+# Chọn 11 chứ không phải 6, dù 6 cũng PASS: ở 6 thẻ mỗi thẻ đứng 9,9 giây trên
+# một video dọc 60 giây, và KHÔNG CỬA NÀO ĐO NHỊP. Lấy sự cho phép của cửa làm
+# bằng chứng về chất lượng là đúng cái bẫy `CLAUDE.md` sinh ra để chống. Gần
+# sàn thì số còn nhiễu và không đơn điệu (8 thẻ → 9, 7 → 10, 6 → 9), biên chỉ
+# hơn ngưỡng 1. 11 thẻ giữ 19 lần đổi cảnh — biên gấp hơn 11 lần ngưỡng.
+SO_CAU_KHAC_MIN = 11
 LAP_TOI_DA = 2
 TRAN_SO_LAN = 3
 
-# 250 / 13 = 19,23. Viết câu dài hơn thế thì không cách cắt nào làm cho vừa cả
-# hai ràng buộc — đo được ở lượt 442 từ / 21 câu.
+# 250 / 11 = 22,73. VẪN LÀ HỆ QUẢ, không phải phép đo — nó chưa bao giờ nói
+# "câu dài hơn thế thì video xấu". Nó chỉ nói: viết dài hơn thì hai ràng buộc
+# (số từ, số câu khác nhau) không thể cùng đúng, và không cách cắt nào cứu được.
+#
+# Nới này mua được gì, đo trên lưới 2×2 ngày 04/09:
+#                            lọt trần 19,2   lọt trần 22,7
+#     lời TRUYỆN (đang dùng)      9/10           10/10
+#     lời BÀI NÓI                 1/10            6/10
+# Lời truyện không mất gì; văn giải thích (22,0–22,4 từ/câu) từ 1/10 lên 6/10.
 TRAN_TU_MOI_CAU = SO_TU_MAX / SO_CAU_KHAC_MIN
 
 # Xin dài dư để còn chỗ mà cắt. 320 cho 4/5 lọt cửa sau khi cắt giữa.

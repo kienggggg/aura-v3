@@ -25,9 +25,17 @@ from core.viet_truyen import (cat_cho_vua, do_kich_ban, viet_kich_ban,  # noqa: 
 
 # ---- NGUỒN SỰ THẬT ĐỘC LẬP, chép tay từ đặc tả ----
 DAC_TA_TU_MIN, DAC_TA_TU_MAX = 215, 250
-DAC_TA_CAU_KHAC_MIN = 13
+DAC_TA_CAU_KHAC_MIN = 11        # 13 -> 11 ngày 04/09/2026
 DAC_TA_LAP_TOI_DA = 2
 DAC_TA_TRAN_SO_LAN = 3
+
+# Số từ/câu dùng cho các mẫu PHẢI VƯỢT TRẦN. Suy từ hằng số ĐẶC TẢ ở trên, không
+# đọc từ mã — hai vế cùng đổi thì gieo không bắt được.
+#
+# Bản trước gõ thẳng 21, đúng khi trần là 19,2. Ngày 04/09/2026 trần lên 22,7 và
+# 21 LỌT, nên hai bài dưới lặng lẽ thôi đo đúng cái nhánh chúng sinh ra để canh
+# — chúng đỏ, và đỏ là may: nếu khẳng định lỏng hơn thì chúng đã xanh mà mù.
+TU_MOI_CAU_QUA_TRAN = int(DAC_TA_TU_MAX / DAC_TA_CAU_KHAC_MIN) + 3
 
 
 def _van_ban(so_cau: int, tu_moi_cau: int = 8) -> str:
@@ -68,16 +76,20 @@ def test_hang_so_trong_ma_khop_DAC_TA():
 
 
 def test_tran_tu_moi_cau_la_he_qua_cua_hai_nguong_kia():
-    """19,2 không phải số đặt tay — nó là `250 / 13`.
+    """22,7 không phải số đặt tay — nó là `250 / 11`.
 
     Lượt trượt duy nhất trong 5 lượt đo 03/09 chết vì đúng chỗ này: 442 từ trong
-    21 câu (21 từ/câu). Cắt xuống 237 từ thì chỉ còn 11 câu, dưới ngưỡng 13. Hai
-    ràng buộc không thể cùng đúng, và không cách cắt nào cứu được.
+    21 câu (21 từ/câu). Cắt xuống 237 từ thì chỉ còn 11 câu.
+
+    04/09/2026 sàn hạ 13 → 11 nên trần lên 19,2 → 22,7. Khoảng chặn dưới đây
+    CHÉP TAY từ đặc tả, không tính lại từ hằng số trong mã: bài trên đã có phép
+    so `TRAN == MAX / CAU_KHAC_MIN`, nếu chỗ này cũng tính theo mã thì gieo đổi
+    cả hai hằng số vẫn xanh — đúng bẫy tautological đã mắc hai lần.
     """
     import core.viet_truyen as vt
 
     assert vt.TRAN_TU_MOI_CAU == DAC_TA_TU_MAX / DAC_TA_CAU_KHAC_MIN
-    assert 19.0 < vt.TRAN_TU_MOI_CAU < 19.5
+    assert 22.5 < vt.TRAN_TU_MOI_CAU < 23.0
 
 
 def test_khong_dung_lai_cua_chat():
@@ -177,7 +189,11 @@ def test_cat_xong_van_phai_QUA_phep_cham():
     Đây đúng lượt trượt 03/09: sau khi cắt nó 237 từ (lọt), nhưng còn 11 câu
     (trượt). Cắt không được phép tự phong là đạt.
     """
-    dai_cau = _van_ban(21, 21)                    # 21 từ/câu, quá trần 19,2
+    # Ca đối chứng cho chính nhạc cụ đo: mẫu PHẢI nằm trên trần, nếu không bài
+    # này đo một chuyện khác mà vẫn xanh.
+    assert TU_MOI_CAU_QUA_TRAN > DAC_TA_TU_MAX / DAC_TA_CAU_KHAC_MIN
+
+    dai_cau = _van_ban(21, TU_MOI_CAU_QUA_TRAN)
     van, _ = cat_cho_vua(dai_cau)
     tt, ly, so = do_kich_ban(van)
     assert tt == "KHONG_DAT", f"cắt xong vẫn phải bác: {so}"
@@ -261,8 +277,9 @@ def test_mot_luot_hong_mot_luot_do_duoc_thi_KHONG_phai_khong_do_duoc(monkeypatch
 
 
 def test_cau_qua_dai_thi_SINH_LAI_ngay_khong_phi_cong_cat(monkeypatch):
-    """21 từ/câu thì cắt kiểu gì cũng trượt — đo trước, đừng cắt rồi mới biết."""
-    gia = _GiaModel([_van_ban(21, 21), _van_ban(26, 9)])
+    """Quá trần từ/câu thì cắt kiểu gì cũng trượt — đo trước, đừng cắt rồi mới biết."""
+    assert TU_MOI_CAU_QUA_TRAN > DAC_TA_TU_MAX / DAC_TA_CAU_KHAC_MIN
+    gia = _GiaModel([_van_ban(21, TU_MOI_CAU_QUA_TRAN), _van_ban(26, 9)])
     monkeypatch.setattr("core.viet_truyen._xin_model", gia)
     kq = viet_kich_ban(DE_KHOP_VAN_MAU)
     assert kq["trang_thai"] == "DAT"

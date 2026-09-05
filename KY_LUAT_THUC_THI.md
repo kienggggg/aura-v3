@@ -92,14 +92,15 @@ AURA viết kịch bản, Alpha dựng video. Mối nối là tham số `van_ban
 
 * **Ngưỡng, đặt TRƯỚC khi viết mã:**
   - Số từ **215–250**.
-  - **≥ 13 câu khác nhau**.
+  - **≥ 11 câu khác nhau** *(13 → 11 ngày 04/09/2026, xem dưới)*.
   - Không câu nào lặp **quá 2 lần**.
   - Trần **3 lần sinh** cho một kịch bản, và **phải báo ra đã thử mấy lần**.
 
   > Ngưỡng lấy từ đâu. Tốc độ giọng OneCore đo trên 5 mẫu: 3,58–3,95 từ/giây,
   > văn xuôi ở cận trên. Lấy 3,9 → cửa sổ 55–65 s = 215–250 từ. Đã kiểm bằng
   > dây chuyền thật: **235 từ / 15 câu → PASS**; **266 từ → 67,3 s, FAIL**.
-  > 13 câu là số thẻ ở 60 giây (`round(60 / 4,5)`).
+  > 13 câu là số thẻ ở 60 giây (`round(60 / 4,5)`) — **và đó là chỗ sai**,
+  > sửa 04/09/2026 xuống 11. Xem mục *"Sàn 11 câu"* bên dưới.
 
 * **MÁY đếm, model không đếm.** Đo 5 lượt, yêu cầu 232 từ:
   `214 · 346 · 273 · 190 · 134` — **0/5 đúng số từ**, lệch −42% đến +49%.
@@ -125,6 +126,55 @@ AURA viết kịch bản, Alpha dựng video. Mối nối là tham số `van_ban
   21 từ/câu, trong khi `250 ÷ 13 = 19,2` là trần. Viết câu dài hơn thế thì hai
   ràng buộc **không thể cùng đúng**, và không cách cắt nào cứu được. Máy phải đo
   từ/câu **trước khi cắt** và sinh lại ngay, khỏi phí công.
+
+* **Sàn 11 câu, trần 22,7 từ/câu (đổi 04/09/2026, trước đó 13 và 19,2):**
+  - `SO_CAU_KHAC_MIN` **13 → 11**.
+  - `TRAN_TU_MOI_CAU = 250 / 11 = 22,7` (vẫn là hệ quả, không phải phép đo).
+
+  > **Con số 13 cũ suy từ một phép tính SAI HƯỚNG.** Nó lấy `round(60 / 4,5) = 13`
+  > thẻ rồi giả định mỗi thẻ một câu, và giả định thêm rằng 13 thẻ cho 12 lần
+  > đổi cảnh — vừa đủ trên ngưỡng 8. Dựng video THẬT ở từng mức, biến duy nhất
+  > là số thẻ, cùng văn bản cùng giọng:
+  >
+  > ```
+  >  thẻ  đổi cảnh  tĩnh lâu nhất   giây  s/thẻ  trạng thái
+  >   13        20            0.0  59.34    4.6        PASS
+  >   11        19            0.0  59.34    5.4        PASS
+  >   10        16            0.0  59.34    5.9        PASS
+  >    9        12            0.0  59.34    6.6        PASS
+  >    8         9            0.0  59.34    7.4        PASS
+  >    7        10            0.0  59.34    8.5        PASS
+  >    6         9            0.0  59.34    9.9        PASS
+  > ```
+  >
+  > `scdet` đếm **20** lần đổi cảnh ở 13 thẻ, không phải 12 — Ken Burns tạo
+  > thêm. Phép tính `số thẻ − 1` sai hẳn hướng, và **mọi mức từ 6 đến 13 đều
+  > PASS toàn bộ cửa**.
+
+  > **Vì sao chọn 11 chứ không phải 6.** Máy đo cho PASS ở 6 thẻ không có nghĩa
+  > 6 thẻ dùng được: ở đó mỗi thẻ đứng **9,9 giây** trên một video dọc 60 giây,
+  > và **không cửa nào đo NHỊP**. Lấy sự cho phép của cửa làm bằng chứng về chất
+  > lượng là đúng cái bẫy tệp này sinh ra để chống. Thêm nữa, gần sàn thì con số
+  > nhiễu và không đơn điệu (8 thẻ → 9 lần cắt, 7 thẻ → 10, 6 thẻ → 9), biên chỉ
+  > hơn ngưỡng 1 — nằm trong nhiễu.
+  >
+  > 11 thẻ giữ **19 lần đổi cảnh, biên gấp hơn 11 lần ngưỡng**, và nhịp 5,4 s/thẻ
+  > sát nguyên bản 4,6.
+
+  > **Nới này mua được gì — số đo từ lưới 2×2 ngày 04/09:**
+  >
+  > ```
+  >                        lọt trần 19,2   lọt trần 22,7
+  > lời TRUYỆN (đang dùng)      9/10           10/10
+  > lời BÀI NÓI                 1/10            6/10
+  > ```
+  >
+  > Lời truyện không mất gì; văn giải thích (đo được 22,0–22,4 từ/câu) từ 1/10
+  > lên 6/10. Đó là toàn bộ lý do đổi — không có lý do nào khác.
+
+  > **CHƯA ĐO — nhịp.** Không cửa nào biết video 11 thẻ xem có chán hơn 13 thẻ
+  > không. Thứ đổi được đo là *lần đổi cảnh* và *tỉ lệ lọt cửa*, không phải
+  > *người xem có ở lại không*.
 
 * **Ba trạng thái, không gộp:** `DAT` · `KHONG_DAT` (đo được mà ngoài cửa sổ,
   kèm số) · `KHONG_DO_DUOC` (Ollama tắt, hết giờ, model không trả lời).

@@ -845,7 +845,21 @@ def test_tra_the_loai_KHONG_no_voi_preset_la():
     assert the_loai_cua_the(None) == "truyen"
     assert the_loai_cua_the("") == "truyen"
     assert the_loai_cua_the("khong_co_that") == "truyen"
-    assert the_loai_cua_the("card_video_shorts") == "bai_noi"
+
+    # Ca đối chứng: hàm phải ĐỌC ĐƯỢC thứ thẻ khai, không phải luôn trả mặc
+    # định. Từ 05/09/2026 không thẻ THẬT nào khai `bai_noi` nữa (rút sau khi
+    # chạy thật thấy hồi quy), nên phải bơm một thẻ vào — nếu không thì
+    # `return "truyen"` vô điều kiện cũng qua bài này.
+    import interface.noi_bo_api as _api
+
+    goc = _api.DANH_SACH_THE_QUY_TRINH
+    try:
+        _api.DANH_SACH_THE_QUY_TRINH = list(goc) + [
+            {"id": "the_thu_bai_noi", "cac_phong": ["aura"],
+             "the_loai": "bai_noi"}]
+        assert the_loai_cua_the("the_thu_bai_noi") == "bai_noi"
+    finally:
+        _api.DANH_SACH_THE_QUY_TRINH = goc
 
 
 def test_the_loai_DI_TOI_viet_kich_ban_that_su(monkeypatch):
@@ -884,8 +898,18 @@ def test_the_loai_DI_TOI_viet_kich_ban_that_su(monkeypatch):
     monkeypatch.setattr(_pnb, "PHONG",
                         {k: _phong for k in ("zeta", "omega", "gamma", "beta", "delta")})
 
+    # Bơm một thẻ khai `bai_noi`. Từ 05/09/2026 không thẻ THẬT nào khai nữa —
+    # rút sau khi chạy thật thấy hồi quy (3/3 trượt cửa độ dài trên chính đề
+    # mặc định). Nhưng bộ máy vẫn phải chứng minh nó truyền đúng giá trị, nếu
+    # không thì `the_loai="truyen"` gõ cứng cũng qua bài này.
+    monkeypatch.setattr(
+        _api, "DANH_SACH_THE_QUY_TRINH",
+        list(_api.DANH_SACH_THE_QUY_TRINH) + [
+            {"id": "the_thu_bai_noi", "cac_phong": ["aura"],
+             "the_loai": "bai_noi"}])
+
     asyncio.run(_api.api_chay_pipeline(
-        _ReqGia({"chu_de": "thử", "preset_id": "card_video_shorts"})))
+        _ReqGia({"chu_de": "thử", "preset_id": "the_thu_bai_noi"})))
     assert da_thay == ["bai_noi"], da_thay
 
     # Ca đối chứng: thẻ truyện phải ra "truyen", nếu không bài trên chỉ chứng

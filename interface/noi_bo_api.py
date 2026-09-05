@@ -604,7 +604,23 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
 DANH_SACH_THE_QUY_TRINH = [
     {
         "id": "card_video_shorts",
-        "the_loai": "bai_noi",  # video 60s giải thích/khám phá
+        # RÚT `bai_noi` NGÀY 05/09/2026, sau khi chạy thật một lượt trên chính
+        # đề mặc định của thẻ này ("Khám phá bí mật lịch sử phố cổ Hà Nội"):
+        #
+        #   bai_noi   KHONG_DAT · 3/3 lượt trượt cửa độ dài
+        #             24,56 · 25,65 · 26,05 từ/câu   (trần 22,7)
+        #             309 giây để nói "không viết được"
+        #   truyen    DAT · 1/3 lượt · 70 giây · video PASS 59,46 s
+        #
+        # Bảng 2×2 nói `bai_noi` hơn hẳn trên đề GIẢI THÍCH (3/5 so 1/5). Nhưng
+        # bảng ấy đo trên MỘT đề khác, ở đó bai_noi cho 19,0–21,6 từ/câu. Độ dài
+        # câu của lời bài nói PHỤ THUỘC ĐỀ TÀI, và n=5 trên một đề không suy ra
+        # được đề khác.
+        #
+        # Muốn dùng lại thì phải đo trên NHIỀU đề trước. Đừng nới trần 22,7 cho
+        # vừa lời nhắc — ràng buộc thật có thể là trần, nhưng nới nó để một bản
+        # vá trông đẹp là đúng cái bẫy `CLAUDE.md` cấm.
+        "the_loai": "truyen",
         "ten": "🎬 Video Shorts 60s Tự Động",
         "bieu_tuong": "🎬",
         "mau_sac": "#EC4899",
@@ -632,7 +648,11 @@ DANH_SACH_THE_QUY_TRINH = [
     },
     {
         "id": "card_deep_scout",
-        "the_loai": "bai_noi",  # báo cáo đối chiếu nguồn
+        # RÚT `bai_noi` cùng ngày với `card_video_shorts` — xem chú thích ở đó.
+        # Thẻ này CHƯA từng được chạy thật với `bai_noi`, nên rút vì cùng rủi
+        # ro chứ không vì đã đo. Nói rõ ra để lần sau không ai đọc thành "đã đo
+        # và hỏng".
+        "the_loai": "truyen",
         "ten": "🔬 Trinh Sát & Kiểm Chứng Sự Thật",
         "bieu_tuong": "🔍",
         "mau_sac": "#6366F1",

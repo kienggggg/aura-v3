@@ -202,6 +202,39 @@ def tach_cau(van_ban: str) -> List[str]:
     return [c.strip() for c in re.split(r"(?<=[.!?])\s+", van_ban.strip()) if c.strip()]
 
 
+def so_the_can_dung(dai_giong: float, van_ban: str) -> int:
+    """Số thẻ cho một lượt dựng. KHÔNG BAO GIỜ nhiều hơn số câu của kịch bản.
+
+    HÀM THUẦN, cố ý — cùng lý do với `kiem_am_thanh`/`kiem_phu_kin`: để phép
+    tính này nằm trong `_dung_video` thì cửa canh chỉ khẳng định được "một lượt
+    thật ra 13 thẻ", không cách nào đưa cặp (thời lượng, số câu) xấu vào.
+
+    VÌ SAO PHẢI CHẶN TRẦN THEO SỐ CÂU (04/09/2026). `_cat_doan` đệm cho đủ thẻ
+    bằng cách LẶP LẠI câu: `cau = (cau * so_the)[:so_the]`. Thiếu câu thì mấy
+    thẻ cuối chiếu lại câu đầu, trong khi giọng đã đọc xong — phụ đề sai so với
+    tiếng, không phải một vết xước thẩm mỹ.
+
+    Và nó VỚI TỚI ĐƯỢC, không phải giả định. Kịch bản đúng 13 câu (sàn của đặc
+    tả) với giọng ≥ 60,7 s (giữa cửa sổ 55–65 s) ra 14 thẻ:
+
+        giọng 55,0s -> 12 thẻ · 0 khối lặp
+        giọng 60,7s -> 13 thẻ · 0 khối lặp
+        giọng 61,0s -> 14 thẻ · 1 khối lặp   <- chiếu lại câu 1
+        giọng 65,0s -> 14 thẻ · 1 khối lặp
+
+    Không cửa nào kêu: `kiem_lap_phu_de` chấm tỉ lệ khác nhau, 13/14 = 0,93 ≫
+    0,80; `kiem_phu_kin` hỏi "có câu nào bị bỏ sót không", không hỏi "có câu nào
+    bị chiếu hai lần không". Hai cửa đo hai thứ, và cái lỗ nằm giữa chúng.
+
+    `SO_THE_TOI_THIEU` vẫn là sàn cứng: dưới 3 thẻ thì không đủ lần đổi cảnh.
+    Kịch bản ít hơn 3 câu vẫn bị lặp — nhưng ở đó cửa nội dung bác thật
+    (2/3 = 0,67 < 0,80), nên nó hỏng TO chứ không hỏng lặng.
+    """
+    theo_thoi_luong = int(round(dai_giong / GIAY_MOI_THE))
+    so_cau = len(tach_cau(van_ban))
+    return max(SO_THE_TOI_THIEU, min(theo_thoi_luong, so_cau))
+
+
 def _cat_doan(van_ban: str, so_the: int) -> List[str]:
     """Chia kịch bản thành `so_the` đoạn, KHÔNG BỎ SÓT CÂU NÀO.
 
@@ -929,7 +962,9 @@ def _dung_video(thu_muc_ra: Path, van_ban: str | None, t0: float) -> Dict[str, A
     # gieo không đổi được hành vi, chứ không phải vì cửa mù.
     # Số thẻ theo THỜI LƯỢNG, không phải một con số cố định: mỗi thẻ ~4,5 giây
     # thì 60 giây ra ~13 thẻ / 12 lần cắt, dư trên ngưỡng 8 lần đổi cảnh.
-    so_the = max(SO_THE_TOI_THIEU, int(round(_giay(wav) / GIAY_MOI_THE)))
+    # Và chặn trần theo SỐ CÂU — xem `so_the_can_dung`, thiếu câu thì thẻ cuối
+    # chiếu lại câu đầu mà không cửa nào kêu.
+    so_the = so_the_can_dung(_giay(wav), van_ban)
     cards = sinh_the_hinh(van_ban, thu_muc_ra, so_the=so_the)
     hien_vat += [_hien_vat(c, "IMAGE", "generated_template") for c in cards]
 

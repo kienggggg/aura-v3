@@ -1085,3 +1085,84 @@ def test_day_chuyen_NGHE_phan_quyet_cua_cua_phu_kin(tmp_path):
     )
     assert sach["kiem"]["so"]["so_cau_len_man_hinh"] == \
         sach["kiem"]["so"]["so_cau_kich_ban"], sach["kiem"]["so"]
+
+
+# ---------------------------------------------------------------------------
+# SỐ THẺ KHÔNG ĐƯỢC VƯỢT SỐ CÂU (04/09/2026)
+#
+# `_cat_doan` đệm cho đủ thẻ bằng cách LẶP LẠI câu. Thiếu câu thì thẻ cuối
+# chiếu lại câu đầu trong khi giọng đã đọc xong — và không cửa nào kêu, vì
+# `kiem_lap_phu_de` chấm TỈ LỆ khác nhau (13/14 = 0,93 ≫ 0,80) còn
+# `kiem_phu_kin` hỏi "có câu nào bị bỏ sót không", không hỏi "có câu nào bị
+# chiếu hai lần không". Lỗ nằm GIỮA hai cửa.
+# ---------------------------------------------------------------------------
+
+def _cau_khac_nhau(n: int) -> str:
+    return " ".join(f"Ý thứ {i} nói một chuyện riêng." for i in range(1, n + 1))
+
+
+@pytest.mark.parametrize("so_cau,giay", [
+    (13, 61.0),   # CA THẬT đã đo: 13 câu là sàn đặc tả, 61s giữa cửa sổ 55–65s
+    (13, 65.0),
+    (13, 58.0),   # ca đối chứng: cùng số câu, giọng ngắn hơn -> chưa bao giờ lặp
+    (11, 65.0), (9, 65.0), (3, 65.0), (17, 65.0), (22, 55.0),
+    # 1 và 2 câu là ca DUY NHẤT chạm tới sàn `SO_THE_TOI_THIEU`. Lưới đầu của
+    # tôi bắt đầu từ 3, nên gieo "bỏ sàn" vẫn XANH — cửa mù, bắt được bằng phép
+    # gieo chứ không bằng đọc lại.
+    (1, 65.0), (2, 55.0),
+])
+def test_so_the_KHONG_vuot_so_cau(so_cau, giay):
+    """Sàn cứng `SO_THE_TOI_THIEU` vẫn thắng — dưới 3 thẻ thì không đủ đổi cảnh.
+
+    Nhưng ở đó cửa nội dung bác THẬT (một khối chiếm 1/3 > 0,25), nên nó hỏng
+    to chứ không hỏng lặng.
+    """
+    from core.phong_alpha import SO_THE_TOI_THIEU, so_the_can_dung
+
+    the = so_the_can_dung(giay, _cau_khac_nhau(so_cau))
+    assert the <= max(so_cau, SO_THE_TOI_THIEU), (
+        f"{so_cau} câu / {giay}s -> {the} thẻ: nhiều thẻ hơn câu thì phải lặp")
+    assert the >= SO_THE_TOI_THIEU
+
+
+@pytest.mark.parametrize("so_cau", [3, 9, 11, 13, 14, 17, 22])
+@pytest.mark.parametrize("giay", [55.0, 58.0, 61.0, 65.0])
+def test_khong_khoi_phu_de_nao_bi_chieu_HAI_LAN(so_cau, giay):
+    """Đi từ số câu + thời lượng ra ĐÚNG các khối sẽ lên màn hình, rồi đếm.
+
+    Không khẳng định về `so_the_can_dung` — khẳng định về THỨ KHÁN GIẢ THẤY.
+    """
+    from core.phong_alpha import _cat_doan, so_the_can_dung
+
+    van = _cau_khac_nhau(so_cau)
+    doan = _cat_doan(van, so_the_can_dung(giay, van))
+    lap = len(doan) - len(set(doan))
+    if so_cau >= 3:
+        assert lap == 0, (
+            f"{so_cau} câu / {giay}s: {lap} khối bị chiếu lại — {doan}")
+
+
+@can_ffmpeg
+@pytest.mark.slow
+def test_day_chuyen_THAT_SU_hoi_so_the_can_dung(tmp_path):
+    """Chấm được một hàm không chứng minh kết quả của nó đi tới đâu.
+
+    Lần thứ năm trong tệp này, nên viết theo khuôn ngay từ đầu: bơm một số thẻ
+    KHÁC vào rồi đếm ẢNH THẬT trên đĩa. Soi văn bản hàm thì gieo `so_the_can_dung`
+    thành `int(round(dai/GIAY_MOI_THE))` vẫn xanh — đó là cửa mù.
+    """
+    import core.phong_alpha as pa
+
+    goc = pa.so_the_can_dung
+    try:
+        pa.so_the_can_dung = lambda dai, van: 7
+        kq = pa.dung_video(tmp_path / "bom_so_the")
+    finally:
+        pa.so_the_can_dung = goc
+
+    if kq["trang_thai"] == "KHONG_CHAY_DUOC":
+        pytest.skip(f"không đo được: {kq['vi_sao']}")
+    anh = [a for a in kq["artifacts"] if a.get("type") == "IMAGE"]
+    assert len(anh) == 7, (
+        f"bơm 7 thẻ mà dây chuyền dựng {len(anh)} ảnh — "
+        "`so_the_can_dung` không phải thứ quyết định số thẻ")

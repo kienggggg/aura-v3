@@ -331,6 +331,63 @@ AURA viết kịch bản, Alpha dựng video. Mối nối là tham số `van_ban
   > Ba ngưỡng này đặt **TRƯỚC** khi sửa mã, và chúng làm đề đóng băng hiện tại
   > **RỚT**. Rớt là đúng.
 
+* **Số thẻ KHÔNG được vượt số câu (thêm 04/09/2026):**
+  - `so_the = max(SO_THE_TOI_THIEU, min(round(dài_giọng / 4,5), số_câu))`.
+  - Không khối phụ đề nào được chiếu **hai lần**.
+
+  > Vì sao thêm. Đi tìm xem trần **19,2 từ/câu** đo cái gì, thì ra nó **không đo
+  > gì cả**: nó là `250 ÷ 13` viết lại — hệ quả số học của `SO_TU_MAX` và
+  > `SO_CAU_KHAC_MIN`, không phải một phát hiện về video. Nó chưa bao giờ nói
+  > "câu dài hơn 19,2 từ thì video xấu".
+  >
+  > Ràng buộc THẬT của video là `TI_LE_PHU_DE_KHAC_MIN = 0,80`. Với 13 thẻ nó
+  > chỉ đòi **11 câu**, đo trên chính hàm sản phẩm:
+  >
+  > ```
+  > số câu   từ/câu   khối   khác   tỉ lệ   cửa nội dung
+  >     10     24,0     13     10    0,77   BÁC
+  >     11     21,8     13     11    0,85   ĐẠT   <- sàn thật
+  >     13     18,5     13     13    1,00   ĐẠT
+  > ```
+  >
+  > Nhưng **không được nới trần theo đó**, vì `_cat_doan` đệm cho đủ thẻ bằng
+  > cách LẶP LẠI câu. 11 câu / 13 thẻ ra:
+  >
+  > ```
+  > thẻ 11 (44,6-49,1s): Ý thứ 11 ...
+  > thẻ 12 (49,1-53,5s): Ý thứ 1  ...   <- CHIẾU LẠI
+  > thẻ 13 (53,5-58,0s): Ý thứ 2  ...   <- CHIẾU LẠI
+  > ```
+  >
+  > Chín giây cuối chiếu lại câu mở trong khi giọng đã đọc xong. **Cả hai cửa
+  > nội dung đều cho ĐẠT**: `kiem_lap_phu_de` chấm tỉ lệ khác nhau (0,85 ≥
+  > 0,80), còn `kiem_phu_kin` hỏi *"có câu nào bị bỏ sót không"*, không hỏi
+  > *"có câu nào bị chiếu hai lần không"*. Lỗ nằm **GIỮA** hai cửa — mỗi cửa đo
+  > đúng phần nó đo.
+
+  > **Và lỗi ấy VỚI TỚI ĐƯỢC, không phải giả định.** Kịch bản đúng 13 câu (sàn
+  > của đặc tả) với giọng ≥ 60,7 s (giữa cửa sổ 55–65 s) cho 14 thẻ:
+  >
+  > ```
+  > giọng 55,0s -> 12 thẻ · 0 khối lặp
+  > giọng 60,7s -> 13 thẻ · 0 khối lặp
+  > giọng 61,0s -> 14 thẻ · 1 khối lặp   <- chiếu lại câu 1, mọi cửa ĐẠT
+  > giọng 65,0s -> 14 thẻ · 1 khối lặp
+  > ```
+  >
+  > Sửa: chặn trần số thẻ theo số câu. Sau vá, **0 ca lặp** trên lưới
+  > 7 số câu × 4 thời lượng. Sàn cứng `SO_THE_TOI_THIEU = 3` vẫn thắng khi kịch
+  > bản dưới 3 câu — ở đó cửa nội dung bác thật (một khối chiếm 1/3 > 0,25),
+  > nên nó hỏng TO chứ không hỏng lặng.
+
+  > **CHƯA LÀM — nới trần 19,2.** Sau khi hết lặp thì sàn thật là *số thẻ tối
+  > thiểu để đủ lần đổi cảnh*, và số học cho 9 thẻ → 8 lần cắt → trần
+  > `250 ÷ 9 = 27,8`, đủ chỗ cho văn giải thích (đo được **22,0–22,4 từ/câu**).
+  > Nhưng phép tính `số thẻ − 1` chỉ là chặn dưới trên giấy: lượt render thật
+  > 04/09 cho **19 lần đổi cảnh với 13 thẻ**, không phải 12, vì `scdet` đếm
+  > thêm nhờ Ken Burns. Sàn thật rộng hơn hay hẹp hơn thì phải **dựng video ở
+  > mức ấy mới biết**, không suy ra được. Chưa đo thì chưa đổi.
+
 * **Cửa PHỦ KÍN KỊCH BẢN (thêm 04/09/2026):**
   - Mọi câu của kịch bản **phải** có mặt trong phụ đề. Số câu mất: **0**.
     Không có ngưỡng phần trăm — mất một câu là hỏng.

@@ -810,6 +810,52 @@ bác thành sự cố 500. Chỗ thứ hai `"; ".join(...)` trên danh sách r�
 nổ**, chỉ trả một câu báo lỗi không có lý do nào trong đó — hỏng lặng hơn, nên
 nguy hơn. Vá một chỗ rồi tưởng xong là bệnh cũ; phải `grep` hết mọi chỗ đọc.
 
+### Một hằng số có thể là hệ quả, và cái lỗ nằm GIỮA hai cửa
+
+Ngày 04/09/2026, đi tìm xem trần **19,2 từ/câu** của `core/viet_truyen.py` đo
+cái gì. Nó **không đo gì cả**: `250 ÷ 13` viết lại — hệ quả số học của `SO_TU_MAX`
+và `SO_CAU_KHAC_MIN`. Nó chưa bao giờ nói *"câu dài hơn 19,2 từ thì video xấu"*,
+nhưng suốt hai ngày nó bác 9/10 lượt văn giải thích như thể nó biết điều ấy.
+
+**Trước khi nới hay siết một hằng số, hỏi nó là ĐO ĐẠC hay là HỆ QUẢ.** Hệ quả
+thì đi ngược lên tìm hằng số gốc; siết nó là siết nhầm chỗ.
+
+Ràng buộc thật hoá ra là `TI_LE_PHU_DE_KHAC_MIN = 0,80`, và với 13 thẻ nó chỉ
+đòi **11 câu** — tức trần thật 22,7, vừa đủ cho văn giải thích (đo được
+22,0–22,4). Nhưng nới theo đó thì hỏng, và chỗ hỏng mới là bài học:
+
+```
+11 câu / 13 thẻ:
+  thẻ 12 (49,1-53,5s): Ý thứ 1  ...   <- CHIẾU LẠI
+  thẻ 13 (53,5-58,0s): Ý thứ 2  ...   <- CHIẾU LẠI
+  kiem_lap_phu_de : ĐẠT      kiem_phu_kin : ĐẠT
+```
+
+Chín giây cuối chiếu lại câu mở trong khi giọng đã đọc xong, và **cả hai cửa
+nội dung đều cho ĐẠT**. `kiem_lap_phu_de` chấm *tỉ lệ khác nhau* (11/13 = 0,85 ≥
+0,80). `kiem_phu_kin` — cửa tôi viết chính buổi sáng hôm ấy — hỏi *"có câu nào
+bị bỏ sót không"*, không hỏi *"có câu nào bị chiếu hai lần không"*.
+
+**Cả hai cửa đều làm đúng việc của nó. Cái lỗ nằm ở KHOẢNG GIỮA.** Đây là họ
+bệnh khác với "cửa mù" (có dây nhưng đứt) và khác với "cửa không nhận thứ nó
+phải chấm" (thiếu dữ kiện trong chữ ký). Ở đây mỗi cửa đủ dữ kiện, đủ dây, và
+vẫn không ai canh chuyện đang xảy ra — vì chuyện ấy rơi vào chỗ không cửa nào
+nhận là phần mình.
+
+Cách tìm nó: đừng hỏi *"cửa này có bắt được không"* mà hỏi *"khán giả thấy gì"*,
+rồi dựng ra đúng thứ khán giả thấy và đếm. Ở đây là in ra 13 khối phụ đề kèm mốc
+giờ — mất mười giây, và không phép gieo nào tìm được nó vì không cửa nào sai.
+
+Và lỗi ấy **VỚI TỚI ĐƯỢC**, không phải giả định: kịch bản đúng 13 câu (sàn của
+đặc tả) với giọng ≥ 60,7 s (giữa cửa sổ 55–65 s) cho 14 thẻ, thẻ cuối chiếu lại
+câu 1. Cả hai đầu vào đều hợp lệ. Sửa ở chỗ **quyết định số thẻ** — chặn trần
+theo số câu — chứ không nới trần.
+
+**Lưới tham số bắt đầu từ đâu thì cửa mù từ đó.** Gieo lần đầu 3/4 đỏ: phép
+"bỏ sàn `SO_THE_TOI_THIEU`" vẫn xanh, vì lưới của tôi chạy từ 3 câu trở lên nên
+chưa bao giờ chạm tới cái sàn ấy. Thêm ca 1 và 2 câu thì đỏ. **Một hằng số chỉ
+được canh nếu có ca đi qua đúng nhánh nó chặn.**
+
 ---
 
 ## 5. Viết mã ở đây

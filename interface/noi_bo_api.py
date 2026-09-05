@@ -725,6 +725,15 @@ TRAN_BUOC_TUY_BIEN = 8
 
 THU_MUC_TIEN_DO = PROJECT_ROOT / "data" / "tien_do"
 
+# `pipeline_id` đi thẳng vào TÊN TỆP ở cả hai đầu — client gửi lên khi chạy, và
+# gửi lại khi poll. Một luật, dùng ở cả hai chỗ: hai luật thì chúng trôi khỏi
+# nhau, và bên lỏng hơn là bên bị lợi dụng.
+_MAU_PIPELINE_ID = re.compile(r"[A-Za-z0-9_-]{1,120}")
+
+
+def pipeline_id_hop_le(pid) -> bool:
+    return bool(pid) and bool(_MAU_PIPELINE_ID.fullmatch(str(pid)))
+
 
 def _ghi_tien_do(pipeline_id: str, dong: Dict[str, Any]) -> None:
     """Ghi MỘT dòng vào sổ tiến độ của một lượt chạy.
@@ -761,7 +770,7 @@ async def api_doc_tien_do(request: web.Request) -> web.Response:
     """
     pid = request.match_info.get("pipeline_id", "")
     # Chặn đường dẫn: `pipeline_id` đi từ URL vào tên tệp.
-    if not pid or not re.fullmatch(r"[A-Za-z0-9_-]{1,120}", pid):
+    if not pipeline_id_hop_le(pid):
         return web.json_response(
             {"trang_thai": "KHONG_DO_DUOC", "vi_sao": "pipeline_id không hợp lệ",
              "buoc_dang_chay": None, "giay_da_troi": None,
@@ -1016,7 +1025,15 @@ async def api_chay_pipeline(request: web.Request) -> web.Response:
 
     chu_de = data.get("chu_de", "Khởi tạo chiến dịch tự động").strip()
     preset_id = data.get("preset_id")
-    pipeline_id = f"pipe_{int(time.time())}_{uuid4().hex[:4]}"
+    # Client được đặt `pipeline_id` để nó POLL tiến độ NGAY, không phải đợi tới
+    # cuối chuỗi mới biết id — mà cuối chuỗi thì hết cái để xem.
+    #
+    # ID này đi vào TÊN TỆP, nên phải qua đúng luật mà đầu đọc dùng. Không hợp
+    # lệ thì máy tự sinh, KHÔNG ném: đây là đường của giao diện, một id xấu
+    # không được làm hỏng cả lượt chạy — nhưng cũng không được đi vào đĩa.
+    _xin = data.get("pipeline_id")
+    pipeline_id = (str(_xin) if pipeline_id_hop_le(_xin)
+                   else f"pipe_{int(time.time())}_{uuid4().hex[:4]}")
     bat_dau = time.monotonic()
 
     KE_HOACH = [

@@ -311,16 +311,54 @@
   // ==========================================================================
   // 6. PIPELINE AUTOMATOR (Quy trình liên phòng ban)
   // ==========================================================================
-  async function kichHoatPipeline() {
+  // Ánh xạ mã phòng -> id ô trên màn hình. Bước nào không có ô thì bỏ qua,
+  // không nổ: chuỗi tùy biến có thể gọi phòng không nằm trong sơ đồ cố định.
+  const O_BUOC = {
+    zeta: 'step_zeta', aura: 'step_aura', alpha: 'step_alpha',
+    omega: 'step_omega', gamma: 'step_gamma'
+  };
+  const NHAN = {
+    DANG_CHAY: ['running', 'ĐANG CHẠY'],
+    PASS: ['done', 'HOÀN TẤT ✓'],
+    FAIL: ['fail', 'HỎNG ✕'],
+    KHONG_CHAY_DUOC: ['fail', 'KHÔNG CHẠY ĐƯỢC'],
+    CHUA_CHAY: ['', 'CHƯA CHẠY'],
+    DAT: ['done', 'HOÀN TẤT ✓'],
+    KHONG_DAT: ['fail', 'KHÔNG ĐẠT']
+  };
+
+  function veMotBuoc(phongId, trangThai, giay) {
+    const el = document.getElementById(O_BUOC[phongId]);
+    if (!el) return;
+    const n = NHAN[trangThai] || ['', trangThai];
+    el.className = 'flow-step ' + n[0];
+    const s = el.querySelector('.step-status');
+    if (s) {
+      s.textContent = (trangThai === 'DANG_CHAY' && giay != null)
+        ? `${n[1]} · ${giay.toFixed(1)}s` : n[1];
+    }
+  }
+
+  async function kichHoatPipeline(presetId) {
+    // `presetId` TỪNG BỊ VỨT. Dòng gọi ở thẻ kịch bản truyền nó vào, nhưng hàm
+    // không khai tham số nên nó rơi mất — và máy chủ không bao giờ nhận được.
+    // Từ 05/09/2026 `preset_id` quyết định thể loại lời nhắc, nên không gửi thì
+    // khâu ấy chưa từng chạy được từ màn hình.
     const input = document.getElementById('pipelineTopicInput');
     const chuDe = (input && input.value.trim()) || 'Chiến dịch sản xuất & phân phối nội dung tự động AURA v3';
 
-    const steps = ['step_zeta', 'step_aura', 'step_alpha', 'step_omega', 'step_gamma'];
-    steps.forEach(id => {
+    // Client tự đặt id để POLL được NGAY. Máy chủ kiểm lại bằng đúng luật của
+    // nó; id xấu thì máy tự sinh và ta sẽ không poll thấy gì — đó là hành vi
+    // đúng, không phải lỗi im lặng.
+    const pipelineId = 'pipe_ui_' + Date.now() + '_' +
+      Math.random().toString(36).slice(2, 8);
+
+    Object.values(O_BUOC).forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.className = 'flow-step';
-        el.querySelector('.step-status').textContent = 'ĐANG ĐỢI';
+        const s = el.querySelector('.step-status');
+        if (s) s.textContent = 'ĐANG ĐỢI';
       }
     });
 
@@ -328,38 +366,64 @@
     const logBox = document.getElementById('pipelineStepsLog');
     if (resultBox) resultBox.style.display = 'none';
 
-    // Animation chạy từng bước
-    for (let i = 0; i < steps.length; i++) {
-      const el = document.getElementById(steps[i]);
-      if (el) {
-        el.className = 'flow-step running';
-        el.querySelector('.step-status').textContent = 'ĐANG CHẠY...';
-      }
-      await new Promise(r => setTimeout(r, 450));
-      if (el) {
-        el.className = 'flow-step done';
-        el.querySelector('.step-status').textContent = 'HOÀN TẤT ✓';
-      }
-    }
+    // KHÔNG `await` — chuỗi chạy 166 giây, phải poll SONG SONG với nó.
+    // Bản trước chạy một hoạt ảnh `setTimeout` 450ms/bước TRƯỚC khi gọi, nên
+    // cả 5 bước báo "HOÀN TẤT ✓" sau 2,25 giây — trước lúc dây chuyền bắt đầu.
+    const chay = fetch('/api/pipeline/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chu_de: chuDe, pipeline_id: pipelineId,
+        ...(presetId ? { preset_id: presetId } : {})
+      })
+    }).then(r => r.json());
 
+    let xong = false;
+    const poll = setInterval(async () => {
+      try {
+        const r = await fetch('/api/tien_do/' + encodeURIComponent(pipelineId));
+        const td = await r.json();
+        (td.cac_dong || []).forEach(d => {
+          if (d.phong_id) veMotBuoc(d.phong_id, d.trang_thai, null);
+        });
+        const dang = td.buoc_dang_chay;
+        if (dang) veMotBuoc(dang.phong_id, 'DANG_CHAY', td.giay_da_troi);
+        if (td.trang_thai === 'XONG') { xong = true; clearInterval(poll); }
+      } catch (_) { /* một nhịp poll hụt không được làm dừng cả vòng */ }
+    }, 1000);
+
+    let data;
     try {
-      const resp = await fetch('/api/pipeline/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chu_de: chuDe })
-      });
-      const data = await resp.json();
-
-      if (data.status === 'PASS' && resultBox && logBox) {
+      data = await chay;
+    } catch (err) {
+      clearInterval(poll);
+      if (resultBox && logBox) {
         resultBox.style.display = 'block';
-        logBox.innerHTML = (data.cac_buoc || []).map(b => `
+        logBox.innerHTML = `<div style="padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:6px;color:#F87171;font-size:12px;">
+          🛑 Không gọi được dây chuyền: ${escapeHtml(err.message || String(err))}</div>`;
+      }
+      return;
+    }
+    clearInterval(poll);
+
+    // VẼ MỌI TRẠNG THÁI, không chỉ PASS. Bản trước chỉ hiện khi `status ===
+    // 'PASS'`, nên một lượt FAIL trông y hệt một lượt chưa bấm.
+    (data.cac_buoc || []).forEach(b => veMotBuoc(b.phong_id, b.trang_thai, null));
+    if (resultBox && logBox) {
+      resultBox.style.display = 'block';
+      const mau = { PASS: '#34D399', FAIL: '#F87171',
+                    KHONG_CHAY_DUOC: '#FBBF24', CHUA_CHAY: '#64748B' };
+      logBox.innerHTML =
+        `<div style="padding:6px 12px;margin-bottom:8px;font-size:12px;font-weight:700;color:${mau[data.status] || '#94A3B8'};">
+           ${escapeHtml(data.status || '?')} · ${data.buoc_dat}/${data.tong_buoc} bước đạt · ${Math.round((data.tong_thoi_gian_ms || 0) / 1000)}s
+         </div>` +
+        (data.cac_buoc || []).map(b => `
           <div style="padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 6px; margin-bottom: 6px; font-size: 12px;">
-            <strong style="color: #60A5FA;">[Bước ${b.buoc}] ${b.phong_ten}:</strong> ${b.hanh_dong}
-            <div style="color: #34D399; margin-top: 2px;">➔ ${b.ket_qua}</div>
+            <strong style="color: #60A5FA;">[Bước ${b.buoc}] ${escapeHtml(b.phong_ten || '')}:</strong> ${escapeHtml(b.hanh_dong || '')}
+            <div style="color: ${mau[b.trang_thai] || '#94A3B8'}; margin-top: 2px;">➔ ${escapeHtml(b.trang_thai || '')} — ${escapeHtml(b.ket_qua || '')}</div>
           </div>
         `).join('');
-      }
-    } catch (_) {}
+    }
   }
 
   // ==========================================================================

@@ -22,8 +22,21 @@ export const TheAlpha: React.FC<Props> = ({ cau, moc }) => {
   const { fps } = useVideoConfig();
   const giay = frame / fps;
 
+  // TRONG KHE THÌ GIỮ THẺ TRƯỚC, đừng nhảy về thẻ cuối.
+  //
+  // Bản đầu để `i = giay < moc[0][0] ? 0 : moc.length - 1`. Mốc có KHE im lặng
+  // giữa hai câu (0,31–0,76s tuỳ kịch bản), nên mỗi khe `findIndex` trả -1 và
+  // màn hình NHÁY SANG THẺ CUỐI — trắng chữ, thanh tiến độ rỗng, 12 lần trong
+  // một video. Đo được: mọi cắt cảnh của bản Remotion lệch phụ đề đúng 0,735–
+  // 0,769 giây, tức bằng chính khe. Một độ lệch HẰNG SỐ không phải nhiễu.
+  //
+  // `kiem_video` cho ĐẠT — nháy 0,76 giây thì không đen, không đứng yên, không
+  // cửa nào bắt. Thấy nó bằng cách rút một khung ra NHÌN.
   let i = moc.findIndex(([bd, kt]) => giay >= bd && giay < kt);
-  if (i < 0) i = giay < moc[0][0] ? 0 : moc.length - 1;
+  if (i < 0) {
+    i = 0;
+    for (let k = 0; k < moc.length; k++) if (giay >= moc[k][0]) i = k;
+  }
   const [bd, kt] = moc[i];
 
   const mo = interpolate(giay, [bd, bd + 0.25], [0, 1], {

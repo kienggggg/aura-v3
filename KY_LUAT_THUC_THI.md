@@ -748,7 +748,43 @@ OPC nằm trong diện miễn phí.
   rào `V3_PHONG` lần theo `import` Python nên tệp `.tsx` không đụng trần.
 * **`remotion/node_modules` phải bị git bỏ qua** — 215 MB, 13.471 tệp.
 
-**CHƯA THAY BỘ DỰNG CŨ.** Chạy song song, chấm bằng cùng bộ cửa, rồi mới quyết.
+**CHẤM HAI BỘ, CÙNG ĐẦU VÀO, CÙNG BỘ CỬA (06/09/2026).** Cùng `van_ban`, cùng
+`voice.wav`, cùng `moc`, cùng `phu_de.srt`, cùng nhạc nền. Khác đúng **một
+biến**: ai vẽ khung hình.
+
+```
+                          A · PIL+ffmpeg    B · Remotion
+lệch chữ–hình lớn nhất       0,293s           0,110s     <- B tốt hơn ~3 lần
+đoạn đứng yên lâu nhất         0,0s           4,92s      <- B XẤU
+số đoạn tĩnh                      0             15       <- B XẤU
+số lần đổi cảnh                  31             20
+kích thước tệp               3,91 MB        2,05 MB
+thời gian dựng                  31s            45s
+kiem_video · kiem_phu_de        ĐẠT            ĐẠT
+```
+
+**KẾT LUẬN: CHƯA ĐỔI MẶC ĐỊNH.** B thắng chỗ đồng bộ và dung lượng, nhưng
+thành phần Remotion chỉ động **0,4 giây đầu mỗi thẻ**, sau đó chỉ còn thanh
+tiến độ 6px — `freezedetect` đọc là đứng yên. Đó đúng kiểu hỏng đã ghi ở đầu
+`core/phong_alpha.py`: *"bốn tấm ảnh chứ không phải video"*. B phải có chuyển
+động liên tục rồi mới thay được A.
+
+> **PHÉP CHẤM NÀY CHẶN ĐƯỢC MỘT LẦN ĐỔI SAI, VÀ BẮT ĐƯỢC MỘT LỖI ẨN.** Mọi cắt
+> cảnh của bản Remotion lệch phụ đề đúng **0,735–0,769 giây** — một độ lệch
+> HẰNG SỐ, bằng chính khe im lặng. Rút một khung trong khe ra nhìn thì thấy:
+> màn hình hiện **"THẺ 13/13"**, trắng chữ, thanh tiến độ rỗng. `findIndex` trả
+> `-1` trong khe và nhánh lui nhảy về thẻ cuối — **nháy 12 lần** trong một
+> video 60 giây. `kiem_video` cho **ĐẠT**: nháy 0,76 giây thì không đen, không
+> đứng yên, không cửa nào bắt.
+
+> **HAI PHÉP ĐO ĐẦU CỦA TÔI ĐỀU KHÔNG DÙNG ĐƯỢC, và lý do đáng ghi.** Dò cắt
+> cảnh trên bản ĐÃ NUNG chữ thì chữ phụ đề đổi cũng tính là đổi cảnh: 13 thẻ
+> phải 12 cắt, đo ra 35 · 18 · 10 · 0 tuỳ ngưỡng. Chuyển sang bản **chưa nung**
+> thì A ra đúng 12 — nhưng lẫn nhiễu do Ken Burns phóng, nên số 2,572s là rác.
+> Thứ dùng được là hỏi **nhãn "THẺ i/N" đổi lúc nào**, tìm bằng chia đôi: 12/12
+> ranh giới đo được ở cả hai bộ.
+
+**CHƯA THAY BỘ DỰNG CŨ.**
 
 ### 3. PHÒNG SCOUT (Tra cứu Dữ kiện Mới & Source Receipt)
 * **Đầu vào:** Tối thiểu 3 câu hỏi cần dữ kiện mới.

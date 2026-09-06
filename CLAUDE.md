@@ -1166,6 +1166,40 @@ thích giải thích vì sao không nung**, đúng chỗ nó nên ở. Sửa xon
 một trường `duongSrt` vào `Props`: **vẫn xanh**, vì tên trường không có dấu
 chấm. Phải hỏi *kiểu này khai những trường nào* rồi so danh sách, mới đỏ.
 
+### Một độ lệch HẰNG SỐ không phải nhiễu — nó là một cái tên chưa đọc ra
+
+Chấm hai bộ dựng, cùng đầu vào, khác đúng một biến: ai vẽ khung hình. Bản
+Remotion cho một con số trông vô hại — mọi cắt cảnh lệch phụ đề **0,735–0,769
+giây**. Nhiễu thì tản ra; đây chín giá trị nằm trong 0,034 giây của nhau.
+
+Và 0,76 giây **chính là khe im lặng** giữa hai câu. Rút một khung trong khe ra
+nhìn:
+
+```
+THẺ 13/13     — trắng chữ, thanh tiến độ rỗng
+```
+
+`findIndex` trả `-1` khi giây rơi vào khe, và nhánh lui của tôi nhảy về
+`moc.length - 1`. Màn hình **nháy thẻ cuối 12 lần** trong một video 60 giây.
+`kiem_video` cho **ĐẠT**: nháy 0,76 giây thì không đen, không đứng yên, không
+cửa nào của Alpha bắt được.
+
+**Thấy một độ lệch gần như không đổi, đừng làm tròn nó đi — hỏi nó BẰNG cái
+gì.** Ở đây nó bằng một hằng số có tên, và cái tên ấy chỉ thẳng vào dòng hỏng.
+
+*Hai phép đo đầu của tôi đều không dùng được.* Dò cắt cảnh trên bản ĐÃ NUNG chữ
+thì chữ phụ đề đổi cũng tính là đổi cảnh — 13 thẻ phải 12 cắt, đo ra 35 · 18 ·
+10 · 0 tuỳ ngưỡng. Chuyển sang bản chưa nung thì A ra đúng 12, nhưng lẫn nhiễu
+do Ken Burns phóng. Thứ dùng được là hỏi **nhãn "THẺ i/N" đổi lúc nào**, tìm
+bằng chia đôi: 12/12 ranh giới đo được ở cả hai bộ.
+
+*Và phép chấm chặn được một lần đổi sai.* Kết quả: Remotion đồng bộ tốt hơn ba
+lần (0,110s so với 0,293s) và tệp nhỏ hơn nửa — nhưng **15 đoạn tĩnh, dài nhất
+4,92 giây**, vì thành phần của tôi chỉ động 0,4 giây đầu mỗi thẻ. Đúng kiểu
+hỏng đã ghi ở đầu `phong_alpha.py`: *"bốn tấm ảnh chứ không phải video"*.
+**Không đổi mặc định.** Cái mới thắng ở chỗ đang đo không có nghĩa là nó thay
+được cái cũ.
+
 **Một bản sao chưa ai đọc thì vô hại. Bản sao được đưa lên màn hình thì thành
 lời hứa.** Trước khi chuyển văn bản từ chỗ ít người nhìn sang chỗ nhiều người
 nhìn, hỏi: câu này đã có phép đo nào đứng sau chưa? Ở đây câu trả lời là 1/8.

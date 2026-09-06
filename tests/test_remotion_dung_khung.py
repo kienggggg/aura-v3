@@ -183,3 +183,61 @@ def test_KHONG_them_goi_PYTHON_nao():
     goi = sorted(d for d in dong if d)
     assert all("remotion" not in g.lower() for g in goi), goi
     assert len(goi) <= 3, f"requirements phình lên {len(goi)} dòng: {goi}"
+
+
+@pytest.mark.skipif(not _co_remotion(), reason="chưa cài Remotion — KHÔNG ĐO ĐƯỢC")
+def test_TRONG_KHE_giu_the_truoc_chu_khong_nhay_ve_THE_CUOI(tmp_path):
+    """Mốc có KHE im lặng giữa hai câu. Khe không được làm màn hình nháy.
+
+    Bản đầu để `i = giay < moc[0][0] ? 0 : moc.length - 1`, nên mỗi khe
+    `findIndex` trả -1 và màn hình NHÁY SANG THẺ CUỐI — trắng chữ, thanh tiến
+    độ rỗng, 12 lần trong một video 60 giây.
+
+    KHÔNG CỬA NÀO CỦA ALPHA BẮT ĐƯỢC: `kiem_video` cho ĐẠT vì nháy 0,76 giây
+    thì không đen, không đứng yên. Thấy nó vì mọi cắt cảnh lệch phụ đề đúng
+    0,735–0,769s — một độ lệch HẰNG SỐ, bằng chính khe — rồi rút một khung
+    trong khe ra NHÌN.
+
+    Bài này đo bằng ẢNH: khung trong khe phải GIỐNG khung cuối câu trước, và
+    KHÁC khung của thẻ cuối.
+    """
+    from core.phong_alpha import render_remotion
+
+    # Ba thẻ, khe 0,5s giữa mỗi cặp. Thẻ cuối cố ý khác hẳn để so được.
+    moc = [(0.0, 1.0), (1.5, 2.5), (3.0, 4.0)]
+    ra = tmp_path / "khe.mp4"
+    xong, ly_do = render_remotion(["Thẻ một.", "Thẻ hai.", "Thẻ ba."], moc, ra)
+    assert xong, ly_do
+
+    def _nhan(giay: float) -> bytes:
+        """Cắt riêng vùng nhãn "THẺ i/N" ở góc trên trái rồi so BYTE.
+
+        So cả khung thì quá chặt: trong khe thanh tiến độ đã chạy hết, còn ở
+        0,9s nó mới 90% — khác vài byte dù thẻ vẫn là thẻ ấy. Bản đầu của bài
+        này đỏ oan đúng vì thế. Vùng nhãn mới là thứ trả lời *đang chiếu thẻ
+        mấy*.
+        """
+        p = tmp_path / f"k{giay}.png"
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(ra), "-ss",
+                        str(giay), "-frames:v", "1", "-vf", "crop=320:60:48:64",
+                        str(p)], capture_output=True, timeout=180)
+        assert p.is_file(), f"không rút được khung ở {giay}s"
+        return p.read_bytes()
+
+    trong_cau_1 = _nhan(0.9)      # cuối thẻ 1
+    khe_1 = _nhan(1.25)           # giữa khe 1,0 -> 1,5
+    trong_cau_2 = _nhan(2.4)      # cuối thẻ 2
+    khe_2 = _nhan(2.75)           # giữa khe 2,5 -> 3,0
+    the_cuoi = _nhan(3.5)         # giữa thẻ 3
+
+    assert len({trong_cau_1, trong_cau_2, the_cuoi}) == 3, (
+        "ba thẻ ra cùng một nhãn — phép đo không phân biệt được gì")
+    assert khe_1 != the_cuoi, (
+        "khung trong khe mang nhãn thẻ CUỐI — màn hình đang nháy về thẻ cuối")
+    assert khe_1 == trong_cau_1, "khe 1 không giữ thẻ 1"
+
+    # PHẢI KIỂM KHE THỨ HAI. Ở khe thứ nhất, "giữ thẻ trước" và "nhảy về thẻ
+    # đầu" cho CÙNG kết quả — gieo `i = 0` vô điều kiện thì bản đầu của bài này
+    # vẫn xanh. Chỉ từ khe thứ hai trở đi hai hành vi mới tách nhau.
+    assert khe_2 == trong_cau_2, (
+        "khe 2 không giữ thẻ 2 — nhánh lui đang nhảy về một thẻ cố định")

@@ -8,4 +8,12 @@
 
 aiohttp        # interface/chat_api.py + chat_app.py — máy chủ web
 httpx          # core/chat_runtime.py + local_first_gateway.py — gọi model
-libcst==1.9.0  # core/the_cst.py — mở/sửa/lưu Python mà giữ nguyên định dạng
+
+# `libcst==1.9.0` GỠ NGÀY 06/09/2026 — bốn ngày sau khi App Thẻ tách sang kho
+# riêng (02/09) và mang `core/the_cst.py` đi theo. Dòng ấy nằm lại, khai một
+# tệp KHÔNG CÒN TỒN TẠI, và người đọc `requirements.txt` sẽ đếm ba gói ngoài
+# trong khi thật ra là hai — đúng con số mục 1 của `CLAUDE.md` vẫn ghi.
+#
+# Verify trước, xoá sau: `core/the_cst.py` không có trên đĩa; không tệp `.py`
+# nào còn `import libcst` (chỉ `build/` — thư mục dựng cũ, git không theo dõi —
+# và một chú thích trong `core/khay_the.py`).

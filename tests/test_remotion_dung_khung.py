@@ -182,7 +182,13 @@ def test_KHONG_them_goi_PYTHON_nao():
     dong = [d.split("#")[0].strip() for d in chu.splitlines()]
     goi = sorted(d for d in dong if d)
     assert all("remotion" not in g.lower() for g in goi), goi
-    assert len(goi) <= 3, f"requirements phình lên {len(goi)} dòng: {goi}"
+    # TRẦN 2, không phải 3. `libcst==1.9.0` gỡ ngày 06/09/2026 — nó khai
+    # `core/the_cst.py`, tệp đã theo App Thẻ sang kho riêng từ 02/09. Để trần 3
+    # khi sự thật là 2 là chừa sẵn chỗ cho một lần phình im lặng.
+    #
+    # Chép TAY từ `CLAUDE.md` mục 1: **2 gói ngoài** (`aiohttp`, `httpx`).
+    assert len(goi) <= 2, f"requirements phình lên {len(goi)} dòng: {goi}"
+    assert {g.split()[0].split("=")[0] for g in goi} == {"aiohttp", "httpx"}, goi
 
 
 @pytest.mark.skipif(not _co_remotion(), reason="chưa cài Remotion — KHÔNG ĐO ĐƯỢC")

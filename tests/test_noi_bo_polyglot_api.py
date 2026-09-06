@@ -106,16 +106,78 @@ class TestNoiBoPolyglotAPI(AioHTTPTestCase):
         assert len(data["presets"]) == 8
 
     async def test_api_pipeline_custom(self):
-        """API /api/pipeline/custom thực thi pipeline tùy biến."""
-        payload = {
-            "ten": "Pipeline Tùy Biến Thử Nghiệm",
-            "cac_buoc": [
-                {"phong_id": "zeta", "hanh_dong": "Thu thập dữ liệu"},
-                {"phong_id": "delta", "hanh_dong": "Khám mã nguồn"}
-            ]
-        }
-        resp = await self.client.post("/api/pipeline/custom", json=payload)
-        assert resp.status == 200
-        data = await resp.json()
+        """API /api/pipeline/custom thực thi pipeline tùy biến.
+
+        PHÒNG BỊ THAY BẰNG BẢN GIẢ — CÓ CHỦ ĐÍCH (06/09/2026).
+
+        Bản trước gọi `zeta` THẬT, tức tra mạng thật, rồi đòi `status == PASS`.
+        Màu của nó phụ thuộc vào **mạng**, không phụ thuộc vào mã: `zeta` tra
+        xong mà không ra nguồn nào là `FAIL` (đặc tả Chương II mục 3), nên cả
+        chuỗi trượt PASS và bài đỏ dù không ai đụng vào một dòng nào.
+
+        Nó đỏ đúng một lần trong bộ đủ 10 phút ngày 06/09; chạy riêng thì xanh
+        2/2, và `phong_zeta` gọi tay cũng PASS 2/2 với 5 nguồn. **Chưa chứng
+        minh được nguyên nhân** — nhưng không cần chứng minh mới biết một bài
+        test đổi màu theo mạng là hỏng. Cùng họ với ca *"phép đo lấy giờ thật
+        là phép đo xanh theo lịch"*.
+
+        Việc của bài này là ĐƯỜNG API: gọi tới phòng, gom bốn trạng thái, đếm
+        đúng số bước. Lượt tra mạng thật thuộc về một lần chạy tay, không thuộc
+        về một bộ test phải tái hiện được.
+        """
+        import core.phong_noi_bo as pnb
+
+        da_goi = []
+
+        def _phong_gia(ten):
+            def _f(task_id, yeu_cau="", *a, **k):
+                da_goi.append(ten)
+                return {"trang_thai": "PASS", "artifacts": [], "so": {},
+                        "vi_sao": "", "ms": 1.0}
+            return _f
+
+        goc = pnb.PHONG
+        pnb.PHONG = {k: _phong_gia(k) for k in goc}
+        try:
+            payload = {
+                "ten": "Pipeline Tùy Biến Thử Nghiệm",
+                "cac_buoc": [
+                    {"phong_id": "zeta", "hanh_dong": "Thu thập dữ liệu"},
+                    {"phong_id": "delta", "hanh_dong": "Khám mã nguồn"}
+                ]
+            }
+            resp = await self.client.post("/api/pipeline/custom", json=payload)
+            assert resp.status == 200
+            data = await resp.json()
+        finally:
+            pnb.PHONG = goc
+
         assert data["status"] == "PASS"
         assert data["tong_buoc"] == 2
+        # ĐẾM PHÒNG ĐƯỢC GỌI. Không có dòng này thì thay phòng bằng bản giả chỉ
+        # làm bài dễ xanh hơn — `return "PASS"` vô điều kiện cũng qua.
+        assert da_goi == ["zeta", "delta"], da_goi
+
+    async def test_api_pipeline_custom_MOT_buoc_gay_thi_KHONG_PASS(self):
+        """Ca đối chứng: thay phòng bằng bản giả không được biến bài thành luôn xanh."""
+        import core.phong_noi_bo as pnb
+
+        def _hong(task_id, yeu_cau="", *a, **k):
+            return {"trang_thai": "FAIL", "artifacts": [], "so": {},
+                    "vi_sao": "gieo", "ms": 1.0}
+
+        goc = pnb.PHONG
+        pnb.PHONG = {k: _hong for k in goc}
+        try:
+            resp = await self.client.post("/api/pipeline/custom", json={
+                "ten": "Thử bước gãy",
+                "cac_buoc": [{"phong_id": "zeta", "hanh_dong": "x"},
+                             {"phong_id": "delta", "hanh_dong": "y"}]})
+            data = await resp.json()
+        finally:
+            pnb.PHONG = goc
+
+        assert data["status"] != "PASS", data
+        assert data["cac_buoc"][0]["trang_thai"] == "FAIL"
+        assert data["cac_buoc"][1]["trang_thai"] == "CHUA_CHAY", (
+            "bước sau phải mang CHUA_CHAY khi bước trước gãy")

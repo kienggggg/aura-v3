@@ -710,11 +710,91 @@ DANH_SACH_THE_QUY_TRINH = [
 ]
 
 
+# MỘT bảng mô tả phòng, dùng chung cho BỘ CHẠY · API DANH MỤC · SƠ ĐỒ MÀN HÌNH.
+#
+# Trước 06/09/2026 tên và mô tả từng bước nằm gõ tay trong `KE_HOACH` của
+# `api_chay_pipeline`, còn màn hình có bản sao thứ hai gõ cứng trong
+# `noi_bo.html` (5 ô `step_*`). Hai bản thì chúng trôi khỏi nhau, và bản ít
+# người nhìn hơn sẽ là bản mục — đúng câu đã viết cho `chay_chuoi_phong`.
+MO_TA_PHONG: Dict[str, Dict[str, str]] = {
+    "zeta": {"ten": "🔍 Zeta (Scout)", "bieu_tuong": "🔍",
+             "ngan": "Tra mạng thật",
+             "hanh_dong": "Tra mạng thật và ghi biên nhận nguồn"},
+    "aura": {"ten": "⚡ AURA (Writer)", "bieu_tuong": "⚡",
+             "ngan": "Viết kịch bản",
+             "hanh_dong": "Viết kịch bản đạt cửa 215–250 từ"},
+    "alpha": {"ten": "🎬 Alpha (Studio)", "bieu_tuong": "🎬",
+              "ngan": "Dựng video dọc",
+              "hanh_dong": "Dựng video dọc 720×1280 từ kịch bản của AURA"},
+    "omega": {"ten": "🎵 Omega (Ledger)", "bieu_tuong": "🎵",
+              "ngan": "Đọc sổ cái",
+              "hanh_dong": "Đọc sổ cái và viết báo cáo"},
+    "gamma": {"ten": "📊 Gamma (Analytics)", "bieu_tuong": "📊",
+              "ngan": "Đo RAM · test · tok/s",
+              "hanh_dong": "Đo RAM, số bài test, tốc độ sinh"},
+    "delta": {"ten": "🩺 Delta (Doctor)", "bieu_tuong": "🩺",
+              "ngan": "Quét AST",
+              "hanh_dong": "Quét AST toàn kho — chẩn đoán, KHÔNG tự sửa mã"},
+    "beta": {"ten": "🧪 Beta (A/B)", "bieu_tuong": "🧪",
+             "ngan": "A/B lời nhắc",
+             "hanh_dong": "A/B hai biến thể lời nhắc, chấm bằng cửa của AURA"},
+}
+
+# Chuỗi dùng khi KHÔNG có `preset_id`, hoặc `preset_id` không có trong danh mục.
+# Đăng ký ở `KY_LUAT_THUC_THI.md` mục 5b (`DAC_TA_CHUOI_MAC_DINH`).
+CHUOI_MAC_DINH = ("zeta", "aura", "alpha", "omega", "gamma")
+
+
+def _mot_buoc(phong_id: str) -> tuple:
+    """`(mã phòng, tên hiển thị, việc nó hứa làm)` cho MỘT bước.
+
+    Phòng lạ KHÔNG nổ ở đây. Nó đi tiếp vào `chay_chuoi_phong` và thành `FAIL`
+    kèm câu *"không có phòng nào tên X"* — to hơn một `KeyError` 500, và đó là
+    chỗ ĐÚNG để nó kêu. Cửa canh danh mục bắt trước ở tầng test.
+    """
+    mo = MO_TA_PHONG.get(phong_id)
+    if mo is None:
+        return (phong_id, f"❓ {phong_id}", "phòng không có trong bảng mô tả")
+    return (phong_id, mo["ten"], mo["hanh_dong"])
+
+
+def ke_hoach_cua_the(preset_id) -> List[tuple]:
+    """Chuỗi phòng mà một thẻ quy trình khai. Không tìm thấy thẻ thì chuỗi mặc định.
+
+    06/09/2026. `cac_phong` được khai từ đầu nhưng **chưa ai đọc**: đo bằng cách
+    thay mọi phòng bằng bản giả rồi đếm phòng nào ĐƯỢC GỌI, cả 8 thẻ chạy y một
+    chuỗi 5 phòng — **khớp 0/8**. `delta` có 4 thẻ khai mà chưa lần nào chạy.
+
+    Giá không chỉ là sai nhãn: `card_code_doctor` xin quét AST (~2 s) thì nhận
+    thêm `aura` + `alpha`, tức **166 giây** cho việc không ai đặt hàng.
+    """
+    the = (next((t for t in DANH_SACH_THE_QUY_TRINH if t["id"] == preset_id), None)
+           if preset_id else None)
+    cac_phong = the["cac_phong"] if the else CHUOI_MAC_DINH
+    return [_mot_buoc(p) for p in cac_phong]
+
+
 async def api_danh_sach_the_quy_trinh(request: web.Request) -> web.Response:
-    """Trả về danh sách 8 thẻ quy trình 1-click thông minh."""
+    """Trả về danh sách 8 thẻ quy trình 1-click, KÈM sơ đồ bước của từng thẻ.
+
+    `so_do` dựng từ đúng `ke_hoach_cua_the` mà bộ chạy dùng, nên màn hình không
+    thể vẽ một chuỗi khác chuỗi sẽ chạy. Bản trước để giao diện tự đoán: HTML
+    gõ cứng 5 ô, thẻ nào bấm cũng hiện 5 ô ấy.
+    """
+    def _so_do(cac_phong) -> List[Dict[str, str]]:
+        ra = []
+        for p in cac_phong:
+            mo = MO_TA_PHONG.get(p, {})
+            ra.append({"phong_id": p, "ten": mo.get("ten", f"❓ {p}"),
+                       "bieu_tuong": mo.get("bieu_tuong", "❓"),
+                       "ngan": mo.get("ngan", "không có trong bảng mô tả")})
+        return ra
+
     return web.json_response({
         "status": "PASS",
-        "presets": DANH_SACH_THE_QUY_TRINH
+        "so_do_mac_dinh": _so_do(CHUOI_MAC_DINH),
+        "presets": [dict(t, so_do=_so_do(t["cac_phong"]))
+                    for t in DANH_SACH_THE_QUY_TRINH],
     })
 
 
@@ -1036,15 +1116,12 @@ async def api_chay_pipeline(request: web.Request) -> web.Response:
                    else f"pipe_{int(time.time())}_{uuid4().hex[:4]}")
     bat_dau = time.monotonic()
 
-    KE_HOACH = [
-        ("zeta", "🔍 Zeta (Scout)", "Tra mạng thật và ghi biên nhận nguồn"),
-        ("aura", "⚡ AURA (Writer)", "Viết kịch bản đạt cửa 215–250 từ"),
-        ("alpha", "🎬 Alpha (Studio)", "Dựng video dọc 720×1280 từ kịch bản của AURA"),
-        ("omega", "🎵 Omega (Ledger)", "Đọc sổ cái và viết báo cáo"),
-        ("gamma", "📊 Gamma (Analytics)", "Đo RAM, số bài test, tốc độ sinh"),
-    ]
+    # CHUỖI DO THẺ QUYẾT ĐỊNH, không gõ cứng 5 bước nữa (06/09/2026). Trước đó
+    # `cac_phong` được khai trên cả 8 thẻ mà không ai đọc: đếm phòng được gọi
+    # thì khớp **0/8**, và `delta` — 4 thẻ khai — chưa lần nào chạy.
+    KE_HOACH = ke_hoach_cua_the(preset_id)
     # Thẻ khai thể loại; không khai thì `"truyen"` như cũ. `preset_id` trước
-    # 05/09/2026 chỉ được ghi vào sổ cái rồi vứt — nay nó quyết định một thứ.
+    # 05/09/2026 chỉ được ghi vào sổ cái rồi vứt — nay nó quyết định hai thứ.
     cac_buoc, hien_vat, dat = await chay_chuoi_phong(
         KE_HOACH, chu_de, pipeline_id, the_loai_cua_the(preset_id))
     trang_thai = trang_thai_chuoi(cac_buoc, len(KE_HOACH))

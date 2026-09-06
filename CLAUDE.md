@@ -856,6 +856,55 @@ theo số câu — chứ không nới trần.
 chưa bao giờ chạm tới cái sàn ấy. Thêm ca 1 và 2 câu thì đỏ. **Một hằng số chỉ
 được canh nếu có ca đi qua đúng nhánh nó chặn.**
 
+### Vá xong một trường không nói gì về trường bên cạnh
+
+Ngày 05/09/2026 tôi nối `preset_id` vào `the_loai` và viết một cửa canh
+*"chấm được một hàm không chứng minh kết quả của nó đi tới đâu"* — bắt tham số
+THẬT mà `viet_kich_ban` nhận khi chạy cả chuỗi. Cửa ấy đúng và nó vẫn đúng.
+
+Nhưng thẻ khai **hai** thứ. Ngày 06/09 đo trường còn lại — thay mọi phòng bằng
+bản giả rồi đếm phòng nào ĐƯỢC GỌI:
+
+```
+thẻ                        KHAI cac_phong              CHẠY THẬT
+card_video_shorts          zeta,aura,alpha,omega       zeta,aura,alpha,omega,gamma
+card_code_doctor           delta,gamma                 zeta,aura,alpha,omega,gamma
+card_deep_scout            zeta,aura,omega             zeta,aura,alpha,omega,gamma
+card_system_audit          gamma,omega                 zeta,aura,alpha,omega,gamma
+    … cả 8 thẻ                                         khớp 0/8
+```
+
+`delta` có **bốn** thẻ khai mà chưa lần nào chạy. Và giá không chỉ là sai nhãn:
+`card_code_doctor` xin một lượt quét AST thì nhận thêm `aura` + `alpha` —
+**166 giây** cho việc không ai đặt hàng. Sau khi vá, tự bấm trên máy chủ thật:
+`delta + gamma · PASS 2/2 · 48 giây`, và đó là **lần đầu `delta` chạy từ một
+thẻ**.
+
+Cùng họ với *"7 phòng tự khai ONLINE, 0 phòng phải chứng minh"* (02/09) và
+*"33 cờ, 29 cái TẮT"* của v2. Điểm mới: lần này **tôi vừa đi ngang qua đúng chỗ
+ấy hôm trước**. Cửa của tôi hỏi *"`the_loai` có tới nơi không"* và trả lời đúng;
+không bài nào hỏi *"còn trường nào cũng được khai mà không ai đọc không"*.
+
+**Vá một trường thì hỏi luôn: cấu trúc này còn khai gì nữa, và ai đọc?** Rẻ hơn
+nhiều so với đợi trường thứ hai tự lộ ra.
+
+Ba thứ khác bắt được trên cùng đường, cả ba đều do phép đo:
+
+*Sửa máy chủ mà không sửa màn hình là dời chỗ nói dối.* Hàng sơ đồ có **5 ô gõ
+cứng trong HTML**, nên thẻ chạy 2 phòng vẫn hiện 5 ô và ba ô đứng im mãi — một
+lời nói dối MỚI đặt lên đúng cái vỏ vừa làm cho trong suốt hôm qua. Sửa: máy chủ
+trả `so_do` từ chính bảng bộ chạy dùng, HTML để trống, JS dựng ô.
+
+*`.flow-step.fail` chưa bao giờ tồn tại trong CSS.* `veMotBuoc` gán lớp `fail`
+từ 05/09 cho cả `FAIL` lẫn `KHONG_CHAY_DUOC`; chữ đổi, viền không đổi. Không
+phép gieo nào tìm ra — thấy nó lúc đọc CSS để thêm một lớp khác.
+
+*Và `x in y` lần nữa, trong cửa vừa viết.* Gieo `veSoDoBuoc((the && the.so_do)
+|| state.soDoMacDinh)` → `veSoDoBuoc(state.soDoMacDinh)` thì bài vẫn xanh: nó
+kiểm `state.theQuyTrinh[presetId]` **có mặt trong hàm**, mà dòng ấy vẫn còn
+nguyên. Hỏi cái tên hàm thay vì hỏi **tham số truyền vào**. Sửa rồi gieo lại:
+12/12 đỏ.
+
 ---
 
 ## 5. Viết mã ở đây

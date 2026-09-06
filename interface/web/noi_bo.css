@@ -693,6 +693,22 @@ body {
   background: rgba(16, 185, 129, 0.1);
 }
 
+/* THIẾU TỪ 05/09/2026. `veMotBuoc` gán class `fail` cho FAIL và
+   KHONG_CHAY_DUOC, nhưng CSS chưa bao giờ có lớp ấy — chỉ chữ đổi, viền không
+   đổi, nên một bước hỏng nhìn gần giống một bước chưa chạy. */
+.flow-step.fail {
+  border-color: #F87171;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.flow-empty {
+  flex: 1;
+  text-align: center;
+  color: var(--text-dim, #94A3B8);
+  font-size: 12px;
+  padding: 12px;
+}
+
 .flow-connector {
   width: 24px;
   height: 2px;

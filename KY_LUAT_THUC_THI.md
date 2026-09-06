@@ -716,6 +716,62 @@ Latency    42 ms               chưa từng đo
   > ngày 02/09. Viết lại thành phép đo hành vi (thay mọi phòng bằng bản giả, rồi
   > đếm cả *phòng nào ĐƯỢC GỌI*) thì **8/8 đỏ**.
 
+### 5b. THẺ PHẢI CHẠY ĐÚNG PHÒNG NÓ KHAI (06/09/2026)
+
+Đăng ký **TRƯỚC KHI VIẾT MÃ**, theo Chương 7 của `CLAUDE.md`.
+
+Đo cái lỗ trước, bằng cách thay mọi phòng bằng bản giả rồi **đếm phòng nào được
+gọi** — không dò chuỗi trong mã:
+
+```
+thẻ                        KHAI cac_phong              CHẠY THẬT
+card_video_shorts          zeta,aura,alpha,omega       zeta,aura,alpha,omega,gamma
+card_code_doctor           delta,gamma                 zeta,aura,alpha,omega,gamma
+card_polyglot_transpiler   delta,gamma,omega           zeta,aura,alpha,omega,gamma
+card_deep_scout            zeta,aura,omega             zeta,aura,alpha,omega,gamma
+card_novel_writer          aura,gamma                  zeta,aura,alpha,omega,gamma
+card_fullstack_builder     aura,delta,alpha            zeta,aura,alpha,omega,gamma
+card_security_guard        delta,gamma,omega           zeta,aura,alpha,omega,gamma
+card_system_audit          gamma,omega                 zeta,aura,alpha,omega,gamma
+                                                       khớp 0/8
+```
+
+`delta` chưa từng được thẻ nào gọi tới, dù **bốn** thẻ khai nó. Và giá không chỉ
+là sai nhãn: `card_code_doctor` xin một lượt quét AST (~2 giây) thì nhận cả
+`aura` + `alpha` — **166 giây** cho một việc không ai đặt hàng.
+
+Cùng họ với *"7 phòng tự khai ONLINE, 0 phòng phải chứng minh"* (02/09) và
+*"33 cờ, 29 cái TẮT"* của v2: một trường được khai, không ai đọc.
+
+**Đặc tả — chép TAY vào cửa canh, đừng tính lại bằng chính mã:**
+
+* `DAC_TA_CHUOI_MAC_DINH = zeta · aura · alpha · omega · gamma` — dùng khi
+  **không** gửi `preset_id`, hoặc gửi một `preset_id` không có trong danh mục.
+  Đường của giao diện: id lạ **không được** làm đổ cả lượt chạy.
+* `DAC_TA_SAN_PHONG = 1`, `DAC_TA_TRAN_PHONG = 8` cho `cac_phong` của mỗi thẻ.
+  Trần dùng chung con số với chuỗi tùy biến, cùng một lý do: một lượt `aura`
+  tốn tới 273 giây.
+* **`alpha` chỉ hợp lệ khi có `aura` đứng TRƯỚC nó trong cùng thẻ.** `alpha` ăn
+  kịch bản của `aura`; thiếu thì nó không có gì để dựng.
+* **MỘT bảng mô tả phòng duy nhất** (`MO_TA_PHONG`), dùng chung cho bộ chạy, API
+  danh mục, và sơ đồ trên màn hình. Ba bảng thì chúng trôi khỏi nhau — đúng bệnh
+  `presetPrompts` gõ cứng trong `noi_bo.js` đang mắc (xem "còn nợ" dưới).
+* **Sơ đồ trên màn hình phải dựng TỪ chuỗi của thẻ**, không phải 5 ô gõ cứng
+  trong HTML. Chạy 2 phòng mà vẽ 5 ô thì ba ô đứng im mãi mãi — một lời nói dối
+  mới đặt lên đúng cái vỏ vừa làm cho trong suốt.
+
+**Còn nợ, nói ra cùng lúc:**
+
+* `noi_bo.js` gõ cứng `presetPrompts` — bản sao thứ hai của `tham_so_mac_dinh`,
+  và **đã lệch**: `card_video_shorts` ở Python là *"Khám phá bí mật lịch sử phố
+  cổ Hà Nội"*, ở JS là *"Sản xuất video ngắn 60s về Lập trình Thẻ AURA v3…"*.
+  Cùng họ với lỗi đang vá, chưa vá trong lượt này.
+* Tám thẻ trong `noi_bo.html` cũng gõ cứng; `/api/pipeline/presets` có sẵn nhưng
+  **màn hình chưa bao giờ gọi**. Danh mục là một nguồn sự thật mà giao diện
+  không đọc.
+* `card_code_doctor` truyền cả **đoạn mã** vào `chu_de`, còn `delta` thì quét
+  `core/*.py` và **bỏ qua** tham số ấy. Chạy đúng phòng rồi vẫn còn chỗ này.
+
 ## CHƯƠNG III: CƠ CHẾ BẢO MẬT & BỘ LỌC DỮ LIỆU NHẠY CẢM (REDACTION)
 - Mọi file log lỗi (`raw/error.txt`) phải đi qua bộ lọc tập trung (Centralized Redactor).
 - Tự động che giấu mọi dạng key/token: Bearer tokens, OpenAI/Gemini/Anthropic/OpenRouter API keys, Basic Auth credentials trong URL.

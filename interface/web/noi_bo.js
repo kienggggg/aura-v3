@@ -11,7 +11,12 @@
     chatHistories: {}, // Keyed by agentId
     polyglotSourceLang: 'python',
     polyglotTargetLang: 'javascript',
-    languages: []
+    languages: [],
+    // Sơ đồ bước LẤY TỪ MÁY CHỦ, không gõ cứng ở đây. Trước 06/09/2026 màn hình
+    // có 5 ô `step_*` cố định trong HTML, nên thẻ chạy 2 phòng vẫn hiện 5 ô và
+    // ba ô đứng im mãi mãi.
+    theQuyTrinh: {},
+    soDoMacDinh: []
   };
 
   // ==========================================================================
@@ -23,6 +28,7 @@
     veSidebarAgents();
     veWarRoomGrid();
     chonAgent('aura');
+    await taiTheQuyTrinh();
     taiLedgerVaEvidence();
     await initPolyglotStudio();
 
@@ -311,12 +317,50 @@
   // ==========================================================================
   // 6. PIPELINE AUTOMATOR (Quy trình liên phòng ban)
   // ==========================================================================
-  // Ánh xạ mã phòng -> id ô trên màn hình. Bước nào không có ô thì bỏ qua,
-  // không nổ: chuỗi tùy biến có thể gọi phòng không nằm trong sơ đồ cố định.
-  const O_BUOC = {
-    zeta: 'step_zeta', aura: 'step_aura', alpha: 'step_alpha',
-    omega: 'step_omega', gamma: 'step_gamma'
-  };
+  // Nạp danh mục thẻ + SƠ ĐỒ BƯỚC của từng thẻ từ máy chủ.
+  //
+  // `/api/pipeline/presets` có sẵn từ lâu nhưng màn hình CHƯA BAO GIỜ GỌI: danh
+  // mục là một nguồn sự thật mà giao diện không đọc. Hệ quả đo được 06/09/2026:
+  // cả 8 thẻ khai `cac_phong` khác nhau, màn hình vẽ y một chuỗi 5 ô gõ cứng.
+  async function taiTheQuyTrinh() {
+    try {
+      const resp = await fetch('/api/pipeline/presets');
+      const data = await resp.json();
+      (data.presets || []).forEach(t => { state.theQuyTrinh[t.id] = t; });
+      state.soDoMacDinh = data.so_do_mac_dinh || [];
+    } catch (_) {
+      // Không nạp được thì KHÔNG vẽ chuỗi đoán. Ô sẽ được dựng dần theo đúng
+      // bước máy chủ báo về — chậm hơn, nhưng không bịa ra bước nào.
+      state.soDoMacDinh = [];
+    }
+    veSoDoBuoc(state.soDoMacDinh);
+  }
+
+  // LỌC ký tự trước khi ghép vào `id=` — mã phòng đi thẳng vào HTML. Hôm nay
+  // mọi `phong_id` đều từ danh mục của chính ta, nhưng một cái id ghép từ dữ
+  // liệu chưa lọc là chỗ chỉ cần sai một lần.
+  function idO(phongId) {
+    return 'step_' + String(phongId).replace(/[^A-Za-z0-9_-]/g, '_');
+  }
+
+  // Dựng lại hàng sơ đồ từ danh sách bước THẬT SỰ sẽ chạy.
+  function veSoDoBuoc(soDo) {
+    const hang = document.getElementById('pipelineVisualFlow');
+    if (!hang) return;
+    if (!soDo || !soDo.length) {
+      hang.innerHTML = '<div class="flow-empty">Chưa nạp được sơ đồ bước — ' +
+        'ô sẽ hiện dần theo từng bước máy chủ báo về.</div>';
+      return;
+    }
+    hang.innerHTML = soDo.map((b, i) => `
+      <div class="flow-step" id="${idO(b.phong_id)}">
+        <div class="step-icon">${escapeHtml(b.bieu_tuong || '?')}</div>
+        <div class="step-title">${i + 1}. ${escapeHtml(b.ten || b.phong_id)}</div>
+        <div class="step-desc">${escapeHtml(b.ngan || '')}</div>
+        <div class="step-status">SẴN SÀNG</div>
+      </div>`).join('<div class="flow-connector"></div>');
+  }
+
   const NHAN = {
     DANG_CHAY: ['running', 'ĐANG CHẠY'],
     PASS: ['done', 'HOÀN TẤT ✓'],
@@ -327,9 +371,29 @@
     KHONG_DAT: ['fail', 'KHÔNG ĐẠT']
   };
 
-  function veMotBuoc(phongId, trangThai, giay) {
-    const el = document.getElementById(O_BUOC[phongId]);
-    if (!el) return;
+  function veMotBuoc(phongId, trangThai, giay, ten) {
+    // KHÔNG có ô thì DỰNG một ô, đừng bỏ qua im lặng. Bản trước `return` khi
+    // thiếu ô, nên một bước máy chủ có chạy mà màn hình không có chỗ hiện thì
+    // biến mất không dấu vết — đúng thứ cả việc "vỏ trong suốt" chống lại.
+    let el = document.getElementById(idO(phongId));
+    if (!el) {
+      const hang = document.getElementById('pipelineVisualFlow');
+      if (!hang) return;
+      const rong = hang.querySelector('.flow-empty');
+      if (rong) rong.remove();
+      if (hang.children.length) {
+        hang.insertAdjacentHTML('beforeend', '<div class="flow-connector"></div>');
+      }
+      hang.insertAdjacentHTML('beforeend', `
+        <div class="flow-step" id="${idO(phongId)}">
+          <div class="step-icon">❓</div>
+          <div class="step-title">${escapeHtml(ten || phongId)}</div>
+          <div class="step-desc">không có trong sơ đồ ban đầu</div>
+          <div class="step-status">SẴN SÀNG</div>
+        </div>`);
+      el = document.getElementById(idO(phongId));
+      if (!el) return;
+    }
     const n = NHAN[trangThai] || ['', trangThai];
     el.className = 'flow-step ' + n[0];
     const s = el.querySelector('.step-status');
@@ -353,13 +417,15 @@
     const pipelineId = 'pipe_ui_' + Date.now() + '_' +
       Math.random().toString(36).slice(2, 8);
 
-    Object.values(O_BUOC).forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.className = 'flow-step';
-        const s = el.querySelector('.step-status');
-        if (s) s.textContent = 'ĐANG ĐỢI';
-      }
+    // VẼ ĐÚNG CHUỖI CỦA THẺ, không phải 5 ô cố định. Máy chủ chạy `cac_phong`
+    // của thẻ từ 06/09/2026; vẽ 5 ô cho một thẻ 2 phòng thì ba ô đứng im mãi —
+    // một lời nói dối mới đặt lên đúng cái vỏ vừa làm cho trong suốt.
+    const the = presetId ? state.theQuyTrinh[presetId] : null;
+    veSoDoBuoc((the && the.so_do) || state.soDoMacDinh);
+    document.querySelectorAll('#pipelineVisualFlow .flow-step').forEach(el => {
+      el.className = 'flow-step';
+      const s = el.querySelector('.step-status');
+      if (s) s.textContent = 'ĐANG ĐỢI';
     });
 
     const resultBox = document.getElementById('pipelineResultsBox');
@@ -384,10 +450,12 @@
         const r = await fetch('/api/tien_do/' + encodeURIComponent(pipelineId));
         const td = await r.json();
         (td.cac_dong || []).forEach(d => {
-          if (d.phong_id) veMotBuoc(d.phong_id, d.trang_thai, null);
+          if (d.phong_id) veMotBuoc(d.phong_id, d.trang_thai, null, d.phong_ten);
         });
         const dang = td.buoc_dang_chay;
-        if (dang) veMotBuoc(dang.phong_id, 'DANG_CHAY', td.giay_da_troi);
+        if (dang) {
+          veMotBuoc(dang.phong_id, 'DANG_CHAY', td.giay_da_troi, dang.phong_ten);
+        }
         if (td.trang_thai === 'XONG') { xong = true; clearInterval(poll); }
       } catch (_) { /* một nhịp poll hụt không được làm dừng cả vòng */ }
     }, 1000);
@@ -408,7 +476,8 @@
 
     // VẼ MỌI TRẠNG THÁI, không chỉ PASS. Bản trước chỉ hiện khi `status ===
     // 'PASS'`, nên một lượt FAIL trông y hệt một lượt chưa bấm.
-    (data.cac_buoc || []).forEach(b => veMotBuoc(b.phong_id, b.trang_thai, null));
+    (data.cac_buoc || []).forEach(
+      b => veMotBuoc(b.phong_id, b.trang_thai, null, b.phong_ten));
     if (resultBox && logBox) {
       resultBox.style.display = 'block';
       const mau = { PASS: '#34D399', FAIL: '#F87171',

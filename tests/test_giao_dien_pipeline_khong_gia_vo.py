@@ -68,7 +68,7 @@ def _than_ham_js(ten: str) -> str:
     nới lỏng tới mức không còn canh được gì.
     """
     chu = _bo_chu_thich_js(JS.read_text(encoding="utf-8"))
-    m = re.search(r"async function " + re.escape(ten) + r"\s*\([^)]*\)\s*\{", chu)
+    m = re.search(r"(?:async )?function " + re.escape(ten) + r"\s*\([^)]*\)\s*\{", chu)
     assert m, f"không tìm thấy hàm {ten}"
     i = m.end() - 1
     sau, j = 0, i
@@ -185,3 +185,101 @@ def test_moi_trang_thai_may_chu_deu_co_nhan_tren_man_hinh(tt):
     # `"FAIL" in ...` vẫn đúng — bảng mất nhãn mà cửa vẫn xanh.
     khoa = set(re.findall(r"^\s*([A-Z_]+)\s*:", m.group(1), re.M))
     assert tt in khoa, f"bảng NHAN thiếu khoá {tt}; đang có {sorted(khoa)}"
+
+
+# ---------------------------------------------------------------------------
+# SƠ ĐỒ BƯỚC PHẢI LÀ CHUỖI CỦA THẺ (06/09/2026)
+#
+# Máy chủ từ 06/09 chạy đúng `cac_phong` của thẻ. Màn hình thì vẫn có 5 ô
+# `step_*` GÕ CỨNG trong HTML, nên một thẻ 2 phòng hiện 5 ô và ba ô đứng im mãi
+# mãi — một lời nói dối MỚI đặt lên đúng cái vỏ vừa làm cho trong suốt.
+#
+# BỐN BÀI DƯỚI LÀ CỬA CHỐNG HỒI QUY, KHÔNG PHẢI BẰNG CHỨNG. Chúng soi cấu
+# trúc tệp; thứ chứng minh màn hình chạy đúng là lượt TỰ BẤM trên máy chủ thật
+# (cổng 8893, 06/09/2026)::
+#
+#   card_system_audit   2 ô: gamma · omega        PASS 2/2 · 48 s
+#   card_code_doctor    2 ô: delta · gamma        PASS 2/2 · 48 s
+#   đồng hồ poll        10,0 -> 16,0 -> ... -> 47,0 s  (đúng 1 s mỗi nhịp)
+#   gieo chặn danh mục  0 ô + câu "chưa nạp được", rồi ô hiện dần theo máy chủ
+#
+# `delta` trước lượt ấy CHƯA TỪNG chạy từ thẻ nào, dù bốn thẻ khai nó.
+
+HTML = PROJECT_ROOT / "interface" / "web" / "noi_bo.html"
+CSS = PROJECT_ROOT / "interface" / "web" / "noi_bo.css"
+
+
+def test_HTML_KHONG_con_go_cung_o_buoc_nao():
+    """Hàng sơ đồ phải RỖNG trong HTML — mọi ô do JS dựng từ chuỗi của thẻ."""
+    chu = HTML.read_text(encoding="utf-8")
+    m = re.search(r'<div class="pipeline-visual-flow" id="pipelineVisualFlow">'
+                  r'(.*?)</div>', chu, re.S)
+    assert m, "không tìm thấy hàng sơ đồ `pipelineVisualFlow`"
+    assert not m.group(1).strip(), (
+        f"hàng sơ đồ còn nội dung gõ cứng: {m.group(1)[:120]!r}")
+    # Và không ô `step_*` nào sót lại ở chỗ khác trong tệp.
+    assert not re.search(r'id="step_', chu), "còn id ô bước gõ cứng trong HTML"
+
+
+def test_JS_NAP_danh_muc_the_tu_may_chu():
+    """`/api/pipeline/presets` có sẵn từ lâu mà màn hình chưa bao giờ gọi."""
+    than = _than_ham_js("taiTheQuyTrinh")
+    assert "'/api/pipeline/presets'" in than, "không gọi danh mục thẻ"
+    assert "so_do_mac_dinh" in than, "không lấy chuỗi mặc định từ máy chủ"
+
+    khoi_dong = _than_ham_js("initCommandCenter")
+    assert re.search(r"await\s+taiTheQuyTrinh\s*\(", khoi_dong), (
+        "khởi tạo không CHỜ danh mục — bấm thẻ trước khi nạp xong thì vẽ nhầm")
+
+
+def test_KHONG_con_bang_o_buoc_GO_CUNG_trong_JS():
+    """`O_BUOC` cũ ánh xạ đúng 5 phòng; phòng thứ sáu thì không có chỗ hiện."""
+    chu = _bo_chu_thich_js(JS.read_text(encoding="utf-8"))
+    assert not re.search(r"\bconst\s+O_BUOC\b", chu), (
+        "bảng ô bước gõ cứng đã quay lại")
+
+
+def test_ve_so_do_CUA_THE_duoc_bam_TRUOC_khi_goi_chuoi():
+    """Vẽ chuỗi của thẻ, và vẽ TRƯỚC lượt gọi — sau thì màn hình sai vài giây."""
+    than = _than_ham_js("kichHoatPipeline")
+    assert re.search(r"state\.theQuyTrinh\s*\[\s*presetId\s*\]", than), (
+        "không tra thẻ được bấm trong danh mục đã nạp")
+    # Hỏi THAM SỐ TRUYỀN VÀO, không chỉ hỏi cái tên hàm. Gieo
+    # `veSoDoBuoc(state.soDoMacDinh)` thì dòng tra thẻ ở trên VẪN CÒN nguyên và
+    # bài này xanh mà mù — bệnh `x in y`, bắt được bằng phép gieo.
+    m = re.search(r"veSoDoBuoc\(([^;]*)\);", than)
+    assert m, "không gọi `veSoDoBuoc` trong hàm chạy pipeline"
+    assert "the.so_do" in m.group(1), (
+        f"vẽ sơ đồ không lấy từ thẻ được bấm: veSoDoBuoc({m.group(1)})")
+    i_ve = than.index("veSoDoBuoc")
+    i_chay = than.index("'/api/pipeline/run'")
+    assert i_ve < i_chay, "vẽ sơ đồ SAU khi gọi chuỗi — sai thứ tự"
+
+
+def test_o_thieu_thi_DUNG_them_o_chu_khong_bo_qua_im_lang():
+    """Bước máy chủ có chạy mà màn hình không có ô thì nó biến mất không dấu vết.
+
+    Gieo thật trong trình duyệt 06/09: chặn `/api/pipeline/presets` thì hàng sơ
+    đồ rỗng, rồi ô `gamma` hiện ra khi máy chủ báo, kèm chú *"không có trong sơ
+    đồ ban đầu"*.
+    """
+    than = _than_ham_js("veMotBuoc")
+    # Soi NHÁNH NGAY SAU lượt tra ô, không quét cả thân hàm: cuối nhánh dựng ô
+    # vẫn còn một `if (!el) return;` hợp lệ (tra lại mà vẫn không thấy). Quét cả
+    # thân thì bài này đỏ oan — nó đã đỏ oan đúng như thế ở lượt chạy đầu.
+    m = re.search(r"document\.getElementById\(idO\(phongId\)\);\s*"
+                  r"if\s*\(\s*!el\s*\)\s*(\{|return)", than)
+    assert m, "không tìm thấy nhánh xử lý ô thiếu trong `veMotBuoc`"
+    assert m.group(1) == "{", "còn nhánh bỏ qua im lặng khi thiếu ô"
+    assert "insertAdjacentHTML" in than, "không dựng ô cho bước lạ"
+
+
+def test_CSS_co_lop_cho_buoc_HONG():
+    """Thiếu `.flow-step.fail` thì bước hỏng chỉ đổi CHỮ, viền không đổi.
+
+    Nó thiếu thật từ 05/09 tới 06/09: `veMotBuoc` gán class `fail` cho cả FAIL
+    lẫn KHONG_CHAY_DUOC, và CSS chưa bao giờ có lớp ấy.
+    """
+    chu = CSS.read_text(encoding="utf-8")
+    assert re.search(r"\.flow-step\.fail\s*\{", chu), "CSS thiếu `.flow-step.fail`"
+    assert re.search(r"\.flow-empty\s*\{", chu), "CSS thiếu `.flow-empty`"

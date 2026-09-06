@@ -157,9 +157,16 @@ AURA viết kịch bản, Alpha dựng video. Mối nối là tham số `van_ban
   > thắng tuốt**: đề giải thích `3/5 > 1/5` (gấp ba), đề hư cấu `4/5 > 3/5`.
   > Mỗi lời nhắc thắng trên thể loại của chính nó.
 
-  > **KHÔNG có máy đoán thể loại — người gọi đã biết.** `card_novel_writer` là
-  > truyện; `card_video_shorts` và `card_deep_scout` là bài nói. Dựng thêm một
-  > bộ đoán là dựng thêm một chỗ đoán sai, cho một dữ kiện đã có sẵn.
+  > **KHÔNG có máy đoán thể loại — người gọi đã biết.** Dựng thêm một bộ đoán
+  > là dựng thêm một chỗ đoán sai, cho một dữ kiện đã có sẵn.
+  >
+  > Thẻ nào khai gì (06/09/2026): `card_fullstack_builder` là **`bai_noi`** —
+  > đề của nó là đề giải thích, đo được `truyen 0/5 · bai_noi 4/5`. Bốn thẻ
+  > gọi `aura` còn lại khai `truyen`. `card_video_shorts` và `card_deep_scout`
+  > **từng** được xếp là bài nói ở đoạn trên; chạy thật 05/09 trên đề của thẻ
+  > video thì `bai_noi` trượt 3/3 vì câu quá dài, nên chúng đã rút về `truyen`.
+  > Câu ấy trong bản 05/09 là **suy từ loại đề, không phải đo trên đề của
+  > thẻ** — và đó chính là chỗ nó sai.
 
   > **PHÉP ĐO NÀY TỪNG KHÔNG KẾT LUẬN ĐƯỢC, và lý do đáng ghi.** Lần chạy
   > 04/09 cho `0/5 · 2/5 · 0/5 · 2/5` — không có đường chéo. Nguyên nhân là
@@ -172,6 +179,28 @@ AURA viết kịch bản, Alpha dựng video. Mối nối là tham số `van_ban
   > **Giới hạn:** n=5 mỗi ô, và bốn ô có số lượt đo được khác nhau (5·4·3·3).
   > `1/5` so `3/5` là chênh gấp ba nhưng vẫn n=5 — đủ để đổi, chưa đủ để gọi
   > là chứng minh.
+
+  > **ĐO LẠI TRÊN MỘT ĐỀ THỨ HAI (06/09/2026)** — đề mặc định của
+  > `card_fullstack_builder`, *"Bảng điều khiển tài chính cá nhân tương tác"*,
+  > cũng là một đề GIẢI THÍCH. Ghép đôi theo hạt giống, 5 hạt, mỗi bên 1 lượt:
+  >
+  > ```
+  > hạt  truyen                              bai_noi
+  > 1    KHONG_DAT  466 từ · 25,89 từ/câu    DAT  245 từ · 20,42
+  > 2    KHONG_DAT  câu mở không nêu đề      KHONG_DAT  22,75 (trần 22,73)
+  > 3    KHONG_DAT  430 từ · 23,89 từ/câu    DAT  250 từ · 20,83
+  > 4    KHONG_DAT  câu mở không nêu đề      DAT  243 từ · 22,09
+  > 5    KHONG_DAT  câu mở không nêu đề      DAT  236 từ · 21,45
+  >                 ĐẠT 0/5                       ĐẠT 4/5
+  > ```
+  >
+  > Đường chéo giữ nguyên, và rõ hơn lần đầu: `0/5` so `4/5`. Lời truyện trượt
+  > **cả hai** cửa — 2/5 vì câu quá dài, 3/5 vì câu mở dựng cảnh nên không nêu
+  > đề. Lượt `bai_noi` trượt duy nhất thua trần **0,02 từ/câu**.
+  >
+  > Điều này trả lời đúng câu mà chú thích của `card_video_shorts` để lại:
+  > *"n=5 trên một đề không suy ra được đề khác"*. Cách trả lời không phải là
+  > suy — là **đo trên đề thứ hai**.
 
 * **Sàn 11 câu, trần 22,7 từ/câu (đổi 04/09/2026, trước đó 13 và 19,2):**
   - `SO_CAU_KHAC_MIN` **13 → 11**.

@@ -311,6 +311,37 @@ THE_PHAI_NOI_GIOI_HAN = {
 }
 
 
+# Thể loại lời nhắc của từng thẻ gọi `aura`, chép TAY từ các lượt CHẠY THẬT —
+# không phải từ loại đề nghe có vẻ đúng. Suy từ loại đề chính là chỗ bản 05/09
+# sai: nó xếp `card_video_shorts` là "bài nói" vì đề nghe như giải thích, chạy
+# thật thì `bai_noi` trượt 3/3 vì câu quá dài.
+#
+#   card_video_shorts       truyen   PASS 4/4 · video 59,46 s        (06/09)
+#   card_deep_scout         truyen   PASS 3/3                        (06/09)
+#   card_novel_writer       truyen   PASS 2/2                        (06/09)
+#   card_fullstack_builder  bai_noi  truyen 0/5 · bai_noi 4/5 rồi
+#                                    PASS 3/3 · 111s · 19 hiện vật   (06/09)
+DAC_TA_THE_LOAI_THEO_THE = {
+    "card_video_shorts": "truyen",
+    "card_deep_scout": "truyen",
+    "card_novel_writer": "truyen",
+    "card_fullstack_builder": "bai_noi",
+}
+
+
+def test_the_loai_tung_the_KHOP_luot_chay_that():
+    """Đổi thể loại một thẻ là đổi hành vi — phải đo lại, không được đoán.
+
+    Bài này chốt bằng bảng chép tay ở trên, nên lật một thể loại trong danh mục
+    mà không đo lại thì nó đỏ. Đó là mục đích: bắt người sửa phải đi qua phép
+    đo, đúng như hằng số chép tay ở `tests/test_phong_alpha_de_ra_video_that.py`.
+    """
+    thuc = {t["id"]: t.get("the_loai") for t in _api.DANH_SACH_THE_QUY_TRINH
+            if "aura" in t["cac_phong"]}
+    assert thuc == DAC_TA_THE_LOAI_THEO_THE, (
+        f"danh mục khai {thuc}, đặc tả đo được {DAC_TA_THE_LOAI_THEO_THE}")
+
+
 @pytest.mark.parametrize("pid", sorted(THE_PHAI_NOI_GIOI_HAN))
 def test_the_PHAI_NOI_RA_gioi_han_cua_no(pid):
     """Ca đối chứng cho bộ chặn từ: nó không được thưởng cho việc im lặng.

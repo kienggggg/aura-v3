@@ -847,9 +847,12 @@ def test_tra_the_loai_KHONG_no_voi_preset_la():
     assert the_loai_cua_the("khong_co_that") == "truyen"
 
     # Ca đối chứng: hàm phải ĐỌC ĐƯỢC thứ thẻ khai, không phải luôn trả mặc
-    # định. Từ 05/09/2026 không thẻ THẬT nào khai `bai_noi` nữa (rút sau khi
-    # chạy thật thấy hồi quy), nên phải bơm một thẻ vào — nếu không thì
+    # định. Bơm một thẻ vào thay vì dựa vào thẻ thật — nếu không thì
     # `return "truyen"` vô điều kiện cũng qua bài này.
+    #
+    # `card_fullstack_builder` khai `bai_noi` từ 06/09/2026 (đo ghép đôi 5 hạt
+    # trên chính đề của nó: truyen 0/5, bai_noi 4/5). Nhưng bài này vẫn bơm thẻ
+    # giả: dựa vào một thẻ thật thì cửa chết theo lần sửa danh mục tiếp theo.
     import interface.noi_bo_api as _api
 
     goc = _api.DANH_SACH_THE_QUY_TRINH
@@ -898,10 +901,10 @@ def test_the_loai_DI_TOI_viet_kich_ban_that_su(monkeypatch):
     monkeypatch.setattr(_pnb, "PHONG",
                         {k: _phong for k in ("zeta", "omega", "gamma", "beta", "delta")})
 
-    # Bơm một thẻ khai `bai_noi`. Từ 05/09/2026 không thẻ THẬT nào khai nữa —
-    # rút sau khi chạy thật thấy hồi quy (3/3 trượt cửa độ dài trên chính đề
-    # mặc định). Nhưng bộ máy vẫn phải chứng minh nó truyền đúng giá trị, nếu
-    # không thì `the_loai="truyen"` gõ cứng cũng qua bài này.
+    # Bơm một thẻ khai `bai_noi` thay vì dùng thẻ thật: bộ máy phải chứng minh
+    # nó truyền đúng giá trị, và cửa không được chết theo lần sửa danh mục kế
+    # tiếp. (`card_fullstack_builder` khai `bai_noi` từ 06/09/2026; thẻ video
+    # vẫn `truyen` — rút 05/09 sau khi đo 3/3 trượt cửa độ dài trên đề của nó.)
     monkeypatch.setattr(
         _api, "DANH_SACH_THE_QUY_TRINH",
         list(_api.DANH_SACH_THE_QUY_TRINH) + [

@@ -613,6 +613,7 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
 #   card_deep_scout           PASS 3/3 · 217s ·  3            "đối chiếu bằng chứng URL" — không đối chiếu
 #   card_novel_writer         PASS 2/2 · 170s ·  2            "3 chương · TTR · giác quan" — 1 kịch bản 240 từ
 #   card_fullstack_builder    FAIL 0/3 · 287s ·  0            "HTML5/CSS3 + API aiohttp" — 0 hiện vật
+#                             -> sau khi đổi `bai_noi`: PASS 3/3 · 111s · 19 hiện vật
 #   card_security_guard       PASS 3/3 ·  83s ·  3            "chống lộ API Key · Path · injection" — không cái nào
 #   card_system_audit         PASS 2/2 ·  48s ·  2            "đo RAM/CPU" — không đo CPU
 #
@@ -727,17 +728,30 @@ DANH_SACH_THE_QUY_TRINH = [
     },
     {
         "id": "card_fullstack_builder",
-        # CHƯA ĐÚNG, và cố ý để nguyên mặc định thay vì đoán một thể
-        # loại cho có. Thẻ này hứa "thiết kế giao diện HTML5/CSS3 kèm
-        # API aiohttp", nhưng đo 05/09/2026 thì chuỗi thật là:
-        #   aura viết TRUYỆN NGẮN về "bảng điều khiển tài chính"
-        #   delta quét AST của chính core/*.py — BỎ QUA đề tài
-        #   alpha dựng video dọc 60 giây từ truyện ấy
-        # Không bước nào thiết kế giao diện. Gán `bai_noi` cho nó là
-        # làm cho một thẻ hỏng trông đỡ hỏng hơn.
-        "the_loai": "truyen",
-        "ten": "Viết → Quét AST → Dựng Video (đang gãy)",
-        "bieu_tuong": "⚠️",
+        # ĐỔI SANG `bai_noi` NGÀY 06/09/2026, sau khi ĐO — không phải sau khi
+        # đoán. Chú thích 05/09 ở đây từ chối đổi với đúng lý do: *"gán `bai_noi`
+        # cho nó là làm cho một thẻ hỏng trông đỡ hỏng hơn"*. Lý do ấy đứng
+        # vững chừng nào lời thẻ còn sai; nay lời thẻ đã sửa theo lượt chạy, và
+        # câu hỏi còn lại là một câu ĐO ĐƯỢC.
+        #
+        # Ghép đôi theo hạt giống, trên CHÍNH đề mặc định của thẻ ("Bảng điều
+        # khiển tài chính cá nhân tương tác"), 5 hạt, mỗi bên 1 lượt model:
+        #
+        #   hạt  truyen                              bai_noi
+        #   1    KHONG_DAT  466 từ · 25,89 từ/câu    DAT  245 từ · 20,42
+        #   2    KHONG_DAT  câu mở không nêu đề      KHONG_DAT  22,75 (trần 22,73)
+        #   3    KHONG_DAT  430 từ · 23,89 từ/câu    DAT  250 từ · 20,83
+        #   4    KHONG_DAT  câu mở không nêu đề      DAT  243 từ · 22,09
+        #   5    KHONG_DAT  câu mở không nêu đề      DAT  236 từ · 21,45
+        #                   ĐẠT 0/5                       ĐẠT 4/5
+        #
+        # Trên đề GIẢI THÍCH, lời truyện trượt CẢ HAI cửa: 2/5 vì câu quá dài,
+        # 3/5 vì câu mở dựng cảnh nên không nêu đề. Đúng thứ bảng 2×2 ngày 05/09
+        # dự đoán — nay đo trên chính đề này, nên không còn phải suy từ đề khác.
+        # Lượt `bai_noi` trượt duy nhất thua trần **0,02 từ/câu**.
+        "the_loai": "bai_noi",
+        "ten": "Viết Lời Thoại → Quét AST → Dựng Video",
+        "bieu_tuong": "🎥",
         "mau_sac": "#06B6D4",
         # Chạy thật 06/09 trên chính đề mặc định của thẻ: **FAIL 0/3 · 287 giây
         # · 0 hiện vật**. `aura` trượt cửa độ dài (23,89 từ/câu, trần 22,7) nên
@@ -748,7 +762,13 @@ DANH_SACH_THE_QUY_TRINH = [
         # THÍCH, và lời nhắc truyện viết câu dài trên đề giải thích — đúng ca đã
         # đo 05/09. Đổi đề để thẻ trông chạy được là làm cho một thẻ hỏng trông
         # đỡ hỏng hơn, đúng thứ chú thích 05/09 ngay dưới đây từ chối làm.
-        "mo_ta": "CHƯA CHẠY ĐƯỢC: 0/3 bước, 0 hiện vật trên đề mặc định của chính thẻ (đo 06/09/2026). Chuỗi khai là aura → delta → alpha, không có bước nào thiết kế giao diện hay viết API.",
+        # Chạy lại sau khi đổi thể loại, cùng đề, cùng máy:
+        #   trước  FAIL 0/3 · 287 s · 0 hiện vật
+        #   sau    PASS 3/3 · 111 s · 19 hiện vật · video 58,87 s
+        # Câu mở của lượt đạt: *"Ngày hôm nay tôi sẽ cùng bạn khám phá cách
+        # hoạt động của bảng điều khiển tài chính cá nhân tương tác."* — nêu đề
+        # ngay, đúng việc lời `bai_noi` sinh ra để làm.
+        "mo_ta": "Viết lời thoại video giải thích, quét AST toàn kho, rồi dựng video dọc 720×1280 kèm giọng đọc và phụ đề. CHƯA thiết kế giao diện hay viết API — và bước quét AST không đọc chủ đề, nó quét core/*.py.",
         "cac_phong": ["aura", "delta", "alpha"],
         "tham_so_mac_dinh": "Bảng điều khiển tài chính cá nhân tương tác"
     },

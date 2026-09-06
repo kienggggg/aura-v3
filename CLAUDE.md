@@ -921,6 +921,42 @@ Và `card_fullstack_builder` **gãy trên chính đề mặc định của nó**
 hiện vật, vì `aura` cho 23,89 từ/câu (trần 22,7). Không đổi đề cho nó qua cửa —
 đổi đề để một thẻ hỏng trông đỡ hỏng là đúng thứ đã từ chối làm ngày 05/09.
 
+### Một lời từ chối cũ có thể hết hạn, và cách kiểm là đo
+
+Chú thích 05/09 ở `card_fullstack_builder` viết: *"gán `bai_noi` cho nó là làm
+cho một thẻ hỏng trông đỡ hỏng hơn"*. Câu ấy **đúng lúc nó được viết** — lúc ấy
+thẻ hứa "thiết kế giao diện HTML5/CSS3 kèm API aiohttp", nên đổi thể loại chỉ
+làm một lời hứa sai chạy trơn hơn.
+
+Chiều 06/09, sau khi lời thẻ đã sửa theo lượt chạy, câu hỏi còn lại không còn
+là câu đạo đức nữa mà là câu đo được. Ghép đôi theo hạt giống, trên **chính đề
+của thẻ**, 5 hạt:
+
+```
+hạt  truyen                              bai_noi
+1    KHONG_DAT  466 từ · 25,89 từ/câu    DAT  245 từ · 20,42
+2    KHONG_DAT  câu mở không nêu đề      KHONG_DAT  22,75 (trần 22,73)
+3    KHONG_DAT  430 từ · 23,89 từ/câu    DAT  250 từ · 20,83
+4    KHONG_DAT  câu mở không nêu đề      DAT  243 từ · 22,09
+5    KHONG_DAT  câu mở không nêu đề      DAT  236 từ · 21,45
+                ĐẠT 0/5                       ĐẠT 4/5
+```
+
+Lời truyện trượt **cả hai** cửa, và hai kiểu trượt khác nhau: 2/5 vì câu quá
+dài, 3/5 vì câu mở dựng cảnh nên không nêu đề. Chạy lại cả chuỗi, cùng đề, cùng
+máy: **FAIL 0/3 · 287 s · 0 hiện vật** → **PASS 3/3 · 111 s · 19 hiện vật**,
+video thật 58,87 giây.
+
+**Đề vẫn nguyên.** Thứ đổi là lời nhắc — chỗ thật sự hỏng.
+
+Và điều này trả đúng món nợ mà chú thích của `card_video_shorts` để lại: *"n=5
+trên một đề không suy ra được đề khác"*. Cách trả không phải là suy, là **đo
+trên đề thứ hai**. Bảng 2×2 ngày 05/09 dự đoán đúng, nhưng nó chỉ trở thành
+bằng chứng cho thẻ này sau khi có năm lượt chạy trên đề này.
+
+**Một câu "không nên làm" được viết ra vì một lý do; khi lý do ấy mất, câu ấy
+phải được hỏi lại.** Cách hỏi lại là chạy, không phải đọc lại câu.
+
 **Một bản sao chưa ai đọc thì vô hại. Bản sao được đưa lên màn hình thì thành
 lời hứa.** Trước khi chuyển văn bản từ chỗ ít người nhìn sang chỗ nhiều người
 nhìn, hỏi: câu này đã có phép đo nào đứng sau chưa? Ở đây câu trả lời là 1/8.

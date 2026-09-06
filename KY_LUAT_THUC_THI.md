@@ -887,6 +887,108 @@ Kiểm Toán Bảo Mật & Secret Leak  -> Quét AST Toàn Kho (chưa quét kho�
   thẻ có việc lượt chạy bác thì bảy `mo_ta` phải nói ra giới hạn, chốt theo
   từng thẻ.
 
+### 5d. PHÒNG `epsilon` — DỊCH MÃ, VÀ CHỈ KHAI ĐẠT CHO THỨ KIỂM ĐƯỢC (06/09/2026)
+
+Đăng ký **TRƯỚC KHI VIẾT MÃ**.
+
+`core/polyglot.py:574 chuyen_doi_ngon_ngu` dịch **thật** — đi bằng
+`ast.NodeVisitor`, 5 nút, mỗi ngôn ngữ ra một dạng khác nhau. Nhưng **không
+phòng nào gọi nó**, nên thẻ Polyglot phải viết *"chưa dịch mã"* trong khi bộ
+dịch nằm ngay trong kho.
+
+**Đo trước khi nối. Hỏi trình biên dịch THẬT, không hỏi `status`:**
+
+```
+             polyglot tự khai   HỎI TRÌNH BIÊN DỊCH
+bash         PASS               FAIL                <-- LỆCH
+javascript   PASS               PASS
+sql          FAIL               (không có bộ kiểm)
+cpp go rust typescript  PASS    KHÔNG ĐO ĐƯỢC
+```
+
+Máy này chỉ có `node` và `bash`. Không có go · rustc · g++ · sqlite3.
+
+Hai chỗ hỏng đọc thấy mà **không bộ kiểm nào trên máy này chứng minh được**:
+`go` khai `func Fibonacci` rồi gọi `fibonacci` (hàm không tồn tại); `rust` sinh
+`fn fibonacci(n)` không kiểu tham số, không kiểu trả về. Ghi lại là **đọc thấy**,
+không phải **đo được** — hai câu khác nhau.
+
+**Đặc tả — chép TAY vào cửa canh:**
+
+* `DAC_TA_EPSILON_KIEM_DUOC = javascript · bash · python` — đúng ba ngôn ngữ có
+  bộ kiểm trên máy này. Mọi ngôn ngữ khác trả `KHONG_DO_DUOC`, **không** trả
+  `PASS`. `node --check` · `bash -n` · `ast.parse`.
+* `DAC_TA_EPSILON_DICH_MAC_DINH = bash · javascript` — **đích mặc định bỏ chính
+  ngôn ngữ nguồn.** `python` ở lại danh sách KIỂM ĐƯỢC (nó là bộ kiểm), nhưng
+  làm ĐÍCH thì nó là phép đồng nhất.
+
+  > **PHÉP ĐỒNG NHẤT LÀ MỘT ĐIỂM TỰ THƯỞNG.** Bản đầu của phòng xin cả ba ngôn
+  > ngữ, và `python` ra `PASS`: `chuyen_doi_ngon_ngu(ma, "python", "python")`
+  > trả lại **y byte** mã vào, rồi `ast.parse` đạt — nhưng nó đạt vì MÃ VÀO hợp
+  > lệ, thứ đã kiểm ở đầu hàm. Bắt được bằng cách mở `ban_dich.py` ra so với mã
+  > vào, không bằng đọc mã. Cùng bẫy tautological đã dính 02/09 và 04/09.
+  >
+  > Và nó kéo theo cái thứ hai: `mo_ta` của thẻ nói *"sang JavaScript và Bash"*
+  > trong khi mặc định xin **ba**. Đúng bệnh cả ngày hôm nay đi vá — thẻ khai
+  > một đằng, máy chạy một nẻo — tự tạo ra ngay trong lượt vá.
+* **Trạng thái phòng, ba nhánh không gộp:** `FAIL` khi có ít nhất một ngôn ngữ
+  *kiểm được mà hỏng* · `KHONG_CHAY_DUOC` khi **bất kỳ ngôn ngữ nào được XIN mà
+  chưa đo được** (kể cả khi mọi ngôn ngữ còn lại đều đạt), hoặc mã vào không
+  phải Python hợp lệ · `PASS` chỉ khi **đo đủ mọi ngôn ngữ được xin và tất cả
+  đều đạt**.
+
+  > **PASS ĐÒI ĐO ĐỦ, KHÔNG CHỈ ĐÒI KHÔNG AI HỎNG.** Bản đầu trả `PASS` khi
+  > `hong` rỗng và có ≥1 cái đạt, và nó đẻ ra **hai phán quyết cho cùng một
+  > lượt**:
+  >
+  > ```
+  > chạy từ Git Bash      bash có trên PATH  -> bản dịch bị bác  -> FAIL
+  > chạy từ máy chủ       bash KHÔNG trên PATH -> KHÔNG ĐO ĐƯỢC -> PASS
+  > ```
+  >
+  > Cùng mã, cùng đề, khác nhau ở **PATH của tiến trình gọi**. Một ngôn ngữ
+  > được xin mà chưa từng đo thì cả lượt chưa kết luận được; gộp nó vào `PASS`
+  > là đúng bệnh *"chưa đo được đội lốt đã đo, không sao"*.
+
+* **Tìm trình kiểm bằng đường dẫn tuyệt đối, đừng dựa vào PATH.** `shutil.which`
+  trước, rồi tới danh sách chỗ quen. `bash.exe` **có thật** trong thư mục cài
+  Git trên máy này — chỉ là PATH của tiến trình máy chủ không thấy. Cùng bài với
+  `System.Speech` báo máy không có giọng tiếng Việt trong khi registry có hai.
+* **Hiện vật phải ghi TRÌNH NÀO đã chấm** (`trinh_kiem`). Hai máy có thể ra hai
+  phán quyết cho cùng một bản dịch; bằng chứng phải nói ra ai là người chấm.
+* **Mỗi ngôn ngữ để lại một tệp thật trên đĩa** kèm SHA-256 tính từ đĩa, cộng
+  `ket_qua.json` ghi phán quyết từng ngôn ngữ.
+* **`yeu_cau` là MÃ NGUỒN Python.** Đây là lần đầu tham số ấy được đọc thật:
+  `card_polyglot_transpiler` truyền cả đoạn mã vào `chu_de` từ đầu, và `delta`
+  thì bỏ qua nó.
+* **Thẻ đổi `cac_phong`** `delta · gamma · omega` → `epsilon · gamma · omega`.
+  Bỏ `delta` vì bước ấy quét `core/*.py`, không liên quan tới đề.
+
+**THẺ NÀY SẼ ĐỎ, VÀ ĐỎ LÀ ĐÚNG.** `bash` sinh mã hỏng thật
+(`if [ n <= 1 ]`, `echo fibonacci(n - 1)`), nên phòng sẽ trả `FAIL` ngay ngày
+đầu. Sếp quyết lấy **đủ ba ngôn ngữ kiểm được** thay vì chỉ xin `javascript`
+cho xanh: cái đỏ ấy chỉ đúng chỗ cần sửa tiếp, thay vì giấu đi bằng cách không
+hỏi.
+
+**KHÔNG sửa bộ dịch trong lượt này.** Trộn hai việc thì không biết con số nào
+của việc nào.
+
+**Chạy thật cả chuỗi thẻ sau khi nối:**
+
+```
+trước  PASS 3/3 · 39s · 3 hiện vật   (delta·gamma·omega — 0 dòng mã dịch)
+sau    FAIL 0/3 ·  0s · 3 hiện vật   (epsilon·gamma·omega — 2 bản dịch thật)
+       epsilon FAIL: bash — line 9: `    echo fibonacci(n - 1) + fibonacci(n - 2)'
+       javascript qua `node --check`
+```
+
+Thẻ nhanh hơn ~200 lần và **đỏ**. Cái đỏ ấy là bản dịch bash thật sự không
+parse nổi; cái xanh cũ là một phép quét AST không liên quan gì tới đề.
+
+**Còn nợ:** `bash` và `go` sinh mã hỏng (`go` khai `func Fibonacci` rồi gọi
+`fibonacci`). Chỗ `go` là **đọc thấy**, không phải **đo được** — máy này không
+có trình biên dịch Go.
+
 ## CHƯƠNG III: CƠ CHẾ BẢO MẬT & BỘ LỌC DỮ LIỆU NHẠY CẢM (REDACTION)
 - Mọi file log lỗi (`raw/error.txt`) phải đi qua bộ lọc tập trung (Centralized Redactor).
 - Tự động che giấu mọi dạng key/token: Bearer tokens, OpenAI/Gemini/Anthropic/OpenRouter API keys, Basic Auth credentials trong URL.

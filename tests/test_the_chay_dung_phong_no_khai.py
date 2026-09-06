@@ -85,8 +85,7 @@ def phong_gia(monkeypatch):
     monkeypatch.setattr(_vt, "viet_kich_ban", _aura)
     monkeypatch.setattr(_pa, "dung_video", _alpha)
     monkeypatch.setattr(_pnb, "PHONG",
-                        {k: _mot_phong(k)
-                         for k in ("zeta", "omega", "gamma", "delta", "beta")})
+                        {k: _mot_phong(k) for k in _pnb.PHONG})
     return da_goi
 
 
@@ -263,19 +262,24 @@ def test_mau_dung_dang_rrggbb(ten_ds):
             f"{ten_ds} · {t['id']} khai màu {t['mau_sac']!r}")
 
 
-# Ba việc KHÔNG phòng nào làm, đo ngày 06/09/2026 bằng cách chạy thật cả 8 thẻ
-# rồi mở hiện vật ra đọc. Thẻ khai gì cũng được, trừ ba thứ này.
+# Ba việc, và PHÒNG NÀO cung cấp được việc ấy. Thẻ chỉ được hứa một việc nếu
+# chuỗi của nó có phòng làm được việc đó. Tập rỗng nghĩa là **chưa phòng nào**.
 #
-#   tự sửa mã     `delta` chỉ chẩn đoán — `KY_LUAT_THUC_THI.md` Chương II mục 5
-#                 ghi thẳng là cấm, và `phong_delta` không sinh bản vá nào
-#   dịch mã       bộ dịch ở `/api/polyglot/translate`, KHÔNG có phòng nào trong
-#                 `PHONG` gọi tới; chạy thẻ "Cross-Compiler" ra 0 dòng dịch
-#   quét khoá     `quet_ast` đếm tệp · dòng · hàm · lớp và bắt lỗi cú pháp;
-#                 không tìm chuỗi khoá, không kiểm đường dẫn
-VIEC_KHONG_PHONG_NAO_LAM = {
-    "tự sửa mã": ("auto-fix", "tự sửa", "sinh bản vá", "tự động vá"),
-    "dịch mã": ("cross-compiler", "transpiler", "dịch mã", "chuyển đổi logic"),
-    "quét khoá": ("secret leak", "quét khoá", "chống lộ api", "rò rỉ"),
+#   tự sửa mã     TẬP RỖNG. `delta` chỉ chẩn đoán — `KY_LUAT_THUC_THI.md`
+#                 Chương II mục 5 ghi thẳng là cấm.
+#   dịch mã       `epsilon` (từ 06/09/2026 chiều). Trước đó là tập rỗng: bộ dịch
+#                 nằm ở `/api/polyglot/translate` mà không phòng nào gọi tới,
+#                 nên thẻ "Cross-Compiler" chạy ra 0 dòng dịch.
+#   quét khoá     TẬP RỖNG. `quet_ast` đếm tệp · dòng · hàm · lớp và bắt lỗi cú
+#                 pháp; không tìm chuỗi khoá, không kiểm đường dẫn.
+#
+# Bảng này ĐỔI THEO ĐẶC TẢ, không đổi theo lời thẻ. Muốn cho một thẻ nói "dịch
+# mã" thì phải dựng phòng dịch trước — đúng thứ vừa làm.
+PHONG_LAM_DUOC_VIEC = {
+    "tự sửa mã": (set(), ("auto-fix", "tự sửa", "sinh bản vá", "tự động vá")),
+    "dịch mã": ({"epsilon"},
+                ("cross-compiler", "transpiler", "dịch mã", "chuyển đổi logic")),
+    "quét khoá": (set(), ("secret leak", "quét khoá", "chống lộ api", "rò rỉ")),
 }
 
 # Cụm phủ định phải được gỡ TRƯỚC khi soi, nếu không bài này cấm luôn việc nói
@@ -283,22 +287,39 @@ VIEC_KHONG_PHONG_NAO_LAM = {
 PHU_DINH = ("không ", "chưa ", "khong ", "chua ")
 
 
-@pytest.mark.parametrize("viec", sorted(VIEC_KHONG_PHONG_NAO_LAM))
-def test_KHONG_the_nao_duoc_hua_viec_khong_phong_nao_lam(viec):
-    """Tên và mô tả thẻ không được hứa ba việc đã đo là không có.
+@pytest.mark.parametrize("viec", sorted(PHONG_LAM_DUOC_VIEC))
+def test_the_chi_duoc_hua_viec_CHUOI_CUA_NO_lam_duoc(viec):
+    """Thẻ hứa một việc thì chuỗi của nó phải có phòng làm được việc ấy.
 
     ĐÂY LÀ BỘ CHẶN TỪ, KHÔNG PHẢI PHÉP CHỨNG MINH — nói tránh đi thì nó trượt.
-    Nó giữ cho đúng những cụm đã nằm trên màn hình sáng 06/09 không quay lại:
-    *"Auto-Fix"* · *"Cross-Compiler"* · *"Secret Leak"* · *"sinh bản vá tự
-    động"* · *"chống lộ API Key"*.
+    Nó giữ cho những cụm đã nằm trên màn hình sáng 06/09 không quay lại khi
+    chưa có phòng đứng sau: *"Auto-Fix"* · *"Cross-Compiler"* · *"Secret
+    Leak"* · *"sinh bản vá tự động"* · *"chống lộ API Key"*.
     """
+    lam_duoc, cac_cum = PHONG_LAM_DUOC_VIEC[viec]
     for t in _api.DANH_SACH_THE_QUY_TRINH:
+        if lam_duoc & set(t["cac_phong"]):
+            continue                       # chuỗi có phòng làm được — cứ hứa
         chu = (t["ten"] + " " + t["mo_ta"]).lower()
-        for cum in VIEC_KHONG_PHONG_NAO_LAM[viec]:
+        for cum in cac_cum:
             for pd in PHU_DINH:
                 chu = chu.replace(pd + cum, " ")
-        dinh = [c for c in VIEC_KHONG_PHONG_NAO_LAM[viec] if c in chu]
-        assert not dinh, f"{t['id']} hứa {dinh} — không phòng nào {viec}"
+        dinh = [c for c in cac_cum if c in chu]
+        assert not dinh, (
+            f"{t['id']} hứa {dinh} nhưng chuỗi {t['cac_phong']} "
+            f"không có phòng nào {viec}")
+
+
+@pytest.mark.parametrize("viec", sorted(PHONG_LAM_DUOC_VIEC))
+def test_phong_khai_lam_duoc_viec_thi_phai_CO_THAT(viec):
+    """Ca đối chứng: bảng trên không được nêu một phòng không tồn tại.
+
+    Không có bài này thì cách dễ nhất để mở khoá một cụm từ bị chặn là thêm một
+    cái tên phòng vào bảng — tức tự cấp phép bằng cách gõ thêm một chữ.
+    """
+    lam_duoc, _ = PHONG_LAM_DUOC_VIEC[viec]
+    la = lam_duoc - set(_pnb.PHONG) - {"aura", "alpha"}
+    assert not la, f"bảng nêu phòng không có thật: {sorted(la)}"
 
 
 # Chép TAY từ bảng đo 06/09/2026 ở `KY_LUAT_THUC_THI.md` mục 5c: bảy thẻ có ít

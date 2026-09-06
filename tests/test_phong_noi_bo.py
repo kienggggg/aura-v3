@@ -28,16 +28,22 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from core.paths import PROJECT_ROOT  # noqa: E402
 from core.phong_noi_bo import (PHONG, dem_test, do_ram, phong_beta,  # noqa: E402
-                               phong_delta, phong_gamma, phong_omega, phong_zeta,
-                               quet_ast)
+                               phong_delta, phong_epsilon, phong_gamma,
+                               phong_omega, phong_zeta, quet_ast)
 
 # Bốn chuỗi này KHÔNG được xuất hiện trong phần mã nữa.
 SO_GO_TAY = ("4.2 GB", "16.0 GB", "714/714", "38.4 tokens", "42 ms",
              "9.4/10", "Perplexity", "120 BPM", "-14 LUFS")
 
 
-def test_du_nam_phong():
-    assert set(PHONG) == {"beta", "delta", "gamma", "omega", "zeta"}
+def test_du_cac_phong_noi_bo():
+    """Danh sách ĐÓNG. Thêm phòng thì phải sửa dòng này — tức phải cố ý.
+
+    `epsilon` thêm 06/09/2026: dịch mã rồi để `node --check` / `bash -n` chấm
+    bản dịch. Nó là phòng đầu tiên có VERIFIER NGOÀI TIẾN TRÌNH, và cũng là
+    phòng đầu tiên đọc thật `yeu_cau`.
+    """
+    assert set(PHONG) == {"beta", "delta", "epsilon", "gamma", "omega", "zeta"}
 
 
 def _ma_khong_chu_thich(p: Path) -> str:
@@ -1104,3 +1110,197 @@ def test_ghi_tien_do_HONG_thi_khong_lam_do_ca_chuoi(monkeypatch, tmp_path):
     # Và KHÔNG hỏng lặng: phía đọc phải nói KHÔNG ĐO ĐƯỢC.
     td = _tien_do(d["pipeline_id"])
     assert td["trang_thai"] == "KHONG_DO_DUOC", td["trang_thai"]
+
+
+# ---------------------------------------------------------------------------
+# PHÒNG EPSILON — DỊCH MÃ, VÀ TRÌNH THẬT CHẤM BẢN DỊCH (06/09/2026)
+#
+# `core/polyglot.py` dịch thật từ 02/09 nhưng KHÔNG phòng nào gọi, nên thẻ
+# Polyglot phải viết "chưa dịch mã" trong khi bộ dịch nằm ngay trong kho.
+#
+# Đo trước khi nối — hỏi trình biên dịch THẬT, không hỏi `status` của bộ dịch::
+#
+#              polyglot tự khai   HỎI TRÌNH BIÊN DỊCH
+#   bash       PASS               FAIL              <-- LỆCH
+#   javascript PASS               PASS
+#   cpp go rust typescript  PASS  KHÔNG ĐO ĐƯỢC (máy không có trình biên dịch)
+
+MA_TOT = ("def fibonacci(n):\n"
+          "    if n <= 1:\n"
+          "        return n\n"
+          "    return fibonacci(n-1) + fibonacci(n-2)")
+
+
+def test_epsilon_biet_noi_PASS(tmp_path_factory):
+    """Máy đo phải chứng minh nó nói được ĐẠT, nếu không thì mọi số 0 vô nghĩa."""
+    kq = phong_epsilon("test_eps_pass", MA_TOT, cac_lang=("javascript",))
+    assert kq["trang_thai"] == "PASS", kq["vi_sao"]
+    assert kq["so"]["dat"] == ["javascript"], kq["so"]
+    assert any(h["kind"] == "ban_dich_javascript" for h in kq["artifacts"])
+
+
+def test_epsilon_bat_duoc_ban_dich_HONG():
+    """Bash hỏng thật — và phòng phải nói ra, không được theo `status` của bộ dịch."""
+    kq = phong_epsilon("test_eps_fail", MA_TOT, cac_lang=("javascript", "bash"))
+    assert kq["trang_thai"] == "FAIL", kq["so"]
+    assert kq["so"]["hong"] == ["bash"], kq["so"]
+    # Và chỗ đắt: bộ dịch TỰ KHAI PASS cho đúng bản dịch ấy.
+    assert kq["so"]["theo_ngon_ngu"]["bash"]["polyglot_khai"] == "PASS"
+
+
+def test_epsilon_MOT_ban_dich_hong_thi_ca_phong_KHONG_duoc_PASS():
+    """PASS đòi hai vế. Chỉ đòi 'có ít nhất một cái đạt' thì bản hỏng nấp được."""
+    kq = phong_epsilon("test_eps_2ve", MA_TOT, cac_lang=("javascript", "bash"))
+    assert kq["so"]["dat"] == ["javascript"] and kq["so"]["hong"] == ["bash"]
+    assert kq["trang_thai"] != "PASS", "một bản dịch hỏng nấp sau một bản tốt"
+
+
+def test_epsilon_ngon_ngu_KHONG_kiem_duoc_thi_khong_phai_PASS():
+    """Máy này không có go/rustc/g++. Không đo được ≠ đã đo, không sao."""
+    kq = phong_epsilon("test_eps_go", MA_TOT, cac_lang=("go", "rust"))
+    assert kq["trang_thai"] == "KHONG_CHAY_DUOC", kq
+    assert set(kq["so"]["khong_do_duoc"]) == {"go", "rust"}
+    assert kq["so"]["dat"] == []
+
+
+def test_epsilon_KHONG_tu_thuong_diem_cho_phep_DONG_NHAT():
+    """`python -> python` trả lại y byte mã vào. Đó không phải một bản dịch.
+
+    Bản đầu của phòng chấm đó là `python PASS`: `ast.parse` đạt vì MÃ VÀO hợp
+    lệ — thứ đã kiểm ở đầu hàm. Một điểm tự thưởng, đúng bẫy tautological. Bắt
+    được bằng cách mở `ban_dich.py` ra so với mã vào, không bằng đọc mã.
+    """
+    kq = phong_epsilon("test_eps_dongnhat", MA_TOT, cac_lang=("python",))
+    assert kq["so"]["dat"] == [], "phép đồng nhất được tính là bản dịch đạt"
+    assert kq["so"]["khong_do_duoc"] == ["python"]
+    assert kq["trang_thai"] == "KHONG_CHAY_DUOC"
+    assert not any(h["kind"] == "ban_dich_python" for h in kq["artifacts"]), (
+        "vẫn ghi ra một 'bản dịch' python — nó là bản sao mã vào")
+
+
+def test_epsilon_ma_vao_hong_thi_KHONG_CHAY_DUOC():
+    """Fail-closed trước khi tốn một lượt dịch nào."""
+    kq = phong_epsilon("test_eps_mahong", "def f(:\n  pass")
+    assert kq["trang_thai"] == "KHONG_CHAY_DUOC", kq
+    assert kq["artifacts"] == []
+    assert "Python hợp lệ" in kq["vi_sao"]
+
+
+def test_epsilon_CHAM_TEP_TREN_DIA_chu_khong_cham_chuoi_trong_RAM(monkeypatch):
+    """Ca đối chứng cho bộ kiểm: bơm rác vào thì nó phải ĐỎ.
+
+    Không có ca này thì `node --check` xanh chỉ chứng minh nó chưa từng nói
+    không. Thay bộ dịch bằng bản trả rác — hiện vật trên đĩa là rác, và phán
+    quyết phải theo TỆP chứ không theo `status` bộ dịch khai.
+    """
+    import core.polyglot as _pg
+
+    def _rac(ma, nguon, dich):
+        return {"status": "PASS", "ma_dich": "function ( { { ]]] unbalanced",
+                "nodes_translated": 99}
+
+    monkeypatch.setattr(_pg, "chuyen_doi_ngon_ngu", _rac)
+    kq = phong_epsilon("test_eps_rac", MA_TOT, cac_lang=("javascript",))
+    assert kq["trang_thai"] == "FAIL", kq
+    assert kq["so"]["hong"] == ["javascript"]
+    tep = PROJECT_ROOT / kq["artifacts"][0]["path"]
+    assert "unbalanced" in tep.read_text(encoding="utf-8")
+
+
+def test_epsilon_hien_vat_co_SHA256_dung_voi_byte_tren_dia():
+    """Bằng chứng trên đĩa là chân lý duy nhất — băm phải tính TỪ đĩa."""
+    import hashlib
+
+    kq = phong_epsilon("test_eps_bam", MA_TOT, cac_lang=("javascript",))
+    for h in kq["artifacts"]:
+        p = PROJECT_ROOT / h["path"]
+        assert p.is_file(), h["path"]
+        assert h["sha256"] == hashlib.sha256(p.read_bytes()).hexdigest()
+        assert h["size_bytes"] == p.stat().st_size > 0
+
+
+def test_epsilon_KHONG_lo_duong_dan_tuyet_doi_ra_ly_do():
+    """Lý do đi vào sổ cái và lên màn hình; đường dẫn tuyệt đối chỉ là chỗ để tệp.
+
+    Bản đầu để nguyên stderr của `bash`, nên lý do bắt đầu bằng cả đường dẫn ổ
+    đĩa. Nó đi thẳng vào `so_cai.jsonl` và lên thẻ trên màn hình.
+    """
+    kq = phong_epsilon("test_eps_duongdan", MA_TOT, cac_lang=("bash",))
+    assert kq["trang_thai"] == "FAIL"
+    chu = kq["vi_sao"] + " " + kq["so"]["theo_ngon_ngu"]["bash"]["vi_sao"]
+    assert str(PROJECT_ROOT) not in chu, chu
+    assert "ban_dich.sh" not in chu, chu
+
+
+# Chép TAY từ `KY_LUAT_THUC_THI.md` mục 5d. Không viết `phong_noi_bo.KIEM_DUOC`
+# ở đây: gieo đổi hằng số trong mã thì hai vế cùng đổi và cửa vẫn xanh.
+DAC_TA_EPSILON_KIEM_DUOC = {"javascript", "bash", "python"}
+DAC_TA_EPSILON_DICH_MAC_DINH = ("bash", "javascript")
+
+
+def test_epsilon_hang_so_khop_DAC_TA():
+    import core.phong_noi_bo as _p
+
+    assert set(_p.KIEM_DUOC) == DAC_TA_EPSILON_KIEM_DUOC
+    assert tuple(_p.DICH_MAC_DINH) == DAC_TA_EPSILON_DICH_MAC_DINH
+
+
+def test_epsilon_dich_MAC_DINH_khong_chua_ngon_ngu_NGUON():
+    """Xin đích trùng nguồn là xin một phép đồng nhất — không phải bản dịch.
+
+    Và nó làm lời thẻ lệch khỏi thứ chạy: `mo_ta` nói "sang JavaScript và Bash"
+    trong khi mặc định xin ba, cái thứ ba luôn KHÔNG ĐO ĐƯỢC. Đúng bệnh cả ngày
+    hôm nay đi vá, tự tạo ra trong lượt vá.
+    """
+    import core.phong_noi_bo as _p
+
+    assert _p.NGUON_MAC_DINH not in _p.DICH_MAC_DINH
+
+
+def test_epsilon_chay_MAC_DINH_dung_hai_ngon_ngu():
+    """Đo HÀNH VI, không đọc hằng số: gọi phòng rồi đếm ngôn ngữ nó thật sự xin."""
+    kq = phong_epsilon("test_eps_macdinh", MA_TOT)
+    assert set(kq["so"]["theo_ngon_ngu"]) == set(DAC_TA_EPSILON_DICH_MAC_DINH)
+    assert kq["so"]["so_ngon_ngu_xin"] == 2
+
+
+def test_epsilon_MOT_ngon_ngu_chua_do_duoc_thi_ca_phong_KHONG_duoc_PASS():
+    """Xin mà chưa đo được thì cả lượt chưa kết luận được — không phải PASS.
+
+    Bản trước trả PASS khi `hong` rỗng và có ít nhất một cái đạt, và nó đẻ ra
+    HAI phán quyết cho cùng một lượt: chạy từ Git Bash thì `bash` đo được và
+    bản dịch bị bác (FAIL); chạy từ máy chủ aiohttp thì `bash` không trên PATH
+    nên KHÔNG ĐO ĐƯỢC, `hong` rỗng, và phòng báo **PASS**. Cùng mã, cùng đề,
+    khác nhau ở PATH của tiến trình gọi.
+    """
+    kq = phong_epsilon("test_eps_thieu", MA_TOT, cac_lang=("javascript", "go"))
+    assert kq["so"]["dat"] == ["javascript"], kq["so"]
+    assert kq["so"]["khong_do_duoc"] == ["go"], kq["so"]
+    assert kq["trang_thai"] == "KHONG_CHAY_DUOC", (
+        "một ngôn ngữ chưa đo được mà cả phòng vẫn báo " + kq["trang_thai"])
+    assert "go" in kq["vi_sao"] and "javascript" in kq["vi_sao"], kq["vi_sao"]
+
+
+def test_epsilon_GHI_RO_trinh_nao_da_cham():
+    """Bằng chứng phải nói ai chấm — hai máy có thể ra hai phán quyết."""
+    import core.phong_noi_bo as _p
+
+    kq = phong_epsilon("test_eps_trinh", MA_TOT, cac_lang=("javascript",))
+    duong = kq["so"]["theo_ngon_ngu"]["javascript"]["trinh_kiem"]
+    assert duong and Path(duong).is_file(), f"trinh_kiem = {duong!r}"
+    assert duong == _p.TRINH_KIEM["javascript"][2]
+
+
+def test_epsilon_TIM_DUOC_bash_du_khong_co_tren_PATH(monkeypatch):
+    """`shutil.which` trượt thì phải tìm tiếp ở chỗ quen, đừng báo 'không có'.
+
+    `bash.exe` CÓ THẬT trong thư mục cài Git trên máy này; chỉ là PATH của tiến
+    trình máy chủ không thấy. Cùng bài với `System.Speech` báo máy không có
+    giọng tiếng Việt trong khi registry có hai giọng.
+    """
+    import core.phong_noi_bo as _p
+
+    monkeypatch.setattr(_p.shutil, "which", lambda _t: None)
+    assert _p._tim_trinh("bash"), "PATH trượt là chịu thua — chưa tìm chỗ quen"
+    assert _p._tim_trinh("khong_co_trinh_nay_dau") is None, (
+        "trả bừa một đường dẫn cho một cái tên không có thật")

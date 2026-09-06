@@ -685,14 +685,23 @@ DANH_SACH_THE_QUY_TRINH = [
     },
     {
         "id": "card_polyglot_transpiler",
-        "ten": "Quét AST Toàn Kho (chưa dịch mã)",
-        "bieu_tuong": "🧾",
+        "ten": "Dịch Mã & Để Trình Thật Chấm",
+        "bieu_tuong": "🔤",
         "mau_sac": "#F59E0B",
-        # Chạy thật 06/09: 3/3 · 39s · 3 hiện vật, và KHÔNG hiện vật nào là mã
-        # đã dịch. Chuỗi này không có phòng dịch — bộ dịch nằm ở Polyglot
-        # Studio (`/api/polyglot/translate`), một đường khác hẳn.
-        "mo_ta": "Quét AST toàn kho, đo RAM và số bài test, rồi ghi báo cáo sổ cái. CHƯA dịch mã sang ngôn ngữ nào — bộ dịch nằm ở Polyglot Studio, không nằm trong chuỗi này.",
-        "cac_phong": ["delta", "gamma", "omega"],
+        # 06/09 sáng: chuỗi là `delta·gamma·omega` — 3/3 · 39s và KHÔNG hiện vật
+        # nào là mã đã dịch, nên thẻ phải viết "chưa dịch mã" trong khi bộ dịch
+        # nằm ngay trong kho (`core/polyglot.py`, không phòng nào gọi).
+        #
+        # 06/09 chiều: `delta` → `epsilon`. Bỏ `delta` vì bước ấy quét
+        # `core/*.py` và bỏ qua đề — nay `tham_so_mac_dinh` (một đoạn mã) lần
+        # đầu được đọc thật.
+        #
+        # THẺ NÀY ĐỎ, VÀ ĐỎ LÀ ĐÚNG: `bash` sinh mã không parse nổi
+        # (`echo fibonacci(n - 1) + fibonacci(n - 2)`), `javascript` qua
+        # `node --check`. Sếp quyết lấy đủ ba ngôn ngữ kiểm được thay vì chỉ xin
+        # `javascript` cho xanh — cái đỏ ấy chỉ đúng chỗ cần sửa tiếp.
+        "mo_ta": "Dịch mã Python sang JavaScript và Bash, ghi bản dịch ra đĩa rồi để node/bash chấm chính tệp ấy. ĐANG ĐỎ: bản dịch Bash không parse nổi. CHƯA kiểm được Go · Rust · C++ · TypeScript · SQL — máy này không có trình biên dịch cho chúng.",
+        "cac_phong": ["epsilon", "gamma", "omega"],
         "tham_so_mac_dinh": "def fibonacci(n):\n    if n <= 1:\n        return n\n    return fibonacci(n-1) + fibonacci(n-2)"
     },
     {
@@ -830,6 +839,9 @@ MO_TA_PHONG: Dict[str, Dict[str, str]] = {
     "beta": {"ten": "🧪 Beta (A/B)", "bieu_tuong": "🧪",
              "ngan": "A/B lời nhắc",
              "hanh_dong": "A/B hai biến thể lời nhắc, chấm bằng cửa của AURA"},
+    "epsilon": {"ten": "🔤 Epsilon (Dịch mã)", "bieu_tuong": "🔤",
+                "ngan": "Dịch mã · trình thật chấm",
+                "hanh_dong": "Dịch mã Python rồi để node/bash chấm bản dịch"},
 }
 
 # Chuỗi dùng khi KHÔNG có `preset_id`, hoặc `preset_id` không có trong danh mục.

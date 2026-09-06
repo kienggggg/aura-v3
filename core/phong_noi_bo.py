@@ -40,6 +40,7 @@ import ctypes
 import hashlib
 import json
 import re
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -414,5 +415,208 @@ def phong_beta(task_id: str, yeu_cau: str = "", so_lan: int = BETA_SO_LAN_MAC_DI
             "vi_sao": so["ghi_chu"], "ms": round((time.monotonic() - t0) * 1000, 1)}
 
 
+# ------------------------------------------------------------------- EPSILON
+#
+# `core/polyglot.py` dịch THẬT từ 02/09 — `ast.NodeVisitor`, 5 nút, mỗi ngôn ngữ
+# một dạng khác nhau — nhưng **không phòng nào gọi nó**, nên thẻ Polyglot phải
+# viết "chưa dịch mã" trong khi bộ dịch nằm ngay trong kho.
+#
+# ĐO TRƯỚC KHI NỐI, hỏi trình biên dịch THẬT chứ không hỏi `status` của nó:
+#
+#              polyglot tự khai   HỎI TRÌNH BIÊN DỊCH
+#   bash       PASS               FAIL              <-- LỆCH
+#   javascript PASS               PASS
+#   sql        FAIL               (không có bộ kiểm)
+#   cpp go rust typescript  PASS  KHÔNG ĐO ĐƯỢC
+#
+# Nên phòng này KHÔNG lấy `status` của bộ dịch làm phán quyết. Nó dịch, ghi tệp
+# ra đĩa, rồi đưa cho trình thật chấm.
+
+# Đúng ba ngôn ngữ có bộ kiểm trên máy này. Đăng ký ở `KY_LUAT_THUC_THI.md` mục
+# 5d. Thêm ngôn ngữ vào đây thì phải có bộ kiểm THẬT đi kèm — `KHONG_DO_DUOC`
+# là câu trả lời đúng cho go · rust · cpp · typescript · sql, không phải `PASS`.
+KIEM_DUOC = {"javascript": ".js", "bash": ".sh", "python": ".py"}
+TRAN_KIEM_GIAY = 30
+
+# ĐÍCH MẶC ĐỊNH BỎ CHÍNH NGÔN NGỮ NGUỒN. `python` ở lại `KIEM_DUOC` vì nó là bộ
+# KIỂM được (dùng khi nguồn không phải Python), nhưng làm ĐÍCH thì nó là phép
+# đồng nhất — xin nó chỉ đẻ thêm một dòng KHÔNG ĐO ĐƯỢC, và làm lời thẻ ("dịch
+# sang JavaScript và Bash") lệch khỏi thứ thật sự chạy.
+NGUON_MAC_DINH = "python"
+DICH_MAC_DINH = tuple(l for l in sorted(KIEM_DUOC) if l != NGUON_MAC_DINH)
+
+# TÌM TRÌNH KIỂM BẰNG ĐƯỜNG DẪN TUYỆT ĐỐI, KHÔNG DỰA VÀO PATH.
+#
+# Đo 06/09/2026: cùng mã, cùng đề, HAI PHÁN QUYẾT khác nhau. Chạy từ Git Bash
+# thì `bash` có trên PATH → bản dịch bash bị bác → phòng FAIL. Chạy từ máy chủ
+# aiohttp (khởi động qua PowerShell) thì `bash` KHÔNG trên PATH →
+# `FileNotFoundError` → KHÔNG ĐO ĐƯỢC → phòng PASS.
+#
+# `bash.exe` **có thật** ở `C:\Program Files\Git\bin` và `...\Git\usr\bin` —
+# chỉ là PATH của tiến trình kia không thấy. Cùng bài với `System.Speech` báo
+# máy không có giọng tiếng Việt trong khi registry có: *một câu báo "không có"
+# có thể sai*.
+_CHO_TIM = {
+    "node": (r"C:\Program Files\nodejs\node.exe",),
+    "bash": (r"C:\Program Files\Git\bin\bash.exe",
+             r"C:\Program Files\Git\usr\bin\bash.exe"),
+}
+
+
+def _tim_trinh(ten: str):
+    """`shutil.which` trước, rồi mới tới danh sách chỗ quen. Trả đường dẫn hoặc None."""
+    duong = shutil.which(ten)
+    if duong:
+        return duong
+    for p in _CHO_TIM.get(ten, ()):
+        if Path(p).is_file():
+            return p
+    return None
+
+
+# `(tên trình, cờ, đường dẫn giải ra)`. Giải MỘT LẦN lúc nạp mô-đun, và đường
+# dẫn ấy được GHI VÀO HIỆN VẬT — bằng chứng phải nói rõ AI đã chấm.
+TRINH_KIEM = {
+    "javascript": ("node", ["--check"], _tim_trinh("node")),
+    "bash": ("bash", ["-n"], _tim_trinh("bash")),
+}
+
+
+def kiem_ma_bang_trinh_that(lang: str, tep: Path) -> Dict[str, str]:
+    """Hỏi trình thật xem tệp này có hợp lệ không. Trả `(trang_thai, vi_sao)`.
+
+    KHÔNG có bộ kiểm thì `KHONG_DO_DUOC` — không phải `PASS`. Gộp hai cái này
+    là đúng bệnh cả tệp này sinh ra để chống: "chưa đo được" đội lốt "đã đo,
+    không sao".
+    """
+    if lang == "python":
+        try:
+            ast.parse(tep.read_text(encoding="utf-8"))
+            return {"trang_thai": "PASS", "vi_sao": ""}
+        except SyntaxError as e:
+            return {"trang_thai": "FAIL", "vi_sao": f"{e.msg} (dòng {e.lineno})"}
+    canh = TRINH_KIEM.get(lang)
+    if canh is None:
+        return {"trang_thai": "KHONG_DO_DUOC",
+                "vi_sao": f"máy này không có bộ kiểm cho {lang}"}
+    ten, co, duong = canh
+    if duong is None:
+        return {"trang_thai": "KHONG_DO_DUOC",
+                "vi_sao": f"không tìm thấy {ten} trên máy này"}
+    lenh = [duong] + co
+    try:
+        r = subprocess.run(lenh + [str(tep)], capture_output=True, text=True,
+                           timeout=TRAN_KIEM_GIAY)
+    except (OSError, subprocess.SubprocessError) as e:
+        # Thiếu `node`/`bash` trên máy khác là KHÔNG ĐO ĐƯỢC, không phải hỏng mã.
+        return {"trang_thai": "KHONG_DO_DUOC", "vi_sao": f"{type(e).__name__}: {e}"}
+    if r.returncode == 0:
+        return {"trang_thai": "PASS", "vi_sao": ""}
+    dong = [d for d in (r.stderr or r.stdout).splitlines() if d.strip()]
+    ly = dong[-1] if dong else ""
+    # Bỏ đường dẫn tuyệt đối khỏi lý do: nó đi vào sổ cái và lên màn hình, mà
+    # `D:\AURA_v3\data\...` chỉ là chỗ máy này để tệp, không phải tin về lỗi.
+    for nhan in (str(tep), tep.name):
+        ly = ly.replace(nhan + ": ", "").replace(nhan, "")
+    return {"trang_thai": "FAIL", "vi_sao": ly.strip()[:200]}
+
+
+def phong_epsilon(task_id: str, yeu_cau: str = "",
+                  cac_lang: tuple = DICH_MAC_DINH) -> Dict[str, Any]:
+    """Dịch mã Python sang nhiều ngôn ngữ, rồi để TRÌNH THẬT chấm bản dịch.
+
+    `yeu_cau` là MÃ NGUỒN Python. Đây là lần đầu tham số ấy được đọc thật:
+    `card_polyglot_transpiler` truyền cả đoạn mã vào từ đầu, còn `delta` — phòng
+    nó từng gọi — quét `core/*.py` và bỏ qua nó.
+
+    PASS đòi hai vế, không phải một: có ít nhất một ngôn ngữ kiểm được mà ĐẠT,
+    **và** không ngôn ngữ kiểm được nào hỏng. Chỉ đòi vế đầu thì một bản dịch
+    hỏng nấp được sau một bản dịch tốt.
+    """
+    from core.polyglot import chuyen_doi_ngon_ngu
+
+    t0 = time.monotonic()
+    ma = (yeu_cau or "").strip()
+    try:
+        ast.parse(ma)
+    except SyntaxError as e:
+        return {"trang_thai": "KHONG_CHAY_DUOC", "artifacts": [], "so": {},
+                "vi_sao": f"mã vào không phải Python hợp lệ: {e.msg} (dòng {e.lineno})",
+                "ms": round((time.monotonic() - t0) * 1000, 1)}
+
+    d = _thu_muc("epsilon", task_id)
+    hv: List[Dict[str, Any]] = []
+    theo_lang: Dict[str, Any] = {}
+    for lang in cac_lang:
+        # NGUỒN TRÙNG ĐÍCH LÀ PHÉP ĐỒNG NHẤT, KHÔNG PHẢI BẢN DỊCH.
+        # `chuyen_doi_ngon_ngu(ma, "python", "python")` trả lại **y byte** mã
+        # vào, rồi `ast.parse` đạt — nhưng nó đạt vì MÃ VÀO hợp lệ, thứ đã kiểm
+        # ở đầu hàm này. Bản đầu của phòng chấm đó là `python PASS`: một điểm
+        # tự thưởng, đúng bẫy tautological đã dính hai lần (02/09 và 04/09).
+        # Bắt được bằng cách mở `ban_dich.py` ra so với mã vào, không bằng đọc.
+        if lang == "python":
+            theo_lang[lang] = {
+                "trang_thai": "KHONG_DO_DUOC", "polyglot_khai": None,
+                "vi_sao": "nguồn và đích trùng nhau — không có bản dịch nào để chấm"}
+            continue
+        kq = chuyen_doi_ngon_ngu(ma, "python", lang)
+        ban_dich = kq.get("ma_dich", "")
+        if kq.get("status") != "PASS" or not ban_dich.strip():
+            theo_lang[lang] = {"trang_thai": "KHONG_CHAY_DUOC",
+                               "vi_sao": kq.get("error", "bộ dịch trả về rỗng"),
+                               "polyglot_khai": kq.get("status")}
+            continue
+        tep = d / f"ban_dich{KIEM_DUOC.get(lang, '.txt')}"
+        tep.write_text(ban_dich, encoding="utf-8")
+        hv.append(_hien_vat(tep, lang.upper(), f"ban_dich_{lang}"))
+        # CHẤM TỆP TRÊN ĐĨA, không chấm chuỗi trong RAM: thứ được kiểm phải là
+        # đúng thứ để lại làm bằng chứng.
+        chot = kiem_ma_bang_trinh_that(lang, tep)
+        # GHI RÕ AI ĐÃ CHẤM. Cùng một bản dịch, hai máy có thể ra hai phán quyết
+        # nếu một bên không tìm thấy trình kiểm — bằng chứng phải nói ra điều đó.
+        theo_lang[lang] = {**chot, "polyglot_khai": kq.get("status"),
+                           "so_nut": kq.get("nodes_translated"),
+                           "trinh_kiem": (TRINH_KIEM.get(lang) or (None, None, None))[2]
+                           or ("ast.parse" if lang == "python" else None)}
+
+    so = {"so_ngon_ngu_xin": len(cac_lang), "theo_ngon_ngu": theo_lang,
+          "dat": sorted(l for l, v in theo_lang.items() if v["trang_thai"] == "PASS"),
+          "hong": sorted(l for l, v in theo_lang.items() if v["trang_thai"] == "FAIL"),
+          "khong_do_duoc": sorted(l for l, v in theo_lang.items()
+                                  if v["trang_thai"] == "KHONG_DO_DUOC")}
+    tep = d / "ket_qua.json"
+    tep.write_text(json.dumps(so, ensure_ascii=False, indent=1), encoding="utf-8")
+    hv.append(_hien_vat(tep, "JSON", "phan_quyet_tung_ngon_ngu"))
+
+    ms = round((time.monotonic() - t0) * 1000, 1)
+    if so["hong"]:
+        return {"trang_thai": "FAIL", "artifacts": hv, "so": so,
+                "vi_sao": "bản dịch không qua được trình thật: "
+                          + ", ".join(f"{l} ({theo_lang[l]['vi_sao'][:60]})"
+                                      for l in so["hong"]),
+                "ms": ms}
+    # PASS ĐÒI ĐO ĐỦ, KHÔNG CHỈ ĐÒI KHÔNG AI HỎNG.
+    #
+    # Bản trước trả PASS khi `hong` rỗng và `dat` có ít nhất một cái — và nó đẻ
+    # ra hai phán quyết cho cùng một lượt: từ Git Bash thì `bash` đo được và
+    # bản dịch bị bác (FAIL); từ máy chủ aiohttp thì `bash` không có trên PATH
+    # nên KHÔNG ĐO ĐƯỢC, `hong` rỗng, và phòng báo **PASS**.
+    #
+    # Một ngôn ngữ được XIN mà chưa từng đo thì cả lượt chưa kết luận được. Gộp
+    # nó vào PASS là đúng cái bệnh "chưa đo được đội lốt đã đo, không sao".
+    if so["khong_do_duoc"]:
+        return {"trang_thai": "KHONG_CHAY_DUOC", "artifacts": hv, "so": so,
+                "vi_sao": "chưa đo được " + ", ".join(so["khong_do_duoc"])
+                          + (f" (đạt: {', '.join(so['dat'])})" if so["dat"] else ""),
+                "ms": ms}
+    if not so["dat"]:
+        return {"trang_thai": "KHONG_CHAY_DUOC", "artifacts": hv, "so": so,
+                "vi_sao": "không ngôn ngữ nào kiểm được trên máy này",
+                "ms": ms}
+    return {"trang_thai": "PASS", "artifacts": hv, "so": so,
+            "vi_sao": f"{len(so['dat'])} ngôn ngữ qua trình thật: "
+                      + ", ".join(so["dat"]), "ms": ms}
+
+
 PHONG = {"gamma": phong_gamma, "omega": phong_omega, "zeta": phong_zeta,
-         "delta": phong_delta, "beta": phong_beta}
+         "delta": phong_delta, "beta": phong_beta, "epsilon": phong_epsilon}

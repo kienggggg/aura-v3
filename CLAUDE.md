@@ -957,6 +957,78 @@ bằng chứng cho thẻ này sau khi có năm lượt chạy trên đề này.
 **Một câu "không nên làm" được viết ra vì một lý do; khi lý do ấy mất, câu ấy
 phải được hỏi lại.** Cách hỏi lại là chạy, không phải đọc lại câu.
 
+### Một khả năng có sẵn mà không ai gọi thì bằng không
+
+`core/polyglot.py` dịch mã **thật** từ 02/09 — `ast.NodeVisitor`, 5 nút, mỗi
+ngôn ngữ một dạng khác nhau. Nhưng **không phòng nào gọi nó**, nên suốt bốn ngày
+thẻ Polyglot chạy `delta` (quét `core/*.py`, bỏ qua đề) và phải viết *"chưa dịch
+mã"* trong khi bộ dịch nằm ngay trong kho.
+
+**Trước khi nối, hỏi trình biên dịch THẬT thay vì hỏi `status` của bộ dịch:**
+
+```
+             polyglot tự khai   HỎI TRÌNH BIÊN DỊCH
+bash         PASS               FAIL              <-- LỆCH
+javascript   PASS               PASS
+cpp go rust typescript  PASS    KHÔNG ĐO ĐƯỢC (máy không có trình biên dịch)
+```
+
+Một bộ kiểm cú pháp tự viết nói `PASS` cho mã mà `bash -n` bác. Nó không mù —
+nó **nông**: nó đếm ngoặc và từ khoá, không phải phân tích thật. Nên phòng mới
+ghi bản dịch ra đĩa rồi đưa **chính tệp ấy** cho `node --check` / `bash -n`.
+
+Chạy thật cả chuỗi: `PASS 3/3 · 39s` → **`FAIL 0/3 · 0s`**. Nhanh hơn ~200 lần
+và đỏ. Cái đỏ là bản dịch bash thật sự không parse nổi; cái xanh cũ là một phép
+quét AST không liên quan gì tới đề. **Sếp chọn đủ ba ngôn ngữ kiểm được thay vì
+chỉ xin `javascript` cho xanh** — cái đỏ chỉ đúng chỗ cần sửa tiếp, thay vì giấu
+đi bằng cách không hỏi.
+
+Hai thứ bắt được trong chính lượt vá, cả hai đều do đọc đầu ra chứ không do đọc
+mã:
+
+*Phép đồng nhất là một điểm tự thưởng.* Bản đầu xin cả `python` làm đích.
+`chuyen_doi_ngon_ngu(ma, "python", "python")` trả lại **y byte** mã vào, rồi
+`ast.parse` đạt — nhưng nó đạt vì MÃ VÀO hợp lệ, thứ đã kiểm ở đầu hàm. Mở
+`ban_dich.py` ra so với mã vào thì thấy ngay; đọc mã thì không.
+
+*Và tôi tự tạo lại đúng bệnh của cả ngày.* Sau khi bỏ `python`, `mo_ta` nói
+*"sang JavaScript và Bash"* trong khi mặc định vẫn xin **ba**. Thẻ khai một
+đằng, máy chạy một nẻo — đúng thứ vừa vá xong buổi sáng, mắc lại buổi chiều
+trong chính bản vá.
+
+**Thấy một mô-đun trông hoàn chỉnh, hỏi: cửa vào nào gọi tới nó?** Nếu không có
+cửa nào, nó chưa tồn tại với người dùng — và mọi con số nó tự khai chưa ai kiểm.
+
+### Cùng mã, cùng đề, hai phán quyết — biến thứ ba là PATH
+
+Chỗ đắt nhất của lượt ấy không nằm trong bộ dịch. Chạy phòng mới từ hai chỗ:
+
+```
+chạy từ Git Bash      bash có trên PATH     -> bản dịch bị bác  -> FAIL
+chạy từ máy chủ       bash KHÔNG trên PATH  -> KHÔNG ĐO ĐƯỢC    -> PASS
+```
+
+Cùng mã, cùng đầu vào, **hai phán quyết ngược nhau**, và biến quyết định là
+`PATH` của tiến trình gọi — thứ không ai khai ở đâu cả. Nếu chỉ chạy từ một
+chỗ thì con số nào cũng "đúng", và không ai biết còn một chỗ khác.
+
+Hai lỗi chồng lên nhau, và cái thứ hai mới nguy:
+
+*`bash.exe` CÓ THẬT trên máy* — trong thư mục cài Git — chỉ là PATH của tiến
+trình máy chủ không thấy. Đúng bài *"một câu báo 'không có' có thể sai"*, y như
+`System.Speech` báo máy không có giọng tiếng Việt trong khi registry có hai.
+Sửa: `shutil.which` trước, rồi tới danh sách chỗ quen, và **ghi vào hiện vật
+đường dẫn trình đã chấm** — hai máy có thể cho hai phán quyết, bằng chứng phải
+nói ra ai chấm.
+
+*Và phòng trả `PASS` khi một ngôn ngữ được XIN mà chưa từng đo.* Nó chỉ hỏi
+"có ai hỏng không" — không hỏi "đã đo đủ chưa". Thiếu bộ kiểm thì `hong` rỗng,
+và rỗng đọc ra thành xanh. Đây đúng là *"chưa đo được đội lốt đã đo, không
+sao"*, lần này nấp trong một phòng vừa viết ra để chống chính nó.
+
+**Chạy phép đo của mình từ HAI chỗ khác nhau trước khi tin nó.** Terminal và
+tiến trình dịch vụ không cùng một môi trường, và chênh lệch ấy im lặng.
+
 **Một bản sao chưa ai đọc thì vô hại. Bản sao được đưa lên màn hình thì thành
 lời hứa.** Trước khi chuyển văn bản từ chỗ ít người nhìn sang chỗ nhiều người
 nhìn, hỏi: câu này đã có phép đo nào đứng sau chưa? Ở đây câu trả lời là 1/8.

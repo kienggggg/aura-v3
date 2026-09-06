@@ -263,23 +263,81 @@ def test_mau_dung_dang_rrggbb(ten_ds):
             f"{ten_ds} · {t['id']} khai màu {t['mau_sac']!r}")
 
 
-def test_the_goi_delta_KHONG_duoc_hua_TU_SUA_MA():
-    """Đặc tả ghi thẳng: **`delta` KHÔNG tự sửa mã**. Thẻ không được hứa ngược.
+# Ba việc KHÔNG phòng nào làm, đo ngày 06/09/2026 bằng cách chạy thật cả 8 thẻ
+# rồi mở hiện vật ra đọc. Thẻ khai gì cũng được, trừ ba thứ này.
+#
+#   tự sửa mã     `delta` chỉ chẩn đoán — `KY_LUAT_THUC_THI.md` Chương II mục 5
+#                 ghi thẳng là cấm, và `phong_delta` không sinh bản vá nào
+#   dịch mã       bộ dịch ở `/api/polyglot/translate`, KHÔNG có phòng nào trong
+#                 `PHONG` gọi tới; chạy thẻ "Cross-Compiler" ra 0 dòng dịch
+#   quét khoá     `quet_ast` đếm tệp · dòng · hàm · lớp và bắt lỗi cú pháp;
+#                 không tìm chuỗi khoá, không kiểm đường dẫn
+VIEC_KHONG_PHONG_NAO_LAM = {
+    "tự sửa mã": ("auto-fix", "tự sửa", "sinh bản vá", "tự động vá"),
+    "dịch mã": ("cross-compiler", "transpiler", "dịch mã", "chuyển đổi logic"),
+    "quét khoá": ("secret leak", "quét khoá", "chống lộ api", "rò rỉ"),
+}
 
-    ĐÂY LÀ MỘT BỘ CHẶN TỪ, KHÔNG PHẢI PHÉP CHỨNG MINH. Đổi cách nói thì nó
-    trượt. Nó chỉ giữ cho đúng ba chữ đã từng nằm trên màn hình 24 giờ trước
-    (`Auto-Fix`, `sinh bản vá tự động`) không quay lại y nguyên.
+# Cụm phủ định phải được gỡ TRƯỚC khi soi, nếu không bài này cấm luôn việc nói
+# ra giới hạn — mà nói ra giới hạn là đúng thứ `CLAUDE.md` bắt làm.
+PHU_DINH = ("không ", "chưa ", "khong ", "chua ")
+
+
+@pytest.mark.parametrize("viec", sorted(VIEC_KHONG_PHONG_NAO_LAM))
+def test_KHONG_the_nao_duoc_hua_viec_khong_phong_nao_lam(viec):
+    """Tên và mô tả thẻ không được hứa ba việc đã đo là không có.
+
+    ĐÂY LÀ BỘ CHẶN TỪ, KHÔNG PHẢI PHÉP CHỨNG MINH — nói tránh đi thì nó trượt.
+    Nó giữ cho đúng những cụm đã nằm trên màn hình sáng 06/09 không quay lại:
+    *"Auto-Fix"* · *"Cross-Compiler"* · *"Secret Leak"* · *"sinh bản vá tự
+    động"* · *"chống lộ API Key"*.
     """
-    cam = ("auto-fix", "tự sửa", "sinh bản vá", "tự động vá")
     for t in _api.DANH_SACH_THE_QUY_TRINH:
-        if "delta" not in t["cac_phong"]:
-            continue
         chu = (t["ten"] + " " + t["mo_ta"]).lower()
-        # `KHÔNG tự sửa mã` là câu phủ định — phải cho qua, nếu không thì bài
-        # này cấm luôn việc nói ra giới hạn.
-        chu = chu.replace("không tự sửa", "").replace("chưa tự sửa", "")
-        dinh = [c for c in cam if c in chu]
-        assert not dinh, f"{t['id']} hứa {dinh} trong khi delta không tự sửa mã"
+        for cum in VIEC_KHONG_PHONG_NAO_LAM[viec]:
+            for pd in PHU_DINH:
+                chu = chu.replace(pd + cum, " ")
+        dinh = [c for c in VIEC_KHONG_PHONG_NAO_LAM[viec] if c in chu]
+        assert not dinh, f"{t['id']} hứa {dinh} — không phòng nào {viec}"
+
+
+# Chép TAY từ bảng đo 06/09/2026 ở `KY_LUAT_THUC_THI.md` mục 5c: bảy thẻ có ít
+# nhất một việc lượt chạy bác. `card_video_shorts` là thẻ DUY NHẤT giữ đúng lời
+# (PASS 4/4 · 21 hiện vật · video 59,46 s), nên nó không nằm đây.
+THE_PHAI_NOI_GIOI_HAN = {
+    "card_code_doctor", "card_polyglot_transpiler", "card_deep_scout",
+    "card_novel_writer", "card_fullstack_builder", "card_security_guard",
+    "card_system_audit",
+}
+
+
+@pytest.mark.parametrize("pid", sorted(THE_PHAI_NOI_GIOI_HAN))
+def test_the_PHAI_NOI_RA_gioi_han_cua_no(pid):
+    """Ca đối chứng cho bộ chặn từ: nó không được thưởng cho việc im lặng.
+
+    Cách dễ nhất để qua một bộ chặn từ là **bỏ hết chữ CHƯA**. Gieo đúng phép
+    ấy thì bản đầu của bài này VẪN XANH — nó chỉ đếm "có ít nhất 5 thẻ nói ra
+    giới hạn", mà chữ `KHÔNG` ở các thẻ khác đủ để lấp chỗ. Đếm gộp che mất
+    việc từng thẻ cụ thể đã câm.
+
+    Nay chốt theo TỪNG THẺ, danh sách chép tay từ bảng đo.
+    """
+    the = next(t for t in _api.DANH_SACH_THE_QUY_TRINH if t["id"] == pid)
+    chu = the["mo_ta"].lower()
+    assert "chưa" in chu or "không" in chu, (
+        f"{pid} có việc lượt chạy đã bác mà mô tả không nói ra: {the['mo_ta']!r}")
+
+
+def test_ten_the_KHONG_mang_emoji():
+    """`bieu_tuong` là icon duy nhất; tên mang emoji nữa thì hai trường cãi nhau.
+
+    Trước 06/09 `card_code_doctor` có 🩺 trong tên đứng cạnh 🔧 ở huy hiệu —
+    một thẻ, hai icon, không cái nào sai nhưng đọc ra là lỗi.
+    """
+    for t in _api.DANH_SACH_THE_QUY_TRINH:
+        dau = t["ten"][0]
+        assert ord(dau) < 0x2000, (
+            f"{t['id']}: tên bắt đầu bằng {dau!r} — icon thuộc về `bieu_tuong`")
 
 
 def test_so_do_mang_du_chu_de_ve_MOT_o_tren_man_hinh():

@@ -939,6 +939,19 @@ PHÒNG — còn cửa thì chỉ canh danh mục THẺ. Phép gieo trúng chỗ 
 đang canh. **Trước khi ghi "cửa mù", kiểm xem phép gieo có vào đúng chỗ không.**
 Và nó chỉ ra một chuyện thật: bốn chỗ khác ghép màu vào `style` chưa ai lọc.
 
+Cùng hình dạng ấy lặp lại **ngay trong buổi chiều**, và lần này rõ hơn:
+`Phep(..., "CHƯA ", "")` để thử xem cửa có thưởng cho việc im lặng không —
+**vẫn xanh**. Lý do: `Phep.so_lan` mặc định là **1**, nên nó xoá đúng một chữ
+`CHƯA` nằm trong một chú thích ở đầu tệp. Truyền `so_lan=0` (thay tất cả) thì
+**5 bài đỏ**, đúng ba thẻ mà `CHƯA` là chữ phủ định duy nhất. Hai lần trong một
+ngày, cùng một câu hỏi chưa hỏi: *phép gieo có tới nơi không?*
+
+*Và một cửa chống nói dối phải có ca đối chứng chống IM LẶNG.* Bản đầu của bài
+"thẻ phải nói ra giới hạn" đếm gộp — *"có ít nhất 5 thẻ dùng chữ chưa/không"*.
+Xoá hết `CHƯA` mà vẫn xanh, vì chữ `KHÔNG` ở các thẻ khác lấp chỗ. Đếm gộp che
+mất việc từng thẻ cụ thể đã câm. Chốt theo **từng thẻ**, danh sách chép tay từ
+bảng đo, thì đỏ.
+
 *Gõ `#` mở chú thích trong tệp JS.* Thói quen Python, mắc lúc sửa khối màu
 Polyglot. Cả tệp gãy — màn hình trắng thật — và **mọi bài soi chuỗi vẫn xanh**,
 vì chúng chỉ đọc văn bản. Chỉ `node --check` bắt được. Nay nó là một bài test,

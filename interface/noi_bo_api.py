@@ -622,6 +622,25 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
 #
 # `mo_ta` dưới đây đã sửa theo lượt chạy. Chỗ nào chưa làm được thì viết
 # **CHƯA**, không viết cho đẹp — đúng luật Chương 7 mục 3.
+#
+# TÊN THẺ CŨNG SỬA THEO (06/09/2026, Sếp quyết "đổi tên cho khớp việc"). Lượt
+# trước tôi chỉ đổi `card_code_doctor` và báo còn hai tên sai; đọc lại cả tám
+# thì **năm** tên hứa việc không có, không phải hai:
+#
+#   Polyglot Cross-Compiler          -> Quét AST Toàn Kho (chưa dịch mã)
+#   Trinh Sát & Kiểm Chứng Sự Thật   -> Trinh Sát Nguồn (chưa kiểm chứng)
+#   Viết Truyện Đời Thường Dài Hơi   -> Viết Một Kịch Bản Truyện 215–250 Từ
+#   Sinh App Fullstack Web           -> Viết → Quét AST → Dựng Video (đang gãy)
+#   Kiểm Toán Bảo Mật & Secret Leak  -> Quét AST Toàn Kho (chưa quét khoá)
+#
+# Hai thẻ AST nay TRÙNG TÊN gần hết và TRÙNG biểu tượng — cố ý. Chúng chạy y
+# hệt nhau; đặt hai cái tên nghe khác nhau cho một hành vi là giấu đúng thứ vừa
+# đo ra.
+#
+# `ten` KHÔNG còn mang emoji: `bieu_tuong` là icon duy nhất trên thẻ, nên hai
+# trường không được cãi nhau (trước đó 🩺 trong tên đứng cạnh 🔧 ở huy hiệu).
+# Và vì `bieu_tuong` nay là icon duy nhất, nó cũng là một lời khai: 🔒 · 🛡️ ·
+# 🌐 · 💻 đã đổi, chúng báo hiệu việc mà chuỗi không làm.
 DANH_SACH_THE_QUY_TRINH = [
     {
         "id": "card_video_shorts",
@@ -642,7 +661,7 @@ DANH_SACH_THE_QUY_TRINH = [
         # vừa lời nhắc — ràng buộc thật có thể là trần, nhưng nới nó để một bản
         # vá trông đẹp là đúng cái bẫy `CLAUDE.md` cấm.
         "the_loai": "truyen",
-        "ten": "🎬 Video Shorts 60s Tự Động",
+        "ten": "Video Shorts 60s Tự Động",
         "bieu_tuong": "🎬",
         "mau_sac": "#EC4899",
         "mo_ta": "Nhập chủ đề ngắn, tự động cào tin tức, viết kịch bản và render video 60s kèm giọng đọc.",
@@ -656,8 +675,8 @@ DANH_SACH_THE_QUY_TRINH = [
         # tên đang hứa đúng thứ đặc tả cấm. Chạy thật: 2/2 · 48s · 2 hiện vật,
         # `chan_doan.json` đếm 27 tệp · 10.590 dòng · 293 hàm · 51 lớp · 0 lỗi
         # cú pháp. Không có bản vá nào.
-        "ten": "🩺 Bác Sĩ Khám Mã (chỉ chẩn đoán)",
-        "bieu_tuong": "🔧",
+        "ten": "Bác Sĩ Khám Mã (chỉ chẩn đoán)",
+        "bieu_tuong": "🩺",
         "mau_sac": "#10B981",
         "mo_ta": "Quét AST toàn kho tìm lỗi cú pháp rồi đo RAM và số bài test. KHÔNG tự sửa mã — đặc tả cấm, và ở đây cũng sẽ không có.",
         "cac_phong": ["delta", "gamma"],
@@ -665,8 +684,8 @@ DANH_SACH_THE_QUY_TRINH = [
     },
     {
         "id": "card_polyglot_transpiler",
-        "ten": "🚀 Polyglot Cross-Compiler",
-        "bieu_tuong": "🌐",
+        "ten": "Quét AST Toàn Kho (chưa dịch mã)",
+        "bieu_tuong": "🧾",
         "mau_sac": "#F59E0B",
         # Chạy thật 06/09: 3/3 · 39s · 3 hiện vật, và KHÔNG hiện vật nào là mã
         # đã dịch. Chuỗi này không có phòng dịch — bộ dịch nằm ở Polyglot
@@ -682,7 +701,7 @@ DANH_SACH_THE_QUY_TRINH = [
         # ro chứ không vì đã đo. Nói rõ ra để lần sau không ai đọc thành "đã đo
         # và hỏng".
         "the_loai": "truyen",
-        "ten": "🔬 Trinh Sát & Kiểm Chứng Sự Thật",
+        "ten": "Trinh Sát Nguồn (chưa kiểm chứng)",
         "bieu_tuong": "🔍",
         "mau_sac": "#6366F1",
         # Chạy thật 06/09: 3/3 · 217s · 3 hiện vật. `zeta` lấy 5 nguồn kèm
@@ -696,7 +715,7 @@ DANH_SACH_THE_QUY_TRINH = [
     {
         "id": "card_novel_writer",
         "the_loai": "truyen",  # sáng tác truyện đời thường
-        "ten": "✍️ Viết Truyện Đời Thường Dài Hơi",
+        "ten": "Viết Một Kịch Bản Truyện 215–250 Từ",
         "bieu_tuong": "📖",
         "mau_sac": "#3B82F6",
         # Chạy thật 06/09: 2/2 · 170s · 2 hiện vật. `aura` cho MỘT kịch bản 240
@@ -717,8 +736,8 @@ DANH_SACH_THE_QUY_TRINH = [
         # Không bước nào thiết kế giao diện. Gán `bai_noi` cho nó là
         # làm cho một thẻ hỏng trông đỡ hỏng hơn.
         "the_loai": "truyen",
-        "ten": "⚡ Sinh App Fullstack Web",
-        "bieu_tuong": "💻",
+        "ten": "Viết → Quét AST → Dựng Video (đang gãy)",
+        "bieu_tuong": "⚠️",
         "mau_sac": "#06B6D4",
         # Chạy thật 06/09 trên chính đề mặc định của thẻ: **FAIL 0/3 · 287 giây
         # · 0 hiện vật**. `aura` trượt cửa độ dài (23,89 từ/câu, trần 22,7) nên
@@ -735,8 +754,8 @@ DANH_SACH_THE_QUY_TRINH = [
     },
     {
         "id": "card_security_guard",
-        "ten": "🛡️ Kiểm Toán Bảo Mật & Secret Leak",
-        "bieu_tuong": "🔒",
+        "ten": "Quét AST Toàn Kho (chưa quét khoá)",
+        "bieu_tuong": "🧾",
         "mau_sac": "#EF4444",
         # Chạy thật 06/09: 3/3 · 83s · 3 hiện vật — và `chan_doan.json` của nó
         # GIỐNG HỆT của `card_polyglot_transpiler`: cùng 119 byte, cùng bốn con
@@ -749,8 +768,8 @@ DANH_SACH_THE_QUY_TRINH = [
     },
     {
         "id": "card_system_audit",
-        "ten": "📊 Kiểm Toán Bằng Chứng & Sinh Tồn",
-        "bieu_tuong": "🛡️",
+        "ten": "Đo Máy Thật & Thống Kê Sổ Cái",
+        "bieu_tuong": "📊",
         "mau_sac": "#8B5CF6",
         # Chạy thật 06/09: 2/2 · 48s · 2 hiện vật. `metrics.json` có ram · test
         # · toc_do — **không có CPU**. Bản HTML cũ còn hứa "714 test cases";

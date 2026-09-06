@@ -831,11 +831,32 @@ card_system_audit         PASS 2/2 ·  48s ·  2            "đo RAM/CPU" — kh
   qua cửa** — đề "bảng điều khiển tài chính" là đề GIẢI THÍCH, đúng ca đã đo
   05/09; đổi đề để thẻ trông chạy được là làm cho một thẻ hỏng trông đỡ hỏng.
 
-**Còn nợ sau mục này:** `ten` của `card_polyglot_transpiler` vẫn là
-*"Cross-Compiler"* cho một chuỗi không dịch dòng nào, và `card_security_guard`
-vẫn là *"Kiểm Toán Bảo Mật & Secret Leak"* cho một chuỗi không quét khoá. Chỉ
-`card_code_doctor` được đổi tên, vì *"Auto-Fix"* là thứ **đặc tả ghi thẳng là
-cấm**; hai tên kia là quyết định của Sếp, không phải của máy.
+**TÊN THẺ ĐÃ ĐỔI THEO (Sếp quyết cùng ngày).** Lượt trước tôi chỉ đổi
+`card_code_doctor` và báo "còn hai tên sai". Đọc lại cả tám thì là **năm**:
+
+```
+Polyglot Cross-Compiler          -> Quét AST Toàn Kho (chưa dịch mã)
+Trinh Sát & Kiểm Chứng Sự Thật   -> Trinh Sát Nguồn (chưa kiểm chứng)
+Viết Truyện Đời Thường Dài Hơi   -> Viết Một Kịch Bản Truyện 215–250 Từ
+Sinh App Fullstack Web           -> Viết → Quét AST → Dựng Video (đang gãy)
+Kiểm Toán Bảo Mật & Secret Leak  -> Quét AST Toàn Kho (chưa quét khoá)
+```
+
+* **Hai thẻ AST nay trùng tên gần hết và trùng biểu tượng — cố ý.** Chúng chạy
+  y hệt nhau; đặt hai cái tên nghe khác nhau cho một hành vi là giấu đúng thứ
+  vừa đo ra.
+* **`ten` không mang emoji nữa.** `bieu_tuong` là icon duy nhất trên thẻ, nên
+  hai trường không được cãi nhau (trước đó 🩺 trong tên đứng cạnh 🔧 ở huy
+  hiệu). Và vì nó là icon duy nhất, nó cũng là một lời khai: 🔒 · 🛡️ · 🌐 · 💻
+  đã đổi, chúng báo hiệu việc mà chuỗi không làm.
+* **Ba việc không phòng nào làm**, chốt trong `tests/`: *tự sửa mã* · *dịch mã*
+  · *quét khoá*. Thẻ không được hứa, kể cả trong tên. Đây là **bộ chặn từ**,
+  không phải phép chứng minh — nói tránh đi thì nó trượt; nó chỉ giữ cho những
+  cụm đã từng nằm trên màn hình không quay lại y nguyên.
+* **Và bộ chặn từ phải có ca đối chứng**, nếu không cách dễ nhất để qua nó là
+  **bỏ hết chữ CHƯA** — tức cửa chống nói dối lại thưởng cho việc im lặng. Bảy
+  thẻ có việc lượt chạy bác thì bảy `mo_ta` phải nói ra giới hạn, chốt theo
+  từng thẻ.
 
 ## CHƯƠNG III: CƠ CHẾ BẢO MẬT & BỘ LỌC DỮ LIỆU NHẠY CẢM (REDACTION)
 - Mọi file log lỗi (`raw/error.txt`) phải đi qua bộ lọc tập trung (Centralized Redactor).

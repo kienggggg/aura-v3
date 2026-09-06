@@ -1111,6 +1111,51 @@ câu ấy. Đo thêm một điểm:
 khởi động chậm thì phải đo ít nhất hai kích thước. Cùng họ với *"số đơn độc thì
 người đo tự điền lời giải thích mình thích nhất"*.
 
+### Vá một nửa của một cặp thì phá vỡ sự ăn khớp của chúng
+
+Sếp bảo chấm hai bộ dựng. Trước khi chấm, tôi đọc lại `render()` — và tìm ra
+lỗi do **chính bản vá phụ đề của mình** tạo ra một giờ trước.
+
+`render()` vẫn đặt thời điểm ĐỔI THẺ bằng `dai / len(cards)` — chia đều. Khi
+phụ đề CŨNG chia đều thì hai bên cùng sai một kiểu nên **khớp nhau**. Vá phụ đề
+theo mốc đo xong mà quên chỗ này thì chúng **lệch nhau**:
+
+```
+thẻ đổi ở   phụ đề bắt đầu   lệch
+  10,000       11,159       +1,159
+  20,000       21,344       +1,344
+  25,000       26,724       +1,724   <- lớn nhất
+```
+
+**1,72 giây — nặng hơn cái 1,31 giây vừa chữa.** `scdet` xác nhận cắt cảnh
+đúng ở 15,000 · 30,000 · 35,000 trong khi phụ đề ở 15,812 · 30,839 · 35,621.
+
+Đúng bài *"vá xong một trường không nói gì về trường bên cạnh"* đã ghi ngày
+06/09 sáng — mắc lại buổi chiều, trong chính bản vá của mục trước.
+
+**Hai chữ đáng nhớ: chữ và hình là MỘT CẶP.** Sửa một nửa cho đúng mà nửa kia
+còn sai thì tổng thể tệ đi, không phải tốt lên. Trước khi vá một vế, hỏi: vế
+nào đang khớp với nó *vì cùng sai một kiểu*?
+
+Sau khi vá cả hai: **1,72 giây → 0,036 giây**, tức trong vòng một khung hình
+(1/24 = 0,042s).
+
+Và bản vá ấy đẻ ra lỗi thứ hai, do cửa CŨ bắt chứ không phải cửa mới:
+
+*Thẻ dài ngắn khác nhau làm bước phóng Ken Burns sai.* `buoc = 0,12 /
+khung_moi_the` tính theo độ dài TRUNG BÌNH, nên thẻ dài hơn trung bình phóng
+hết cỡ sớm rồi **đứng im** nốt phần còn lại. `kiem_video` bắt đúng: *"1 đoạn
+đứng yên > 5s (lâu nhất 5,3s)"*. Lỗi này chỉ **với tới được** sau khi thẻ có độ
+dài khác nhau — trước đó mọi thẻ bằng nhau nên một bước chung là đúng.
+
+*Và hai phép gieo đi qua mọi cửa mới của tôi.* Cả hai chỉ lộ khi có VIDEO
+THẬT; mọi bài soi tham số đều xanh. Thêm một bài dựng thật với thẻ chênh nhau
+ba lần thì 4/4 đỏ.
+
+*Phép gieo lại không tới nơi, lần thứ ba trong ngày.* Thêm cửa mới xong, bộ lọc
+`-k` của phép gieo không khớp tên nó nên nó bị bỏ chọn — bảng vẫn báo "VẪN XANH
+— CỬA MÙ" cho hai phép. Đọc kỹ dòng `deselected` mới thấy.
+
 Và giấy phép phải kiểm trước, theo Chương 7 mục 3: Remotion **không phải MIT** —
 riêng, miễn phí cho cá nhân và tổ chức ≤ 3 người. Nếu nó đòi trả tiền thì mọi
 phép đo tốc độ ở trên đều vô nghĩa, nên nó phải là câu hỏi ĐẦU TIÊN.

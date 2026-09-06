@@ -665,7 +665,8 @@ def _lufs(tep: Path) -> float | None:
 
 
 def render(cards: List[Path], wav: Path, ra: Path,
-           srt: Path | None = None, nhac: Path | None = None) -> tuple[bool, str]:
+           srt: Path | None = None, nhac: Path | None = None,
+           moc: List[tuple] | None = None) -> tuple[bool, str]:
     """Ghép thẻ + giọng thành MP4, mỗi thẻ có chuyển động chậm (Ken Burns).
 
     VÌ SAO KHÔNG DÙNG `concat` ẢNH TĨNH NỮA. Bản đầu ghép thẳng ảnh, ra video
@@ -680,15 +681,44 @@ def render(cards: List[Path], wav: Path, ra: Path,
     dai = _giay(wav)
     if dai <= 0:
         return False, "không đọc được thời lượng voice.wav"
-    moi_the = dai / len(cards)
-    khung_moi_the = max(2, int(round(moi_the * FPS)))
+
+    # THỜI ĐIỂM ĐỔI THẺ PHẢI THEO CÙNG MỐC VỚI PHỤ ĐỀ (06/09/2026).
+    #
+    # Bản trước để `moi_the = dai / len(cards)` — chia đều. Khi phụ đề còn chia
+    # đều thì hai bên cùng sai một kiểu nên KHỚP NHAU. Vá phụ đề theo mốc đo
+    # xong mà quên chỗ này thì chúng LỆCH NHAU, và lệch nặng hơn cái vừa chữa:
+    #
+    #   thẻ đổi ở   phụ đề bắt đầu   lệch
+    #     10,000        11,159      +1,159
+    #     20,000        21,344      +1,344
+    #     25,000        26,724      +1,724   <- lớn nhất
+    #
+    # `scdet` xác nhận cắt cảnh đúng ở 15,000 · 30,000 · 35,000 — bội số của
+    # 5,0s — trong khi phụ đề ở 15,812 · 30,839 · 35,621.
+    #
+    # Đúng bài "vá xong một trường không nói gì về trường bên cạnh", mắc lại
+    # ngay trong lượt vá trường thứ nhất.
+    if moc is not None and len(moc) == len(cards):
+        dai_the = [max(0.1, kt - bd) for bd, kt in moc]
+        # Thẻ cuối kéo tới hết giọng: khe im lặng cuối cùng thuộc về nó, không
+        # được để video cụt trước tiếng.
+        du = dai - sum(dai_the)
+        if du > 0:
+            dai_the[-1] += du
+    else:
+        dai_the = [dai / len(cards)] * len(cards)
+    # BƯỚC PHÓNG TÍNH RIÊNG TỪNG THẺ. Dùng một bước chung theo độ dài TRUNG
+    # BÌNH thì thẻ dài hơn trung bình phóng hết cỡ sớm rồi ĐỨNG IM nốt phần
+    # còn lại — `kiem_video` bắt đúng: *"1 đoạn đứng yên > 5s (lâu nhất 5,3s)"*.
+    # Lỗi này chỉ với tới được sau khi thẻ có độ dài khác nhau.
+    khung_the = [max(2, int(round(t * FPS))) for t in dai_the]
 
     lenh: List[str] = ["ffmpeg", "-v", "error", "-y"]
-    for c in cards:
+    for c, t in zip(cards, dai_the):
         # `-framerate FPS` để đầu vào TỰ sinh đủ khung; zoompan chỉ việc đi qua
         # từng khung một (`d=1`).
         lenh += ["-loop", "1", "-framerate", str(FPS),
-                 "-t", f"{moi_the:.4f}", "-i", str(c)]
+                 "-t", f"{t:.4f}", "-i", str(c)]
     lenh += ["-i", str(wav)]
 
     # `d=1`, KHÔNG phải `d=khung_moi_the`.
@@ -701,9 +731,8 @@ def render(cards: List[Path], wav: Path, ra: Path,
     # hai thẻ đầu, phóng to dần.
     #
     # `min(...)` chặn trần: dù tính sai vẫn không phóng quá 1,12.
-    buoc = 0.12 / khung_moi_the
     doan = "".join(
-        f"[{i}:v]zoompan=z='min(1+{buoc:.6f}*on,1.12)':d=1"
+        f"[{i}:v]zoompan=z='min(1+{0.12 / khung_the[i]:.6f}*on,1.12)':d=1"
         f":x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
         f":s={RONG}x{CAO}:fps={FPS},setsar=1[v{i}];"
         for i in range(len(cards)))
@@ -1165,7 +1194,10 @@ def _dung_video(thu_muc_ra: Path, van_ban: str | None, t0: float) -> Dict[str, A
         hien_vat.append(_hien_vat(nhac, "AUDIO", "generated_tone_bed"))
 
     mp4 = thu_muc_ra / "video.mp4"
-    ok, loi = render(cards, wav, mp4, srt=srt, nhac=nhac)
+    # CÙNG `moc` VỚI PHỤ ĐỀ. Truyền phụ đề theo mốc đo mà để thẻ chia đều thì
+    # chữ và hình lệch nhau tới 1,72 giây — nặng hơn cái vừa chữa.
+    ok, loi = render(cards, wav, mp4, srt=srt, nhac=nhac,
+                     moc=moc if len(moc) == len(cards) else None)
     if not ok:
         return {"trang_thai": "KHONG_CHAY_DUOC", "artifacts": hien_vat, "kiem": {},
                 "ms": round((time.monotonic() - t0) * 1000, 1), "vi_sao": loi}

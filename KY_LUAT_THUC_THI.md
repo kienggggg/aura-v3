@@ -677,6 +677,32 @@ D · cắt + chèn khe             58,91s    LỌT
 > để đủ cửa sổ — đúng cái lỗi đã nằm một tháng không ai thấy (xem chú thích đầu
 > `core/phong_alpha.py`). Nay im lặng nằm giữa các câu, chỗ nó vốn phải ở.
 
+* **THỜI ĐIỂM ĐỔI THẺ DÙNG CHUNG `moc` VỚI PHỤ ĐỀ.** `render()` nhận `moc` và
+  đặt `-t` riêng cho từng thẻ; bước phóng Ken Burns cũng tính riêng từng thẻ.
+
+  > **VÁ MỘT NỬA CỦA MỘT CẶP THÌ PHÁ VỠ SỰ ĂN KHỚP.** `render()` để
+  > `dai / len(cards)` — chia đều. Khi phụ đề CŨNG chia đều thì hai bên cùng
+  > sai một kiểu nên **khớp nhau**. Vá phụ đề mà quên chỗ này:
+  >
+  > ```
+  > thẻ đổi ở   phụ đề bắt đầu   lệch
+  >   10,000       11,159       +1,159
+  >   20,000       21,344       +1,344
+  >   25,000       26,724       +1,724   <- NẶNG HƠN cái 1,31s vừa chữa
+  > ```
+  >
+  > `scdet` xác nhận cắt cảnh ở 15,000 · 30,000 · 35,000 trong khi phụ đề ở
+  > 15,812 · 30,839 · 35,621. Sau khi vá cả hai: **1,72s → 0,036s**, trong vòng
+  > một khung hình (1/24 = 0,042s).
+
+  > **BƯỚC PHÓNG PHẢI TÍNH RIÊNG TỪNG THẺ.** Một bước chung theo độ dài trung
+  > bình thì thẻ dài hơn trung bình phóng hết cỡ sớm rồi ĐỨNG IM nốt phần còn
+  > lại — `kiem_video` bắt đúng: *"1 đoạn đứng yên > 5s (lâu nhất 5,3s)"*. Lỗi
+  > này chỉ **với tới được** sau khi thẻ có độ dài khác nhau.
+
+  > **Thẻ cuối nhận phần dư.** Khe im lặng cuối cùng thuộc về nó; bỏ đi thì
+  > video cụt trước khi giọng đọc xong.
+
 ### 2c. BỘ DỰNG THỨ HAI: REMOTION (06/09/2026)
 
 `sinh_the_hinh` vẽ ảnh **TĨNH** bằng PIL rồi ffmpeg chiếu mỗi ảnh một khoảng —

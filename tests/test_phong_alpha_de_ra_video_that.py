@@ -1293,7 +1293,7 @@ def test_day_chuyen_THAT_SU_dua_MOC_vao_phu_de(tmp_path, monkeypatch):
         return goc(doan, moi_the, dich, moc=moc)
 
     monkeypatch.setattr(pa, "lam_phu_de", _bat)
-    def _render_gia(cards, wav, ra, srt=None, nhac=None):
+    def _render_gia(cards, wav, ra, srt=None, nhac=None, moc=None):
         ra.write_bytes(b"x" * 64)      # phải TẠO tệp: `_hien_vat` gọi `stat()`
         return True, ""
 
@@ -1362,3 +1362,125 @@ def test_SO_THE_tinh_tu_DAI_DICH_chu_khong_tu_do_dai_do_duoc(tmp_path, monkeypat
 
     assert thay.get("dai") == pa.DAI_DICH, (
         f"`so_the_can_dung` nhận {thay.get('dai')}, phải là DAI_DICH={pa.DAI_DICH}")
+
+
+def test_THE_DOI_dung_luc_PHU_DE_doi(tmp_path, monkeypatch):
+    """Chữ và hình phải đổi cùng một mốc. Bắt THAM SỐ THẬT `render` nhận.
+
+    Vá phụ đề theo mốc đo mà để `render` chia đều thì hai bên LỆCH NHAU, và
+    lệch nặng hơn cái vừa chữa. Đo trên lượt dựng thật::
+
+        thẻ đổi ở   phụ đề bắt đầu   lệch
+          10,000       11,159       +1,159
+          20,000       21,344       +1,344
+          25,000       26,724       +1,724   <- lớn nhất
+
+    `scdet` xác nhận cắt cảnh ở 15,000 · 30,000 · 35,000 trong khi phụ đề ở
+    15,812 · 30,839 · 35,621.
+    """
+    import core.phong_alpha as pa
+
+    thay = {}
+
+    def _bat(cards, wav, ra, srt=None, nhac=None, moc=None):
+        thay["moc"] = moc
+        thay["so_the"] = len(cards)
+        ra.write_bytes(b"x" * 64)
+        return True, ""
+
+    monkeypatch.setattr(pa, "render", _bat)
+    monkeypatch.setattr(pa, "kiem_video",
+                        lambda *a, **k: {"dat": True, "so": {}, "vi_sao": []})
+    van = " ".join(f"Câu số {i} nói một điều khác hẳn câu trước." for i in range(1, 14))
+    pa.dung_video(tmp_path / "ra", van)
+
+    assert thay.get("moc") is not None, (
+        "`render` không nhận `moc` — thẻ vẫn đổi theo phép chia đều")
+    assert len(thay["moc"]) == thay["so_the"], (
+        f"{len(thay['moc'])} mốc cho {thay['so_the']} thẻ")
+
+
+def test_render_DUNG_moc_de_dat_do_dai_tung_the(tmp_path):
+    """Hàm thuần hơn: đưa mốc dài ngắn khác nhau vào rồi soi lệnh ffmpeg dựng ra.
+
+    Không dựng video thật ở đây — chỉ hỏi `render` có đặt `-t` khác nhau cho
+    từng thẻ không. Ca đối chứng: không đưa mốc thì mọi `-t` phải bằng nhau.
+    """
+    import core.phong_alpha as pa
+
+    bat = {}
+
+    def _gia(lenh, **k):
+        if "-filter_complex" in lenh:
+            bat["t"] = [lenh[i + 1] for i, x in enumerate(lenh) if x == "-t"]
+
+        class R:
+            returncode = 0
+            stderr = stdout = ""
+        (tmp_path / "ra.mp4").write_bytes(b"x" * 64)
+        return R()
+
+    cards = [tmp_path / f"c{i}.png" for i in range(3)]
+    for c in cards:
+        c.write_bytes(b"x")
+    wav = tmp_path / "v.wav"
+    wav.write_bytes(b"x")
+
+    pa.subprocess.run, goc = _gia, pa.subprocess.run
+    pa._giay, goc_giay = (lambda p: 9.0), pa._giay
+    try:
+        # Ba độ dài phải còn KHÁC NHAU SAU khi cộng phần dư vào thẻ cuối. Bộ số
+        # đầu tiên của bài này cho 1,0 · 4,0 · 3,6 rồi dư 0,4 đẩy thẻ cuối lên
+        # 4,0 — trùng thẻ giữa, và bài đỏ oan.
+        pa.render(cards, wav, tmp_path / "ra.mp4", moc=[(0, 1.0), (1.2, 4.2), (4.4, 9.0)])
+        khac = bat["t"]
+        pa.render(cards, wav, tmp_path / "ra.mp4", moc=None)
+        deu = bat["t"]
+    finally:
+        pa.subprocess.run, pa._giay = goc, goc_giay
+
+    assert len(set(khac)) == 3, f"đưa mốc lệch nhau mà `-t` vẫn giống: {khac}"
+    assert len(set(deu)) == 1, f"không đưa mốc mà `-t` lại khác nhau: {deu}"
+
+
+def test_THE_DAI_NGAN_KHAC_NHAU_khong_sinh_doan_dung_yen(tmp_path):
+    """Dựng THẬT với thẻ dài ngắn khác nhau, rồi hỏi `kiem_video`.
+
+    Hai phép gieo đi qua mọi bài soi-tham-số ở trên mà vẫn xanh, vì cả hai chỉ
+    lộ ra khi có VIDEO THẬT:
+
+      bước phóng tính theo độ dài TRUNG BÌNH  -> thẻ dài hơn trung bình phóng
+        hết cỡ sớm rồi ĐỨNG IM nốt phần còn lại. Chạy thật bắt đúng:
+        *"1 đoạn đứng yên > 5s (lâu nhất 5,3s)"*.
+      bỏ phần dư của thẻ cuối  -> video kết thúc TRƯỚC khi giọng đọc xong.
+
+    Lỗi thứ nhất chỉ VỚI TỚI ĐƯỢC sau khi thẻ có độ dài khác nhau — trước đó
+    mọi thẻ bằng nhau nên một bước chung là đúng.
+    """
+    from core.phong_alpha import _giay, kiem_video, render, sinh_the_hinh
+
+    van = " ".join(f"Câu số {i} nói một điều khác hẳn hẳn câu trước đó." for i in range(1, 4))
+    cards = sinh_the_hinh(van, tmp_path, so_the=3)
+    assert len(cards) == 3
+
+    # Giọng giả 9 giây, im lặng — đủ để `zoompan` và `freezedetect` chạy thật.
+    wav = tmp_path / "v.wav"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i",
+                    "anullsrc=r=16000:cl=mono:d=9", str(wav)],
+                   capture_output=True, timeout=120)
+    assert wav.is_file()
+
+    # Thẻ 1 rất ngắn, thẻ 3 rất dài — chênh hơn ba lần.
+    moc = [(0.0, 1.2), (1.4, 3.6), (3.8, 9.0)]
+    ra = tmp_path / "ra.mp4"
+    xong, ly_do = render(cards, wav, ra, moc=moc)
+    assert xong, ly_do
+
+    kv = kiem_video(ra)
+    dung_yen = kv["so"].get("dung_yen_lau_nhat", 0)
+    assert dung_yen < 2.0, (
+        f"đoạn đứng yên {dung_yen}s — bước phóng không theo độ dài từng thẻ")
+
+    # Và video không được cụt trước giọng.
+    assert _giay(ra) >= _giay(wav) - 0.2, (
+        f"video {_giay(ra):.2f}s ngắn hơn giọng {_giay(wav):.2f}s — mất phần dư")

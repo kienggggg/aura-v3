@@ -1,0 +1,9 @@
+# 215 MB · 13.471 tệp · 149 gói cấp 1 — đo 06/09/2026.
+# `.gitignore` gốc đã chặn `data/*`; chỗ này chặn phần Node.
+node_modules/
+out/
+.remotion/
+
+# Tham số của MỘT lượt dựng, `render_remotion` ghi đè mỗi lần gọi. Nó mang cả
+# kịch bản của Sếp — không phải mã nguồn, và không được vào kho.
+props.json

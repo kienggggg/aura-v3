@@ -677,6 +677,53 @@ D · cắt + chèn khe             58,91s    LỌT
 > để đủ cửa sổ — đúng cái lỗi đã nằm một tháng không ai thấy (xem chú thích đầu
 > `core/phong_alpha.py`). Nay im lặng nằm giữa các câu, chỗ nó vốn phải ở.
 
+### 2c. BỘ DỰNG THỨ HAI: REMOTION (06/09/2026)
+
+`sinh_the_hinh` vẽ ảnh **TĨNH** bằng PIL rồi ffmpeg chiếu mỗi ảnh một khoảng —
+mỗi thẻ là một khung đứng yên, không có gì chuyển động được vì thứ duy nhất tồn
+tại là một tệp PNG. Remotion dựng **lại từng khung** bằng React, nên chữ hiện
+dần, nhích lên, và thanh tiến độ chạy theo đúng mốc đo được ở mục 2b.
+
+**Đo trước khi dựng, trên chính máy này (không GPU rời):**
+
+```
+cài            2m06s · 215 MB · 13.471 tệp · 149 gói cấp 1
+120 khung      76,0s   <- gần hết là chi phí MỘT LẦN: tải + bung Chromium
+480 khung      18,8s
+1440 khung     45,3s (scratchpad) · 47,7s (trong kho)
+ra             60,05s · 720×1280 · h264 · 4,13 MB
+```
+
+Suýt ngoại suy từ con số đầu: 76 giây cho 5 giây video đọc ra thành "chậm gấp
+30 lần, không dùng được". Đo tiếp thì 480 khung chỉ mất 18,8s — **gấp bốn số
+khung trong một phần tư thời gian**. Một điểm không tách được chi phí cố định
+khỏi chi phí biên.
+
+**Giấy phép — kiểm trước tiên, theo Chương 7 mục 3.** Remotion **KHÔNG phải
+MIT**: giấy phép riêng, miễn phí cho cá nhân và tổ chức **≤ 3 người**, được
+dùng thương mại để làm video, **cấm bán lại hoặc cấp phép lại chính Remotion**.
+OPC nằm trong diện miễn phí.
+
+**Đặc tả:**
+
+* `FPS 24 · RONG 720 · CAO 1280` khai trong `remotion/src/Root.tsx`, chép tay
+  vào cửa canh — không đọc từ `core.phong_alpha`, kẻo hai vế cùng đổi.
+* **Độ dài suy từ `moc`** qua `calculateMetadata`, không gõ `durationInFrames`.
+  Đóng đinh nó là dựng lại đúng phép chia đều vừa gỡ ở mục 2b.
+* **`Props` chỉ nhận `cau` và `moc`.** Không nhận đường dẫn `.srt`, và
+  `render_remotion` chỉ nhận `(cau, moc, ra)`.
+
+  > **PHỤ ĐỀ VẪN LÀ TỆP `.srt` RIÊNG.** Sức hút của Remotion là vẽ chữ thành
+  > một phần khung hình, nhưng `core/phong_alpha.py` ghi thẳng: *"nung vào thì
+  > không ai kiểm được bằng máy, còn luồng phụ đề thì `ffprobe` đọc ra"*.
+  > Remotion không được nới luật ấy ra.
+
+* **Không thêm một dòng nào vào `requirements.txt`.** Remotion là Node; hàng
+  rào `V3_PHONG` lần theo `import` Python nên tệp `.tsx` không đụng trần.
+* **`remotion/node_modules` phải bị git bỏ qua** — 215 MB, 13.471 tệp.
+
+**CHƯA THAY BỘ DỰNG CŨ.** Chạy song song, chấm bằng cùng bộ cửa, rồi mới quyết.
+
 ### 3. PHÒNG SCOUT (Tra cứu Dữ kiện Mới & Source Receipt)
 * **Đầu vào:** Tối thiểu 3 câu hỏi cần dữ kiện mới.
 * **Quy trình Tra cứu & Biên nhận Nguồn:**

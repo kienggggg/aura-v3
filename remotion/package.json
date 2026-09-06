@@ -1,0 +1,16 @@
+{
+  "name": "aura-remotion",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Bộ dựng khung hình cho phòng Alpha. Node, không phải Python — nên nó KHÔNG đụng trần V3_PHONG (hàng rào lần theo import Python).",
+  "scripts": {
+    "render": "remotion render src/index.ts TheAlpha"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "@remotion/renderer": "^4.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "remotion": "^4.0.0"
+  }
+}

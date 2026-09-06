@@ -348,6 +348,55 @@ KHE_MIN, KHE_MAX = 0.15, 1.20
 NGUONG_LANG = "-45dB"
 
 
+# BỘ DỰNG THỨ HAI: Remotion (06/09/2026). CHẠY SONG SONG, chưa thay bản cũ.
+#
+# `sinh_the_hinh` vẽ ảnh TĨNH bằng PIL rồi ffmpeg chiếu mỗi ảnh một khoảng — mỗi
+# thẻ là một khung đứng yên, không có gì chuyển động được. Remotion dựng LẠI
+# từng khung bằng React nên chữ hiện dần, nhích lên, thanh tiến độ chạy theo
+# đúng mốc đo được.
+#
+# ĐO TRƯỚC KHI DỰNG, trên chính máy này (không GPU rời):
+#
+#   cài            2m06s · 215 MB · 13.471 tệp · 149 gói cấp 1
+#   120 khung      76,0s   <- gần hết là chi phí MỘT LẦN: tải + bung Chromium
+#   480 khung      18,8s
+#   1440 khung     45,3s   <- đúng độ dài Alpha: 60,05s · 720×1280 · 2,7 MB
+#
+# Giấy phép Remotion KHÔNG phải MIT — giấy phép riêng, miễn phí cho cá nhân và
+# tổ chức ≤ 3 người, được dùng thương mại để làm video, cấm bán lại chính
+# Remotion. OPC nằm trong diện miễn phí.
+REMOTION_DIR = PROJECT_ROOT / "remotion"
+TRAN_REMOTION_GIAY = 900
+
+
+def render_remotion(cau: List[str], moc: List[tuple], ra: Path,
+                    ) -> tuple[bool, str]:
+    """Dựng khung hình bằng Remotion. Trả `(xong, lý do)`.
+
+    KHÔNG ghép giọng và KHÔNG nung phụ đề ở đây — hai việc ấy để ffmpeg làm như
+    cũ, để `kiem_phu_de` vẫn đọc được luồng `.srt` bằng `ffprobe`. Nung chữ vào
+    khung thì không ai kiểm được bằng máy; đó là luật của tệp này, và Remotion
+    không được phép làm nó lỏng ra.
+    """
+    if not (REMOTION_DIR / "node_modules").is_dir():
+        return False, "chưa cài Remotion — chạy `npm install` trong remotion/"
+    thuoc = REMOTION_DIR / "props.json"
+    thuoc.write_text(json.dumps({"cau": cau, "moc": [list(m) for m in moc]},
+                                ensure_ascii=False), encoding="utf-8")
+    try:
+        r = subprocess.run(
+            ["npx", "remotion", "render", "src/index.ts", "TheAlpha", str(ra),
+             f"--props={thuoc.name}", "--log=error"],
+            cwd=str(REMOTION_DIR), capture_output=True, text=True,
+            encoding="utf-8", errors="replace", shell=True,
+            timeout=TRAN_REMOTION_GIAY)
+    except (OSError, subprocess.SubprocessError) as e:
+        return False, f"{type(e).__name__}: {e}"
+    if r.returncode != 0 or not ra.is_file() or ra.stat().st_size == 0:
+        return False, (r.stderr or r.stdout or "").strip()[:300]
+    return True, ""
+
+
 def khe_can_chen(tong_da_cat: float, so_doan: int) -> float:
     """Khe im lặng giữa hai đoạn, SUY TỪ ĐÍCH chứ không gõ tay.
 

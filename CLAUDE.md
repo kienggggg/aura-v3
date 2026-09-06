@@ -1087,6 +1087,40 @@ Cùng một họ với *"chấm được một hàm không chứng minh kết qu
 — đòi mốc theo **TỪ**, mà OneCore không trả. Đây là mốc theo **CÂU**. Nói ra
 cùng lúc với thành quả, đừng để ai đọc rồi tưởng đã có.
 
+### Một điểm đo không tách được chi phí cố định khỏi chi phí biên
+
+Dựng Remotion làm bộ vẽ khung thứ hai cho Alpha. Phép đo đầu tiên:
+
+```
+120 khung (5 giây video)   76 giây
+```
+
+Đọc ra là *"chậm gấp 30 lần bộ cũ, không dùng được"* — và tôi suýt viết đúng
+câu ấy. Đo thêm một điểm:
+
+```
+120 khung    76,0s
+480 khung    18,8s     <- gấp BỐN số khung, một phần TƯ thời gian
+1440 khung   45,3s     <- đúng độ dài Alpha: 60,05s · 720×1280
+```
+
+76 giây kia gần như toàn bộ là **chi phí một lần**: tải và bung Chromium không
+đầu. Chi phí biên thật là ~26 khung/giây, tức 60 giây video mất 45–48 giây.
+
+**Một điểm đo không nói được gì về độ dốc.** Muốn biết một việc chậm hay chỉ
+khởi động chậm thì phải đo ít nhất hai kích thước. Cùng họ với *"số đơn độc thì
+người đo tự điền lời giải thích mình thích nhất"*.
+
+Và giấy phép phải kiểm trước, theo Chương 7 mục 3: Remotion **không phải MIT** —
+riêng, miễn phí cho cá nhân và tổ chức ≤ 3 người. Nếu nó đòi trả tiền thì mọi
+phép đo tốc độ ở trên đều vô nghĩa, nên nó phải là câu hỏi ĐẦU TIÊN.
+
+*Và `x in y` lần nữa, hai lần trong một tệp cửa vừa viết.* Bài "không được nung
+phụ đề thay `.srt`" tìm chuỗi `.srt` trong mã — nhưng chuỗi ấy nằm trong **chú
+thích giải thích vì sao không nung**, đúng chỗ nó nên ở. Sửa xong thì gieo thêm
+một trường `duongSrt` vào `Props`: **vẫn xanh**, vì tên trường không có dấu
+chấm. Phải hỏi *kiểu này khai những trường nào* rồi so danh sách, mới đỏ.
+
 **Một bản sao chưa ai đọc thì vô hại. Bản sao được đưa lên màn hình thì thành
 lời hứa.** Trước khi chuyển văn bản từ chỗ ít người nhìn sang chỗ nhiều người
 nhìn, hỏi: câu này đã có phép đo nào đứng sau chưa? Ở đây câu trả lời là 1/8.

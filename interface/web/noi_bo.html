@@ -252,98 +252,26 @@
           <div class="pane-header">
             <div>
               <h2 class="pane-title">⚡ Quy Trình Tự Động Hóa (Pipeline Automator)</h2>
-              <p class="pane-subtitle">Kích hoạt chuỗi phối hợp tác chiến liên phòng ban với 8 Thẻ Kịch Bản 1-Click</p>
+              <!-- KHÔNG ghi con số thẻ ở đây: số gõ tay thì tụt lại sau danh
+                   mục, đúng bệnh "714 test cases" của chính trang này. -->
+              <p class="pane-subtitle">Kích hoạt chuỗi phối hợp tác chiến liên phòng ban bằng Thẻ Kịch Bản 1-Click</p>
             </div>
           </div>
 
-        <!-- 8 THẺ QUY TRÌNH 1-CLICK THÔNG MINH -->
-        <div class="pipeline-presets-grid" id="pipelinePresetsGrid">
-          <div class="preset-card" data-preset="card_video_shorts" style="border-left: 4px solid #EC4899;">
-            <div class="preset-badge" style="background: rgba(236,72,153,0.15); color: #EC4899;">🎬 VIDEO 60S</div>
-            <h4 class="preset-name">Sản Xuất Video Shorts 60s</h4>
-            <p class="preset-desc">Zeta cào tin tức ➔ AURA viết kịch bản ➔ Alpha render video dọc MP4 kèm giọng đọc.</p>
-            <div class="preset-footer">
-              <span class="preset-agents">🔍 ⚡ 🎬 🎵</span>
-              <button class="btn-preset-run" data-preset="card_video_shorts">Nạp Thẻ ➔</button>
-            </div>
-          </div>
-
-          <div class="preset-card" data-preset="card_code_doctor" style="border-left: 4px solid #10B981;">
-            <div class="preset-badge" style="background: rgba(16,185,129,0.15); color: #34D399;">🩺 CODE DOCTOR</div>
-            <h4 class="preset-name">Bác Sĩ Khám & Auto-Fix</h4>
-            <p class="preset-desc">Delta định vị lỗi AST/CST ➔ Khám vòng lặp & syntax ➔ Tự sinh bản vá & chạy kiểm thử.</p>
-            <div class="preset-footer">
-              <span class="preset-agents">🔧 📊 🛡️</span>
-              <button class="btn-preset-run" data-preset="card_code_doctor">Nạp Thẻ ➔</button>
-            </div>
-          </div>
-
-          <div class="preset-card" data-preset="card_polyglot_transpiler" style="border-left: 4px solid #F59E0B;">
-            <div class="preset-badge" style="background: rgba(245,158,11,0.15); color: #FBBF24;">🌐 POLYGLOT</div>
-            <h4 class="preset-name">Polyglot Cross-Compiler</h4>
-            <p class="preset-desc">Delta dịch AST đa ngôn ngữ ➔ Gamma đo đạc AST nodes ➔ Omega ghi sổ cái.</p>
-            <div class="preset-footer">
-              <span class="preset-agents">🔧 📊 🎵</span>
-              <button class="btn-preset-run" data-preset="card_polyglot_transpiler">Nạp Thẻ ➔</button>
-            </div>
-          </div>
-
-          <div class="preset-card" data-preset="card_deep_scout" style="border-left: 4px solid #6366F1;">
-            <div class="preset-badge" style="background: rgba(99,102,241,0.15); color: #818CF8;">🔬 FACT-CHECKER</div>
-            <h4 class="preset-name">Kiểm Chứng Sự Thật</h4>
-            <p class="preset-desc">Zeta cào đa nguồn tin ➔ AURA đối chiếu bằng chứng ➔ Omega lưu sổ kiểm chứng.</p>
-            <div class="preset-footer">
-              <span class="preset-agents">🔍 ⚡ 🎵</span>
-              <button class="btn-preset-run" data-preset="card_deep_scout">Nạp Thẻ ➔</button>
-            </div>
-          </div>
-
-          <div class="preset-card" data-preset="card_novel_writer" style="border-left: 4px solid #3B82F6;">
-            <div class="preset-badge" style="background: rgba(59,130,246,0.15); color: #60A5FA;">📖 NOVEL BUILDER</div>
-            <h4 class="preset-name">Viết Truyện Đời Thường</h4>
-            <p class="preset-desc">AURA sáng tác 3 chương truyện liên hoàn ➔ Gamma đo đạc TTR & Mật độ giác quan.</p>
-            <div class="preset-footer">
-              <span class="preset-agents">⚡ 📊 📜</span>
-              <button class="btn-preset-run" data-preset="card_novel_writer">Nạp Thẻ ➔</button>
-            </div>
-          </div>
-
-          <div class="preset-card" data-preset="card_fullstack_builder" style="border-left: 4px solid #06B6D4;">
-            <div class="preset-badge" style="background: rgba(6,182,212,0.15); color: #22D3EE;">⚡ FULLSTACK WEB</div>
-            <h4 class="preset-name">Sinh App Fullstack</h4>
-            <p class="preset-desc">AURA dựng layout HTML5/JS ➔ Delta viết API backend ➔ Alpha tạo visual assets.</p>
-            <div class="preset-footer">
-              <span class="preset-agents">⚡ 🔧 🎬</span>
-              <button class="btn-preset-run" data-preset="card_fullstack_builder">Nạp Thẻ ➔</button>
-            </div>
-          </div>
-
-          <div class="preset-card" data-preset="card_security_guard" style="border-left: 4px solid #EF4444;">
-            <div class="preset-badge" style="background: rgba(239,68,68,0.15); color: #F87171;">🔒 SECURITY AUDIT</div>
-            <h4 class="preset-name">Kiểm Toán Bảo Mật</h4>
-            <p class="preset-desc">Delta quét AST chống rò rỉ API Key ➔ Gamma đo Hard Gates ➔ Omega niêm phong sổ cái.</p>
-            <div class="preset-footer">
-              <span class="preset-agents">🔧 📊 🎵</span>
-              <button class="btn-preset-run" data-preset="card_security_guard">Nạp Thẻ ➔</button>
-            </div>
-          </div>
-
-          <div class="preset-card" data-preset="card_system_audit" style="border-left: 4px solid #8B5CF6;">
-            <div class="preset-badge" style="background: rgba(139,92,246,0.15); color: #A78BFA;">📊 SYSTEM AUDIT</div>
-            <h4 class="preset-name">Kiểm Toán Sinh Tồn & Sổ Cái</h4>
-            <p class="preset-desc">Đo RAM/CPU thật ➔ Quét Sổ cái Omega `so_cai.jsonl` ➔ Xác thực toàn bộ 714 test cases.</p>
-            <div class="preset-footer">
-              <span class="preset-agents">📊 🎵 🛡️</span>
-              <button class="btn-preset-run" data-preset="card_system_audit">Nạp Thẻ ➔</button>
-            </div>
-          </div>
-        </div>
+        <!-- LƯỚI TRỐNG LÀ CỐ Ý (06/09/2026). Trước đây 8 thẻ gõ cứng ở
+             đây, và đã lệch khỏi `DANH_SACH_THE_QUY_TRINH`: tên 7/8 · mô tả
+             8/8 · biểu tượng phòng 6/8 · đề mặc định 8/8. Nay `veTheQuyTrinh()`
+             dựng từ `/api/pipeline/presets`. -->
+        <div class="pipeline-presets-grid" id="pipelinePresetsGrid"></div>
 
         <div class="pipeline-card">
           <div class="form-group">
             <label for="pipelineTopicInput">Chủ đề hoặc Mục tiêu Chiến dịch:</label>
             <div class="input-with-button">
-              <input type="text" id="pipelineTopicInput" class="form-input" placeholder="Ví dụ: Sản xuất video ngắn 60s về Lập trình Thẻ AURA v3 và Xuất bản tự động">
+              <!-- TEXTAREA, không phải `input type=text` (06/09/2026). Hai thẻ
+                   mang cả đoạn mã trong `tham_so_mac_dinh`; ô `input` NUỐT `\n`
+                   không báo, nên thứ gửi đi khác thứ thẻ khai. -->
+              <textarea id="pipelineTopicInput" class="form-input" rows="1" placeholder="Ví dụ: Sản xuất video ngắn 60s về Lập trình Thẻ AURA v3 và Xuất bản tự động"></textarea>
               <button class="btn btn-primary" id="btnTriggerPipeline">
                 🚀 Bắt Đầu Quy Trình
               </button>

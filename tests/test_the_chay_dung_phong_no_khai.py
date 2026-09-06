@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import asyncio
 import json as _json
+import re
 import sys
 from pathlib import Path
 
@@ -231,6 +232,54 @@ def test_so_do_trong_API_danh_muc_KHOP_chuoi_CHAY_THAT(phong_gia):
         _, goi = _chay(phong_gia, preset_id=the["id"])
         assert so_do[the["id"]] == goi, (
             f"{the['id']}: màn hình sẽ vẽ {so_do[the['id']]} còn máy chạy {goi}")
+
+
+def test_danh_muc_mang_DU_TRUONG_man_hinh_can():
+    """Màn hình dựng thẻ TỪ danh mục; thiếu một trường thì thẻ hiện ra rỗng.
+
+    06/09/2026: tám thẻ trước đó gõ cứng trong `noi_bo.html` và đã lệch — tên
+    7/8 · mô tả 8/8 · biểu tượng phòng 6/8 · đề mặc định 8/8.
+    """
+    r = asyncio.run(_api.api_danh_sach_the_quy_trinh(_Req({})))
+    d = _json.loads(r.body.decode("utf-8"))
+    assert len(d["presets"]) == len(_api.DANH_SACH_THE_QUY_TRINH)
+    for t in d["presets"]:
+        for truong in ("id", "ten", "mo_ta", "mau_sac", "bieu_tuong",
+                       "tham_so_mac_dinh", "cac_phong", "so_do"):
+            assert t.get(truong), f"{t.get('id')}: thiếu {truong!r}"
+
+
+@pytest.mark.parametrize("ten_ds", ["DANH_SACH_THE_QUY_TRINH", "DANH_MUC_PHONG"])
+def test_mau_dung_dang_rrggbb(ten_ds):
+    """Màu đi thẳng vào thuộc tính `style` — phải chốt dạng.
+
+    CẢ HAI danh mục, không riêng thẻ. Phép gieo đầu tiên của bài này nhắm vào
+    `"mau_sac": "#8B5CF6"` và **trúng danh mục PHÒNG** — chuỗi ấy có ở cả hai
+    chỗ. Bài xanh, và tôi suýt ghi là "cửa mù". Nó không mù; nó chỉ canh một
+    nửa. Bên kia có bốn chỗ ghép màu vào `style` mà chưa ai lọc.
+    """
+    for t in getattr(_api, ten_ds):
+        assert re.fullmatch(r"#[0-9A-Fa-f]{6}", t["mau_sac"]), (
+            f"{ten_ds} · {t['id']} khai màu {t['mau_sac']!r}")
+
+
+def test_the_goi_delta_KHONG_duoc_hua_TU_SUA_MA():
+    """Đặc tả ghi thẳng: **`delta` KHÔNG tự sửa mã**. Thẻ không được hứa ngược.
+
+    ĐÂY LÀ MỘT BỘ CHẶN TỪ, KHÔNG PHẢI PHÉP CHỨNG MINH. Đổi cách nói thì nó
+    trượt. Nó chỉ giữ cho đúng ba chữ đã từng nằm trên màn hình 24 giờ trước
+    (`Auto-Fix`, `sinh bản vá tự động`) không quay lại y nguyên.
+    """
+    cam = ("auto-fix", "tự sửa", "sinh bản vá", "tự động vá")
+    for t in _api.DANH_SACH_THE_QUY_TRINH:
+        if "delta" not in t["cac_phong"]:
+            continue
+        chu = (t["ten"] + " " + t["mo_ta"]).lower()
+        # `KHÔNG tự sửa mã` là câu phủ định — phải cho qua, nếu không thì bài
+        # này cấm luôn việc nói ra giới hạn.
+        chu = chu.replace("không tự sửa", "").replace("chưa tự sửa", "")
+        dinh = [c for c in cam if c in chu]
+        assert not dinh, f"{t['id']} hứa {dinh} trong khi delta không tự sửa mã"
 
 
 def test_so_do_mang_du_chu_de_ve_MOT_o_tren_man_hinh():

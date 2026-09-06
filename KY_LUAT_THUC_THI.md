@@ -760,17 +760,82 @@ Cùng họ với *"7 phòng tự khai ONLINE, 0 phòng phải chứng minh"* (02
   trong HTML. Chạy 2 phòng mà vẽ 5 ô thì ba ô đứng im mãi mãi — một lời nói dối
   mới đặt lên đúng cái vỏ vừa làm cho trong suốt.
 
-**Còn nợ, nói ra cùng lúc:**
+**Còn nợ khi vá xong mục này — đã trả ở mục 5c ngay dưới.**
 
-* `noi_bo.js` gõ cứng `presetPrompts` — bản sao thứ hai của `tham_so_mac_dinh`,
-  và **đã lệch**: `card_video_shorts` ở Python là *"Khám phá bí mật lịch sử phố
-  cổ Hà Nội"*, ở JS là *"Sản xuất video ngắn 60s về Lập trình Thẻ AURA v3…"*.
-  Cùng họ với lỗi đang vá, chưa vá trong lượt này.
-* Tám thẻ trong `noi_bo.html` cũng gõ cứng; `/api/pipeline/presets` có sẵn nhưng
-  **màn hình chưa bao giờ gọi**. Danh mục là một nguồn sự thật mà giao diện
-  không đọc.
-* `card_code_doctor` truyền cả **đoạn mã** vào `chu_de`, còn `delta` thì quét
-  `core/*.py` và **bỏ qua** tham số ấy. Chạy đúng phòng rồi vẫn còn chỗ này.
+### 5c. MỘT THẺ, MỘT BẢN KHAI (06/09/2026)
+
+Đăng ký **TRƯỚC KHI VIẾT MÃ**.
+
+Vá xong mục 5b thì máy chủ chạy đúng `cac_phong`. Nhưng thẻ được khai ở **ba
+chỗ**: `DANH_SACH_THE_QUY_TRINH` (Python), 8 khối `.preset-card` gõ cứng trong
+`noi_bo.html`, và bảng `presetPrompts` gõ cứng trong `noi_bo.js`. Đo độ lệch
+giữa chúng:
+
+```
+tên thẻ            lệch 7/8
+mô tả              lệch 8/8
+biểu tượng phòng   lệch 6/8
+đề mặc định        lệch 8/8
+```
+
+Không phải lệch câu chữ. Lệch **nội dung**:
+
+* `card_code_doctor` hiện **ba** biểu tượng phòng cho chuỗi **hai** phòng, và
+  🛡️ không phải phòng nào cả. `card_novel_writer` hiện 📜, `card_system_audit`
+  hiện 🛡️ — cùng kiểu.
+* `card_system_audit` hứa *"xác thực toàn bộ 714 test cases"*. Bộ test hôm nay
+  **893**. Con số gõ tay tụt lại sau phép đo, đúng bệnh câu *"đúng 17 tệp"* của
+  `CLAUDE.md`.
+* `card_code_doctor` hứa *"Tự sinh bản vá & chạy kiểm thử"*, trong khi mục 5
+  của chương này ghi thẳng: **`delta` KHÔNG tự sửa mã**. Màn hình hứa đúng cái
+  thứ đặc tả cấm.
+
+**Đặc tả:**
+
+* **MỘT nguồn khai duy nhất là `DANH_SACH_THE_QUY_TRINH`.** `noi_bo.html` để
+  trống lưới thẻ; `noi_bo.js` dựng thẻ từ `/api/pipeline/presets`; `presetPrompts`
+  bị xoá, đề mặc định lấy từ `tham_so_mac_dinh`.
+* **Dãy biểu tượng phòng SINH RA từ `so_do`**, không gõ tay — để nó đúng *bằng
+  cấu trúc*, không bằng kỷ luật người sửa.
+* **Lời thẻ hứa phải đối chiếu với một lượt CHẠY THẬT.** Chuyển prose từ HTML
+  sang màn hình mà không kiểm là dời một lời hứa chưa ai đo sang chỗ dễ tin
+  hơn. Câu nào lượt chạy bác thì sửa câu, kèm số.
+* **Ô nhập chủ đề phải giữ được xuống dòng.** Hai thẻ mang cả đoạn mã trong
+  `tham_so_mac_dinh`; `<input type="text">` **nuốt `\n` không báo**, nên thứ gửi
+  đi khác thứ thẻ khai. Đổi sang `<textarea>`.
+* **Bấm thẻ phải đi qua uỷ nhiệm sự kiện.** Thẻ nay dựng SAU khi gán trình nghe;
+  gán lên từng thẻ lúc khởi động thì không thẻ nào nghe được.
+
+**Chạy thật cả 8 thẻ trước khi đưa lời thẻ lên màn hình (06/09/2026):**
+
+```
+thẻ                       chạy thật                       lời hứa
+card_video_shorts         PASS 4/4 · 216s · 21 hiện vật   ĐÚNG
+card_code_doctor          PASS 2/2 ·  48s ·  2            "sinh bản vá tự động" — không có
+card_polyglot_transpiler  PASS 3/3 ·  39s ·  3            "dịch sang JS/Go/Rust…" — 0 dòng dịch
+card_deep_scout           PASS 3/3 · 217s ·  3            "đối chiếu bằng chứng URL" — không đối chiếu
+card_novel_writer         PASS 2/2 · 170s ·  2            "3 chương · TTR · giác quan" — 1 kịch bản 240 từ
+card_fullstack_builder    FAIL 0/3 · 287s ·  0            "HTML5/CSS3 + API aiohttp" — 0 hiện vật
+card_security_guard       PASS 3/3 ·  83s ·  3            "chống lộ API Key · Path · injection" — không cái nào
+card_system_audit         PASS 2/2 ·  48s ·  2            "đo RAM/CPU" — không đo CPU
+```
+
+`mo_ta` đã sửa theo lượt chạy, chỗ chưa làm được viết **CHƯA**. Hai điều ghi lại
+để không phải đo lại:
+
+* `card_polyglot_transpiler` và `card_security_guard` **chạy y hệt nhau** —
+  cùng chuỗi `delta · gamma · omega`, và `chan_doan.json` của cả hai đều 119
+  byte với đúng bốn con số đếm. Hai thẻ, hai lời hứa, một hành vi.
+* `card_fullstack_builder` **gãy trên chính đề mặc định của nó**: `aura` cho
+  23,89 từ/câu (trần 22,7) nên hai bước sau không chạy. **KHÔNG đổi đề cho nó
+  qua cửa** — đề "bảng điều khiển tài chính" là đề GIẢI THÍCH, đúng ca đã đo
+  05/09; đổi đề để thẻ trông chạy được là làm cho một thẻ hỏng trông đỡ hỏng.
+
+**Còn nợ sau mục này:** `ten` của `card_polyglot_transpiler` vẫn là
+*"Cross-Compiler"* cho một chuỗi không dịch dòng nào, và `card_security_guard`
+vẫn là *"Kiểm Toán Bảo Mật & Secret Leak"* cho một chuỗi không quét khoá. Chỉ
+`card_code_doctor` được đổi tên, vì *"Auto-Fix"* là thứ **đặc tả ghi thẳng là
+cấm**; hai tên kia là quyết định của Sếp, không phải của máy.
 
 ## CHƯƠNG III: CƠ CHẾ BẢO MẬT & BỘ LỌC DỮ LIỆU NHẠY CẢM (REDACTION)
 - Mọi file log lỗi (`raw/error.txt`) phải đi qua bộ lọc tập trung (Centralized Redactor).

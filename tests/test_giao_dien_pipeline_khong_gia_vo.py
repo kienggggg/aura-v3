@@ -283,3 +283,125 @@ def test_CSS_co_lop_cho_buoc_HONG():
     chu = CSS.read_text(encoding="utf-8")
     assert re.search(r"\.flow-step\.fail\s*\{", chu), "CSS thiếu `.flow-step.fail`"
     assert re.search(r"\.flow-empty\s*\{", chu), "CSS thiếu `.flow-empty`"
+
+
+# ---------------------------------------------------------------------------
+# MỘT THẺ, MỘT BẢN KHAI (06/09/2026)
+#
+# Thẻ từng được khai ở BA chỗ. Đo độ lệch giữa chúng::
+#
+#     tên thẻ            lệch 7/8
+#     mô tả              lệch 8/8
+#     biểu tượng phòng   lệch 6/8
+#     đề mặc định        lệch 8/8
+#
+# Không phải lệch câu chữ. `card_code_doctor` hiện BA biểu tượng phòng cho chuỗi
+# HAI phòng, và 🛡️ không phải phòng nào cả. `card_system_audit` hứa *"xác thực
+# toàn bộ 714 test cases"* khi bộ test đã 893. `card_code_doctor` hứa *"Tự sinh
+# bản vá"* trong khi đặc tả ghi thẳng **`delta` KHÔNG tự sửa mã**.
+
+def test_noi_bo_js_KHONG_GAY_CU_PHAP():
+    """`node --check` trên chính tệp giao diện.
+
+    CẦN THẬT, và bắt được ngay hôm viết: sửa khối màu Polyglot, tôi gõ `#` mở
+    chú thích giữa hai dòng `//` — thói quen Python trong tệp JS. Cả tệp gãy,
+    màn hình trắng thật, và **mọi bài soi-chuỗi ở trên vẫn xanh** vì chúng chỉ
+    đọc văn bản. Đây là bài duy nhất trong tệp hỏi *tệp này có chạy được không*.
+
+    Bỏ qua khi máy không có `node` — không có thì KHÔNG ĐO ĐƯỢC, không phải đạt.
+    """
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("máy không có `node` — KHÔNG ĐO ĐƯỢC, không phải đạt")
+    r = subprocess.run([node, "--check", str(JS)], capture_output=True, text=True)
+    assert r.returncode == 0, f"noi_bo.js gãy cú pháp:\n{r.stderr[:800]}"
+
+
+def test_HTML_KHONG_con_the_QUY_TRINH_go_cung():
+    """Lưới thẻ phải rỗng trong HTML — mọi thẻ do JS dựng từ danh mục."""
+    chu = HTML.read_text(encoding="utf-8")
+    m = re.search(r'<div class="pipeline-presets-grid" id="pipelinePresetsGrid">'
+                  r'(.*?)</div>', chu, re.S)
+    assert m, "không tìm thấy lưới thẻ `pipelinePresetsGrid`"
+    assert not m.group(1).strip(), f"lưới thẻ còn gõ cứng: {m.group(1)[:120]!r}"
+    assert "data-preset=" not in chu, "còn thuộc tính `data-preset` trong HTML"
+    assert 'class="preset-card"' not in chu, "còn khối thẻ gõ cứng trong HTML"
+
+
+def test_JS_KHONG_con_bang_de_MAC_DINH_go_cung():
+    """`presetPrompts` là bản sao thứ hai của `tham_so_mac_dinh`, đã lệch 8/8."""
+    chu = _bo_chu_thich_js(JS.read_text(encoding="utf-8"))
+    assert "presetPrompts" not in chu, "bảng đề mặc định gõ cứng đã quay lại"
+
+
+def test_de_MAC_DINH_lay_tu_may_chu_khi_bam_the():
+    """Hỏi THAM SỐ GÁN VÀO ô nhập, không chỉ hỏi tên trường có mặt đâu đó."""
+    than = _than_ham_js("setupNavigation")
+    m = re.search(r"o\.value\s*=\s*([^;]+);", than)
+    assert m, "không gán đề mặc định vào ô nhập chủ đề"
+    assert "tham_so_mac_dinh" in m.group(1), (
+        f"đề mặc định không lấy từ thẻ máy chủ: o.value = {m.group(1)}")
+
+
+def test_bam_the_di_qua_UY_NHIEM_su_kien():
+    """Thẻ dựng SAU khi gán trình nghe; gán lên từng thẻ thì không thẻ nào nghe.
+
+    Cửa này không chứng minh nút chạy — thứ chứng minh là lượt tự bấm. Nó chỉ
+    giữ cho mẫu gán-lên-từng-thẻ không quay lại cùng lúc với lưới động.
+    """
+    than = _than_ham_js("setupNavigation")
+    assert re.search(r"getElementById\('pipelinePresetsGrid'\)\s*\??\.\s*"
+                     r"addEventListener", than), "không uỷ nhiệm trên lưới thẻ"
+    assert not re.search(r"querySelectorAll\(\s*'[^']*\.preset-card", than), (
+        "còn gán trình nghe lên từng thẻ — thẻ động sẽ không nghe được")
+
+
+def test_day_bieu_tuong_phong_SINH_RA_tu_so_do():
+    """Dãy biểu tượng phải sinh từ chuỗi sẽ chạy, không gõ tay.
+
+    Gõ tay thì nó sai số phòng mà không ai biết: bản cũ hiện 3 biểu tượng cho
+    chuỗi 2 phòng ở `card_code_doctor`, và 🛡️ không phải phòng nào cả.
+    """
+    than = _than_ham_js("veTheQuyTrinh")
+    m = re.search(r'class="preset-agents"[^>]*>\$\{([^}]+)\}', than)
+    assert m, "không tìm thấy chỗ dựng dãy biểu tượng phòng"
+    assert "phong" in m.group(1), f"dãy biểu tượng gõ tay: {m.group(1)}"
+    assert re.search(r"const phong = \(t\.so_do \|\| \[\]\)\.map", than), (
+        "dãy biểu tượng không sinh từ `so_do`")
+
+
+def test_mau_the_duoc_LOC_truoc_khi_vao_CSS():
+    """Màu đi thẳng vào thuộc tính `style` — phải lọc, dù hôm nay là dữ liệu ta."""
+    than = _than_ham_js("mauHop")
+    assert re.search(r"\^#\[0-9A-Fa-f\]\{6\}\$", than), (
+        "`mauHop` không chốt đúng dạng `#rrggbb`")
+    ve = _than_ham_js("veTheQuyTrinh")
+    assert "mauHop(t.mau_sac)" in ve, "màu thẻ vào CSS mà không qua bộ lọc"
+
+    # MỌI chỗ ghép màu vào `style`, không riêng thẻ. Bốn chỗ khác (sidebar, lưới
+    # phòng, đầu bảng phòng) dùng `DANH_MUC_PHONG` và chưa ai lọc tới 06/09.
+    chu = _bo_chu_thich_js(JS.read_text(encoding="utf-8"))
+    tho = re.findall(r"\$\{\s*\w+\.mau_sac\s*\}", chu)
+    assert not tho, f"{len(tho)} chỗ ghép màu vào style mà không qua `mauHop`"
+
+
+def test_o_chu_de_GIU_DUOC_xuong_dong():
+    """`<input type=text>` NUỐT `\\n` không báo, mà hai thẻ mang cả đoạn mã."""
+    chu = HTML.read_text(encoding="utf-8")
+    assert re.search(r'<textarea id="pipelineTopicInput"', chu), (
+        "ô chủ đề không phải textarea — xuống dòng bị nuốt im lặng")
+    assert not re.search(r'<input[^>]*id="pipelineTopicInput"', chu)
+
+
+def test_KHONG_go_con_so_the_vao_tieu_de():
+    """Số gõ tay thì tụt lại sau danh mục — đúng bệnh "714 test cases"."""
+    chu = HTML.read_text(encoding="utf-8")
+    m = re.search(r'<p class="pane-subtitle">([^<]*Thẻ Kịch Bản[^<]*)</p>', chu)
+    assert m, "không tìm thấy phụ đề khu Pipeline"
+    # Chốt vào SỐ ĐẾM THẺ, không cấm mọi chữ số: "1-Click" là tên, không phải
+    # phép đếm. Bản đầu của bài này cấm cả chữ số nên đỏ oan ngay lượt chạy.
+    assert not re.search(r"\d+\s*Thẻ", m.group(1)), (
+        f"phụ đề còn gõ số thẻ: {m.group(1)!r}")

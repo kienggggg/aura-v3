@@ -63,29 +63,23 @@
     document.getElementById('btnReloadLedgerFull')?.addEventListener('click', taiLedgerVaEvidence);
     document.getElementById('btnRefreshLedgerPreview')?.addEventListener('click', taiLedgerVaEvidence);
 
-    // Xử lý 8 Thẻ Quy Trình 1-Click
-    const presetPrompts = {
-      card_video_shorts: 'Sản xuất video ngắn 60s về Lập trình Thẻ AURA v3 và Xuất bản tự động',
-      card_code_doctor: 'Khám bệnh mã nguồn Python, định vị lỗi AST và sinh bản vá tự động',
-      card_polyglot_transpiler: 'Chuyển đổi logic Python AST sang JavaScript/Go/Rust/C++ và kiểm tra cú pháp',
-      card_deep_scout: 'Tra cứu đa nguồn Internet về xu hướng AI 2026 và kiểm chứng sự thật',
-      card_novel_writer: 'Sáng tác chương truyện đời thường Quán Cà Phê Cuối Ngõ và chấm điểm TTR',
-      card_fullstack_builder: 'Tạo giao diện web tương tác HTML5/JS và API backend aiohttp',
-      card_security_guard: 'Kiểm toán bảo mật AST, quét rò rỉ secret key và kiểm tra đường dẫn an toàn',
-      card_system_audit: 'Kiểm toán toàn diện sinh tồn hệ thống, RAM/CPU và quét 714 test cases'
-    };
-
-    document.querySelectorAll('.preset-card, .btn-preset-run').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const presetId = btn.dataset.preset || btn.closest('.preset-card')?.dataset.preset;
-        if (presetId && presetPrompts[presetId]) {
-          const input = document.getElementById('pipelineTopicInput');
-          if (input) input.value = presetPrompts[presetId];
-          chuyenView('viewPipeline');
-          kichHoatPipeline(presetId);
-        }
-      });
+    // UỶ NHIỆM SỰ KIỆN, không gán lên từng thẻ. Thẻ nay được DỰNG SAU khi hàm
+    // này chạy (nạp từ `/api/pipeline/presets`), nên gán ở đây thì không thẻ
+    // nào nghe được — và màn hình sẽ im lặng chứ không báo lỗi.
+    document.getElementById('pipelinePresetsGrid')?.addEventListener('click', (e) => {
+      const the = e.target.closest('.preset-card');
+      if (!the) return;
+      const presetId = the.dataset.preset;
+      const t = state.theQuyTrinh[presetId];
+      if (!presetId || !t) return;
+      // ĐỀ MẶC ĐỊNH LẤY TỪ MÁY CHỦ. Bảng `presetPrompts` gõ cứng cũ là bản sao
+      // thứ hai của `tham_so_mac_dinh` và đã lệch **8/8** — ví dụ thẻ video ở
+      // Python là "Khám phá bí mật lịch sử phố cổ Hà Nội", ở JS là một câu khác
+      // hẳn. Bấm thẻ thì chạy đề của JS, còn thẻ thì khai đề của Python.
+      const o = document.getElementById('pipelineTopicInput');
+      if (o) o.value = t.tham_so_mac_dinh || '';
+      chuyenView('viewPipeline');
+      kichHoatPipeline(presetId);
     });
   }
 
@@ -131,7 +125,7 @@
 
     list.innerHTML = state.rooms.map(r => `
       <div class="agent-nav-item ${r.id === state.activeAgentId ? 'active' : ''}" data-id="${r.id}">
-        <div class="agent-icon-box" style="background: ${r.mau_sac}20; color: ${r.mau_sac};">
+        <div class="agent-icon-box" style="background: ${mauHop(r.mau_sac)}20; color: ${mauHop(r.mau_sac)};">
           ${r.bieu_tuong}
         </div>
         <div class="agent-meta">
@@ -158,7 +152,7 @@
     if (!grid) return;
 
     grid.innerHTML = state.rooms.map(r => `
-      <div class="room-card" style="border-top: 3px solid ${r.mau_sac};">
+      <div class="room-card" style="border-top: 3px solid ${mauHop(r.mau_sac)};">
         <div class="room-card-header">
           <div class="room-badge-group">
             <span class="room-icon">${r.bieu_tuong}</span>
@@ -204,12 +198,12 @@
     if (header) {
       header.innerHTML = `
         <div style="display: flex; align-items: center; gap: 12px;">
-          <div style="font-size: 28px; width: 44px; height: 44px; border-radius: 10px; background: ${room.mau_sac}25; display: flex; align-items: center; justify-content: center;">
+          <div style="font-size: 28px; width: 44px; height: 44px; border-radius: 10px; background: ${mauHop(room.mau_sac)}25; display: flex; align-items: center; justify-content: center;">
             ${room.bieu_tuong}
           </div>
           <div>
             <h3 style="font-size: 16px; font-weight: 800; color: #FFF;">${room.code_name} — ${room.ten}</h3>
-            <span style="font-size: 12px; color: ${room.mau_sac}; font-weight: 600;">${room.vai_tro}</span>
+            <span style="font-size: 12px; color: ${mauHop(room.mau_sac)}; font-weight: 600;">${room.vai_tro}</span>
           </div>
         </div>
         <span class="room-status-badge">${room.trang_thai}</span>
@@ -333,7 +327,48 @@
       // bước máy chủ báo về — chậm hơn, nhưng không bịa ra bước nào.
       state.soDoMacDinh = [];
     }
+    veTheQuyTrinh();
     veSoDoBuoc(state.soDoMacDinh);
+  }
+
+  // Chỉ nhận mã màu `#rrggbb`. Màu đi thẳng vào thuộc tính `style`; hôm nay nó
+  // từ danh mục của chính ta, nhưng một giá trị chưa lọc ghép vào CSS là chỗ
+  // chỉ cần sai một lần.
+  function mauHop(m) {
+    return /^#[0-9A-Fa-f]{6}$/.test(String(m || '')) ? m : '#64748B';
+  }
+
+  // Dựng lưới thẻ từ danh mục máy chủ.
+  //
+  // Trước 06/09/2026 tám thẻ gõ cứng trong `noi_bo.html`, và đã lệch khỏi
+  // `DANH_SACH_THE_QUY_TRINH`: tên 7/8 · mô tả 8/8 · biểu tượng phòng 6/8 · đề
+  // mặc định 8/8. Không phải lệch câu chữ — `card_code_doctor` hiện BA biểu
+  // tượng cho chuỗi HAI phòng (🛡️ không phải phòng nào cả), và
+  // `card_system_audit` hứa "714 test cases" khi bộ test đã 893.
+  function veTheQuyTrinh() {
+    const luoi = document.getElementById('pipelinePresetsGrid');
+    if (!luoi) return;
+    const cac = Object.values(state.theQuyTrinh);
+    if (!cac.length) {
+      luoi.innerHTML = '<div class="flow-empty">Chưa nạp được danh mục thẻ — ' +
+        'không có thẻ nào để bấm.</div>';
+      return;
+    }
+    luoi.innerHTML = cac.map(t => {
+      const mau = mauHop(t.mau_sac);
+      // Dãy biểu tượng SINH RA từ chuỗi sẽ chạy, nên nó không thể sai số phòng.
+      const phong = (t.so_do || []).map(b => escapeHtml(b.bieu_tuong)).join(' ');
+      return `
+      <div class="preset-card" data-preset="${escapeHtml(t.id)}" style="border-left: 4px solid ${mau};">
+        <div class="preset-badge" style="background: ${mau}26; color: ${mau};">${escapeHtml(t.bieu_tuong || '')} ${(t.so_do || []).length} PHÒNG</div>
+        <h4 class="preset-name">${escapeHtml(t.ten || t.id)}</h4>
+        <p class="preset-desc">${escapeHtml(t.mo_ta || '')}</p>
+        <div class="preset-footer">
+          <span class="preset-agents" title="${escapeHtml((t.cac_phong || []).join(' → '))}">${phong}</span>
+          <button class="btn-preset-run" data-preset="${escapeHtml(t.id)}">Nạp Thẻ ➔</button>
+        </div>
+      </div>`;
+    }).join('');
   }
 
   // LỌC ký tự trước khi ghép vào `id=` — mã phòng đi thẳng vào HTML. Hôm nay
@@ -607,17 +642,20 @@
     const srcBadge = document.getElementById('sourceLangBadge');
     const tgtBadge = document.getElementById('targetLangBadge');
 
+    // Qua `mauHop` như mọi chỗ khác. Sáu dòng này gán qua CSSOM nên trình duyệt
+    // tự bác giá trị hỏng — nhưng "chỗ này an toàn vì một lý do khác" là đúng
+    // thứ bắt người đọc sau phải suy lại. Một luật, mọi chỗ.
     if (srcBadge && srcInfo) {
       srcBadge.textContent = `${srcInfo.bieu_tuong} ${srcInfo.ten}`;
-      srcBadge.style.color = srcInfo.mau_sac;
-      srcBadge.style.background = `${srcInfo.mau_sac}20`;
-      srcBadge.style.borderColor = `${srcInfo.mau_sac}40`;
+      srcBadge.style.color = mauHop(srcInfo.mau_sac);
+      srcBadge.style.background = `${mauHop(srcInfo.mau_sac)}20`;
+      srcBadge.style.borderColor = `${mauHop(srcInfo.mau_sac)}40`;
     }
     if (tgtBadge && tgtInfo) {
       tgtBadge.textContent = `${tgtInfo.bieu_tuong} ${tgtInfo.ten}`;
-      tgtBadge.style.color = tgtInfo.mau_sac;
-      tgtBadge.style.background = `${tgtInfo.mau_sac}20`;
-      tgtBadge.style.borderColor = `${tgtInfo.mau_sac}40`;
+      tgtBadge.style.color = mauHop(tgtInfo.mau_sac);
+      tgtBadge.style.background = `${mauHop(tgtInfo.mau_sac)}20`;
+      tgtBadge.style.borderColor = `${mauHop(tgtInfo.mau_sac)}40`;
     }
   }
 

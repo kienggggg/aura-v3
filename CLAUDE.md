@@ -888,6 +888,62 @@ không bài nào hỏi *"còn trường nào cũng được khai mà không ai �
 **Vá một trường thì hỏi luôn: cấu trúc này còn khai gì nữa, và ai đọc?** Rẻ hơn
 nhiều so với đợi trường thứ hai tự lộ ra.
 
+### Dời một lời hứa sang chỗ dễ tin hơn cũng là xuất bản nó
+
+Cùng ngày 06/09, dọn nốt chỗ thẻ được khai ở **ba** nơi — Python, 8 khối gõ
+cứng trong `noi_bo.html`, bảng `presetPrompts` gõ cứng trong `noi_bo.js`. Đo độ
+lệch: **tên 7/8 · mô tả 8/8 · biểu tượng phòng 6/8 · đề mặc định 8/8**.
+
+Việc phải làm rõ ràng: bỏ hai bản sao, dựng thẻ từ máy chủ. Và tôi suýt làm
+đúng thế — **chép nguyên `mo_ta` của Python lên màn hình**. Dừng lại vì một câu:
+*những lời ấy đã có ai đo chưa?*
+
+Chạy thật cả 8 thẻ, đối chiếu với hiện vật trên đĩa:
+
+```
+thẻ                       chạy thật                       lời hứa
+card_video_shorts         PASS 4/4 · 216s · 21 hiện vật   ĐÚNG
+card_code_doctor          PASS 2/2 ·  48s ·  2            "sinh bản vá tự động" — không có
+card_polyglot_transpiler  PASS 3/3 ·  39s ·  3            "dịch sang JS/Go/Rust…" — 0 dòng dịch
+card_deep_scout           PASS 3/3 · 217s ·  3            "đối chiếu bằng chứng URL" — không đối chiếu
+card_novel_writer         PASS 2/2 · 170s ·  2            "3 chương · TTR · giác quan" — 1 kịch bản 240 từ
+card_fullstack_builder    FAIL 0/3 · 287s ·  0            "HTML5/CSS3 + API aiohttp" — 0 hiện vật
+card_security_guard       PASS 3/3 ·  83s ·  3            "chống lộ API Key · Path · injection" — không cái nào
+card_system_audit         PASS 2/2 ·  48s ·  2            "đo RAM/CPU" — không đo CPU
+```
+
+**7/8.** Chỗ đắt nhất: `card_polyglot_transpiler` và `card_security_guard` hứa
+hai việc khác hẳn nhau mà chạy **y hệt nhau** — cùng chuỗi, và `chan_doan.json`
+của cả hai đều 119 byte với đúng bốn con số đếm. Đọc hai thẻ ấy trên màn hình
+thì tưởng là hai công cụ.
+
+Và `card_fullstack_builder` **gãy trên chính đề mặc định của nó**: 287 giây, 0
+hiện vật, vì `aura` cho 23,89 từ/câu (trần 22,7). Không đổi đề cho nó qua cửa —
+đổi đề để một thẻ hỏng trông đỡ hỏng là đúng thứ đã từ chối làm ngày 05/09.
+
+**Một bản sao chưa ai đọc thì vô hại. Bản sao được đưa lên màn hình thì thành
+lời hứa.** Trước khi chuyển văn bản từ chỗ ít người nhìn sang chỗ nhiều người
+nhìn, hỏi: câu này đã có phép đo nào đứng sau chưa? Ở đây câu trả lời là 1/8.
+
+Ba thứ khác trên cùng đường:
+
+*`<input type="text">` nuốt `\n` không báo.* Hai thẻ mang cả đoạn mã trong
+`tham_so_mac_dinh`. Ca đối chứng chạy ngay trong trình duyệt: cùng một chuỗi 65
+ký tự, `input` giữ **62**, `textarea` giữ **65**. Thứ gửi đi khác thứ thẻ khai,
+và không có một dấu hiệu nào.
+
+*"Vẫn xanh" không phải lúc nào cũng là cửa mù.* Gieo `"mau_sac": "#8B5CF6"` để
+thử cửa màu thì bài vẫn xanh, và tôi suýt ghi vào sổ là cửa mù. Nó không mù:
+chuỗi ấy có ở **cả hai** danh mục, `gieo` thay lần xuất hiện đầu — tức danh mục
+PHÒNG — còn cửa thì chỉ canh danh mục THẺ. Phép gieo trúng chỗ khác chỗ cửa
+đang canh. **Trước khi ghi "cửa mù", kiểm xem phép gieo có vào đúng chỗ không.**
+Và nó chỉ ra một chuyện thật: bốn chỗ khác ghép màu vào `style` chưa ai lọc.
+
+*Gõ `#` mở chú thích trong tệp JS.* Thói quen Python, mắc lúc sửa khối màu
+Polyglot. Cả tệp gãy — màn hình trắng thật — và **mọi bài soi chuỗi vẫn xanh**,
+vì chúng chỉ đọc văn bản. Chỉ `node --check` bắt được. Nay nó là một bài test,
+và phép gieo dựng lại đúng cái lỗi ấy.
+
 Ba thứ khác bắt được trên cùng đường, cả ba đều do phép đo:
 
 *Sửa máy chủ mà không sửa màn hình là dời chỗ nói dối.* Hàng sơ đồ có **5 ô gõ

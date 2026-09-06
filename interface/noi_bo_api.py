@@ -602,6 +602,26 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
 # 4. API QUY TRÌNH PHỐI HỢP LIÊN PHÒNG BAN (PIPELINE AUTOMATOR & PRESET CARDS)
 # ==============================================================================
 
+# CHẠY THẬT CẢ 8 THẺ NGÀY 06/09/2026, rồi đối chiếu `mo_ta` với hiện vật trên
+# đĩa. Chuyển lời thẻ từ HTML sang màn hình mà không kiểm là dời một lời hứa
+# chưa ai đo sang chỗ dễ tin hơn — nên đo trước, rồi mới chuyển.
+#
+#   thẻ                       chạy thật                       lời hứa
+#   card_video_shorts         PASS 4/4 · 216s · 21 hiện vật   ĐÚNG
+#   card_code_doctor          PASS 2/2 ·  48s ·  2            "sinh bản vá tự động" — không có
+#   card_polyglot_transpiler  PASS 3/3 ·  39s ·  3            "dịch sang JS/Go/Rust…" — 0 dòng dịch
+#   card_deep_scout           PASS 3/3 · 217s ·  3            "đối chiếu bằng chứng URL" — không đối chiếu
+#   card_novel_writer         PASS 2/2 · 170s ·  2            "3 chương · TTR · giác quan" — 1 kịch bản 240 từ
+#   card_fullstack_builder    FAIL 0/3 · 287s ·  0            "HTML5/CSS3 + API aiohttp" — 0 hiện vật
+#   card_security_guard       PASS 3/3 ·  83s ·  3            "chống lộ API Key · Path · injection" — không cái nào
+#   card_system_audit         PASS 2/2 ·  48s ·  2            "đo RAM/CPU" — không đo CPU
+#
+# Chỗ đắt nhất: `card_polyglot_transpiler` và `card_security_guard` hứa hai việc
+# khác hẳn nhau mà chạy **y hệt nhau** — cùng chuỗi delta·gamma·omega, và
+# `chan_doan.json` của cả hai đều 119 byte với đúng bốn con số đếm.
+#
+# `mo_ta` dưới đây đã sửa theo lượt chạy. Chỗ nào chưa làm được thì viết
+# **CHƯA**, không viết cho đẹp — đúng luật Chương 7 mục 3.
 DANH_SACH_THE_QUY_TRINH = [
     {
         "id": "card_video_shorts",
@@ -631,10 +651,15 @@ DANH_SACH_THE_QUY_TRINH = [
     },
     {
         "id": "card_code_doctor",
-        "ten": "🩺 Bác Sĩ Khám Mã & Auto-Fix",
+        # ĐỔI TÊN 06/09/2026: bỏ "Auto-Fix". Mục 5 Chương II của
+        # `KY_LUAT_THUC_THI.md` ghi thẳng **`delta` KHÔNG tự sửa mã**, nên cái
+        # tên đang hứa đúng thứ đặc tả cấm. Chạy thật: 2/2 · 48s · 2 hiện vật,
+        # `chan_doan.json` đếm 27 tệp · 10.590 dòng · 293 hàm · 51 lớp · 0 lỗi
+        # cú pháp. Không có bản vá nào.
+        "ten": "🩺 Bác Sĩ Khám Mã (chỉ chẩn đoán)",
         "bieu_tuong": "🔧",
         "mau_sac": "#10B981",
-        "mo_ta": "Khám lỗi cú pháp, vòng lặp vô tận hoặc hàm thiếu return bằng CST/AST và sinh bản vá tự động.",
+        "mo_ta": "Quét AST toàn kho tìm lỗi cú pháp rồi đo RAM và số bài test. KHÔNG tự sửa mã — đặc tả cấm, và ở đây cũng sẽ không có.",
         "cac_phong": ["delta", "gamma"],
         "tham_so_mac_dinh": "def tinh_tong(n):\n    s = 0\n    for i in range(n):\n        s += i"
     },
@@ -643,7 +668,10 @@ DANH_SACH_THE_QUY_TRINH = [
         "ten": "🚀 Polyglot Cross-Compiler",
         "bieu_tuong": "🌐",
         "mau_sac": "#F59E0B",
-        "mo_ta": "Chuyển đổi logic mã nguồn tự động sang JavaScript, TypeScript, Go, Rust, C++, SQL và kiểm định cú pháp.",
+        # Chạy thật 06/09: 3/3 · 39s · 3 hiện vật, và KHÔNG hiện vật nào là mã
+        # đã dịch. Chuỗi này không có phòng dịch — bộ dịch nằm ở Polyglot
+        # Studio (`/api/polyglot/translate`), một đường khác hẳn.
+        "mo_ta": "Quét AST toàn kho, đo RAM và số bài test, rồi ghi báo cáo sổ cái. CHƯA dịch mã sang ngôn ngữ nào — bộ dịch nằm ở Polyglot Studio, không nằm trong chuỗi này.",
         "cac_phong": ["delta", "gamma", "omega"],
         "tham_so_mac_dinh": "def fibonacci(n):\n    if n <= 1:\n        return n\n    return fibonacci(n-1) + fibonacci(n-2)"
     },
@@ -657,7 +685,11 @@ DANH_SACH_THE_QUY_TRINH = [
         "ten": "🔬 Trinh Sát & Kiểm Chứng Sự Thật",
         "bieu_tuong": "🔍",
         "mau_sac": "#6366F1",
-        "mo_ta": "Cào đa nguồn Internet, trích xuất dữ liệu thô và đối chiếu bằng chứng URL chống bịa đặt (Anti-Hallucination).",
+        # Chạy thật 06/09: 3/3 · 217s · 3 hiện vật. `zeta` lấy 5 nguồn kèm
+        # SHA-256, `aura` viết kịch bản TỪ CHỦ ĐỀ — không đọc biên nhận, nên
+        # không có bước đối chiếu nào. Chữ "chống bịa đặt" là lời hứa nặng nhất
+        # của cả danh mục và nó chưa có gì đứng sau.
+        "mo_ta": "Tra mạng thật rồi ghi biên nhận nguồn kèm SHA-256, viết kịch bản từ chủ đề và ghi sổ cái. CHƯA đối chiếu kịch bản với nguồn.",
         "cac_phong": ["zeta", "aura", "omega"],
         "tham_so_mac_dinh": "Xu hướng công nghệ AI Agent tự hành năm 2026"
     },
@@ -667,7 +699,10 @@ DANH_SACH_THE_QUY_TRINH = [
         "ten": "✍️ Viết Truyện Đời Thường Dài Hơi",
         "bieu_tuong": "📖",
         "mau_sac": "#3B82F6",
-        "mo_ta": "Sáng tác 3 chương truyện đời thường liên hoàn, đo lường độ phong phú từ vựng TTR và mật độ giác quan.",
+        # Chạy thật 06/09: 2/2 · 170s · 2 hiện vật. `aura` cho MỘT kịch bản 240
+        # từ / 16 câu khác nhau — không phải 3 chương. `gamma` đo RAM · số bài
+        # test · tốc độ sinh; không có TTR, không có mật độ giác quan ở đâu.
+        "mo_ta": "Viết MỘT kịch bản truyện 215–250 từ rồi đo RAM, số bài test và tốc độ sinh. CHƯA có 3 chương, CHƯA đo TTR hay mật độ giác quan.",
         "cac_phong": ["aura", "gamma"],
         "tham_so_mac_dinh": "Quán Cà Phê Cuối Ngõ"
     },
@@ -685,7 +720,16 @@ DANH_SACH_THE_QUY_TRINH = [
         "ten": "⚡ Sinh App Fullstack Web",
         "bieu_tuong": "💻",
         "mau_sac": "#06B6D4",
-        "mo_ta": "Tự động thiết kế giao diện HTML5/CSS3/Vanilla JS tương tác cao kèm API máy chủ Python aiohttp.",
+        # Chạy thật 06/09 trên chính đề mặc định của thẻ: **FAIL 0/3 · 287 giây
+        # · 0 hiện vật**. `aura` trượt cửa độ dài (23,89 từ/câu, trần 22,7) nên
+        # `delta` và `alpha` không chạy. Đây là thẻ DUY NHẤT trong 8 thẻ không
+        # ra nổi một byte nào.
+        #
+        # KHÔNG đổi đề cho nó qua cửa. Đề "bảng điều khiển tài chính" là đề GIẢI
+        # THÍCH, và lời nhắc truyện viết câu dài trên đề giải thích — đúng ca đã
+        # đo 05/09. Đổi đề để thẻ trông chạy được là làm cho một thẻ hỏng trông
+        # đỡ hỏng hơn, đúng thứ chú thích 05/09 ngay dưới đây từ chối làm.
+        "mo_ta": "CHƯA CHẠY ĐƯỢC: 0/3 bước, 0 hiện vật trên đề mặc định của chính thẻ (đo 06/09/2026). Chuỗi khai là aura → delta → alpha, không có bước nào thiết kế giao diện hay viết API.",
         "cac_phong": ["aura", "delta", "alpha"],
         "tham_so_mac_dinh": "Bảng điều khiển tài chính cá nhân tương tác"
     },
@@ -694,7 +738,12 @@ DANH_SACH_THE_QUY_TRINH = [
         "ten": "🛡️ Kiểm Toán Bảo Mật & Secret Leak",
         "bieu_tuong": "🔒",
         "mau_sac": "#EF4444",
-        "mo_ta": "Quét AST chống lộ API Key, kiểm tra Path Confinement, ngăn chặn injection và kiểm tra Hard Gates.",
+        # Chạy thật 06/09: 3/3 · 83s · 3 hiện vật — và `chan_doan.json` của nó
+        # GIỐNG HỆT của `card_polyglot_transpiler`: cùng 119 byte, cùng bốn con
+        # số đếm. Hai thẻ hứa hai việc khác hẳn nhau, chạy y một chuỗi, để lại y
+        # một thứ. `quet_ast` đếm tệp/dòng/hàm/lớp và bắt lỗi cú pháp; nó không
+        # tìm khoá, không kiểm đường dẫn, không xét tiêm lệnh.
+        "mo_ta": "Quét AST toàn kho (đếm tệp · dòng · hàm · lớp · lỗi cú pháp), đo RAM và số bài test, ghi báo cáo sổ cái. CHƯA quét khoá, CHƯA kiểm đường dẫn, CHƯA chống tiêm lệnh.",
         "cac_phong": ["delta", "gamma", "omega"],
         "tham_so_mac_dinh": "Audit toàn diện kho mã nguồn AURA v3"
     },
@@ -703,7 +752,11 @@ DANH_SACH_THE_QUY_TRINH = [
         "ten": "📊 Kiểm Toán Bằng Chứng & Sinh Tồn",
         "bieu_tuong": "🛡️",
         "mau_sac": "#8B5CF6",
-        "mo_ta": "Đo đạc RAM/CPU thật, kiểm tra tính toàn vẹn của Sổ cái Omega và quét toàn bộ bộ test.",
+        # Chạy thật 06/09: 2/2 · 48s · 2 hiện vật. `metrics.json` có ram · test
+        # · toc_do — **không có CPU**. Bản HTML cũ còn hứa "714 test cases";
+        # phép đo hôm nay trả về 894. Số gõ tay tụt lại sau phép đo, đúng bệnh
+        # câu "đúng 17 tệp" của `CLAUDE.md`.
+        "mo_ta": "Đo RAM thật, đếm số bài test thật, đo tốc độ sinh thật, rồi thống kê sổ cái kèm SHA-256. KHÔNG đo CPU.",
         "cac_phong": ["gamma", "omega"],
         "tham_so_mac_dinh": "Full Health Audit"
     }

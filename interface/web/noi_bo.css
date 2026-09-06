@@ -661,6 +661,16 @@ body {
   font-size: 13px;
 }
 
+/* `pipelineTopicInput` là `<textarea>` từ 06/09/2026 — ô `input` nuốt `\n` mà
+   hai thẻ mang cả đoạn mã. Cho nó cao dần theo nội dung, tối đa 6 dòng. */
+textarea.form-input {
+  min-height: 40px;
+  max-height: 132px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
 .pipeline-visual-flow {
   display: flex;
   align-items: center;

@@ -1172,3 +1172,193 @@ def test_day_chuyen_THAT_SU_hoi_so_the_can_dung(tmp_path):
     assert len(anh) == 7, (
         f"bơm 7 thẻ mà dây chuyền dựng {len(anh)} ảnh — "
         "`so_the_can_dung` không phải thứ quyết định số thẻ")
+
+
+# ---------------------------------------------------------------------------
+# MỐC PHỤ ĐỀ PHẢI ĐO, KHÔNG ĐƯỢC CHIA ĐỀU (06/09/2026)
+#
+# `_dung_video` đặt mốc bằng `dai_giong / len(cards)`. Đo trên kịch bản thật
+# 245 từ / 13 đoạn: **lệch tới 1,31 giây** (đoạn 4,17–6,28s, chia đều 5,15s).
+#
+# VÀ 89 BÀI TRONG TỆP NÀY XANH XUYÊN QUA CẢ LẦN ĐỔI CƠ CHẾ. Không cửa nào hỏi
+# *"mốc phụ đề có khớp tiếng không"* — đó là lý do lỗi sống được.
+#
+# Chép TAY từ `KY_LUAT_THUC_THI.md` mục 2b.
+DAC_TA_DAI_DICH = 60.0
+DAC_TA_KHE_MIN, DAC_TA_KHE_MAX = 0.15, 1.20
+
+
+def test_hang_so_moc_phu_de_khop_DAC_TA():
+    import core.phong_alpha as pa
+
+    assert pa.DAI_DICH == DAC_TA_DAI_DICH
+    assert (pa.KHE_MIN, pa.KHE_MAX) == (DAC_TA_KHE_MIN, DAC_TA_KHE_MAX)
+    assert DAC_TA_DAI_DICH == pytest.approx((pa.DAI_MIN + pa.DAI_MAX) / 2)
+
+
+def test_doc_giong_theo_doan_tra_MOC_DO_DUOC(tmp_path):
+    """Mốc phải theo độ dài THẬT của từng đoạn, và khe phải đều nhau.
+
+    Đoạn dài ngắn khác nhau rõ rệt thì khối phụ đề cũng phải khác nhau. Chia
+    đều thì mọi khối bằng nhau — đó là thứ bài này bác.
+    """
+    from core.phong_alpha import doc_giong_theo_doan
+
+    doan = ["Một câu rất ngắn.",
+            "Đây là một câu dài hơn hẳn, có nhiều mệnh đề nối nhau, "
+            "cốt để thời lượng đọc chênh rõ so với câu trước.",
+            "Câu ba vừa phải thôi."]
+    wav, moc, ly_do = doc_giong_theo_doan(doan, tmp_path)
+    assert wav is not None, ly_do
+    assert len(moc) == 3
+
+    dai = [kt - bd for bd, kt in moc]
+    assert max(dai) > min(dai) * 1.5, (
+        f"khối phụ đề gần như bằng nhau ({dai}) — mốc đang bị chia đều")
+
+    khe = [moc[i + 1][0] - moc[i][1] for i in range(len(moc) - 1)]
+    assert max(khe) - min(khe) < 0.02, f"khe không đều: {khe}"
+    assert DAC_TA_KHE_MIN - 1e-6 <= khe[0] <= DAC_TA_KHE_MAX + 1e-6, khe
+
+    from core.phong_alpha import _giay
+    assert moc[-1][1] == pytest.approx(_giay(wav) - 0.0, abs=0.15), (
+        "mốc cuối không trùng độ dài tệp âm thanh thật")
+
+
+def test_khe_SUY_TU_DICH_chu_khong_phai_hang_so():
+    """Hai tổng khác nhau phải cho hai khe khác nhau — HÀM THUẦN nên đưa được
+    cặp xấu vào, không phải đợi một lượt TTS thật rơi đúng vùng cần đo.
+
+    Bản đầu của phép đo fit `khe = 0,31s` từ CHÍNH kịch bản dùng để kiểm. Đo
+    ba kịch bản thì khe ra `0,31 · 0,72 · 0,72` — `0,31` là ca lệch nhất, và áp
+    nó cho bài thứ hai ra 54,58s, **dưới sàn 55s**. Một hằng số ở đây là sai.
+
+    Ba cặp dưới chép TAY từ ba lượt đo thật.
+    """
+    from core.phong_alpha import khe_can_chen
+
+    assert khe_can_chen(55.19, 13) == pytest.approx(0.40, abs=0.01)
+    assert khe_can_chen(50.86, 13) == pytest.approx(0.76, abs=0.01)
+    assert khe_can_chen(51.19, 13) == pytest.approx(0.73, abs=0.01)
+
+    # Ba tổng khác nhau KHÔNG được cho cùng một khe.
+    ba = {khe_can_chen(t, 13) for t in (55.19, 50.86, 51.19)}
+    assert len(ba) == 3, f"ba tổng khác nhau ra {len(ba)} khe: {ba}"
+
+    # Và tổng sau khi chèn phải về đúng đích.
+    for tong in (55.19, 50.86, 51.19):
+        assert tong + khe_can_chen(tong, 13) * 12 == pytest.approx(
+            DAC_TA_DAI_DICH, abs=0.01)
+
+
+def test_khe_bi_KEP_hai_dau_va_noi_ra_bang_do_dai():
+    """Tiếng quá dài thì khe âm; quá ngắn thì lặng lê thê. Kẹp, rồi cửa dài canh."""
+    from core.phong_alpha import khe_can_chen
+
+    assert khe_can_chen(200.0, 13) == DAC_TA_KHE_MIN, "khe âm không bị kẹp"
+    assert khe_can_chen(5.0, 13) == DAC_TA_KHE_MAX, "khe khổng lồ không bị kẹp"
+    assert khe_can_chen(50.0, 1) == 0.0, "một đoạn thì không có khe nào"
+
+
+def test_lam_phu_de_DUNG_moc_khi_duoc_dua(tmp_path):
+    """Ca đối chứng hai chiều: có `moc` thì dùng, không có thì mới chia đều."""
+    from core.phong_alpha import lam_phu_de
+
+    doan = ["một", "hai", "ba"]
+    moc = [(0.0, 2.0), (3.0, 9.0), (10.0, 11.0)]
+    chu = lam_phu_de(doan, 4.0, tmp_path / "co.srt", moc=moc).read_text(
+        encoding="utf-8")
+    assert "00:00:03,000 --> 00:00:09,000" in chu, chu
+    assert "00:00:04,000 --> 00:00:08,000" not in chu, "vẫn chia đều dù có mốc"
+
+    deu = lam_phu_de(doan, 4.0, tmp_path / "khong.srt").read_text(encoding="utf-8")
+    assert "00:00:04,000 --> 00:00:08,000" in deu, "đường lui chia đều đã hỏng"
+
+
+def test_day_chuyen_THAT_SU_dua_MOC_vao_phu_de(tmp_path, monkeypatch):
+    """Chấm được một hàm không chứng minh kết quả của nó đi tới đâu.
+
+    Bài này bắt THAM SỐ THẬT mà `lam_phu_de` nhận khi chạy cả dây chuyền. Gieo
+    bỏ khâu truyền `moc=` thì bốn bài trên VẪN XANH — đúng cửa mù đã để 89 bài
+    đi qua một lần đổi cơ chế mà không ai đỏ.
+    """
+    import core.phong_alpha as pa
+
+    thay = {}
+    goc = pa.lam_phu_de
+
+    def _bat(doan, moi_the, dich, moc=None):
+        thay["moc"] = moc
+        thay["moi_the"] = moi_the
+        return goc(doan, moi_the, dich, moc=moc)
+
+    monkeypatch.setattr(pa, "lam_phu_de", _bat)
+    def _render_gia(cards, wav, ra, srt=None, nhac=None):
+        ra.write_bytes(b"x" * 64)      # phải TẠO tệp: `_hien_vat` gọi `stat()`
+        return True, ""
+
+    monkeypatch.setattr(pa, "render", _render_gia)
+    monkeypatch.setattr(pa, "kiem_video", lambda *a, **k: {"dat": True, "so": {},
+                                                           "vi_sao": []})
+    van = " ".join(f"Câu số {i} nói một điều khác hẳn câu trước." for i in range(1, 14))
+    pa.dung_video(tmp_path / "ra", van)
+
+    assert thay.get("moc") is not None, (
+        "`lam_phu_de` không nhận `moc` — phụ đề vẫn đang chia đều")
+    dai = [kt - bd for bd, kt in thay["moc"]]
+    assert max(dai) - min(dai) > 0.2, (
+        f"mốc truyền vào gần như đều nhau ({dai}) — không phải mốc đo được")
+
+
+def test_CO_THAT_SU_cat_im_lang_dem_cua_SAPI(tmp_path):
+    """Mốc trả về phải là độ dài ĐÃ CẮT, không phải độ dài thô.
+
+    Mỗi lượt SAPI đệm ~0,90s im lặng (đo 0,89–0,90s trên 39 đoạn). Bỏ cắt thì
+    13 đoạn cộng thêm ~8 giây, video lên 66,94s và vượt trần 65s — nhưng `moc`
+    vẫn "đo được", khe vẫn đều, nên không bài nào khác kêu.
+
+    BẢN ĐẦU CỦA BÀI NÀY GỌI `_cat_lang` TRỰC TIẾP nên gieo vào CHỖ GỌI trong
+    `doc_giong_theo_doan` thì nó vẫn xanh. Chấm được một hàm không chứng minh
+    kết quả của nó đi tới đâu — phải so mốc với TỆP THÔ trên đĩa.
+    """
+    from core.phong_alpha import _giay, doc_giong_theo_doan
+
+    doan = ["Câu thứ nhất để thử.", "Câu thứ hai cũng để thử.",
+            "Câu thứ ba khép lại."]
+    wav, moc, ly_do = doc_giong_theo_doan(doan, tmp_path)
+    assert wav is not None, ly_do
+
+    for i, (bd, kt) in enumerate(moc, 1):
+        tho = tmp_path / f"doan_{i:02d}" / "voice.wav"
+        assert tho.is_file(), f"không thấy bản thô của đoạn {i}"
+        bo = _giay(tho) - (kt - bd)
+        assert bo > 0.4, (
+            f"đoạn {i}: mốc dài {kt - bd:.2f}s so với bản thô {_giay(tho):.2f}s "
+            f"— chỉ chênh {bo:.2f}s, khâu cắt đệm SAPI không còn chạy")
+        assert kt - bd > 0.3, f"đoạn {i}: cắt sạch cả tiếng nói"
+
+
+def test_SO_THE_tinh_tu_DAI_DICH_chu_khong_tu_do_dai_do_duoc(tmp_path, monkeypatch):
+    """Bắt THAM SỐ THẬT mà `so_the_can_dung` nhận khi chạy cả dây chuyền.
+
+    Gieo đổi `DAI_DICH` thành `55.0` ở chỗ gọi mà sáu bài trên vẫn xanh — cửa
+    mù. Thứ tự mới là: quyết đích trước, chia thẻ theo đích, rồi mới đọc; nên
+    tham số ấy PHẢI là `DAI_DICH`.
+    """
+    import core.phong_alpha as pa
+
+    thay = {}
+    goc = pa.so_the_can_dung
+
+    def _bat(dai, van):
+        thay.setdefault("dai", dai)
+        return goc(dai, van)
+
+    monkeypatch.setattr(pa, "so_the_can_dung", _bat)
+    monkeypatch.setattr(pa, "doc_giong_theo_doan",
+                        lambda doan, tm: (None, [], "chặn ở đây, đã đủ đo"))
+    van = " ".join(f"Câu số {i} nói một điều khác hẳn câu trước." for i in range(1, 14))
+    pa.dung_video(tmp_path / "ra", van)
+
+    assert thay.get("dai") == pa.DAI_DICH, (
+        f"`so_the_can_dung` nhận {thay.get('dai')}, phải là DAI_DICH={pa.DAI_DICH}")

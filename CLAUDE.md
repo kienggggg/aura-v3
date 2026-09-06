@@ -1029,6 +1029,64 @@ sao"*, lần này nấp trong một phòng vừa viết ra để chống chính 
 **Chạy phép đo của mình từ HAI chỗ khác nhau trước khi tin nó.** Terminal và
 tiến trình dịch vụ không cùng một môi trường, và chênh lệch ấy im lặng.
 
+### Một hằng số fit từ chính mẫu dùng để kiểm thì chưa phải phép đo
+
+Ngày 06/09/2026, Sếp gửi bốn ảnh và một bản quay màn hình: một dây chuyền khác
+làm đúng việc của Alpha — `script.json` → ElevenLabs TTS (**timestamp từng mili
+giây**) → Remotion/React → `video.mp4`. Chỗ đáng học không phải giọng đọc, mà
+là **mốc thời gian đo được**.
+
+Alpha đặt mốc phụ đề bằng `dai_giong / len(cards)` — chia đều. Đo trên kịch bản
+thật 245 từ / 13 đoạn: **lệch tới 1,31 giây**, vì đoạn ngắn nhất 4,17s còn dài
+nhất 6,28s trong khi phép chia cho mọi đoạn 5,15s.
+
+Đọc từng đoạn rồi nối thì mốc thành đo được — nhưng bốn cách cho bốn kết quả:
+
+```
+A · đọc liền một lần        58,87s   LỌT     <- bản cũ
+B · nối 13 đoạn, không cắt  66,94s   TRƯỢT   <- mỗi lượt SAPI đệm ~0,90s
+C · cắt sạch im lặng        55,19s   LỌT nhưng sát sàn 0,19s
+D · cắt + chèn khe          58,91s   LỌT
+```
+
+**Và đây là chỗ suýt sai.** Tôi tính khe `= (58,87 − 55,19)/12 = 0,31s` từ
+**chính kịch bản dùng để kiểm**, rồi báo "D lệch A chỉ +0,05s". Vòng tròn — dĩ
+nhiên khớp, vì đã fit vào nó. Đo tiếp trên ba kịch bản:
+
+```
+                 đọc liền   đã cắt   đệm/đoạn    KHE
+kb1 (245 từ)      58,87s    55,19s    0,90s     0,31s
+kb2 (239 từ)      59,46s    50,86s    0,89s     0,72s
+kb3 (240 từ)      59,88s    51,19s    0,90s     0,72s
+
+ĐỆM SAPI  0,89–0,90s  chênh 0,01s  -> hằng số THẬT, 39 đoạn
+KHE       0,31–0,72s  chênh 0,42s  -> KHÔNG phải hằng số
+```
+
+`0,31s` hoá ra là ca lệch nhất. Áp nó cho kb2 ra `54,58s` — **dưới sàn 55s**.
+Suýt vá bằng một hằng số chỉ đúng cho đúng bài đã dùng để tìm ra nó. Cách đúng
+là bỏ hằng số: **suy khe từ đích**, cả ba đều ra 60,00s.
+
+**Trước khi đóng đinh một hằng số rút ra từ dữ liệu, hỏi: nó rút ra từ mấy
+mẫu, và mẫu ấy có phải chính mẫu dùng để kiểm không?** Ba mẫu là ít, nhưng ba
+mẫu đủ để thấy 0,31 và 0,72 không cùng một họ.
+
+Ba thứ khác trên đường:
+
+*89 bài xanh xuyên qua một lần đổi cơ chế.* Đổi hẳn cách đặt mốc phụ đề mà cả
+bộ cửa của Alpha không đỏ một bài. Không cửa nào hỏi *"mốc có khớp tiếng
+không"* — đó là lý do lỗi sống được.
+
+*Và cửa mới của tôi mù hai chỗ, gieo mới lộ.* Bỏ khâu cắt im lặng: vẫn xanh,
+vì bài kiểm gọi `_cat_lang` **trực tiếp** nên gieo vào **chỗ gọi** không ảnh
+hưởng. Đổi cách tính số thẻ: vẫn xanh, vì không bài nào bắt tham số ở chỗ gọi.
+Cùng một họ với *"chấm được một hàm không chứng minh kết quả của nó đi tới
+đâu"* — viết lại thành so mốc trả về với TỆP THÔ trên đĩa thì 8/8 đỏ.
+
+*Cái này KHÔNG mua được phụ đề sáng từng chữ.* Phụ đề của họ highlight từng từ
+— đòi mốc theo **TỪ**, mà OneCore không trả. Đây là mốc theo **CÂU**. Nói ra
+cùng lúc với thành quả, đừng để ai đọc rồi tưởng đã có.
+
 **Một bản sao chưa ai đọc thì vô hại. Bản sao được đưa lên màn hình thì thành
 lời hứa.** Trước khi chuyển văn bản từ chỗ ít người nhìn sang chỗ nhiều người
 nhìn, hỏi: câu này đã có phép đo nào đứng sau chưa? Ở đây câu trả lời là 1/8.

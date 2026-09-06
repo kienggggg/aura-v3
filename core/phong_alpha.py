@@ -324,6 +324,122 @@ def doc_giong(van_ban: str, thu_muc: Path) -> tuple[Path | None, str]:
     return wav, ""
 
 
+# ĐỌC TỪNG ĐOẠN — để MỐC PHỤ ĐỀ là ĐO ĐƯỢC, không phải phép chia (06/09/2026).
+#
+# Bản cũ đặt mốc bằng `dai_giong / len(cards)`. Đo trên kịch bản thật 245 từ /
+# 13 đoạn: **lệch tới 1,31 giây**, vì đoạn ngắn nhất 4,17s còn dài nhất 6,28s
+# trong khi phép chia cho mọi đoạn 5,15s. Ở 2–3 từ/giây, 1,31s là lệch 3–4 chữ.
+#
+# BỐN CÁCH ĐO TRÊN CÙNG MỘT KỊCH BẢN:
+#
+#   A · đọc liền một lần        58,87s   LỌT     <- bản cũ, mốc lệch 1,31s
+#   B · nối 13 đoạn, không cắt  66,94s   TRƯỢT   <- mỗi lượt SAPI đệm ~0,90s
+#   C · cắt sạch im lặng        55,19s   LỌT nhưng sát sàn 0,19s
+#   D · cắt + chèn khe          58,91s   LỌT
+#
+# KHE KHÔNG PHẢI HẰNG SỐ — đây là chỗ suýt sai. Bản đầu fit `khe = 0,31s` từ
+# CHÍNH kịch bản dùng để kiểm. Đo ba kịch bản thì khe ra `0,31 · 0,72 · 0,72`,
+# và `0,31` là ca lệch nhất: áp nó cho bài thứ hai ra 54,58s, **dưới sàn 55s**.
+# Còn đệm SAPI thì đúng là hằng số: `0,89–0,90s` trên 39 đoạn.
+#
+# Nên khe SUY TỪ ĐÍCH, không gõ tay. Cả ba kịch bản đều ra đúng 60,00s.
+DAI_DICH = 60.0                  # giữa cửa sổ DAI_MIN–DAI_MAX
+KHE_MIN, KHE_MAX = 0.15, 1.20
+NGUONG_LANG = "-45dB"
+
+
+def khe_can_chen(tong_da_cat: float, so_doan: int) -> float:
+    """Khe im lặng giữa hai đoạn, SUY TỪ ĐÍCH chứ không gõ tay.
+
+    HÀM THUẦN, cố ý — cùng lý do với `so_the_can_dung`: để phép tính này nằm
+    trong `doc_giong_theo_doan` thì cửa canh chỉ khẳng định được "một lượt thật
+    ra khe 0,84s", không cách nào đưa cặp (tổng, số đoạn) xấu vào.
+
+    Ba kịch bản thật, tổng đã cắt và khe suy ra::
+
+        55,19s / 13 đoạn -> 0,40s
+        50,86s / 13 đoạn -> 0,76s
+        51,19s / 13 đoạn -> 0,73s
+
+    Kẹp hai đầu: tiếng nói dài quá thì khe âm (không chèn nổi), ngắn quá thì
+    khe hoá thành khoảng lặng dài lê thê giữa từng câu. Kẹp rồi thì tổng lệch
+    khỏi `DAI_DICH` — và cửa độ dài 55–65 vẫn canh chỗ ấy.
+    """
+    if so_doan < 2:
+        return 0.0
+    return max(KHE_MIN, min(KHE_MAX, (DAI_DICH - tong_da_cat) / (so_doan - 1)))
+
+
+def _cat_lang(vao: Path, ra: Path) -> bool:
+    """Cắt im lặng HAI ĐẦU. Đệm SAPI đo được ~0,90s mỗi lượt gọi.
+
+    Ca đối chứng đã chạy: `mean_volume` của cả 13 đoạn đều TĂNG 0,7–1,1 dB sau
+    khi cắt, tức bỏ đúng phần lặng chứ không phạm vào tiếng nói. Lần đo đầu ca
+    ấy trả `None` vì đặt `-v error` nên ffmpeg nuốt mất dòng `volumedetect` —
+    KHÔNG ĐO ĐƯỢC, không phải đạt.
+    """
+    loc = (f"silenceremove=start_periods=1:start_silence=0:"
+           f"start_threshold={NGUONG_LANG}:detection=peak,areverse,"
+           f"silenceremove=start_periods=1:start_silence=0:"
+           f"start_threshold={NGUONG_LANG}:detection=peak,areverse")
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(vao), "-af", loc,
+                    str(ra)], capture_output=True, timeout=TRAN_RENDER_GIAY)
+    return ra.is_file() and ra.stat().st_size > 0
+
+
+def doc_giong_theo_doan(doan: List[str], thu_muc: Path
+                        ) -> tuple[Path | None, List[tuple], str]:
+    """Đọc từng đoạn rồi nối, trả `(wav, [(đầu, cuối)…], lý do)`.
+
+    Mốc trả về là ĐỘ DÀI THẬT của từng đoạn cộng khe do chính hàm này đặt — nên
+    phụ đề khớp với tiếng, không còn là giả định.
+
+    NÓ KHÔNG CHO MỐC THEO TỪ. Phụ đề sáng từng chữ đòi mốc từng từ, mà OneCore
+    không trả. Đây là mốc theo CÂU.
+    """
+    cac, dai = [], []
+    for i, seg in enumerate(doan, 1):
+        d = thu_muc / f"doan_{i:02d}"
+        d.mkdir(parents=True, exist_ok=True)
+        w, ly_do = doc_giong(seg, d)
+        if w is None:
+            return None, [], f"đoạn {i}/{len(doan)}: {ly_do}"
+        sach = d / "cat.wav"
+        if not _cat_lang(w, sach):
+            return None, [], f"đoạn {i}: cắt im lặng hỏng"
+        cac.append(sach)
+        dai.append(_giay(sach))
+
+    khe = khe_can_chen(sum(dai), len(dai))
+
+    im = thu_muc / "khe.wav"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i",
+                    f"anullsrc=r=16000:cl=mono:d={khe:.3f}", str(im)],
+                   capture_output=True, timeout=TRAN_RENDER_GIAY)
+    if not im.is_file():
+        return None, [], "không tạo được khe im lặng"
+
+    dong = []
+    for i, c in enumerate(cac):
+        if i:
+            dong.append(f"file '{im.as_posix()}'")
+        dong.append(f"file '{c.as_posix()}'")
+    ds = thu_muc / "danh_sach_doan.txt"
+    ds.write_text("\n".join(dong), encoding="utf-8")
+    wav = thu_muc / "voice.wav"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0",
+                    "-i", str(ds), str(wav)],
+                   capture_output=True, timeout=TRAN_RENDER_GIAY)
+    if not wav.is_file() or wav.stat().st_size == 0:
+        return None, [], "nối các đoạn hỏng"
+
+    moc, cong = [], 0.0
+    for i, d in enumerate(dai):
+        moc.append((cong, cong + d))
+        cong += d + (khe if i < len(dai) - 1 else 0.0)
+    return wav, moc, ""
+
+
 def _giay(tep: Path) -> float:
     r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
                         "-of", "default=nw=1:nk=1", str(tep)],
@@ -363,15 +479,23 @@ def _mmss(giay: float) -> str:
     return f"{h:02d}:{p:02d}:{g:02d},{ms:03d}"
 
 
-def lam_phu_de(doan: List[str], moi_the: float, dich: Path) -> Path:
+def lam_phu_de(doan: List[str], moi_the: float, dich: Path,
+               moc: List[tuple] | None = None) -> Path:
     """Một dòng phụ đề cho mỗi thẻ, khớp đúng khoảng thẻ ấy trên màn hình.
 
     Viết ra tệp `.srt` RIÊNG chứ không nung chữ vào khung hình: nung vào thì
     không ai kiểm được bằng máy, còn luồng phụ đề thì `ffprobe` đọc ra.
+
+    `moc` LÀ ĐƯỜNG ĐÚNG (06/09/2026): mốc đo được từ độ dài thật của từng đoạn.
+    `moi_the` là đường cũ — chia đều, lệch tới 1,31 giây trên kịch bản thật. Giữ
+    nó lại vì cửa canh dùng để dựng ca xấu, không phải vì đường chính còn dùng.
     """
     khoi = []
     for i, chu in enumerate(doan, 1):
-        bd, kt = (i - 1) * moi_the, i * moi_the
+        if moc is not None and i <= len(moc):
+            bd, kt = moc[i - 1]
+        else:
+            bd, kt = (i - 1) * moi_the, i * moi_the
         khoi.append(f"{i}\n{_mmss(bd)} --> {_mmss(kt)}\n{chu.strip()}\n")
     dich.write_text("\n".join(khoi), encoding="utf-8", newline="\n")
     return dich
@@ -950,11 +1074,22 @@ def _dung_video(thu_muc_ra: Path, van_ban: str | None, t0: float) -> Dict[str, A
     thu_muc_ra.mkdir(parents=True, exist_ok=True)
     hien_vat: List[Dict[str, Any]] = []
 
-    wav, ly_do = doc_giong(van_ban, thu_muc_ra)
+    # SỐ THẺ TÍNH TỪ ĐÍCH, không từ độ dài đo được — vì nay chính ta quyết định
+    # độ dài (khe suy từ `DAI_DICH`). Bản cũ phải đọc một lượt để biết dài bao
+    # nhiêu rồi mới chia thẻ; nay thứ tự ngược lại và bớt được một lượt TTS.
+    so_the = so_the_can_dung(DAI_DICH, van_ban)
+    doan = _cat_doan(van_ban, so_the)
+
+    # ĐỌC TỪNG ĐOẠN. Mốc phụ đề là ĐO ĐƯỢC, không phải `dai_giong / so_the`.
+    wav, moc, ly_do = doc_giong_theo_doan(doan, thu_muc_ra)
     if wav is None:
         return {"trang_thai": "KHONG_CHAY_DUOC", "artifacts": [], "kiem": {},
                 "ms": round((time.monotonic() - t0) * 1000, 1), "vi_sao": ly_do}
-    _dai_ngan_lai(wav, DAI_MIN + 1.5)
+    # Van an toàn: khe bị kẹp ở `KHE_MAX` thì tổng vẫn có thể dưới sàn. Đệm
+    # cuối là đường CHÓT, không phải đường chính — dồn im lặng vào cuối chính
+    # là lỗi nằm một tháng không ai thấy (xem chú thích đầu tệp).
+    if _giay(wav) < DAI_MIN:
+        _dai_ngan_lai(wav, DAI_MIN + 1.5)
     hien_vat.append(_hien_vat(wav, "AUDIO", "tts_onecore"))
 
     # `max(SO_THE_TOI_THIEU, 4)` ở bản đầu làm hằng số này thành CHẾT: hạ nó
@@ -964,14 +1099,15 @@ def _dung_video(thu_muc_ra: Path, van_ban: str | None, t0: float) -> Dict[str, A
     # thì 60 giây ra ~13 thẻ / 12 lần cắt, dư trên ngưỡng 8 lần đổi cảnh.
     # Và chặn trần theo SỐ CÂU — xem `so_the_can_dung`, thiếu câu thì thẻ cuối
     # chiếu lại câu đầu mà không cửa nào kêu.
-    so_the = so_the_can_dung(_giay(wav), van_ban)
     cards = sinh_the_hinh(van_ban, thu_muc_ra, so_the=so_the)
     hien_vat += [_hien_vat(c, "IMAGE", "generated_template") for c in cards]
 
-    # Phụ đề: một dòng cho mỗi thẻ, khớp đúng khoảng thẻ ấy trên màn hình.
+    # Phụ đề theo MỐC ĐO ĐƯỢC. `dai_giong / len(cards)` chỉ còn là đường lui khi
+    # số thẻ và số mốc lệch nhau — và khi ấy nó phải kêu chứ không im.
     dai_giong = _giay(wav)
     srt = lam_phu_de(_cat_doan(van_ban, len(cards)),
-                     dai_giong / len(cards), thu_muc_ra / "phu_de.srt")
+                     dai_giong / len(cards), thu_muc_ra / "phu_de.srt",
+                     moc=moc if len(moc) == len(cards) else None)
     hien_vat.append(_hien_vat(srt, "SUBTITLE", "srt_theo_the"))
 
     # Nhạc nền SINH BẰNG MÁY, không phải nhạc thật.

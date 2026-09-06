@@ -617,6 +617,66 @@ lượt tra 4 giây. Cùng một luật, hai bài toán, hai hướng sai.
   > nội dung** — chỉ khác là lần này thứ bị mất nằm ở khúc KẾT, tức là phần
   > khán giả cần nhất.
 
+### 2b. MỐC PHỤ ĐỀ PHẢI ĐO, KHÔNG ĐƯỢC CHIA ĐỀU (06/09/2026)
+
+Đăng ký **TRƯỚC KHI VIẾT MÃ**.
+
+`_dung_video` đặt mốc phụ đề bằng `dai_giong / len(cards)` — **chia đều**. Nó
+không đo câu nào kết thúc ở giây nào; nó giả định mọi câu dài bằng nhau. Đo
+trên kịch bản thật 245 từ / 13 đoạn:
+
+```
+lệch mốc lớn nhất 1,31 giây     đoạn ngắn nhất 4,17s · dài nhất 6,28s
+                                chia đều cho    5,15s
+```
+
+Ở tốc độ 2–3 từ/giây, 1,31s là lệch 3–4 chữ. Nhìn thấy được.
+
+**Đo bốn cách trên cùng một kịch bản:**
+
+```
+cách                            giây     cửa 55–65
+A · đọc liền một lần           58,87s    LỌT     <- đang chạy, mốc lệch 1,31s
+B · nối 13 đoạn, không cắt     66,94s    TRƯỢT   <- mỗi lượt SAPI đệm ~0,90s
+C · cắt sạch im lặng           55,19s    LỌT nhưng sát sàn 0,19s
+D · cắt + chèn khe             58,91s    LỌT
+```
+
+**Đặc tả:**
+
+* **Đọc TỪNG ĐOẠN, cắt đệm SAPI, rồi chèn khe SUY RA TỪ ĐÍCH.** Mốc phụ đề
+  tính từ độ dài thật của từng đoạn cộng khe — sai số 0, không còn phép chia.
+* `DAI_DICH = 60,0s` (giữa cửa sổ 55–65). `khe = (DAI_DICH − tổng đã cắt) /
+  (số đoạn − 1)`, kẹp trong `KHE_MIN 0,15s … KHE_MAX 1,20s`.
+* **Ngưỡng cắt im lặng `-45dB`**, cắt hai đầu.
+* **Số thẻ tính từ `DAI_DICH`, không từ độ dài đo được** — vì nay chính ta
+  quyết định độ dài. `so_the_can_dung` giữ nguyên, kể cả trần theo số câu.
+
+> **KHÔNG DÙNG MỘT HẰNG SỐ KHE.** Bản đầu của phép đo fit `khe = 0,31s` từ
+> **chính kịch bản dùng để kiểm** — vòng tròn. Đo tiếp trên ba kịch bản:
+>
+> ```
+>                  đọc liền   đã cắt   đệm/đoạn    KHE
+> kb1 (245 từ)      58,87s    55,19s    0,90s     0,31s
+> kb2 (239 từ)      59,46s    50,86s    0,89s     0,72s
+> kb3 (240 từ)      59,88s    51,19s    0,90s     0,72s
+>
+> ĐỆM SAPI  0,89–0,90s  chênh 0,01s  -> hằng số thật, 39 đoạn
+> KHE       0,31–0,72s  chênh 0,42s  -> KHÔNG phải hằng số
+> ```
+>
+> `0,31s` hoá ra là ca lệch nhất. Áp nó cho kb2 thì `50,86 + 12×0,31 = 54,58s`
+> — **dưới sàn 55s**. Suýt vá bằng một hằng số chỉ đúng cho đúng bài đã dùng để
+> tìm ra nó. Suy khe từ đích thì cả ba đều ra đúng 60,00s.
+
+> **CÁI NÀY KHÔNG MUA ĐƯỢC PHỤ ĐỀ SÁNG TỪNG CHỮ.** Nó cho mốc theo **CÂU**.
+> Phụ đề karaoke đòi mốc theo **TỪ**, mà OneCore không trả. Nói ra để không ai
+> đọc mục này rồi tưởng đã có.
+
+> **Và nó thay `_dai_ngan_lai` trên đường chính.** Hàm ấy dồn im lặng vào CUỐI
+> để đủ cửa sổ — đúng cái lỗi đã nằm một tháng không ai thấy (xem chú thích đầu
+> `core/phong_alpha.py`). Nay im lặng nằm giữa các câu, chỗ nó vốn phải ở.
+
 ### 3. PHÒNG SCOUT (Tra cứu Dữ kiện Mới & Source Receipt)
 * **Đầu vào:** Tối thiểu 3 câu hỏi cần dữ kiện mới.
 * **Quy trình Tra cứu & Biên nhận Nguồn:**

@@ -6,9 +6,9 @@ Tách khỏi `CLAUDE.md` ngày 06/09/2026, khi tệp ấy lên **83.047 byte** �
 
 `CLAUDE.md` giữ **luật**, mỗi luật một dòng kèm con số tạo ra nó. Chi tiết nằm ở đây. Đọc một ca khi luật tương ứng sắp được áp dụng, hoặc khi muốn biết vì sao nó tồn tại.
 
-**29 ca dưới đây đều là một lần trả giá trên chính máy này** — không chép từ đâu về.
+**30 ca dưới đây đều là một lần trả giá trên chính máy này** — không chép từ đâu về.
 
-> **Tách ra KHÔNG làm bài học dính hơn.** 29 ca này đã được đọc, và riêng ngày
+> **Tách ra KHÔNG làm bài học dính hơn.** 30 ca này đã được đọc, và riêng ngày
 > 06/09 vẫn bị phá: `x in y` bốn lần, dấu chéo qua vỏ shell lần thứ mười một,
 > hằng số fit từ chính mẫu dùng để kiểm — bài học ấy viết buổi sáng, dính bẫy
 > buổi chiều. Thứ bắt được là `tools/gieo.py`.
@@ -1163,3 +1163,63 @@ nguyên. Hỏi cái tên hàm thay vì hỏi **tham số truyền vào**. Sửa 
 12/12 đỏ.
 
 ---
+
+### Vá xong cái hỏng thì mất luôn ca đối chứng — và đi tìm ca mới là lúc bắt được lỗi tệ hơn
+
+Ngày 07/09/2026, trả món nợ ghi từ 06/09: **bộ dịch sinh mã bash hỏng**. Đo trước khi vá, ba đề, hai câu hỏi tách rời:
+
+```
+            polyglot khai   CÚ PHÁP        HÀNH VI
+bash ×3         PASS        FAIL 0/3       FAIL 0/3
+javascript ×3   PASS        PASS 3/3       PASS 3/3   <- ca đối chứng
+go ×3           PASS        KHÔNG ĐO ĐƯỢC  KHÔNG ĐO ĐƯỢC
+```
+
+`javascript` đi qua **cùng bộ khung** `PythonToPolyglotVisitor` mà đạt cả hai vế, nên cái hỏng nằm ở nhánh `bash` chứ không ở bộ khung. Ba chỗ sai cùng một gốc: **bash không phải "biểu thức lồng biểu thức"**. Cùng tên `n` phải viết ba kiểu tuỳ chỗ đứng — `tong=5` (trần), `echo "$tong"` (có `$`), `(( tong + 1 ))` (lại trần). Bản cũ dùng CHUNG một hàm sinh chuỗi cho cả ba, nên ra `if [ n <= 1 ]` (so chuỗi `"n"` với `"1"`) và `echo fibonacci(n - 1)` (bash bác dấu `(`). Tách hẳn nhánh bash ra: **3/3 cú pháp, 3/3 hành vi**, phòng `epsilon` chuyển từ FAIL sang **PASS · 83 ms**.
+
+Đến đây là một lượt vá bình thường. Chỗ đắt nằm ngay sau.
+
+**Ba bài test đỏ lên, và đỏ là đúng.** `test_epsilon_bat_duoc_ban_dich_HONG`, `..._MOT_ban_dich_hong_thi_ca_phong_KHONG_duoc_PASS`, `..._KHONG_lo_duong_dan_tuyet_doi_ra_ly_do` — cả ba mượn **cái hỏng thật của bash** làm ca FAIL. Vá xong thì không còn cái hỏng nào để mượn.
+
+Xoá ba bài ấy là mất luôn khả năng chứng minh phòng **nói được** FAIL. Nên phải đi tìm một ca hỏng mới. Và đúng lúc đi tìm — chạy tám cấu trúc Python qua bộ dịch xem cái nào còn sinh mã hỏng — thì lộ ra thứ tệ hơn tất cả những gì vừa vá:
+
+```
+de         bash    javascript
+while      PASS    PASS      <-- vong lap BIEN MAT
+class      PASS    PASS
+try        PASS    PASS
+listcomp   PASS    PASS
+dict       PASS    FAIL
+with       PASS    FAIL
+```
+
+`ast.NodeVisitor` không có `visit_While` thì gọi `generic_visit` — tức **đi thẳng vào thân vòng lặp, sinh thân ra, còn vòng lặp thì biến mất**:
+
+```
+def dem(n):            ->   dem() {
+    while n > 0:                local n="$1"
+        n -= 1                  n=$(( n - 1 ))
+    return n                    echo "$n"
+                            }
+```
+
+`bash -n` GẬT. `node --check` GẬT. Phòng báo **PASS**. Bản dịch chạy đúng một lần thay vì `n` lần. `class`, `try`, `with`, list comprehension cùng bệnh. Riêng bash còn im hơn: biểu thức không dịch được ra `x=""` — parse sạch — trong khi bốn ngôn ngữ kia ra `/* complex_expr */` và bị trình kiểm bác ngay. **Cùng một chỗ bỏ cuộc, một bên đỏ một bên xanh, chỉ vì cú pháp bên này rộng hơn.**
+
+Đây đúng là chỗ **một cửa chỉ hỏi cú pháp không bao giờ nhìn thấy**. Và nó không lộ ra vì đọc mã kỹ hơn — nó lộ ra vì cái hỏng cũ đã bị vá mất, buộc phải đi tìm cái hỏng mới.
+
+**Vá:** mọi chỗ bộ dịch bỏ cuộc phải **tự khai tên** (`bo_sot`), câu lệnh lẫn biểu thức; `epsilon` thấy có bỏ sót thì trả `KHONG_DO_DUOC` **trước khi** hỏi cú pháp. `status: "PASS"` của bộ dịch từ nay chỉ có nghĩa *"bộ dịch chạy xong"*, không có nghĩa *"dịch đủ"*. Ba bài cũ nay bơm rác vào **đúng một ngôn ngữ**, ngôn ngữ còn lại chạy thật — điều được canh trở về đúng chỗ của nó: *phán quyết đi theo TRÌNH THẬT, không theo `status` bộ dịch tự khai.*
+
+**Và một điểm tự thưởng nữa, bắt được do gõ sai khoá.** Chạy thử phòng bằng `the.get("chu_de")` trong khi khoá thật là `tham_so_mac_dinh`, nên `yeu_cau=""`. `ast.parse("")` đạt, bộ dịch sinh mỗi dòng tiêu đề, hai trình kiểm đều gật, và phòng trả **PASS · 2 ngôn ngữ qua trình thật** cho một tệp không có lấy một câu lệnh. Cùng bệnh đã cấm ở chuỗi tuỳ biến (*"Danh sách rỗng là KHONG_CHAY_DUOC"*), chỉ khác tầng: ở đó 0 bước, ở đây 0 câu lệnh. Một lỗi gõ tay hoá ra là phép đo tốt nhất trong ngày.
+
+**Gieo 5 phép, cả 5 đỏ.** Phép đắt nhất giữ nguyên cú pháp và chỉ làm sai kết quả — `local n="$1"` → `local n="0"`:
+
+```
+tham so luon 0 (cu phap van dung)   DO   bai HANH VI (2 de + bai dem)
+                                    XANH bai `bash -n`
+```
+
+Một cửa chỉ hỏi `bash -n` cho phép này đi qua sạch sẽ. Đó là lý do hai câu hỏi — **CÚ PHÁP** và **HÀNH VI** — phải nằm ở hai bài riêng, không được gộp.
+
+**Và `x in y` lần thứ tám, ngay trong cửa canh chống nó.** Bài hành vi có một dòng chặn bẫy tautological: *"bản dịch không được gọi ngược lại python"*, viết `"python" not in ban.lower()`. **Đỏ cả 6 lượt** — vì dòng đầu mọi bản dịch là *"Chuyển đổi tự động từ Python sang Bash"*. Chữ nằm trong lời kể, không nằm trong lệnh. Bỏ chú thích trước khi dò, rồi tìm bằng `\bpython[\d.]*\b`.
+
+**`go` không động tới, và đó là một quyết định chứ không phải quên.** Máy này không có trình biên dịch Go, nên mọi câu về bản dịch Go chỉ là **đọc thấy**: `func Fibonacci` khai rồi gọi `fibonacci`, câu lệnh mức module nằm ngoài `func main`. Sửa một thứ không đo được rồi báo "đã sửa" là đúng loại câu cả sổ này sinh ra để chống. Có một bài canh riêng để lượt sau đọc đặc tả không tưởng `go` đã xong.

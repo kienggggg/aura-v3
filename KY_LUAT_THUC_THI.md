@@ -1154,9 +1154,131 @@ sau    FAIL 0/3 ·  0s · 3 hiện vật   (epsilon·gamma·omega — 2 bản d�
 Thẻ nhanh hơn ~200 lần và **đỏ**. Cái đỏ ấy là bản dịch bash thật sự không
 parse nổi; cái xanh cũ là một phép quét AST không liên quan gì tới đề.
 
-**Còn nợ:** `bash` và `go` sinh mã hỏng (`go` khai `func Fibonacci` rồi gọi
-`fibonacci`). Chỗ `go` là **đọc thấy**, không phải **đo được** — máy này không
-có trình biên dịch Go.
+**Còn nợ (07/09/2026 đã trả một nửa — xem §5e):** `bash` đã vá, chạy ra đúng
+số 3/3 đề. `go` **vẫn nợ** (`func Fibonacci` khai rồi gọi `fibonacci`), và chỗ
+ấy là **đọc thấy**, không phải **đo được** — máy này không có trình biên dịch Go.
+
+### 5e. BỘ DỊCH `bash` — TRẢ NỢ, VÀ ĐO BẰNG HAI CÂU HỎI TÁCH RỜI (07/09/2026)
+
+Đăng ký **TRƯỚC KHI SỬA MÃ**. Đây là món nợ mục 5d ghi lại và cố ý không trả
+trong lượt ấy (*"KHÔNG sửa bộ dịch trong lượt này. Trộn hai việc thì không biết
+con số nào của việc nào"*).
+
+**Đo trước khi vá.** Ba đề chọn xong trước khi biết kết quả — `fib` là **đúng
+đoạn mã** `card_polyglot_transpiler` đang gửi vào phòng `epsilon`:
+
+```
+            polyglot khai   CÚ PHÁP        HÀNH VI
+bash fib        PASS        FAIL           FAIL (chạy lỗi)
+bash tong_vong  PASS        FAIL           FAIL (chạy lỗi)
+bash if_else    PASS        FAIL           FAIL (chạy lỗi)
+javascript ×3   PASS        PASS  3/3      PASS  3/3
+go ×3           PASS        KHÔNG ĐO ĐƯỢC  KHÔNG ĐO ĐƯỢC
+```
+
+`javascript` **đạt cả hành vi**, không chỉ cú pháp — nên cái hỏng nằm ở nhánh
+`bash` của bộ dịch, không nằm ở bộ khung.
+
+**HAI CÂU HỎI, KHÔNG ĐƯỢC GỘP:**
+
+1. **CÚ PHÁP** — `bash -n` có parse nổi không?
+2. **HÀNH VI** — chạy thật, stdout có **bằng đúng** stdout của bản Python không?
+
+Cửa `epsilon` hôm nay chỉ hỏi câu 1. Một bản dịch parse được mà tính sai vẫn
+xanh — đúng họ bệnh `x in y` đã ghi **7 lần**. Sửa xong mà chỉ khoe `bash -n`
+xanh là tự thưởng.
+
+**Ngưỡng — chép TAY vào cửa canh, đặt theo NGUYÊN TẮC chứ không theo kết quả
+chạy được:**
+
+* `DAC_TA_BASH_DE = fib · tong_vong · if_else`, mã nguồn gõ thẳng trong tệp
+  test, không đọc từ đâu về.
+* Bản dịch bash phải đạt **3/3 cú pháp** VÀ **3/3 hành vi**. Không có mức
+  "gần đạt". Không tới thì ghi số thật ra và để cửa ĐỎ.
+* **So `stdout` từng byte** với `stdout` của chính đoạn Python ấy, chạy trong
+  cùng một lượt — không gõ cứng `"55"` vào test. Gõ cứng thì đề đổi mà kỳ vọng
+  không đổi.
+* Không có `bash` trên máy → `KHONG_DO_DUOC`, **skip có tên**, không phải xanh.
+
+**CỬA `epsilon` GIỮ NGUYÊN Ở MỨC CÚ PHÁP — CỐ Ý.**
+
+Đầu vào của `epsilon` là **mã do người ngoài gửi** (`yeu_cau`). Dịch nó sang
+bash rồi **chạy** tức là chạy mã của người ngoài — đúng cái rủi ro đã ghi cho
+`/api/polyglot/run` ở dưới (*"đường chạy mã tuỳ ý"*). Nâng `epsilon` từ *kiểm cú
+pháp* lên *chạy thật* sẽ biến một phòng dịch thành một phòng thực thi mà không
+ai đăng ký điều đó.
+
+Nên phép đo hành vi nằm ở **bộ test**, nơi ba đề do chính mình gõ ra và cố định;
+`epsilon` vẫn chỉ `bash -n` · `node --check`. Hai chỗ, hai mức, nói rõ mức nào ở
+đâu.
+
+**ĐO SAU KHI VÁ (07/09/2026, cùng ba đề, cùng máy):**
+
+```
+            CÚ PHÁP        HÀNH VI
+bash        3/3  PASS      3/3  PASS      (trước: 0/3 · 0/3)
+javascript  3/3  PASS      3/3  PASS      (ca đối chứng, không đổi)
+```
+
+Phòng `epsilon` chạy thật với đúng `tham_so_mac_dinh` của thẻ:
+**PASS · 83–175 ms · bash và javascript đều qua trình thật.** Cửa đỏ tự chuyển
+xanh, không phải sửa cửa.
+
+Ba chỗ nhánh bash cũ sai, cả ba cùng một gốc: **bash không phải "biểu thức lồng
+biểu thức"**. Cùng tên `n` phải viết ba kiểu tuỳ chỗ đứng — `tong=5` (trần),
+`echo "$tong"` (có `$`), `(( tong + 1 ))` (lại trần). Bản cũ dùng CHUNG một hàm
+sinh chuỗi cho cả ba, nên ra `if [ n <= 1 ]` (so chuỗi `"n"` với `"1"`) và
+`echo fibonacci(n - 1)` (bash bác dấu `(`).
+
+**VÀ CÙNG LƯỢT ẤY ĐO RA MỘT CHỖ TỆ HƠN CÁI VỪA VÁ.**
+
+`ast.NodeVisitor` không có `visit_While` thì gọi `generic_visit` — tức **đi
+thẳng vào thân vòng lặp, sinh thân ra, còn vòng lặp thì biến mất**:
+
+```
+def dem(n):            ->   dem() {
+    while n > 0:                local n="$1"
+        n -= 1                  n=$(( n - 1 ))
+    return n                    echo "$n"
+                            }
+```
+
+`bash -n` GẬT. `node --check` GẬT. Phòng báo **PASS**. Bản dịch chạy đúng một
+lần thay vì `n` lần. `class` · `try` · `with` · list comprehension cùng bệnh;
+riêng bash còn im hơn nữa — biểu thức không dịch được ra `x=""`, parse sạch,
+trong khi bốn ngôn ngữ kia ra `/* complex_expr */` và bị trình kiểm BÁC ngay.
+
+Đây đúng là chỗ **một cửa chỉ hỏi cú pháp không bao giờ nhìn thấy**. Nó không
+lộ ra vì đọc mã kỹ hơn — nó lộ ra vì đi tìm một ca hỏng THẬT để giữ bài
+*"phòng biết nói FAIL"*, sau khi cái hỏng cũ đã được vá mất.
+
+**Vá:** mọi chỗ bộ dịch bỏ cuộc đều phải **tự khai tên** (`bo_sot`), câu lệnh
+lẫn biểu thức. `chuyen_doi_ngon_ngu` trả thêm trường ấy; `epsilon` thấy có bỏ
+sót thì trả `KHONG_DO_DUOC` **trước khi** hỏi cú pháp. `status: "PASS"` của bộ
+dịch từ nay chỉ có nghĩa *"bộ dịch chạy xong"*, không có nghĩa *"dịch đủ"*.
+
+**Và một điểm tự thưởng nữa, bắt được do gọi phòng bằng sai khoá:** `yeu_cau=""`
+thì `ast.parse` đạt, bộ dịch sinh mỗi dòng tiêu đề, hai trình kiểm đều gật, và
+phòng trả **PASS · 2 ngôn ngữ qua trình thật** cho một tệp không có lấy một câu
+lệnh. Nay `cay.body` rỗng là `KHONG_CHAY_DUOC`. Cùng bệnh đã cấm ở chuỗi tuỳ
+biến (*"Danh sách rỗng là KHONG_CHAY_DUOC"*), chỉ khác tầng: ở đó 0 bước, ở đây
+0 câu lệnh.
+
+**Ba bài cũ phải sửa, và vì sao KHÔNG được xoá chúng.**
+`test_epsilon_bat_duoc_ban_dich_HONG`, `..._MOT_ban_dich_hong_thi_ca_phong_
+KHONG_duoc_PASS`, `..._KHONG_lo_duong_dan_tuyet_doi_ra_ly_do` đều mượn **cái
+hỏng thật của bash** làm ca FAIL. Vá xong thì cả ba đỏ — đúng, nhưng xoá đi là
+mất luôn khả năng chứng minh phòng nói được FAIL. Nay chúng bơm rác vào **đúng
+một ngôn ngữ** (`_gia_bash_ra_rac`), ngôn ngữ còn lại chạy thật. Điều được canh
+trở về đúng chỗ của nó: *phán quyết đi theo TRÌNH THẬT, không theo `status` bộ
+dịch tự khai.* Một bài mượn cái hỏng thật là bài phụ thuộc vào việc nó **ở lại
+hỏng**.
+
+**`go` KHÔNG ĐỘNG TỚI TRONG LƯỢT NÀY.** Máy này không có trình biên dịch Go, nên
+mọi câu nói về bản dịch Go chỉ là **đọc thấy**. Sửa một thứ không đo được rồi
+báo "đã sửa" là đúng loại câu cả tệp này sinh ra để chống. Nợ `go` ở lại sổ, ghi
+nguyên trạng: `func Fibonacci` khai rồi gọi `fibonacci`, và câu lệnh mức module
+nằm ngoài `func main`.
 
 ## CHƯƠNG III: CƠ CHẾ BẢO MẬT & BỘ LỌC DỮ LIỆU NHẠY CẢM (REDACTION)
 - Mọi file log lỗi (`raw/error.txt`) phải đi qua bộ lọc tập trung (Centralized Redactor).

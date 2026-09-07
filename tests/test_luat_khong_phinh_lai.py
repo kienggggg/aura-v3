@@ -38,7 +38,7 @@ SO = PROJECT_ROOT / "SO_BENH_AN.md"
 # Chép TAY. Đo được lúc tách: 20.906 byte. Trần 32.000 cho chỗ viết thêm, nhưng
 # không rộng tới mức nuốt lại được cả sổ bệnh án (70 KB).
 TRAN_BYTE_CLAUDE = 32_000
-SO_CA_TOI_THIEU = 29
+SO_CA_TOI_THIEU = 30
 
 
 def _muc4(chu: str) -> str:

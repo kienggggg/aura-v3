@@ -538,10 +538,22 @@ def phong_epsilon(task_id: str, yeu_cau: str = "",
     t0 = time.monotonic()
     ma = (yeu_cau or "").strip()
     try:
-        ast.parse(ma)
+        cay = ast.parse(ma)
     except SyntaxError as e:
         return {"trang_thai": "KHONG_CHAY_DUOC", "artifacts": [], "so": {},
                 "vi_sao": f"mã vào không phải Python hợp lệ: {e.msg} (dòng {e.lineno})",
+                "ms": round((time.monotonic() - t0) * 1000, 1)}
+
+    # MÃ RỖNG KHÔNG PHẢI "ĐÃ DỊCH ĐƯỢC HẾT". Bắt được 07/09/2026 khi gọi phòng
+    # bằng sai khoá: `yeu_cau=""` thì `ast.parse` đạt, bộ dịch sinh mỗi dòng
+    # tiêu đề, `bash -n` và `node --check` đều gật, và phòng trả **PASS · 2
+    # ngôn ngữ qua trình thật** cho một tệp không có lấy một câu lệnh.
+    #
+    # Đúng bệnh đã cấm ở chuỗi tuỳ biến (*"Danh sách rỗng là KHONG_CHAY_DUOC,
+    # không phải PASS"*), chỉ khác tầng: ở đó là 0 bước, ở đây là 0 câu lệnh.
+    if not cay.body:
+        return {"trang_thai": "KHONG_CHAY_DUOC", "artifacts": [], "so": {},
+                "vi_sao": "mã vào rỗng — không có câu lệnh nào để dịch",
                 "ms": round((time.monotonic() - t0) * 1000, 1)}
 
     d = _thu_muc("epsilon", task_id)
@@ -565,6 +577,16 @@ def phong_epsilon(task_id: str, yeu_cau: str = "",
             theo_lang[lang] = {"trang_thai": "KHONG_CHAY_DUOC",
                                "vi_sao": kq.get("error", "bộ dịch trả về rỗng"),
                                "polyglot_khai": kq.get("status")}
+            continue
+        # BẢN DỊCH THIẾU CÂU LỆNH KHÔNG PHẢI BẢN DỊCH ĐẠT.
+        #
+        # Đo 07/09/2026: `while n > 0: n -= 1` sang bash ra đúng một dòng
+        # `n=$(( n - 1 ))` — vòng lặp biến mất, `bash -n` GẬT, phòng báo PASS.
+        # Cửa hỏi cú pháp không thể thấy chỗ này, nên phải chặn trước khi hỏi.
+        if kq.get("bo_sot"):
+            theo_lang[lang] = {
+                "trang_thai": "KHONG_DO_DUOC", "polyglot_khai": kq.get("status"),
+                "vi_sao": "bộ dịch bỏ sót " + ", ".join(kq["bo_sot"][:4])}
             continue
         tep = d / f"ban_dich{KIEM_DUOC.get(lang, '.txt')}"
         tep.write_text(ban_dich, encoding="utf-8")

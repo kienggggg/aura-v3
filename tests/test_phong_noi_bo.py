@@ -1139,8 +1139,33 @@ def test_epsilon_biet_noi_PASS(tmp_path_factory):
     assert any(h["kind"] == "ban_dich_javascript" for h in kq["artifacts"])
 
 
-def test_epsilon_bat_duoc_ban_dich_HONG():
-    """Bash hỏng thật — và phòng phải nói ra, không được theo `status` của bộ dịch."""
+def _gia_bash_ra_rac(monkeypatch):
+    """Thay ĐÚNG MỘT ngôn ngữ bằng bản dịch rác, các ngôn ngữ khác chạy thật.
+
+    Từ 07/09/2026 bản dịch bash THẬT đã qua được `bash -n`, nên ba bài dưới
+    không còn mượn được cái hỏng thật để chứng minh phòng biết nói FAIL. Mượn
+    cái hỏng thật thì bài phụ thuộc vào việc bộ dịch **ở lại hỏng** — sửa xong
+    là bài đỏ, và người sửa sẽ tưởng mình làm hỏng cái gì.
+
+    Bơm rác vào đúng một ngôn ngữ thì điều được canh trở lại đúng chỗ của nó:
+    **phán quyết đi theo TRÌNH THẬT, không theo `status` bộ dịch tự khai.**
+    """
+    import core.polyglot as _pg
+
+    that = _pg.chuyen_doi_ngon_ngu
+
+    def _gia(ma, nguon, dich):
+        if dich == "bash":
+            return {"status": "PASS", "ma_dich": "f() { if [ ; then\n",
+                    "nodes_translated": 9}
+        return that(ma, nguon, dich)
+
+    monkeypatch.setattr(_pg, "chuyen_doi_ngon_ngu", _gia)
+
+
+def test_epsilon_bat_duoc_ban_dich_HONG(monkeypatch):
+    """Bản dịch hỏng — phòng phải nói ra, không được theo `status` của bộ dịch."""
+    _gia_bash_ra_rac(monkeypatch)
     kq = phong_epsilon("test_eps_fail", MA_TOT, cac_lang=("javascript", "bash"))
     assert kq["trang_thai"] == "FAIL", kq["so"]
     assert kq["so"]["hong"] == ["bash"], kq["so"]
@@ -1148,11 +1173,74 @@ def test_epsilon_bat_duoc_ban_dich_HONG():
     assert kq["so"]["theo_ngon_ngu"]["bash"]["polyglot_khai"] == "PASS"
 
 
-def test_epsilon_MOT_ban_dich_hong_thi_ca_phong_KHONG_duoc_PASS():
+def test_epsilon_MOT_ban_dich_hong_thi_ca_phong_KHONG_duoc_PASS(monkeypatch):
     """PASS đòi hai vế. Chỉ đòi 'có ít nhất một cái đạt' thì bản hỏng nấp được."""
+    _gia_bash_ra_rac(monkeypatch)
     kq = phong_epsilon("test_eps_2ve", MA_TOT, cac_lang=("javascript", "bash"))
     assert kq["so"]["dat"] == ["javascript"] and kq["so"]["hong"] == ["bash"]
     assert kq["trang_thai"] != "PASS", "một bản dịch hỏng nấp sau một bản tốt"
+
+
+def test_epsilon_bash_GIO_qua_duoc_trinh_that():
+    """Món nợ 06/09 đã trả: bản dịch bash chạy THẬT, không phải chỉ parse được.
+
+    Chạy không giả lập gì. `MA_TOT` là đúng đoạn `card_polyglot_transpiler`
+    gửi vào, và đúng đề `fib` của `tests/test_bo_dich_bash_chay_that.py` —
+    nơi đo tiếp câu hỏi thứ hai (chạy ra có bằng bản Python không).
+
+        06/09  bash FAIL (`echo fibonacci(n - 1)` — bash bác dấu `(`)
+        07/09  bash PASS
+    """
+    kq = phong_epsilon("test_eps_bash_da_sua", MA_TOT,
+                       cac_lang=("javascript", "bash"))
+    assert kq["so"]["hong"] == [], kq["so"]
+    assert kq["so"]["dat"] == ["bash", "javascript"], kq["so"]
+    assert kq["trang_thai"] == "PASS", kq["vi_sao"]
+
+
+def test_epsilon_BO_SOT_cau_lenh_thi_KHONG_duoc_la_PASS():
+    """Bản dịch thiếu câu lệnh không phải bản dịch đạt.
+
+    `ast.NodeVisitor` không có `visit_While` thì đi thẳng vào thân vòng lặp và
+    sinh thân ra — **vòng lặp biến mất**. Đo 07/09/2026: `while n > 0: n -= 1`
+    sang bash ra đúng một dòng `n=$(( n - 1 ))`, và `bash -n` GẬT.
+
+    Đây là chỗ một cửa chỉ hỏi cú pháp không bao giờ thấy được, nên nó phải
+    được chặn TRƯỚC khi hỏi cú pháp.
+    """
+    ma = "def dem(n):\n    while n > 0:\n        n -= 1\n    return n\n"
+    kq = phong_epsilon("test_eps_bosot", ma, cac_lang=("bash", "javascript"))
+    assert kq["trang_thai"] == "KHONG_CHAY_DUOC", kq
+    assert set(kq["so"]["khong_do_duoc"]) == {"bash", "javascript"}, kq["so"]
+    assert "While" in kq["so"]["theo_ngon_ngu"]["bash"]["vi_sao"], kq["so"]
+
+
+def test_epsilon_BO_SOT_o_muc_BIEU_THUC_cung_khong_duoc_la_PASS():
+    """Bash im hơn bốn ngôn ngữ kia khi bỏ cuộc, nên phải canh riêng.
+
+    `x = {'a': 1}`: bốn ngôn ngữ kia sinh `/* complex_expr */` và trình kiểm
+    BÁC ngay — hỏng to tiếng. Bash sinh `x=""`, `bash -n` gật. Cùng một chỗ bỏ
+    cuộc, một bên đỏ một bên xanh, chỉ vì cú pháp bên này rộng hơn.
+    """
+    ma = "def d():\n    x = {'a': 1}\n    return x\n"
+    kq = phong_epsilon("test_eps_bosot_bt", ma, cac_lang=("bash",))
+    assert kq["trang_thai"] == "KHONG_CHAY_DUOC", kq
+    assert "Dict" in kq["so"]["theo_ngon_ngu"]["bash"]["vi_sao"], kq["so"]
+
+
+def test_epsilon_ma_RONG_khong_duoc_la_PASS():
+    """0 câu lệnh mà báo '2 ngôn ngữ qua trình thật' là một điểm tự thưởng.
+
+    Bắt được 07/09/2026 khi gọi phòng bằng sai khoá: `yeu_cau=""` thì
+    `ast.parse` đạt, bộ dịch sinh mỗi dòng tiêu đề, `bash -n` và `node --check`
+    đều gật, và phòng trả **PASS**. Cùng bệnh đã cấm ở chuỗi tuỳ biến
+    (*"Danh sách rỗng là KHONG_CHAY_DUOC"*), chỉ khác tầng: ở đó 0 bước, ở đây
+    0 câu lệnh.
+    """
+    for rong in ("", "   \n\n  ", "# chỉ có chú thích\n"):
+        kq = phong_epsilon("test_eps_rong", rong)
+        assert kq["trang_thai"] == "KHONG_CHAY_DUOC", (rong, kq)
+        assert kq["artifacts"] == [], rong
 
 
 def test_epsilon_ngon_ngu_KHONG_kiem_duoc_thi_khong_phai_PASS():
@@ -1219,12 +1307,13 @@ def test_epsilon_hien_vat_co_SHA256_dung_voi_byte_tren_dia():
         assert h["size_bytes"] == p.stat().st_size > 0
 
 
-def test_epsilon_KHONG_lo_duong_dan_tuyet_doi_ra_ly_do():
+def test_epsilon_KHONG_lo_duong_dan_tuyet_doi_ra_ly_do(monkeypatch):
     """Lý do đi vào sổ cái và lên màn hình; đường dẫn tuyệt đối chỉ là chỗ để tệp.
 
     Bản đầu để nguyên stderr của `bash`, nên lý do bắt đầu bằng cả đường dẫn ổ
     đĩa. Nó đi thẳng vào `so_cai.jsonl` và lên thẻ trên màn hình.
     """
+    _gia_bash_ra_rac(monkeypatch)
     kq = phong_epsilon("test_eps_duongdan", MA_TOT, cac_lang=("bash",))
     assert kq["trang_thai"] == "FAIL"
     chu = kq["vi_sao"] + " " + kq["so"]["theo_ngon_ngu"]["bash"]["vi_sao"]

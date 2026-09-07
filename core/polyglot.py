@@ -275,6 +275,29 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
         self.indent_str = "    "
         self.notes: List[str] = []
         self.nodes_count = 0
+        # BASH KHÔNG CÓ BIẾN TRẦN NHƯ PYTHON, nên phải nhớ ba thứ mà cây AST
+        # không nói ra (07/09/2026):
+        #   * `ham_tu_khai` — gọi một hàm do chính tệp định nghĩa thì phải ra
+        #     `$(ten tham_so)`, còn `echo` / `len` thì không. Không phân biệt
+        #     được thì sinh ra `echo fibonacci(n - 1)` — bash coi `(` là lỗi cú
+        #     pháp, đo được 3/3 đề đều gãy.
+        #   * `mang` — `for x in ds` cần `"${ds[@]}"` chứ không phải `$ds`.
+        #   * `trong_ham` — tên tham số phải `local` lại từ `$1`, vì bash không
+        #     có tham số có tên.
+        self.ham_tu_khai: set = set()
+        self.mang: set = set()
+        # CÂU LỆNH BỊ BỎ SÓT, GHI RA TÊN.
+        #
+        # `ast.NodeVisitor` không có `visit_While` thì gọi `generic_visit`, tức
+        # **đi vào thân vòng lặp và sinh thân ra, còn vòng lặp thì biến mất**.
+        # Đo 07/09/2026: `while n > 0: n -= 1` dịch sang bash ra đúng một dòng
+        # `n=$(( n - 1 ))` — `bash -n` GẬT, `node --check` GẬT, và bản dịch
+        # tính sai hoàn toàn. `class`, `try`, `with`, list comprehension cùng
+        # bệnh.
+        #
+        # Một cửa chỉ hỏi cú pháp không bao giờ thấy chỗ này. Nên chỗ sót phải
+        # tự khai ra, để phòng `epsilon` trả KHÔNG ĐO ĐƯỢC thay vì PASS.
+        self.bo_sot: List[str] = []
 
     def _indent(self) -> str:
         return self.indent_str * self.indent_level
@@ -282,8 +305,15 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
     def _emit(self, text: str):
         self.lines.append(f"{self._indent()}{text}")
 
+    # Đúng những nút có `visit_*` bên dưới. Danh sách ĐÓNG: viết thêm một
+    # `visit_While` thì phải thêm tên vào đây, tức phải cố ý.
+    _NUT_DICH_DUOC = (ast.Module, ast.FunctionDef, ast.Return, ast.Assign,
+                      ast.AugAssign, ast.If, ast.For, ast.Expr)
+
     def visit(self, node: ast.AST):
         self.nodes_count += 1
+        if isinstance(node, ast.stmt) and not isinstance(node, self._NUT_DICH_DUOC):
+            self.bo_sot.append(f"{type(node).__name__} (dòng {getattr(node, 'lineno', '?')})")
         super().visit(node)
 
     def visit_Module(self, node: ast.Module):
@@ -307,6 +337,14 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
         elif self.target == "bash":
             self.lines.append("#!/bin/bash")
             self.lines.append("# Chuyển đổi tự động từ Python sang Bash bởi AURA Polyglot Engine\n")
+
+        # GOM TÊN HÀM TRƯỚC KHI SINH DÒNG NÀO. Đệ quy gọi chính nó ngay trong
+        # thân nó, nên gom dần theo thứ tự gặp thì `fibonacci` bên trong
+        # `fibonacci` vẫn chưa biết là hàm. Đi một vòng riêng thì hết.
+        if self.target == "bash":
+            for stmt in ast.walk(node):
+                if isinstance(stmt, ast.FunctionDef):
+                    self.ham_tu_khai.add(stmt.name)
 
         for stmt in node.body:
             self.visit(stmt)
@@ -335,16 +373,34 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
             self._emit(f"# Hàm: {name}")
 
         self.indent_level += 1
+        if self.target == "bash":
+            # THAM SỐ CÓ TÊN KHÔNG TỒN TẠI TRONG BASH — chỉ có `$1 $2`. Bản cũ
+            # để nguyên tên rồi dùng `n` trần, nên `if [ n <= 1 ]` so chuỗi
+            # `"n"` với `"1"`; buộc phải `local` lại ở đầu thân hàm.
+            dung_nhu_mang = self._bash_ten_dung_nhu_mang(node)
+            for i, ten_ts in enumerate(args, start=1):
+                if ten_ts in dung_nhu_mang and i == len(args):
+                    # Bash làm phẳng mảng khi truyền đi, nên tham số CUỐI hứng
+                    # phần đuôi. Không có cách nào giữ được hai mảng một lúc —
+                    # ghi ra đây thay vì giả vờ có.
+                    self._emit(f'local {ten_ts}=("${{@:{i}}}")')
+                    self.mang.add(ten_ts)
+                else:
+                    self._emit(f'local {ten_ts}="${i}"')
         for stmt in node.body:
             self.visit(stmt)
         self.indent_level -= 1
+        if self.target == "bash":
+            # Tham số là biến CỤC BỘ — để nó ở lại `self.mang` thì một tên
+            # trùng ở mức module sau đó bị sinh nhầm ra `"${x[@]}"`.
+            self.mang -= set(args)
 
         if self.target in ("javascript", "typescript", "go", "rust", "cpp", "bash"):
             self._emit("}\n")
 
     def visit_Return(self, node: ast.Return):
         if node.value is None:
-            self._emit("return;")
+            self._emit("return 0" if self.target == "bash" else "return;")
         else:
             val = self._expr_to_str(node.value)
             if self.target in ("javascript", "typescript", "cpp"):
@@ -359,6 +415,26 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
                 self._emit(f"return {val}")
 
     def visit_Assign(self, node: ast.Assign):
+        if self.target == "bash":
+            # VẾ TRÁI PHẢI TRẦN, VẾ PHẢI PHẢI CÓ `$`. Cùng một `ast.Name` ra
+            # hai dạng khác nhau tuỳ chỗ đứng, nên không dùng chung một hàm
+            # sinh chuỗi được: `tong=$x` đúng, `$tong=$x` là lỗi.
+            for t in node.targets:
+                if not isinstance(t, ast.Name):
+                    # Gán vào `a[0]` hoặc `a, b = ...` — chưa dịch được. Ghi
+                    # tên ra chứ không bỏ im lặng, để `epsilon` trả KHÔNG ĐO
+                    # ĐƯỢC thay vì để `bash -n` gật cho một tệp thiếu dòng.
+                    self._bash_bo_qua(t)
+                    continue
+                if isinstance(node.value, (ast.List, ast.Tuple)):
+                    self.mang.add(t.id)
+                    elts = " ".join(self._bash(e, arith=False)
+                                    for e in node.value.elts)
+                    self._emit(f"{t.id}=({elts})")
+                else:
+                    self._emit(f"{t.id}={self._bash(node.value, arith=False)}")
+            return
+
         targets = [self._expr_to_str(t) for t in node.targets]
         val = self._expr_to_str(node.value)
         t_str = ", ".join(targets)
@@ -376,7 +452,16 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
         else:
             self._emit(f"{t_str} = {val}")
 
+    _DAU_SO = {ast.Add: "+", ast.Sub: "-", ast.Mult: "*", ast.Div: "/",
+               ast.Mod: "%"}
+
     def visit_AugAssign(self, node: ast.AugAssign):
+        if self.target == "bash" and isinstance(node.target, ast.Name):
+            dau = self._DAU_SO.get(type(node.op), "+")
+            v = self._bash(node.value, arith=True)
+            self._emit(f"{node.target.id}=$(( {node.target.id} {dau} {v} ))")
+            return
+
         target = self._expr_to_str(node.target)
         val = self._expr_to_str(node.value)
         op = "+="
@@ -397,13 +482,13 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
             self._emit(f"{target} {op} {val}")
 
     def visit_If(self, node: ast.If):
-        test = self._expr_to_str(node.test)
+        test = ("" if self.target == "bash" else self._expr_to_str(node.test))
         if self.target in ("javascript", "typescript", "cpp"):
             self._emit(f"if ({test}) {{")
         elif self.target in ("go", "rust"):
             self._emit(f"if {test} {{")
         elif self.target == "bash":
-            self._emit(f"if [ {test} ]; then")
+            self._emit(f"if {self._bash_dieu_kien(node.test)}; then")
         else:
             self._emit(f"if {test}:")
 
@@ -428,6 +513,16 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
             self._emit("fi")
 
     def visit_For(self, node: ast.For):
+        if self.target == "bash":
+            ten = node.target.id if isinstance(node.target, ast.Name) else "muc"
+            self._emit(f"for {ten} in {self._bash_duyet(node.iter)}; do")
+            self.indent_level += 1
+            for stmt in node.body:
+                self.visit(stmt)
+            self.indent_level -= 1
+            self._emit("done")
+            return
+
         target = self._expr_to_str(node.target)
         iter_expr = self._expr_to_str(node.iter)
 
@@ -455,6 +550,15 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
             self._emit("done")
 
     def visit_Expr(self, node: ast.Expr):
+        if (self.target == "bash" and isinstance(node.value, ast.Call)
+                and isinstance(node.value.func, ast.Name)
+                and node.value.func.id in self.ham_tu_khai):
+            # Ở VỊ TRÍ CÂU LỆNH thì gọi hàm là `f 1`, không phải `"$(f 1)"` —
+            # dạng sau bảo bash lấy kết quả in ra rồi CHẠY nó như một lệnh.
+            tso = " ".join(self._bash(a) for a in node.value.args)
+            self._emit(f"{node.value.func.id} {tso}".rstrip())
+            return
+
         val = self._expr_to_str(node.value)
         if val:
             if self.target in ("javascript", "typescript", "cpp"):
@@ -468,6 +572,8 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
 
     def _expr_to_str(self, expr: ast.AST) -> str:
         """Chuyển biểu thức Python AST sang chuỗi theo cú pháp ngôn ngữ đích."""
+        if self.target == "bash":
+            return self._bash(expr, arith=False)
         if isinstance(expr, ast.Constant):
             if isinstance(expr.value, str):
                 return json.dumps(expr.value, ensure_ascii=False)
@@ -570,6 +676,168 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
 
         return "/* complex_expr */"
 
+    # ------------------------------------------------------------------
+    # BASH (07/09/2026) — vì sao phải tách hẳn ra khỏi `_expr_to_str`
+    #
+    # Bốn ngôn ngữ kia đều là "biểu thức lồng biểu thức": một `ast.Name` ra
+    # cùng một chuỗi dù đứng ở đâu. Bash thì KHÔNG — cùng tên `n` phải viết ba
+    # kiểu tuỳ chỗ đứng:
+    #
+    #     tong=5          <- vế trái, TRẦN
+    #     echo "$tong"    <- lấy giá trị, có `$`
+    #     (( tong + 1 ))  <- trong ngoặc số học, lại TRẦN
+    #
+    # Bản cũ dùng chung một hàm cho cả ba, nên sinh ra `if [ n <= 1 ]` (so
+    # chuỗi "n" với "1") và `echo fibonacci(n - 1)` (bash coi `(` là lỗi cú
+    # pháp). Đo 07/09: **3/3 đề gãy cú pháp, 3/3 gãy hành vi**, trong khi
+    # javascript cùng bộ khung đạt 3/3 cả hai. Cái hỏng nằm ở nhánh bash.
+    # ------------------------------------------------------------------
+
+    def _bash(self, expr: ast.AST, arith: bool = False) -> str:
+        """Sinh MỘT TỪ bash cho biểu thức.
+
+        `arith=True` nghĩa là chỗ đứng đã nằm trong `$(( ))` hoặc `(( ))`: tên
+        biến để trần, và không bọc thêm một lớp `$(( ))` nữa.
+        """
+        if isinstance(expr, ast.Constant):
+            if isinstance(expr.value, bool):
+                return "1" if expr.value else "0"
+            if expr.value is None:
+                return '""'
+            if isinstance(expr.value, str):
+                return json.dumps(expr.value, ensure_ascii=False)
+            return str(expr.value)
+
+        if isinstance(expr, ast.Name):
+            if arith:
+                return expr.id
+            if expr.id in self.mang:
+                return '"${%s[@]}"' % expr.id
+            return '"$%s"' % expr.id
+
+        if isinstance(expr, (ast.List, ast.Tuple)):
+            return "(" + " ".join(self._bash(e) for e in expr.elts) + ")"
+
+        if isinstance(expr, ast.UnaryOp) and isinstance(expr.op, ast.USub):
+            trong = self._bash(expr.operand, arith=True)
+            return f"-{trong}" if arith else f'"$(( -{trong} ))"'
+
+        if isinstance(expr, ast.BinOp):
+            # `"a" + "b"` KHÔNG PHẢI PHÉP CỘNG SỐ. Để nó rơi vào `$(( ))` thì
+            # bash vẫn parse được — cú pháp XANH — nhưng ra `0`. Đúng loại lỗi
+            # mà một cửa chỉ hỏi `bash -n` sẽ bỏ lọt, nên tách ra ở đây.
+            if isinstance(expr.op, ast.Add) and self._bash_la_chuoi(expr):
+                return '"' + self._bash_than_chuoi(expr) + '"'
+            dau = self._DAU_SO.get(type(expr.op))
+            if dau is None:
+                return self._bash_bo_qua(expr)
+            than = (f"{self._bash(expr.left, arith=True)} {dau} "
+                    f"{self._bash(expr.right, arith=True)}")
+            return than if arith else f'"$(( {than} ))"'
+
+        if isinstance(expr, ast.Call):
+            return self._bash_goi(expr, arith)
+
+        return self._bash_bo_qua(expr)
+
+    def _bash_bo_qua(self, expr: ast.AST) -> str:
+        """Chỗ nhánh bash bỏ cuộc — GHI TÊN RA, rồi mới trả chuỗi rỗng.
+
+        Bốn ngôn ngữ kia bỏ cuộc thì sinh `/* complex_expr */`, và trình kiểm
+        BÁC ngay — hỏng to tiếng. Bash thì `x=""` parse sạch, nên cùng một chỗ
+        bỏ cuộc lại đi qua cửa `bash -n` mà không ai biết. Đo 07/09: `x = {'a':
+        1}` sang bash ra `x=""`, `bash -n` gật.
+        """
+        self.bo_sot.append(f"{type(expr).__name__} "
+                           f"(dòng {getattr(expr, 'lineno', '?')}, biểu thức)")
+        return '""'
+
+    def _bash_goi(self, expr: ast.Call, arith: bool = False) -> str:
+        ten = expr.func.id if isinstance(expr.func, ast.Name) else ""
+        if ten == "print":
+            return "echo " + " ".join(self._bash(a) for a in expr.args)
+        if ten == "len" and expr.args:
+            if isinstance(expr.args[0], ast.Name):
+                return "${#%s[@]}" % expr.args[0].id
+            return "0"
+        if ten in self.ham_tu_khai:
+            # GỌI HÀM LẤY GIÁ TRỊ PHẢI QUA `$( )`. Bash không có giá trị trả
+            # về ngoài mã thoát 0-255, nên quy ước ở đây: hàm `echo` kết quả,
+            # người gọi hứng bằng thay thế lệnh.
+            tso = " ".join(self._bash(a) for a in expr.args)
+            tho = f"$({ten} {tso})" if tso else f"$({ten})"
+            return tho if arith else f'"{tho}"'
+        return self._bash_bo_qua(expr)
+
+    def _bash_la_chuoi(self, e: ast.AST) -> bool:
+        if isinstance(e, ast.Constant):
+            return isinstance(e.value, str)
+        if isinstance(e, ast.BinOp) and isinstance(e.op, ast.Add):
+            return self._bash_la_chuoi(e.left) or self._bash_la_chuoi(e.right)
+        return False
+
+    def _bash_than_chuoi(self, e: ast.AST) -> str:
+        """Phần thân để nhét vào GIỮA hai dấu nháy kép."""
+        if isinstance(e, ast.Constant) and isinstance(e.value, str):
+            return e.value.replace("\\", "\\\\").replace('"', '\\"')
+        if isinstance(e, ast.BinOp) and isinstance(e.op, ast.Add):
+            return self._bash_than_chuoi(e.left) + self._bash_than_chuoi(e.right)
+        if isinstance(e, ast.Name):
+            return "${%s}" % e.id
+        if isinstance(e, ast.Call):
+            return self._bash_goi(e, arith=True)
+        return self._bash(e, arith=False).strip('"')
+
+    def _bash_dieu_kien(self, test: ast.AST) -> str:
+        """Câu điều kiện — `(( ))` cho số, `[[ ]]` cho bằng/khác.
+
+        `(( ))` so SỐ, `[[ a == b ]]` so CHUỖI. Không biết kiểu thì không chọn
+        đúng được cả hai: `(( s <= 1 ))` với `s` là chuỗi thì bash đọc `s` như
+        một tên biến rỗng và cho ra `0 <= 1` — ĐÚNG cú pháp, SAI kết quả. Ghi
+        ra đây thay vì để người đọc tưởng chỗ này kín.
+        """
+        if isinstance(test, ast.Compare) and len(test.ops) == 1:
+            op, trai, phai = test.ops[0], test.left, test.comparators[0]
+            if isinstance(op, (ast.Eq, ast.NotEq)):
+                dau = "==" if isinstance(op, ast.Eq) else "!="
+                return f"[[ {self._bash(trai)} {dau} {self._bash(phai)} ]]"
+            dau = {ast.Lt: "<", ast.LtE: "<=",
+                   ast.Gt: ">", ast.GtE: ">="}.get(type(op))
+            if dau:
+                return (f"(( {self._bash(trai, arith=True)} {dau} "
+                        f"{self._bash(phai, arith=True)} ))")
+        return f"(( {self._bash(test, arith=True)} ))"
+
+    def _bash_duyet(self, it: ast.AST) -> str:
+        """Vế `in` của vòng lặp."""
+        if (isinstance(it, ast.Call) and isinstance(it.func, ast.Name)
+                and it.func.id == "range"):
+            a = [self._bash(x, arith=True) for x in it.args]
+            if len(a) == 1:
+                return f"$(seq 0 $(( {a[0]} - 1 )))"
+            if len(a) >= 2:
+                return f"$(seq {a[0]} $(( {a[1]} - 1 )))"
+        if isinstance(it, ast.Name):
+            # Dạng mảng chạy được cho CẢ biến thường (ra đúng 1 phần tử), nên
+            # dùng luôn — khỏi phải đoán kiểu.
+            return '"${%s[@]}"' % it.id
+        if isinstance(it, (ast.List, ast.Tuple)):
+            return " ".join(self._bash(e) for e in it.elts)
+        return self._bash(it)
+
+    @staticmethod
+    def _bash_ten_dung_nhu_mang(node: ast.FunctionDef) -> set:
+        """Tên nào TRONG hàm này được dùng như mảng (`for … in x`, `len(x)`)."""
+        ten = set()
+        for con in ast.walk(node):
+            if isinstance(con, ast.For) and isinstance(con.iter, ast.Name):
+                ten.add(con.iter.id)
+            if (isinstance(con, ast.Call) and isinstance(con.func, ast.Name)
+                    and con.func.id == "len" and con.args
+                    and isinstance(con.args[0], ast.Name)):
+                ten.add(con.args[0].id)
+        return ten
+
 
 def chuyen_doi_ngon_ngu(
     ma_nguon: str,
@@ -616,7 +884,10 @@ def chuyen_doi_ngon_ngu(
                 "target_lang": lang_dich,
                 "ma_dich": ma_ket_qua,
                 "nodes_translated": visitor.nodes_count,
-                "notes": visitor.notes
+                "notes": visitor.notes,
+                # Người gọi PHẢI đọc được chỗ sót. `status: PASS` ở đây chỉ có
+                # nghĩa "bộ dịch chạy xong", không có nghĩa "dịch đủ".
+                "bo_sot": visitor.bo_sot,
             }
         except SyntaxError as err:
             return {

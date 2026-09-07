@@ -700,7 +700,16 @@ DANH_SACH_THE_QUY_TRINH = [
         # (`echo fibonacci(n - 1) + fibonacci(n - 2)`), `javascript` qua
         # `node --check`. Sếp quyết lấy đủ ba ngôn ngữ kiểm được thay vì chỉ xin
         # `javascript` cho xanh — cái đỏ ấy chỉ đúng chỗ cần sửa tiếp.
-        "mo_ta": "Dịch mã Python sang JavaScript và Bash, ghi bản dịch ra đĩa rồi để node/bash chấm chính tệp ấy. ĐANG ĐỎ: bản dịch Bash không parse nổi. CHƯA kiểm được Go · Rust · C++ · TypeScript · SQL — máy này không có trình biên dịch cho chúng.",
+        #
+        # 07/09 sáng: nợ ấy đã trả. Chạy thật `epsilon` với đúng
+        # `tham_so_mac_dinh` dưới đây: **PASS · 175ms · bash và javascript đều
+        # qua trình thật**, và bản dịch bash chạy ra `55` bằng đúng bản Python.
+        #
+        # Nhưng KHÔNG được viết "dịch được Python sang Bash". Cùng lượt ấy đo
+        # ra một chỗ tệ hơn cái vừa vá: `while`, `class`, `try`, `with` bị bộ
+        # dịch **bỏ im lặng** — thân vòng lặp còn, vòng lặp mất, `bash -n` gật.
+        # Nay chúng trả KHÔNG ĐO ĐƯỢC thay vì PASS, và lời thẻ phải nói ra.
+        "mo_ta": "Dịch mã Python sang JavaScript và Bash, ghi bản dịch ra đĩa rồi để node/bash chấm chính tệp ấy. CHỈ dịch được def · if · for · gán · gọi hàm; gặp while · class · try · with thì trả KHÔNG ĐO ĐƯỢC chứ KHÔNG dịch. CHƯA kiểm được Go · Rust · C++ · TypeScript · SQL — máy này không có trình biên dịch cho chúng.",
         "cac_phong": ["epsilon", "gamma", "omega"],
         "tham_so_mac_dinh": "def fibonacci(n):\n    if n <= 1:\n        return n\n    return fibonacci(n-1) + fibonacci(n-2)"
     },

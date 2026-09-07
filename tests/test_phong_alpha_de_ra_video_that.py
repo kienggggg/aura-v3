@@ -84,6 +84,10 @@ DAC_TA_DAI_MIN, DAC_TA_DAI_MAX = 55.0, 65.0
 DAC_TA_SO_THE_TOI_THIEU = 3
 DAC_TA_TRAN_TINH_GIAY = 5.0
 DAC_TA_SO_DOI_CANH = 8
+# Chép TAY từ §2b-bis. `2,5` là con số CHỌN — nói ra chứ không giấu — nhưng nó
+# vẫn phải có cửa, vì đổi luật số thẻ hôm 07/09 mà **31 bài liên quan vẫn xanh**:
+# không cửa nào chốt công thức cũ, nên nó trôi đi không tiếng động.
+DAC_TA_GIAY_TOI_THIEU_MOI_THE = 2.5
 
 CO_FFMPEG = bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
 can_ffmpeg = pytest.mark.skipif(not CO_FFMPEG, reason="máy này không có ffmpeg/ffprobe")
@@ -126,6 +130,55 @@ def test_hang_so_trong_ma_khop_DAC_TA():
     assert SO_THE_TOI_THIEU >= DAC_TA_SO_THE_TOI_THIEU
     assert TRAN_TINH_GIAY == DAC_TA_TRAN_TINH_GIAY
     assert SO_DOI_CANH_TOI_THIEU == DAC_TA_SO_DOI_CANH
+    from core.phong_alpha import GIAY_TOI_THIEU_MOI_THE
+
+    assert GIAY_TOI_THIEU_MOI_THE == DAC_TA_GIAY_TOI_THIEU_MOI_THE
+
+
+def test_MOT_THE_MOT_CAU_khi_thoi_luong_con_cho():
+    """Ràng buộc đổi chiều: `so_cau` là ĐÍCH, thời lượng là TRẦN (07/09/2026).
+
+    Bản trước lấy `min(round(dài/4,5), số_câu)` nên 60,0s chặn ở 13 thẻ và
+    `_cat_doan` phải nhét 15 câu vào 13 ô. Chạy thật:
+
+        thẻ ngắn nhất 2,04s · dài nhất 7,87s     (3,9 lần)
+        từ ít nhất 11        · nhiều nhất 32     (2,9 lần)
+
+    Sau khi đổi: 15 thẻ, 2,04–3,70s, 11–17 từ (1,5 lần).
+    """
+    from core.phong_alpha import GIAY_TOI_THIEU_MOI_THE, so_the_can_dung
+
+    van15 = _cau_khac_nhau(15)
+    assert so_the_can_dung(60.0, van15) == 15, "60,0s còn chỗ mà vẫn gộp câu"
+    # TRẦN THỜI LƯỢNG VẪN CÒN: 40 câu ngắn không được ra 40 thẻ × 1,5s.
+    assert so_the_can_dung(60.0, _cau_khac_nhau(40)) == int(
+        60.0 / DAC_TA_GIAY_TOI_THIEU_MOI_THE)
+    assert so_the_can_dung(20.0, van15) == int(
+        20.0 / DAC_TA_GIAY_TOI_THIEU_MOI_THE)
+    # SÀN CỨNG vẫn thắng cả hai.
+    assert so_the_can_dung(60.0, "Một. Hai.") == DAC_TA_SO_THE_TOI_THIEU
+
+
+def test_KHONG_the_nao_om_hai_cau_khi_con_cho():
+    """Đo ĐỘ LỆCH, không đo số thẻ.
+
+    Chỉ đếm "13 → 15" thì một bản vá làm 15 thẻ lệch hơn nữa vẫn qua. Bài này
+    hỏi thứ khán giả thấy: có màn hình nào dày chữ gấp đôi màn hình khác không.
+    """
+    import re as _re
+
+    from core.phong_alpha import _cat_doan, so_the_can_dung
+
+    van = _cau_khac_nhau(15)
+    doan = _cat_doan(van, so_the_can_dung(60.0, van))
+    assert len(doan) == 15, len(doan)
+    so_cau_moi_the = [len([x for x in _re.split(r"[.!?]", d) if x.strip()])
+                      for d in doan]
+    assert max(so_cau_moi_the) == 1, (
+        f"có thẻ ôm nhiều câu trong khi thời lượng còn chỗ: {so_cau_moi_the}")
+    tu = [len(d.split()) for d in doan]
+    assert max(tu) / max(1, min(tu)) <= 2.0, (
+        f"thẻ dày chữ nhất gấp {max(tu)/min(tu):.1f} lần thẻ mỏng nhất: {tu}")
 
 
 @can_ffmpeg

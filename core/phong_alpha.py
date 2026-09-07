@@ -101,7 +101,22 @@ SO_DOI_CANH_TOI_THIEU = 8
 
 # Mỗi thẻ giữ bao nhiêu giây. 60s ÷ 4,5 ≈ 13 thẻ, tức 12 lần cắt — dư trên
 # ngưỡng 8. Bản đầu để 4 thẻ / 15 giây mỗi thẻ, và đó chính là thứ làm nó rớt.
+#
+# TỪ 07/09/2026 HẰNG SỐ NÀY KHÔNG CÒN QUYẾT ĐỊNH SỐ THẺ — xem
+# `GIAY_TOI_THIEU_MOI_THE` và `so_the_can_dung`. Giữ lại vì cửa canh cũ dựng ca
+# xấu bằng nó, và vì nó ghi lại vì sao 4 thẻ / 15 giây là hỏng.
 GIAY_MOI_THE = 4.5
+
+# TRẦN THỜI LƯỢNG: một thẻ không được ngắn hơn chừng này.
+#
+# Đây là con số CHỌN, không phải đo được — `GIAY_MOI_THE = 4,5` trước nó cũng
+# vậy. Thứ đo được chỉ là một điểm: thẻ ngắn nhất của lượt chạy 07/09 dài
+# **2,04s** và qua sạch mọi cửa, nên vùng quanh 2 giây chưa phải chỗ hỏng.
+#
+# Nó chỉ có việc khi kịch bản **>24 câu** (60s / 2,5). `core/viet_truyen.py` có
+# sàn `SO_CAU_KHAC_MIN = 11` nhưng KHÔNG có trần, nên để hở thì một kịch bản 40
+# câu ngắn sẽ ra 40 thẻ × 1,5s.
+GIAY_TOI_THIEU_MOI_THE = 2.5
 # Bước xoay màu nền giữa hai thẻ liền nhau, tính theo vòng màu.
 #
 # 137,5° là góc vàng — chia vòng tròn đều nhất có thể với số bước bất kỳ, nên
@@ -231,9 +246,25 @@ def so_the_can_dung(dai_giong: float, van_ban: str) -> int:
     Kịch bản ít hơn 3 câu vẫn bị lặp — nhưng ở đó cửa nội dung bác thật
     (2/3 = 0,67 < 0,80), nên nó hỏng TO chứ không hỏng lặng.
     """
-    theo_thoi_luong = int(round(dai_giong / GIAY_MOI_THE))
+    # MỘT THẺ MỘT CÂU, TRỪ KHI THẺ SẼ QUÁ NGẮN (07/09/2026).
+    #
+    # Bản trước lấy `min(round(dài/4,5), số_câu)` — thời lượng QUYẾT ĐỊNH số
+    # thẻ, còn câu chỉ là trần chống lặp. Với 60,0s thì `round(60/4,5) = 13`
+    # chặn trước, và `_cat_doan` phải nhét 15 câu vào 13 ô. Chạy thật:
+    #
+    #     thẻ ngắn nhất 2,04s · dài nhất 7,87s     (3,9 lần)
+    #     từ ít nhất 11        · nhiều nhất 32     (2,9 lần)
+    #     thẻ 7 và 13 ôm 2 câu -> 31–32 từ trên một màn hình dọc
+    #
+    # Cân lại theo số từ không cứu được: mọi câu ở lượt ấy dài 11–17 từ, nên
+    # gộp bất kỳ cặp nào cũng ra 27–32 từ. Thứ sửa được là ĐỪNG GỘP.
+    #
+    # Hai ràng buộc ĐỔI VAI, không cái nào bị xoá: `so_cau` từ trần thành đích,
+    # thời lượng từ đích thành trần. Lý do chống lặp vẫn còn vì `min(so_cau, …)`
+    # vẫn giữ.
+    tran_thoi_luong = int(dai_giong / GIAY_TOI_THIEU_MOI_THE)
     so_cau = len(tach_cau(van_ban))
-    return max(SO_THE_TOI_THIEU, min(theo_thoi_luong, so_cau))
+    return max(SO_THE_TOI_THIEU, min(so_cau, tran_thoi_luong))
 
 
 def _cat_doan(van_ban: str, so_the: int) -> List[str]:

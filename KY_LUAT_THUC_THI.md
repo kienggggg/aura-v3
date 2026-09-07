@@ -703,6 +703,78 @@ D · cắt + chèn khe             58,91s    LỌT
   > **Thẻ cuối nhận phần dư.** Khe im lặng cuối cùng thuộc về nó; bỏ đi thì
   > video cụt trước khi giọng đọc xong.
 
+### 2b-bis. MỘT THẺ MỘT CÂU, TRỪ KHI THẺ SẼ QUÁ NGẮN (07/09/2026)
+
+Chạy thật một lượt Alpha để xem: **13 thẻ cho 15 câu**. Đọc kỹ hơn thì cái hỏng
+không phải hai con số lệch nhau, mà là **độ lệch giữa các thẻ**:
+
+```
+thẻ ngắn nhất 2,04s · dài nhất 7,87s     (3,9 lần)
+từ ít nhất 11        · nhiều nhất 32     (2,9 lần)
+
+thẻ  7:  31 từ · 7,23s · 2 câu
+thẻ 13:  32 từ · 7,87s · 2 câu
+```
+
+Hai thẻ ôm 2 câu, mỗi thẻ **32 từ trong 7,9 giây**, trong khi thẻ 1 có 11 từ.
+Trên một video dọc 720×1280 thì đó là hai màn hình chữ dày gấp ba các thẻ khác.
+
+**Nguyên nhân: ràng buộc đang đi SAI CHIỀU.**
+`so_the_can_dung` lấy `min(round(dài/4,5), số_câu)` — tức **thời lượng quyết
+định số thẻ**, còn câu chỉ là trần chống lặp. Với 60,0s thì `round(60/4,5) = 13`
+chặn trước, và `_cat_doan` phải nhét 15 câu vào 13 ô bằng phép chia chỉ số
+`i * n // so_the` — chọn thẻ nào ôm 2 câu **theo vị trí**, không theo độ dài.
+
+Cân lại theo số từ cũng không cứu được: mọi câu ở lượt này dài 11–17 từ, nên
+gộp bất kỳ cặp nào cũng ra 27–32 từ. Thứ sửa được là **đừng gộp**.
+
+**Đặc tả mới — chép TAY vào cửa canh:**
+
+```
+so_the = max(SO_THE_TOI_THIEU, min(so_cau, int(dai_giong / GIAY_TOI_THIEU_MOI_THE)))
+DAC_TA_GIAY_TOI_THIEU_MOI_THE = 2.5
+```
+
+Một thẻ một câu, **trừ khi** làm thế khiến thẻ ngắn hơn `GIAY_TOI_THIEU_MOI_THE`.
+Với 60,0s thì trần là 24 thẻ; 15 câu ra đúng 15 thẻ.
+
+**`2,5` LÀ MỘT CON SỐ CHỌN, KHÔNG PHẢI ĐO ĐƯỢC — nói ra chứ không giấu.**
+`GIAY_MOI_THE = 4,5` trước nó cũng vậy. Thứ đo được ở đây chỉ là một điểm:
+thẻ ngắn nhất của lượt vừa chạy dài **2,04s** và qua sạch mọi cửa, nên vùng
+quanh 2 giây chưa phải chỗ hỏng. Trần này chỉ có việc khi kịch bản **>24 câu**;
+`core/viet_truyen.py` có sàn `SO_CAU_KHAC_MIN = 11` nhưng **không có trần**, nên
+để hở thì một kịch bản 40 câu ngắn sẽ ra 40 thẻ × 1,5s.
+
+**Ràng buộc cũ đổi vai, không bị xoá.** `so_cau` từ chỗ là *trần chống lặp* trở
+thành *đích*; thời lượng từ chỗ là *đích* trở thành *trần*. Lý do chống lặp
+(`_cat_doan` đệm bằng cách lặp câu khi thiếu) vẫn còn nguyên vì `min(so_cau, …)`
+vẫn giữ.
+
+**Phải đo lại sau khi đổi, và đo ĐỘ LỆCH chứ không đo số thẻ:** tỷ lệ
+từ-nhiều-nhất / từ-ít-nhất phải giảm. Chỉ đếm "13 → 15" thì một bản vá làm 15
+thẻ lệch hơn nữa vẫn qua.
+
+**ĐO SAU KHI ĐỔI — chạy thật lại cả dây chuyền:**
+
+```
+                  TRƯỚC (13 thẻ)     SAU (15 thẻ)
+thẻ ngắn / dài    2,04s / 7,87s      2,04s / 3,70s     3,9× → 1,8×
+từ ít / nhiều     11 / 32            11 / 17           2,9× → 1,5×
+thẻ ôm 2 câu      2                  0
+trạng thái        PASS 74,3s         PASS 63,8s
+```
+
+**VÀ CHỖ ĐÁNG GHI NHẤT: ĐỔI LUẬT XONG, 31 BÀI LIÊN QUAN VẪN XANH.**
+Không cửa nào chốt công thức cũ, nên một quy tắc trung tâm của phòng Alpha
+trôi đi **không tiếng động**. Hằng số `GIAY_MOI_THE = 4,5` có mặt trong mã, có
+chú thích dài, nhưng chưa bao giờ có một dòng `assert` nào đối chiếu nó với đặc
+tả — và `GIAY_TOI_THIEU_MOI_THE` mới cũng suýt vào kho theo cùng cách.
+
+Nay ba cửa: hằng số chép tay · một thẻ một câu khi thời lượng còn chỗ · **độ
+lệch** (thẻ dày chữ nhất không quá 2 lần thẻ mỏng nhất). Cửa thứ ba là cửa
+quan trọng nhất — chỉ đếm "13 → 15" thì một bản vá làm 15 thẻ lệch hơn nữa vẫn
+qua. Gieo 5 phép, cả 5 đỏ.
+
 ### 2c. BỘ DỰNG THỨ HAI: REMOTION (06/09/2026)
 
 `sinh_the_hinh` vẽ ảnh **TĨNH** bằng PIL rồi ffmpeg chiếu mỗi ảnh một khoảng —

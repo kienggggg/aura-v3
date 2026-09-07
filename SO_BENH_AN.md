@@ -6,9 +6,9 @@ Tách khỏi `CLAUDE.md` ngày 06/09/2026, khi tệp ấy lên **83.047 byte** �
 
 `CLAUDE.md` giữ **luật**, mỗi luật một dòng kèm con số tạo ra nó. Chi tiết nằm ở đây. Đọc một ca khi luật tương ứng sắp được áp dụng, hoặc khi muốn biết vì sao nó tồn tại.
 
-**30 ca dưới đây đều là một lần trả giá trên chính máy này** — không chép từ đâu về.
+**31 ca dưới đây đều là một lần trả giá trên chính máy này** — không chép từ đâu về.
 
-> **Tách ra KHÔNG làm bài học dính hơn.** 30 ca này đã được đọc, và riêng ngày
+> **Tách ra KHÔNG làm bài học dính hơn.** 31 ca này đã được đọc, và riêng ngày
 > 06/09 vẫn bị phá: `x in y` bốn lần, dấu chéo qua vỏ shell lần thứ mười một,
 > hằng số fit từ chính mẫu dùng để kiểm — bài học ấy viết buổi sáng, dính bẫy
 > buổi chiều. Thứ bắt được là `tools/gieo.py`.
@@ -1223,3 +1223,73 @@ Một cửa chỉ hỏi `bash -n` cho phép này đi qua sạch sẽ. Đó là l
 **Và `x in y` lần thứ tám, ngay trong cửa canh chống nó.** Bài hành vi có một dòng chặn bẫy tautological: *"bản dịch không được gọi ngược lại python"*, viết `"python" not in ban.lower()`. **Đỏ cả 6 lượt** — vì dòng đầu mọi bản dịch là *"Chuyển đổi tự động từ Python sang Bash"*. Chữ nằm trong lời kể, không nằm trong lệnh. Bỏ chú thích trước khi dò, rồi tìm bằng `\bpython[\d.]*\b`.
 
 **`go` không động tới, và đó là một quyết định chứ không phải quên.** Máy này không có trình biên dịch Go, nên mọi câu về bản dịch Go chỉ là **đọc thấy**: `func Fibonacci` khai rồi gọi `fibonacci`, câu lệnh mức module nằm ngoài `func main`. Sửa một thứ không đo được rồi báo "đã sửa" là đúng loại câu cả sổ này sinh ra để chống. Có một bài canh riêng để lượt sau đọc đặc tả không tưởng `go` đã xong.
+
+---
+
+### Cửa đo được thứ khác cũng đang chuyển động, chứ không phải thứ nó tưởng
+
+Ngày 07/09/2026, trả món nợ *"phụ đề sang từng từ — OneCore không trả timestamp theo từ"*. Đo trên `voice.wav` 60,00s · 12 đoạn · 245 từ, có sẵn lời gốc:
+
+```
+model   RTF    thời gian   WER      TỪ GỐC CÓ MỐC
+base    0,23     13,7s     17,1%    205/245  83,7%   KHÔNG ĐẠT
+small   0,63     38,1s      6,9%    228/245  93,1%   ĐẠT
+```
+
+**Vòng đo đầu chấm sai, và sai theo đúng bệnh đã ghi.** Chỉ tiêu đầu đếm *số từ*: `base` ra **247/245 = 100,8%** và được chấm ĐẠT, trong khi nó phiên *"**Này** hôm nay"* cho *"**Ngày** hôm nay"*. Một bản sai cả 245 từ vẫn đếm ra 245 từ. Đổi sang WER + chuỗi con chung dài nhất thì thứ tự **lật ngược**: `base` 83,7% < `small` 93,1%. Cùng bài *"đừng tự chấm điểm bằng dò chuỗi con"* ghi 12/08 — lần này nó còn **chọn nhầm model**.
+
+Và câu hỏi của AURA hoá ra không phải *"phiên dịch đúng không"*: AURA **đã biết lời**, chính nó sinh giọng từ lời ấy. Việc cần là gắn mốc cho lời đã biết, nên bộ nhận dạng chỉ là cái thước, còn mốc thì chuyển sang lời gốc qua chuỗi con chung dài nhất.
+
+**Chỗ đắt nhất nằm ở cửa canh, không ở tính năng.**
+
+Karaoke phải chứng minh được là chữ **quét theo thời gian**, chứ không phải đứng im. Cửa đầu của tôi làm thế này: rút ba khung ở ba mốc trong **cùng một đoạn**, băm dải phụ đề, thấy ba băm khác nhau → ĐẠT.
+
+```
+t= 0.66s  sha 44d5c5dff89c750e
+t= 2.21s  sha 5a2edd1d93bb2d6b
+t= 3.77s  sha 6ccbaee1754e22c5
+3/3 khung KHÁC nhau -> "chữ có đổi theo thời gian"
+```
+
+Câu kết luận ấy sai. Nền có Ken Burns phóng chậm **1,00 → 1,12 suốt một thẻ**, nên **ba khung khác nhau kể cả khi chữ đứng im**. Cửa đo chuyển động của **NỀN** và ghi nhận nó thành chuyển động của **CHỮ**. Không có gì hỏng, không có gì đỏ, và con số thì thật — chỉ là nó trả lời một câu hỏi khác.
+
+Đo lại bằng thứ **chỉ karaoke mới làm được**: đếm điểm ảnh VÀNG (`\kf` quét chữ từ trắng sang vàng). Và chạy **ca đối chứng cùng lúc, khác đúng một biến** — cùng video nền, cùng ba mốc, nung bằng `.srt` chữ tĩnh:
+
+```
+ t (s)    KARAOKE .ass    ĐỐI CHỨNG .srt
+  0,44               0                 0
+  1,55           1.965                 0
+  2,66           7.613                 0
+  3,77          12.591                 0
+```
+
+Ca đối chứng phẳng 0 ở cả bốn mốc. **Không có nó thì cột bên trái không chứng minh được gì** — 12.591 là một con số lớn, và một con số lớn rất dễ đọc thành một kết luận.
+
+Đây là họ hàng gần của bài Remotion nháy 0,76 giây mà `kiem_video` vẫn cho ĐẠT, nhưng khác một chỗ đáng ghi: lần ấy cửa **không nhìn** thứ cần nhìn; lần này cửa **có nhìn**, thấy đúng chỗ, và vẫn kết luận sai vì trong khung còn một thứ khác đang chuyển động.
+
+**Ba chỗ khác bắt được trên cùng đường:**
+
+*Không đưa `faster-whisper` vào `requirements.txt`.* Nó kéo theo `ctranslate2` · `onnxruntime` · `av` · `numpy` · `tokenizers` · `huggingface-hub` — đo được **273 MB và 10+ gói**, cộng 605 MB model. `CLAUDE.md` mục 1 lấy con số **2 gói ngoài** làm lý do v3 tồn tại; đẩy lên 12 để thêm một tính năng là tự tay dựng lại v2. Nối bằng **tiến trình riêng, venv riêng, tìm bằng đường dẫn tuyệt đối** — đúng khuôn `node --check` / `bash -n` của phòng `epsilon`.
+
+*Ba trạng thái, và lần này nhánh giữa có việc thật.* `PASS` · `KHONG_DAT` (đo được mà dưới ngưỡng — có số, và số ấy nói không) · `KHONG_DO_DUOC` (máy chưa có bộ căn). Nhánh cuối **không được kéo cả lượt xuống đỏ**: thiếu một cái thước không phải là hỏng, và video vẫn dựng xong với phụ đề theo đoạn như cũ.
+
+*Và lỗi UTF-8 lần thứ hai trong một tuần.* Worker in JSON tiếng Việt ra stdout, Windows mặc định `cp1252` khi bị chuyển hướng vào đường ống, chết ở chữ **"ẽ"**. Điều đáng ghi không phải cái lỗi — nó nằm sẵn trong `CLAUDE.md` mục 3 — mà là **ba trạng thái đã làm đúng việc**: bên gọi đọc mã thoát 1 và trả `KHONG_DO_DUOC` thay vì `PASS`, nên cái sai không bao giờ đi tiếp được thành một con số đẹp.
+
+**Chốt lại:** gieo 8 phép, cả 8 đỏ, mỗi phép trúng đúng một bài. Chạy thật cả chuỗi: **PASS · 84,1 s**, mọi cửa cũ vẫn xanh, `.srt` theo đoạn giữ nguyên nên phép đo lệch chữ–hình 0,036 s không bị đụng. Chỉ phần **nung** đổi sang `.ass`. Thay cả hai luồng là đúng bài *"vá một nửa của một cặp"* — chỉ khác là lần này sẽ phá cái đang chạy được.
+
+**Và cái đắt thứ hai, tìm ra SAU khi đã nối xong.** Ngưỡng `khớp ≥ 90%` được đặt từ **đúng một kịch bản**. Đo thêm sáu cái khác:
+
+```
+                    WER            khớp          phán quyết
+lặp khuôn   ×3   16,9–72,9%    27,1–83,2%     KHÔNG ĐẠT
+văn tự nhiên ×3  10,2–16,3%    83,7–89,8%     KHÔNG ĐẠT
+mẫu đặt ngưỡng        6,9%          93,1%     ĐẠT
+```
+
+Cái duy nhất đạt là chính cái đã dùng để đặt ngưỡng. Tính năng đã nối, đã đo, và **đang gần như không bật**. Đó là bài *"một hằng số fit từ chính mẫu dùng để kiểm"* ở dạng nặng nhất: không phải sai một con số, mà là **một tính năng chạy được nhưng không bao giờ chạy**.
+
+Đo tiếp bằng **phép giữ lại** — giấu 1 trong mỗi 7 từ đã khớp, bắt nội suy đoán lại — thì lộ ra sàn ấy đo sai thứ: **83 từ bị giấu, trung vị lệch 0,000s, p90 0,110s**. Người xem thấy chữ sáng lệch bao nhiêu GIÂY, không thấy bao nhiêu phần trăm từ khớp ASR.
+
+**Nhưng không đổi ngưỡng.** Ca đối chứng dựng để chứng minh cửa mới biết đỏ — kịch bản lặp khuôn — lần chạy sau ra **81,4%** thay vì 27,1%, sai số nội suy vẫn nhỏ. Cửa mới **chưa từng đỏ**. Đổi sang một cửa chưa ai đi qua là thay một điểm tự thưởng bằng một điểm tự thưởng khác — nên nó ở lại thành nợ, có tên.
+
+**Còn nợ, nói rõ:** đây là **nhận dạng rồi ghép mốc**, chưa phải **căn cưỡng bức** lời đã biết. 17/245 từ không khớp được nội suy giữa hai từ kề — chúng là **suy ra**, không phải **đo được**. WhisperX làm đúng việc thứ hai và sẽ phủ 100%, nhưng kéo theo `torch` ≈ 2–2,5 GB và **chưa chạy trên máy này**, nên mọi câu về nó là *đọc thấy*.

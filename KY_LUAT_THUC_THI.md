@@ -786,6 +786,126 @@ tiến độ 6px — `freezedetect` đọc là đứng yên. Đó đúng kiểu 
 
 **CHƯA THAY BỘ DỰNG CŨ.**
 
+### 2d. PHỤ ĐỀ THEO TỪNG TỪ — CĂN BẰNG TIẾN TRÌNH RIÊNG, KHÔNG KÉO 10 GÓI VÀO (07/09/2026)
+
+Đăng ký **TRƯỚC KHI VIẾT MÃ**. Trả món nợ ghi từ 06/09: *"phụ đề sang từng từ —
+OneCore không trả timestamp theo từ"*.
+
+**Đo trước khi nối**, `voice.wav` 60,00s · 12 đoạn · 245 từ, có sẵn lời gốc:
+
+```
+model   RTF    thời gian   WER      TỪ GỐC CÓ MỐC     phán quyết
+base    0,23     13,7s     17,1%    205/245  83,7%    KHÔNG ĐẠT
+small   0,63     38,1s      6,9%    228/245  93,1%    ĐẠT cả hai
+                           ≤15%            ≥90%
+```
+
+**Ngưỡng WER ≤ 15% và KHỚP ≥ 90% viết ra TRƯỚC khi chạy vòng đo ấy**, không
+phải sau. Chép tay xuống cửa canh.
+
+**VÒNG ĐO ĐẦU CHẤM SAI, VÀ SAI THEO ĐÚNG BỆNH ĐÃ GHI.** Chỉ tiêu đầu đếm *số
+từ*: `base` ra **247/245 = 100,8%** và được chấm ĐẠT, trong khi nó phiên
+*"**Này** hôm nay"* cho *"**Ngày** hôm nay"*. Một bản phiên sai cả 245 từ vẫn
+đếm ra 245 từ. Đổi sang WER + chuỗi con chung dài nhất thì thứ tự **lật ngược**:
+
+```
+đếm số từ      base 100,8%  >  small 100,0%
+so khớp thật   base  83,7%  <  small  93,1%
+```
+
+Đúng bài *"đừng tự chấm điểm bằng dò chuỗi con"* đã ghi 12/08.
+
+**CÂU HỎI CỦA AURA KHÔNG PHẢI "PHIÊN DỊCH ĐÚNG KHÔNG".** AURA **đã biết lời** —
+chính nó sinh giọng từ lời ấy. Việc cần là **gắn mốc cho lời đã biết**. Nên
+phép đo là: chuyển mốc từ bản phiên sang lời gốc qua chuỗi con chung dài nhất.
+17/245 từ không khớp thì nội suy từ hai từ kề.
+
+**KHÔNG ĐƯA `faster-whisper` VÀO `requirements.txt`.** Nó kéo theo
+`ctranslate2` · `onnxruntime` · `av` · `numpy` · `tokenizers` · `huggingface-hub`
+— đo được **273 MB và 10+ gói**, cộng 605 MB model. `CLAUDE.md` mục 1 lấy con số
+**2 gói ngoài** làm lý do v3 tồn tại; đẩy nó lên 12 là tự tay dựng lại v2.
+
+Nối theo **đúng khuôn đã dùng cho `node` và `bash`** ở phòng `epsilon`:
+
+* **Tiến trình riêng, venv riêng, tìm bằng ĐƯỜNG DẪN TUYỆT ĐỐI.** Biến môi
+  trường `AURA_STT_PYTHON` trước, rồi tới danh sách chỗ quen. Kho model đi
+  cùng ổ với `F:\ollama-models` — ổ C chỉ còn 26,7 GB, F còn 61 GB.
+* **Không có bộ căn thì `KHONG_DO_DUOC`**, và video vẫn dựng xong với phụ đề
+  theo ĐOẠN như cũ. Không được rơi xuống `FAIL`, cũng tuyệt đối không `PASS`.
+* **Worker chỉ sinh mốc, KHÔNG tự chấm.** `tools/can_tung_tu_worker.py` in ra
+  JSON mốc từng từ; `core/can_chu.py` mới là chỗ tính WER · KHỚP và ra phán
+  quyết. Đúng luật chương VIII: *"Runner chỉ sinh file; Verifier độc lập mới
+  có quyền ghi trạng thái."*
+
+**HAI LUỒNG PHỤ ĐỀ, HAI VIỆC KHÁC NHAU — KHÔNG ĐƯỢC GỘP:**
+
+```
+luồng RỜI (.srt, theo ĐOẠN)   -> để MÁY kiểm; `ffprobe` đọc ra; gates cũ dùng
+chữ NUNG   (.ass, theo TỪ)    -> để NGƯỜI xem; karaoke `\kf` quét theo giọng
+```
+
+Chú thích sẵn có ở `render` viết: *"luồng rời để KIỂM, chữ nung để XEM"*. Bản
+theo từ **chỉ thay phần NUNG**. `phu_de.srt` giữ nguyên, nên `kiem_phu_de` và
+phép đo lệch chữ–hình **0,036 s** không bị đụng tới. Thay cả hai là đúng bài
+*"vá một nửa của một cặp"* — chỉ khác là lần này phá cái đang chạy được.
+
+**Đặc tả — chép TAY vào cửa canh:**
+
+* `DAC_TA_CAN_WER_TRAN = 0,15` · `DAC_TA_CAN_KHOP_SAN = 0,90` · model `small`.
+* **Mốc từ phải TĂNG DẦN** và nằm trong `[đoạn.đầu − 0,30 ; đoạn.cuối + 0,30]`.
+* **Từ không khớp thì NỘI SUY giữa hai từ kề**, không bỏ trắng — bỏ trắng thì
+  chữ biến mất giữa câu.
+* **`.ass` phải làm chữ ĐỔI theo thời gian.** Hai khung trong CÙNG một đoạn,
+  ở hai mốc từ khác nhau, phải KHÁC nhau ở dải phụ đề. Chỉ kiểm "có chữ" thì
+  một bản karaoke đứng im vẫn qua — đúng lỗ đã để lọt bản Remotion nháy 0,76 s
+  mà `kiem_video` vẫn cho ĐẠT.
+* **Ca đối chứng:** gieo cho bộ căn biến mất → phòng phải vẫn dựng xong video
+  và trả `KHONG_DO_DUOC` cho riêng phần căn chữ, **không** đỏ cả lượt.
+
+**NGƯỠNG NÀY FIT TỪ ĐÚNG MỘT MẪU, VÀ ĐO THÊM THÌ 6/6 KỊCH BẢN KHÁC TRƯỢT.**
+
+Đo 07/09 sau khi nối, trên sáu kịch bản chưa từng dùng để đặt ngưỡng:
+
+```
+                    WER            khớp          phán quyết
+lặp khuôn   ×3   16,9–72,9%    27,1–83,2%     KHÔNG ĐẠT
+văn tự nhiên ×3  10,2–16,3%    83,7–89,8%     KHÔNG ĐẠT  <- sát sàn
+mẫu đặt ngưỡng        6,9%          93,1%     ĐẠT
+```
+
+Cái duy nhất đạt là **chính cái đã dùng để đặt ngưỡng**. Nghĩa là karaoke hiện
+**rất ít khi bật** trên nội dung mới. Nói ra chỗ này chứ không giấu: tính năng
+đã nối, đã đo, và **đang gần như không chạy**.
+
+Lặp khuôn là một biến lớn (72,9% → 10,2%) — bộ nhận dạng hỏng nặng trên tiếng
+lặp — nhưng kể cả văn tự nhiên vẫn dừng ở 83,7–89,8%.
+
+**VÀ SÀN 90% CÓ THỂ ĐANG ĐO SAI THỨ.** Từ không khớp được nội suy giữa hai từ
+neo, nên sai số của nó CÓ CHẶN. Đo bằng **phép giữ lại** — giấu 1 trong mỗi 7
+từ đã khớp, bắt bộ nội suy đoán lại, so với mốc thật:
+
+```
+83 từ bị giấu:  trung vị 0,000s · p90 0,110s · tối đa 0,400s
+                lệch quá 0,30s: 1/83 = 1,2%
+```
+
+Tức 14% từ được nội suy gần như **miễn phí về thời gian**. Thứ người xem thấy
+là chữ sáng lệch bao nhiêu GIÂY, không phải bao nhiêu phần trăm từ khớp ASR.
+
+**NHƯNG KHÔNG ĐỔI NGƯỠNG TRONG LƯỢT NÀY.** Ca đối chứng dựng để chứng minh cửa
+mới biết đỏ — kịch bản lặp khuôn — lần chạy sau lại ra **81,4%** thay vì 27,1%,
+và sai số nội suy của nó vẫn nhỏ (tối đa 0,258s). Cửa mới **chưa từng đỏ**, nên
+theo đúng luật của chính tệp này, nó chưa chứng minh được gì. Đổi sang một cửa
+chưa ai đi qua là thay một điểm tự thưởng bằng một điểm tự thưởng khác.
+
+**Nợ để lại, ghi rõ:** dựng cho được một ca mà phép đo sai số nội suy PHẢI đỏ,
+rồi mới bàn tới việc đổi ngưỡng. Chưa có ca ấy thì `KHOP_SAN = 0,90` ở lại, và
+lời mô tả phải nói rằng karaoke hiếm khi bật.
+
+**Việc KHÔNG làm trong lượt này:** WhisperX (căn cưỡng bức thật, phủ 100%) kéo
+theo `torch` ≈ 2–2,5 GB. Chưa chạy trên máy này nên mọi câu về nó là **đọc
+thấy**, không phải **đo được**.
+
 ### 3. PHÒNG SCOUT (Tra cứu Dữ kiện Mới & Source Receipt)
 * **Đầu vào:** Tối thiểu 3 câu hỏi cần dữ kiện mới.
 * **Quy trình Tra cứu & Biên nhận Nguồn:**

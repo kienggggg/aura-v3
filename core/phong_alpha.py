@@ -69,6 +69,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
+from core.can_chu import can_tung_tu
 from core.paths import PROJECT_ROOT
 
 FIXTURE = PROJECT_ROOT / "experiments" / "evidence_sprint" / "data_inputs" / "STUDIO_FIXTURE.md"
@@ -666,7 +667,8 @@ def _lufs(tep: Path) -> float | None:
 
 def render(cards: List[Path], wav: Path, ra: Path,
            srt: Path | None = None, nhac: Path | None = None,
-           moc: List[tuple] | None = None) -> tuple[bool, str]:
+           moc: List[tuple] | None = None,
+           nung: Path | None = None) -> tuple[bool, str]:
     """Ghép thẻ + giọng thành MP4, mỗi thẻ có chuyển động chậm (Ken Burns).
 
     VÌ SAO KHÔNG DÙNG `concat` ẢNH TĨNH NỮA. Bản đầu ghép thẳng ảnh, ra video
@@ -769,24 +771,35 @@ def render(cards: List[Path], wav: Path, ra: Path,
     #
     # `subtitles` cần đường dẫn KHÔNG có dấu `:` của ổ đĩa Windows, nên chạy
     # ffmpeg ngay trong thư mục chứa tệp và chỉ truyền TÊN.
-    if srt is not None and srt.is_file():
+    # `nung` LÀ TỆP ĐƯỢC NUNG VÀO HÌNH, `srt` LÀ LUỒNG RỜI. Hai việc khác nhau,
+    # cố ý tách (07/09/2026): `.ass` karaoke theo TỪNG TỪ để người xem nhìn chữ
+    # chạy theo giọng, còn `.srt` theo ĐOẠN giữ nguyên cho `ffprobe` đọc.
+    #
+    # Thay cả hai là đúng bài "vá một nửa của một cặp" — chỉ khác là lần này
+    # phá cái đang chạy được: `kiem_phu_de` và phép đo lệch chữ–hình 0,036 s
+    # đều bám vào `.srt`.
+    nung_tu = nung if (nung is not None and nung.is_file()) else srt
+    if srt is not None and srt.is_file() and nung_tu is not None:
         # GIỮ LẠI BẢN CHƯA NUNG. Không có nó thì không cách nào chứng minh chữ
         # đã vào hình — máy không đọc được chữ trên khung, chỉ so được hai
         # khung với nhau.
         shutil.copy(ra, ra.with_name("video_chua_nung.mp4"))
-        nung = ra.with_name("_nung_" + ra.name)
+        ra_nung = ra.with_name("_nung_" + ra.name)
         kieu = ("FontName=Segoe UI,FontSize=20,PrimaryColour=&H00FFFFFF,"
                 "OutlineColour=&H90000000,BorderStyle=3,Outline=2,"
                 "Alignment=2,MarginV=60")
+        # `.ass` mang sẵn kiểu của nó; ép `force_style` lên thì màu quét karaoke
+        # bị đè và chữ đứng im — vẫn có chữ, vẫn qua mọi cửa "có phụ đề không".
+        loc = (f"subtitles={nung_tu.name}" if nung_tu.suffix.lower() == ".ass"
+               else f"subtitles={nung_tu.name}:force_style='{kieu}'")
         r3 = subprocess.run(
             ["ffmpeg", "-v", "error", "-y", "-i", ra.name,
-             "-vf", f"subtitles={srt.name}:force_style='{kieu}'",
-             "-c:a", "copy", nung.name],
+             "-vf", loc, "-c:a", "copy", ra_nung.name],
             cwd=str(ra.parent), capture_output=True, text=True,
             encoding="utf-8", errors="replace", timeout=TRAN_RENDER_GIAY)
-        if r3.returncode != 0 or not nung.is_file():
+        if r3.returncode != 0 or not ra_nung.is_file():
             return False, f"nung phụ đề hỏng: {(r3.stderr or '').strip()[:200]}"
-        nung.replace(ra)
+        ra_nung.replace(ra)
 
     # Phụ đề ghép ở LƯỢT RIÊNG, `-c copy`, không mã hoá lại.
     #
@@ -1183,10 +1196,21 @@ def _dung_video(thu_muc_ra: Path, van_ban: str | None, t0: float) -> Dict[str, A
     # Phụ đề theo MỐC ĐO ĐƯỢC. `dai_giong / len(cards)` chỉ còn là đường lui khi
     # số thẻ và số mốc lệch nhau — và khi ấy nó phải kêu chứ không im.
     dai_giong = _giay(wav)
-    srt = lam_phu_de(_cat_doan(van_ban, len(cards)),
+    cau = _cat_doan(van_ban, len(cards))
+    srt = lam_phu_de(cau,
                      dai_giong / len(cards), thu_muc_ra / "phu_de.srt",
                      moc=moc if len(moc) == len(cards) else None)
     hien_vat.append(_hien_vat(srt, "SUBTITLE", "srt_theo_the"))
+
+    # PHỤ ĐỀ THEO TỪNG TỪ (07/09/2026) — trả món nợ "OneCore không trả mốc theo
+    # từ". Bộ căn chạy ở TIẾN TRÌNH RIÊNG với venv riêng; không có nó thì đây
+    # là `KHONG_DO_DUOC` và video vẫn dựng xong với phụ đề theo đoạn như cũ.
+    # Không được rơi xuống FAIL — thiếu một cái thước không phải là hỏng.
+    kq_can = can_tung_tu(wav, cau, moc if len(moc) == len(cards) else [],
+                         thu_muc_ra / "phu_de_tung_tu.ass")
+    ass = kq_can.get("ass")
+    if ass is not None:
+        hien_vat.append(_hien_vat(ass, "SUBTITLE", "ass_karaoke_tung_tu"))
 
     # Nhạc nền SINH BẰNG MÁY, không phải nhạc thật.
     nhac, ly_do_nhac = lam_nhac_nen(dai_giong, thu_muc_ra / "nhac_nen.wav")
@@ -1197,7 +1221,8 @@ def _dung_video(thu_muc_ra: Path, van_ban: str | None, t0: float) -> Dict[str, A
     # CÙNG `moc` VỚI PHỤ ĐỀ. Truyền phụ đề theo mốc đo mà để thẻ chia đều thì
     # chữ và hình lệch nhau tới 1,72 giây — nặng hơn cái vừa chữa.
     ok, loi = render(cards, wav, mp4, srt=srt, nhac=nhac,
-                     moc=moc if len(moc) == len(cards) else None)
+                     moc=moc if len(moc) == len(cards) else None,
+                     nung=ass)
     if not ok:
         return {"trang_thai": "KHONG_CHAY_DUOC", "artifacts": hien_vat, "kiem": {},
                 "ms": round((time.monotonic() - t0) * 1000, 1), "vi_sao": loi}
@@ -1209,6 +1234,29 @@ def _dung_video(thu_muc_ra: Path, van_ban: str | None, t0: float) -> Dict[str, A
     kiem = kiem_video(mp4)
     kiem["so"]["lufs_giong"] = lufs_giong
     kiem["so"]["lufs_nhac"] = lufs_nhac
+
+    # BA TRẠNG THÁI CỦA BỘ CĂN GHI ĐỦ VÀO SỔ, NHƯNG KHÔNG CÁI NÀO CHẤM VIDEO.
+    #
+    # Bản đầu 07/09 để `KHONG_DAT` kéo cả lượt xuống đỏ, lý lẽ nghe xuôi: "có
+    # số, và số ấy nói không". Chạy bộ đủ thì **6 bài đỏ**, và lý do là:
+    #
+    #     đề 245 từ / 60s   WER  6,9%   khớp 93,1%   -> PASS
+    #     đề ngắn trong test WER 17,9%  khớp 82,1%   -> kéo video xuống FAIL
+    #
+    # WER là tính chất của TIẾNG và LỜI, không phải của mã. Chấm video bằng nó
+    # thì màu của một lượt dựng đổi theo NỘI DUNG chứ không theo đúng/sai —
+    # đúng bài "test đổi màu theo mạng" đã chữa 06/09, chỉ khác biến.
+    #
+    # Và ngưỡng 15% / 90% đo trên ĐÚNG MỘT kịch bản. Lấy một điểm đo làm cửa
+    # cho mọi lượt là cùng họ với "một hằng số fit từ chính mẫu dùng để kiểm".
+    #
+    # Không đạt thì `ass` là None, `render` nung `.srt` theo đoạn — đúng thứ
+    # chạy tốt từ 06/09. Video không xấu đi; nó chỉ mất phần karaoke. Cái phải
+    # canh là **có thật sự lui về .srt không**, và đó là việc của cửa canh, xem
+    # `tests/test_can_chu_tung_tu.py`.
+    kiem["so"]["can_chu"] = kq_can["trang_thai"]
+    kiem["so"]["can_chu_vi_sao"] = kq_can["vi_sao"]
+    kiem["so"].update({f"can_{k}": v for k, v in (kq_can.get("so") or {}).items()})
 
     kp = kiem_phu_de(srt, len(cards), _giay(mp4))
     kiem["so"].update(kp["so"])

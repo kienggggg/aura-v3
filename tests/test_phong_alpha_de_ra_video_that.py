@@ -45,6 +45,29 @@ from pathlib import Path
 import pytest
 
 from core.paths import PROJECT_ROOT
+
+
+@pytest.fixture(autouse=True)
+def _tat_bo_can_chu(monkeypatch):
+    """Tệp này chạy `dung_video` 12 lượt; mỗi lượt gọi bộ căn tốn ~30 giây.
+
+    Đo 07/09/2026: nối bộ căn vào làm bộ đủ đi từ **13:36 lên 31:17** — thêm
+    gần 18 phút cho một thứ không bài nào ở đây hỏi tới. Bài dài thì người ta
+    ngừng chạy nó, và một bộ test không ai chạy thì bằng không.
+
+    Tắt ở đây KHÔNG phải để né. Nó chính là **đường lui đã đăng ký**: máy không
+    có bộ căn thì `KHONG_DO_DUOC`, `ass` là None, `render` nung `.srt` theo
+    đoạn — tức 12 bài dưới đây đang chạy đúng cấu hình cũ, và chúng phải vẫn
+    xanh. Đó là phép đo "thêm tính năng mà không phá thứ đang chạy".
+
+    Phần căn chữ THẬT đo ở `tests/test_can_chu_tung_tu.py`, kể cả một lượt
+    chạy hết cả dây chuyền.
+    """
+    import core.phong_alpha as pa
+
+    monkeypatch.setattr(pa, "can_tung_tu", lambda *a, **k: {
+        "trang_thai": "KHONG_DO_DUOC", "ass": None,
+        "vi_sao": "tắt trong bộ test của phòng Alpha — xem _tat_bo_can_chu"})
 from core.phong_alpha import (CAO, DAI_MAX, DAI_MIN, RONG, SO_DOI_CANH_TOI_THIEU,
                               SO_THE_TOI_THIEU, TRAN_TINH_GIAY, _tim_phong,
                               kiem_video, sinh_the_hinh)
@@ -1293,7 +1316,7 @@ def test_day_chuyen_THAT_SU_dua_MOC_vao_phu_de(tmp_path, monkeypatch):
         return goc(doan, moi_the, dich, moc=moc)
 
     monkeypatch.setattr(pa, "lam_phu_de", _bat)
-    def _render_gia(cards, wav, ra, srt=None, nhac=None, moc=None):
+    def _render_gia(cards, wav, ra, srt=None, nhac=None, moc=None, nung=None):
         ra.write_bytes(b"x" * 64)      # phải TẠO tệp: `_hien_vat` gọi `stat()`
         return True, ""
 
@@ -1382,7 +1405,7 @@ def test_THE_DOI_dung_luc_PHU_DE_doi(tmp_path, monkeypatch):
 
     thay = {}
 
-    def _bat(cards, wav, ra, srt=None, nhac=None, moc=None):
+    def _bat(cards, wav, ra, srt=None, nhac=None, moc=None, nung=None):
         thay["moc"] = moc
         thay["so_the"] = len(cards)
         ra.write_bytes(b"x" * 64)

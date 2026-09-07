@@ -902,6 +902,93 @@ chưa ai đi qua là thay một điểm tự thưởng bằng một điểm tự
 rồi mới bàn tới việc đổi ngưỡng. Chưa có ca ấy thì `KHOP_SAN = 0,90` ở lại, và
 lời mô tả phải nói rằng karaoke hiếm khi bật.
 
+### 2d-bis. ĐỔI NGƯỠNG: TỪ "BAO NHIÊU % TỪ KHỚP" SANG "LỆCH BAO NHIÊU GIÂY" (07/09/2026)
+
+Sếp bảo sửa ngưỡng. Sửa được, nhưng phải sửa **phép đo trước** — vì phép giữ
+lại của bản trước có một lỗ.
+
+**LỖ: GIẤU RẢI RÁC LÀ ĐO CA DỄ.** Bản trước giấu 1 trong mỗi 7 từ, nên mọi từ
+bị giấu đều nằm **giữa hai neo**. Nội suy một từ đơn giữa hai neo gần như không
+thể sai — trung vị 0,000s — và tôi suýt kết luận cho cả bài từ con số ấy. Chỗ
+hỏng thật không có hình dạng đó: từ trượt đi thành **chuỗi liền nhau**.
+
+Đo lại, giấu theo chuỗi:
+
+```
+                      chuỗi trống THẬT      p90 sai số nội suy khi giấu chuỗi dài
+                   số chuỗi · dài nhất       1        3        6       10
+tài chính  89,8%      17    ·    3        0,050    0,140    0,200    0,229
+văn xuôi   83,7%      22    ·    5        0,040    0,160    0,166    0,386
+lặp khuôn  81,4%      29    ·    4        0,040    0,100    0,128    0,106
+```
+
+Hai điều đọc ra: **chuỗi trống thật rất ngắn** (trung vị 1, dài nhất 3–5), và
+**phép đo có nhạy** — p90 đi từ 0,04s lên 0,386s theo độ dài chuỗi. Cửa mới
+biết đỏ, khác hẳn lần trước khi tôi không dựng nổi một ca đỏ.
+
+**NGƯỠNG MỚI, LẤY TỪ NGUYÊN TẮC CHỨ KHÔNG TỪ KẾT QUẢ:**
+
+```
+DAC_TA_CAN_TY_LE_NUA_TU = 0,5
+ngưỡng = 0,5 × (độ dài TRUNG VỊ của một từ, đo từ chính lượt ấy)
+```
+
+Đo được: từ dài trung vị **0,200s** trên cả ba kịch bản → ngưỡng **0,100s**.
+Lý lẽ: lệch quá **nửa từ** thì vệt sáng karaoke nằm sang từ bên cạnh, và người
+xem thấy chữ sáng sai chỗ. Ngưỡng **tự hiệu chỉnh theo từng lượt** — đọc nhanh
+thì từ ngắn, ngưỡng chặt lại theo.
+
+**BỎ `KHOP_SAN = 0,90` LÀM CỬA, VÀ ĐÂY LÀ LÝ DO:**
+
+Một từ chỉ trở thành neo khi nó **khớp đúng chữ** trong lời gốc, nên từ bị phiên
+sai **không** thành neo — nó chỉ làm neo THƯA hơn. Neo thưa thì chuỗi trống dài
+ra, và chuỗi trống dài thì sai số nội suy tăng. Tức `khop` và `WER` tác động lên
+chất lượng **qua đúng một đường**, và đường ấy là thứ ngưỡng mới đo thẳng.
+
+Giữ chúng làm **số ghi sổ**, không làm cửa. Một cửa đo hệ quả thì tốt hơn hai
+cửa đo nguyên nhân — nhất là khi hai con số kia được đặt từ một mẫu duy nhất.
+
+**GIỚI HẠN CỦA NGƯỠNG MỚI, NÓI RA:** phép giữ lại lấy chính các neo làm mốc
+đúng, nên nó đo **chất lượng NỘI SUY**, không đo **chất lượng NEO**. Neo sai
+chỗ do trùng chữ ngẫu nhiên thì nó không thấy — thứ chặn việc ấy là LCS giữ
+đúng thứ tự, không phải bài này.
+
+**Không đo được thì `KHONG_DO_DUOC`:** ít neo tới mức không giấu nổi một chuỗi
+nào thì chưa kết luận được, và đó là nhánh thứ ba chứ không phải `KHONG_DAT`.
+
+**ĐO SAU KHI ĐỔI — CỬA MỚI XẾP HẠNG KHÁC CỬA CŨ, VÀ KHÁC ĐÚNG CHỖ:**
+
+```
+             khớp     p90 / ngưỡng     cũ (khớp≥90%)   mới
+tài chính   89,8%    0,087 / 0,100     KHÔNG ĐẠT      PASS
+kỹ thuật    86,7%    0,210 / 0,100     KHÔNG ĐẠT      KHÔNG ĐẠT
+văn xuôi    83,7%    0,067 / 0,100     KHÔNG ĐẠT      PASS
+```
+
+`văn xuôi` khớp **thấp nhất** mà đạt; `kỹ thuật` khớp cao hơn lại trượt. Hai
+trục xếp hạng **ngược nhau** — đó là bằng chứng "% từ khớp" không phải thứ
+quyết định chất lượng. Cửa cũ: **0/6 đạt**. Cửa mới: 2/3 đạt trên văn tự nhiên.
+
+**Gieo 5 phép, và hai lần đầu KHÔNG đủ:**
+
+```
+lần 1   3/5 đỏ   2 cửa mù
+lần 2   4/5 đỏ   1 cửa mù
+lần 3   5/5 đỏ
+```
+
+Hai chỗ mù, cả hai đáng ghi:
+
+* **Bài canh đọc nhầm trường.** Nó khẳng định `3 in dai_chuoi_trong` — nhưng
+  trường ấy là chuỗi trống **ĐO ĐƯỢC**, không đổi khi bộ đo quay về giấu rải
+  rác. Gieo `L = 1` thì cửa vẫn xanh. Thêm `dai_da_giau` — độ dài các chuỗi
+  **ĐÃ GIẤU** — và hỏi vào đó.
+* **Phép gieo không tới nơi, lần thứ tư.** Nhánh `KHONG_DO_DUOC` có bài canh
+  hẳn hoi, nhưng tên bài không khớp bộ lọc `-k` của kịch bản gieo, nên nó
+  không hề chạy. Công cụ in "VẪN XANH — CỬA MÙ" cho một cửa **chưa từng được
+  gọi**. Trước khi ghi "cửa mù", kiểm xem bài định bắt có nằm trong lượt chạy
+  không.
+
 **Việc KHÔNG làm trong lượt này:** WhisperX (căn cưỡng bức thật, phủ 100%) kéo
 theo `torch` ≈ 2–2,5 GB. Chưa chạy trên máy này nên mọi câu về nó là **đọc
 thấy**, không phải **đo được**.

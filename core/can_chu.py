@@ -32,12 +32,29 @@ from typing import Any, Dict, List, Tuple
 
 from core.paths import PROJECT_ROOT
 
-# Chép TAY từ `KY_LUAT_THUC_THI.md` §2d, và cả hai con số này được viết ra
-# TRƯỚC khi chạy vòng đo cho ra 6,9% / 93,1% — không phải fit sau khi thấy kết
-# quả. Đó là khác biệt giữa một ngưỡng và một lời mô tả.
+# NGƯỠNG LÀ SAI SỐ THỜI GIAN, KHÔNG PHẢI TỶ LỆ TỪ KHỚP (§2d-bis, 07/09/2026).
+#
+# `WER_TRAN = 0,15` và `KHOP_SAN = 0,90` của bản trước đặt từ ĐÚNG MỘT kịch
+# bản, và đo thêm thì 6/6 kịch bản khác trượt — tức karaoke gần như không bao
+# giờ bật. Một ngưỡng mà chỉ mẫu sinh ra nó đi qua được thì không phải ngưỡng.
+#
+# Nay cửa hỏi thẳng thứ người xem thấy: **vệt sáng lệch bao nhiêu giây**. Lệch
+# quá NỬA TỪ thì nó nằm sang từ bên cạnh. Ngưỡng lấy từ độ dài từ đo được của
+# chính lượt ấy, nên đọc nhanh thì tự chặt lại theo — không phải một hằng số
+# gõ cứng chờ ai đó fit lại.
+#
+# Vì sao bỏ được `khop` và `WER` làm cửa: một từ chỉ thành NEO khi khớp đúng
+# chữ, nên từ bị phiên sai không thành neo — nó chỉ làm neo THƯA hơn. Neo thưa
+# thì chuỗi trống dài ra, và chuỗi trống dài thì sai số nội suy tăng. Hai con
+# số ấy tác động qua đúng một đường, và đường ấy là thứ ngưỡng mới đo thẳng.
+# Chúng ở lại làm SỐ GHI SỔ.
+TY_LE_NUA_TU = 0.5
+MODEL = "small"
+
+# Giữ để GHI SỔ, không còn là cửa. Xoá hẳn thì mất luôn khả năng đọc lại vì sao
+# một lượt có ít neo.
 WER_TRAN = 0.15
 KHOP_SAN = 0.90
-MODEL = "small"
 BIEN_DOAN = 0.30
 TRAN_GIAY = 900
 
@@ -134,6 +151,90 @@ def _noi_suy(moc: Dict[int, Tuple[float, float]], so_tu: int,
         buoc = (b - a) / max(1, n)
         ra.append((a + k * buoc, a + (k + 1) * buoc))
     return ra
+
+
+def _chuoi_trong(co_neo: set, n: int) -> List[int]:
+    """Độ dài các CHUỖI LIÊN TIẾP không có neo."""
+    ra, dai = [], 0
+    for i in range(n):
+        if i in co_neo:
+            if dai:
+                ra.append(dai)
+            dai = 0
+        else:
+            dai += 1
+    if dai:
+        ra.append(dai)
+    return ra
+
+
+def sai_so_noi_suy(neo: Dict[int, Tuple[float, float]],
+                   goc_tu: List[List[str]],
+                   moc_doan: List[tuple]) -> Dict[str, Any]:
+    """PHÉP GIỮ LẠI: giấu bớt neo, bắt bộ nội suy đoán lại, so với mốc thật.
+
+    Đây là "đổi sang bộ đề tương đương, chưa từng công bố" áp dụng tại chỗ:
+    câu trả lời có sẵn nhưng bị giấu, nên không học thuộc được.
+
+    GIẤU THEO CHUỖI, KHÔNG GIẤU RẢI RÁC. Bản đầu giấu 1 trong mỗi 7 từ, nên mọi
+    từ bị giấu đều nằm GIỮA hai neo — nội suy kiểu ấy gần như không thể sai
+    (trung vị 0,000s) và tôi suýt kết luận cho cả bài từ con số ấy. Chỗ hỏng
+    thật không có hình dạng đó: từ trượt đi thành chuỗi liền nhau. Đo 07/09,
+    cùng một kịch bản: giấu chuỗi dài 1 ra p90 0,040s, dài 10 ra p90 0,386s.
+
+    Nên ở đây giấu theo ĐÚNG phân bố độ dài chuỗi trống thật của chính lượt ấy.
+    """
+    n = sum(len(w) for w in goc_tu)
+    if not neo or n == 0:
+        return {"do_duoc": False, "vi_sao": "không có neo nào để giấu"}
+
+    dai_chuoi = _chuoi_trong(set(neo), n) or [1]
+    neo_idx = sorted(neo)
+    giau: set = set()
+    da_giau: List[int] = []
+    k, vong = 2, 0
+    while k < len(neo_idx) and vong < len(dai_chuoi) * 4:
+        L = dai_chuoi[vong % len(dai_chuoi)]
+        cum = neo_idx[k:k + L]
+        # Chỉ giấu khi cả cụm nằm LIỀN NHAU trong lời gốc — giấu một cụm rời
+        # rạc là dựng lại đúng ca dễ mà bài này sinh ra để tránh.
+        if len(cum) == L and cum[-1] - cum[0] == L - 1:
+            giau |= set(cum)
+            da_giau.append(L)
+            k += L + 2
+        else:
+            k += 1
+        vong += 1
+
+    if not giau:
+        return {"do_duoc": False, "vi_sao": "không giấu nổi chuỗi neo nào"}
+
+    con = {i: v for i, v in neo.items() if i not in giau}
+    sai, o = [], 0
+    for i, ws in enumerate(goc_tu):
+        bd, kt = (moc_doan[i] if i < len(moc_doan) else (0.0, 0.0))
+        rieng = {q - o: con[q] for q in range(o, o + len(ws)) if q in con}
+        ra = _noi_suy(rieng, len(ws), bd, kt)
+        for q in range(o, o + len(ws)):
+            if q in giau:
+                sai.append(abs(ra[q - o][0] - neo[q][0]))
+        o += len(ws)
+
+    if not sai:
+        return {"do_duoc": False, "vi_sao": "không đo được từ nào"}
+    sai.sort()
+    dai_tu = sorted(kt - bd for bd, kt in neo.values())[len(neo) // 2]
+    return {"do_duoc": True, "so_tu_giau": len(sai),
+            "p90": round(sai[int(len(sai) * 0.9)], 3),
+            "trung_vi": round(sai[len(sai) // 2], 3),
+            "toi_da": round(sai[-1], 3),
+            "tu_dai_trung_vi": round(dai_tu, 3),
+            "nguong": round(dai_tu * TY_LE_NUA_TU, 3),
+            "dai_chuoi_trong": sorted(dai_chuoi, reverse=True)[:5],
+            # ĐỘ DÀI CÁC CHUỖI ĐÃ GIẤU — khác `dai_chuoi_trong` (chuỗi ĐO
+            # ĐƯỢC). Gieo `L = 1` hồi 07/09 làm bộ đo quay về giấu rải rác mà
+            # cửa vẫn xanh, vì bài canh đọc nhầm sang trường kia.
+            "dai_da_giau": sorted(set(da_giau), reverse=True)}
 
 
 def _ass_giay(g: float) -> str:
@@ -244,13 +345,21 @@ def can_tung_tu(wav: Path, doan: List[str], moc_doan: List[tuple],
           "model": d.get("model"), "giay_nap": d.get("giay_nap"),
           "giay_dich": d.get("giay_dich")}
 
-    if wer > WER_TRAN or khop < KHOP_SAN:
-        return {"trang_thai": "KHONG_DAT", "ass": None, "so": so,
-                "vi_sao": f"WER {wer:.1%} (trần {WER_TRAN:.0%}) · "
-                          f"khớp {khop:.1%} (sàn {KHOP_SAN:.0%})"}
-
     moc_phang = {i: (nhan_tho[ban_do[j]]["bd"], nhan_tho[ban_do[j]]["kt"])
                  for i, j in cap}
+
+    # CỬA DUY NHẤT: vệt sáng lệch bao nhiêu giây (§2d-bis).
+    ss = sai_so_noi_suy(moc_phang, goc_tu, moc_doan)
+    so["sai_so"] = ss
+    if not ss["do_duoc"]:
+        return {"trang_thai": "KHONG_DO_DUOC", "ass": None, "so": so,
+                "vi_sao": f"chưa đo được sai số nội suy: {ss['vi_sao']} "
+                          f"(khớp {khop:.1%})"}
+    if ss["p90"] > ss["nguong"]:
+        return {"trang_thai": "KHONG_DAT", "ass": None, "so": so,
+                "vi_sao": f"vệt sáng lệch p90 {ss['p90']:.3f}s, quá nửa từ "
+                          f"({ss['nguong']:.3f}s) — chuỗi trống dài "
+                          f"{ss['dai_chuoi_trong']}, khớp {khop:.1%}"}
     moc_tu: List[List[Tuple[float, float]]] = []
     o = 0
     for i, ws in enumerate(goc_tu):
@@ -262,5 +371,6 @@ def can_tung_tu(wav: Path, doan: List[str], moc_doan: List[tuple],
 
     viet_ass(doan, moc_doan, moc_tu, dich_ass)
     return {"trang_thai": "PASS", "ass": dich_ass, "so": so,
-            "vi_sao": f"{len(cap)}/{len(phang)} từ có mốc đo được, "
-                      f"WER {wer:.1%}"}
+            "vi_sao": f"vệt sáng lệch p90 {ss['p90']:.3f}s ≤ nửa từ "
+                      f"({ss['nguong']:.3f}s) · {len(cap)}/{len(phang)} từ "
+                      f"có neo · WER {wer:.1%}"}

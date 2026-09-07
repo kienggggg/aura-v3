@@ -25,23 +25,91 @@ karaoke, không do cái gì khác.
 """
 from __future__ import annotations
 
+import json
 import subprocess
 
 import pytest
 
 from core import can_chu
 
-# Chép TAY từ §2d. Không viết `can_chu.WER_TRAN` ở vế phải: gieo đổi hằng số
-# trong mã thì hai vế cùng đổi và cửa vẫn xanh — bẫy tautological đã dính 02/09.
-DAC_TA_CAN_WER_TRAN = 0.15
-DAC_TA_CAN_KHOP_SAN = 0.90
+# Chép TAY từ §2d-bis. Không viết `can_chu.TY_LE_NUA_TU` ở vế phải: gieo đổi
+# hằng số trong mã thì hai vế cùng đổi và cửa vẫn xanh — bẫy tautological 02/09.
+#
+# `WER` và `khớp` KHÔNG còn là cửa (07/09 chiều). Chúng đặt từ đúng một kịch
+# bản và 6/6 kịch bản khác trượt — tức karaoke gần như không bật. Nay cửa hỏi
+# thẳng thứ người xem thấy: vệt sáng lệch bao nhiêu giây.
+DAC_TA_CAN_TY_LE_NUA_TU = 0.5
 DAC_TA_CAN_MODEL = "small"
 
 
 def test_hang_so_khop_DAC_TA():
-    assert can_chu.WER_TRAN == DAC_TA_CAN_WER_TRAN
-    assert can_chu.KHOP_SAN == DAC_TA_CAN_KHOP_SAN
+    assert can_chu.TY_LE_NUA_TU == DAC_TA_CAN_TY_LE_NUA_TU
     assert can_chu.MODEL == DAC_TA_CAN_MODEL
+
+
+def test_KHOP_khong_con_la_cua_va_TRUC_da_doi():
+    """Đo được 07/09 chiều, ba kịch bản tự nhiên:
+
+        kịch bản     khớp     p90 / ngưỡng      phán quyết
+        tài chính   89,8%   0,087 / 0,100      PASS
+        kỹ thuật    86,7%   0,210 / 0,100      KHÔNG ĐẠT
+        văn xuôi    83,7%   0,067 / 0,100      PASS
+
+    `văn xuôi` khớp THẤP NHẤT mà đạt, `kỹ thuật` khớp cao hơn lại trượt. Hai
+    trục xếp hạng NGƯỢC nhau — đó là bằng chứng "% từ khớp" không phải thứ
+    quyết định chất lượng. Bài này chốt rằng cửa không quay về trục cũ.
+    """
+    import inspect
+
+    nguon = inspect.getsource(can_chu.can_tung_tu)
+    assert "KHOP_SAN" not in nguon, (
+        "`can_tung_tu` lại chấm bằng `KHOP_SAN` — trục cũ đã quay lại")
+    assert "WER_TRAN" not in nguon, (
+        "`can_tung_tu` lại chấm bằng `WER_TRAN` — trục cũ đã quay lại")
+    assert "sai_so_noi_suy" in nguon, "không còn gọi phép giữ lại"
+
+
+def test_giu_lai_giau_theo_CHUOI_chu_khong_rai_rac():
+    """Giấu rải rác là đo ca dễ, và bản đầu của chính bài này mắc đúng thế.
+
+    Mỗi từ giấu rải rác đều nằm GIỮA hai neo, nội suy gần như không thể sai
+    (trung vị 0,000s). Chỗ hỏng thật là CHUỖI liền nhau. Đo 07/09 trên cùng
+    một kịch bản: giấu chuỗi dài 1 ra p90 0,040s; dài 10 ra p90 0,386s.
+
+    Ở đây dựng một lượt có chuỗi trống dài 3, và đòi phép giữ lại cũng phải
+    giấu được một cụm dài 3 — nếu nó chỉ giấu lẻ từng từ thì bài đỏ.
+    """
+    # 12 từ; neo ở mọi chỗ TRỪ chỉ số 4,5,6 -> chuỗi trống thật dài 3.
+    neo = {i: (i * 0.2, i * 0.2 + 0.2) for i in range(12) if i not in (4, 5, 6)}
+    ss = can_chu.sai_so_noi_suy(neo, [[f"t{i}" for i in range(12)]],
+                                [(0.0, 2.4)])
+    assert ss["do_duoc"], ss
+    assert 3 in ss["dai_chuoi_trong"], ss
+    # HỎI ĐỘ DÀI ĐÃ GIẤU, KHÔNG HỎI ĐỘ DÀI ĐO ĐƯỢC. Bản đầu của bài này khẳng
+    # định `3 in dai_chuoi_trong` — nhưng trường ấy là chuỗi trống THẬT, không
+    # đổi khi bộ đo quay về giấu rải rác. Gieo `L = 1` thì cửa VẪN XANH.
+    assert 3 in ss["dai_da_giau"], (
+        f"phép giữ lại không giấu nổi một cụm dài 3 — nó đang giấu rải rác, "
+        f"tức đo ca dễ: {ss}")
+    # Neo đều tăm tắp thì nội suy đúng tuyệt đối — đó là ca đối chứng: phép đo
+    # KHÔNG được tự sinh ra sai số từ hư không.
+    assert ss["p90"] == 0.0, ss
+
+
+def test_giu_lai_BAT_duoc_khi_tieng_noi_KHONG_deu():
+    """Ca đối chứng chiều ngược: mốc lệch nhau thì phép đo phải kêu.
+
+    Bài trên dùng neo đều và đòi sai số bằng 0. Chỉ có một chiều thì chưa
+    chứng minh được gì — phép đo luôn trả 0 cũng qua bài ấy.
+    """
+    # Từ 0-5 rất ngắn, từ 6-11 rất dài: nội suy đều sẽ trượt nặng.
+    moc = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5]
+    neo = {i: (t, t + 0.1) for i, t in enumerate(moc)}
+    ss = can_chu.sai_so_noi_suy(neo, [[f"t{i}" for i in range(12)]],
+                                [(0.0, 6.6)])
+    assert ss["do_duoc"], ss
+    assert ss["p90"] > ss["nguong"], (
+        f"tiếng nói rất không đều mà phép đo vẫn báo khớp: {ss}")
 
 
 def test_ghep_moc_bang_LCS_chu_khong_bang_thu_tu():
@@ -107,19 +175,55 @@ def test_do_duoc_ma_DUOI_NGUONG_thi_KHONG_DAT_chu_khong_phai_KHONG_DO_DUOC(
     """Có số, và số ấy nói không — đó là nhánh thứ ba, phải đứng riêng."""
     monkeypatch.setattr(can_chu, "tim_bo_can", lambda: "python")
 
+    # Mọi từ đều khớp, nhưng TIẾNG NÓI RẤT KHÔNG ĐỀU: sáu từ đầu dồn trong
+    # nửa giây, sáu từ sau kéo mỗi từ một giây. Nội suy đều sẽ trượt nặng, nên
+    # phép giữ lại phải bắt được — dù `khớp` là 100%.
+    tu = ["một", "hai", "ba", "bốn", "năm", "sáu",
+          "bảy", "tám", "chín", "mười", "mười một", "mười hai"]
+    moc = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5]
+
     class _R:
         returncode = 0
         stderr = ""
-        stdout = ('{"tu": [{"bd": 0.0, "kt": 0.5, "chu": "xyz"}], '
-                  '"model": "small"}')
+        stdout = json.dumps({"tu": [{"bd": t, "kt": t + 0.1, "chu": w}
+                                    for w, t in zip(tu, moc)],
+                             "model": "small"}, ensure_ascii=False)
+
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: _R())
+    kq = can_chu.can_tung_tu(tmp_path / "a.wav", [" ".join(tu)],
+                             [(0.0, 6.6)], tmp_path / "x.ass")
+    assert kq["trang_thai"] == "KHONG_DAT", kq
+    assert kq["ass"] is None
+    assert kq["so"]["khop"] == 1.0, (
+        f"khớp 100% mà vẫn phải trượt — đó là cả điểm của việc đổi trục: "
+        f"{kq['so']}")
+    assert kq["so"]["sai_so"]["p90"] > kq["so"]["sai_so"]["nguong"], kq["so"]
+
+
+def test_KHONG_giau_noi_chuoi_nao_thi_KHONG_DO_DUOC_chu_khong_phai_dat(
+        monkeypatch, tmp_path):
+    """Neo thưa tới mức không giấu nổi cụm nào thì CHƯA kết luận được.
+
+    Phép gieo 07/09 bắt được chỗ mù: đổi `if not ss["do_duoc"]:` thành
+    `if False:` mà cả bộ vẫn xanh — không bài nào canh nhánh thứ ba này. Gộp
+    nó vào `PASS` là đúng bệnh "chưa đo được đội lốt đã đo, không sao".
+    """
+    monkeypatch.setattr(can_chu, "tim_bo_can", lambda: "python")
+
+    class _R:
+        returncode = 0
+        stderr = ""
+        stdout = json.dumps({"tu": [{"bd": 0.0, "kt": 0.2, "chu": "một"}],
+                             "model": "small"}, ensure_ascii=False)
 
     monkeypatch.setattr(subprocess, "run", lambda *a, **k: _R())
     kq = can_chu.can_tung_tu(tmp_path / "a.wav",
-                             ["một hai ba bốn năm sáu bảy tám"],
-                             [(0.0, 4.0)], tmp_path / "x.ass")
-    assert kq["trang_thai"] == "KHONG_DAT", kq
+                             ["một hai ba bốn năm sáu bảy tám chín mười"],
+                             [(0.0, 5.0)], tmp_path / "x.ass")
+    assert kq["trang_thai"] == "KHONG_DO_DUOC", kq
     assert kq["ass"] is None
-    assert kq["so"]["khop"] < DAC_TA_CAN_KHOP_SAN
+    assert not (tmp_path / "x.ass").exists()
+    assert kq["so"]["sai_so"]["do_duoc"] is False, kq["so"]
 
 
 def _dung_video_thu(d, ass_hay_srt, ten_ra):
@@ -207,9 +311,12 @@ def test_chay_THAT_bo_can_TU_DUNG_LAY_TIENG(tmp_path):
     kq = can_chu.can_tung_tu(wav, doan[:len(moc)], moc, tmp_path / "t.ass")
     assert kq["trang_thai"] in ("PASS", "KHONG_DAT"), kq
     assert "wer" in kq["so"] and "khop" in kq["so"], kq
+    ss = kq["so"]["sai_so"]
+    assert ss["do_duoc"], kq["so"]
+    assert ss["nguong"] == round(ss["tu_dai_trung_vi"]
+                                 * DAC_TA_CAN_TY_LE_NUA_TU, 3), ss
     if kq["trang_thai"] == "PASS":
-        assert kq["so"]["wer"] <= DAC_TA_CAN_WER_TRAN, kq["so"]
-        assert kq["so"]["khop"] >= DAC_TA_CAN_KHOP_SAN, kq["so"]
+        assert ss["p90"] <= ss["nguong"], ss
         assert (tmp_path / "t.ass").is_file()
         assert r"\kf" in (tmp_path / "t.ass").read_text(encoding="utf-8")
     else:

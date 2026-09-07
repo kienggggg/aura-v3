@@ -989,6 +989,91 @@ Hai chỗ mù, cả hai đáng ghi:
   gọi**. Trước khi ghi "cửa mù", kiểm xem bài định bắt có nằm trong lượt chạy
   không.
 
+### 2d-ter. `ky thuat` TRƯỢT VÌ QUÃNG NGẮT, VÀ MỌI THỨ TRƯỚC ĐÓ CHƯA LÊN MÀN HÌNH (07/09/2026)
+
+Sếp bảo sửa nốt kịch bản trượt (p90 0,210s). **Không nới ngưỡng** — mở bốn từ
+lệch nhất ra:
+
+```
+0,370  đoạn 11  "đo"     nội suy 53,15  thật 53,52
+0,360  đoạn  5  "thì"    nội suy 24,58  thật 24,94
+0,360  đoạn  5  "hoặc"   nội suy 23,22  thật 23,58
+0,347  đoạn 11  "và"     nội suy 54,49  thật 54,84
+```
+
+Cả bốn **sớm hơn thật**, và cả bốn đứng **ngay sau dấu phẩy hoặc hai chấm**.
+Đo trên 336 cặp từ liền nhau đều có neo:
+
+```
+sau dấu phẩy/hai chấm    15 cặp   khe trung vị 0,360s
+từ thường               321 cặp   khe trung vị 0,000s
+```
+
+Độ lệch bằng ĐÚNG khe ấy. *Một độ lệch hằng số không phải nhiễu.* `_noi_suy`
+chia đều theo SỐ TỪ và không biết dấu câu tồn tại. Vá: trừ quãng ngắt ra trước,
+rồi mới chia phần còn lại.
+
+**Và quãng ngắt TỰ ĐO TỪNG LƯỢT, không gõ cứng.** `NGAT_GIAY = 0,36` đo trên
+chính hai kịch bản đang chấm — để nó làm hằng số là lại rơi vào "hằng số fit từ
+mẫu dùng để kiểm", đúng bẫy vừa mất một lượt để bỏ. Ba kịch bản tự đo ra
+**0,38 · 0,36 · 0,34** giây.
+
+```
+             p90 TRƯỚC   →   SAU
+tài chính      0,087        0,056
+kỹ thuật       0,210        0,080
+văn xuôi       0,067        0,067
+```
+
+**NHƯNG CHỖ ĐẮT NHẤT NẰM SAU ĐÓ, VÀ NÓ LÀM MỌI SỐ TRÊN THÀNH VÔ NGHĨA.**
+
+Khi dựng cửa canh cho phần vừa vá, phát hiện `viet_ass` chỉ mã hoá **độ dài
+từng từ**, không mã hoá **khe giữa hai từ**. libass chạy `\kf` NỐI TIẾP từ mốc
+đầu Dialogue; nó không biết `moc_tu` tồn tại. Đo trên một đoạn dựng tay có khe
+1,00s:
+
+```
+từ   mốc THẬT   libass vẽ ở   lệch
+t3     1,60s        0,60s    -1,00s
+t4     1,90s        0,90s    -1,00s
+tổng kf 1,20s / đoạn dài 3,00s
+```
+
+Tức **mọi công nội suy chưa bao giờ lên tới màn hình** — kể cả quãng ngắt vừa
+vá. Và cửa đếm điểm ảnh vàng vẫn xanh suốt: nó chứng minh chữ **CÓ quét**, chưa
+từng chứng minh quét **ĐÚNG LÚC**. Cùng họ với cửa đo Ken Burns tưởng là đo chữ,
+lần thứ hai trong một ngày.
+
+Vá ba chỗ, mỗi chỗ một phép đo:
+* **Khe đi vào một đơn vị karaoke riêng** mang đúng dấu cách giữa hai từ.
+* **Kẹp mốc vào trong đoạn** — mốc từ theo thời gian TOÀN TỆP còn `moc_doan`
+  theo phép ghép TTS, nên có từ chạy quá đoạn **0,26s**.
+* **Bỏ sàn 1 phần trăm giây.** Từ bị phép kẹp bóp còn 0 giây mà vẫn được cấp
+  1cs thì mỗi cái đẩy cả dòng đi 0,01s — đo được **0,02s** trên một đoạn 4 từ.
+  `\kf0` hợp lệ và đúng nghĩa: từ ấy không có lúc nào để quét.
+
+**Gieo 10 phép, và phải chạy BỐN LƯỢT mới đủ đỏ:**
+
+```
+lượt 1   3/5 đỏ    lượt 3   9/10 đỏ
+lượt 2   4/5 đỏ    lượt 4  10/10 đỏ
+```
+
+Ba chỗ mù, và **hai trong ba là phép gieo không tới nơi**:
+
+* Bài canh hỏi `dai_chuoi_trong` (chuỗi ĐO ĐƯỢC) trong khi cần hỏi chuỗi ĐÃ
+  GIẤU. Gieo `L = 1` đi qua sạch.
+* Nhánh `KHONG_DO_DUOC` **có** bài canh, nhưng tên nó không khớp bộ lọc `-k`
+  của kịch bản gieo. Công cụ in "CỬA MÙ" cho một cửa **chưa từng được gọi**.
+* Phép kẹp có **hai nửa** (trần `kt` và mốc `truoc`); gieo bỏ nửa sau thì cửa
+  vẫn xanh vì dữ liệu thử không đi ngược thứ tự. Một cửa chỉ canh được nửa cặp
+  thì nửa kia mục đi mà không ai biết.
+
+**Và hai lần chốt bằng con số GÕ RA thay vì TÍNH RA**, cả hai đỏ ngay dù mã
+đúng: `> 0,3` cho độ dời (đúng là `0,36 × (1 − 1/3) = 0,24`) và `> 10,3` cho mốc
+`t9` (đúng là `6,8`). Ngưỡng trong cửa canh cũng phải suy ra được, y như ngưỡng
+trong mã.
+
 **Việc KHÔNG làm trong lượt này:** WhisperX (căn cưỡng bức thật, phủ 100%) kéo
 theo `torch` ≈ 2–2,5 GB. Chưa chạy trên máy này nên mọi câu về nó là **đọc
 thấy**, không phải **đo được**.

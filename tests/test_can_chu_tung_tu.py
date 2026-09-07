@@ -26,6 +26,7 @@ karaoke, không do cái gì khác.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 
 import pytest
@@ -224,6 +225,241 @@ def test_KHONG_giau_noi_chuoi_nao_thi_KHONG_DO_DUOC_chu_khong_phai_dat(
     assert kq["ass"] is None
     assert not (tmp_path / "x.ass").exists()
     assert kq["so"]["sai_so"]["do_duoc"] is False, kq["so"]
+
+
+def test_noi_suy_CHUA_CHO_cho_quang_ngat_sau_dau_phay():
+    """Chia đều theo số từ là sai, và sai đúng bằng quãng ngắt.
+
+    Đo 07/09 trên 336 cặp từ liền nhau đều có neo: khe sau dấu phẩy/hai chấm
+    trung vị **0,360s**, khe giữa từ thường **0,000s**. Bốn từ lệch nhất của
+    kịch bản "kỹ thuật" lệch 0,347–0,370s — bằng ĐÚNG khe ấy — và cả bốn đứng
+    ngay sau dấu ngắt. Một độ lệch hằng số không phải nhiễu.
+
+    Ở đây: 5 từ, neo ở đầu và cuối, từ thứ 2 kết thúc bằng dấu phẩy. Từ thứ 3
+    phải bị đẩy MUỘN hơn so với chia đều.
+    """
+    moc = {0: (0.0, 0.2), 4: (3.0, 3.2)}
+    ngat = [False, True, False, False, False]   # từ index 1 có dấu phẩy sau nó
+    deu = can_chu._noi_suy(moc, 5, 0.0, 3.2)
+    co_ngat = can_chu._noi_suy(moc, 5, 0.0, 3.2, ngat, 0.36)
+    # ĐỘ DỜI SUY RA ĐƯỢC, KHÔNG ĐOÁN. Giữ lại 0,36s cho quãng ngắt rồi chia
+    # phần còn lại cho n=3 từ trong khe, nên từ sau dấu phẩy dời đúng
+    # `0,36 × (1 − 1/3) = 0,24s`. Bản đầu của bài này chốt `> 0,3` — một con
+    # số gõ ra chứ không tính ra — và đỏ ngay, dù mã đúng.
+    doi = 0.36 * (1 - 1 / 3)
+    assert abs((co_ngat[2][0] - deu[2][0]) - doi) < 0.01, (
+        f"đều {deu[2][0]:.3f} · có ngắt {co_ngat[2][0]:.3f} · "
+        f"dời {co_ngat[2][0] - deu[2][0]:.3f}, cần {doi:.3f}")
+    # Và KHÔNG được đẩy quá mốc neo cuối.
+    assert co_ngat[3][1] <= moc[4][0] + 1e-6, co_ngat
+
+
+def test_quang_ngat_TU_DO_tung_luot_chu_khong_go_cung():
+    """`NGAT_GIAY = 0,36` đo trên chính hai kịch bản đang chấm — nếu để nó làm
+    hằng số thì lại là "hằng số fit từ mẫu dùng để kiểm", đúng bẫy vừa bỏ.
+
+    Quãng ngắt là tính chất của GIỌNG và TỐC ĐỘ ĐỌC, nên lượt nào tự đo lượt
+    ấy. Đo 07/09, ba kịch bản tự đo ra 0,38 · 0,36 · 0,34 giây.
+    """
+    # Dựng một lượt có khe sau dấu ngắt đúng 1,00s — khác hẳn hằng số 0,36.
+    tu = [f"t{i}" for i in range(10)]
+    ngat = [i in (2, 5) for i in range(10)]
+    neo, t = {}, 0.0
+    for i in range(10):
+        neo[i] = (t, t + 0.2)
+        t += 0.2 + (1.0 if ngat[i] else 0.0)
+    ng, mau = can_chu.do_ngat_tu_luot_nay(neo, [tu], [ngat])
+    assert mau == 2, mau
+    # Ít mẫu (<4) thì trả về hằng số — và nói ra bằng `so_mau`.
+    assert ng == can_chu.NGAT_GIAY, (ng, mau)
+
+    ngat9 = [i % 2 == 0 for i in range(10)]
+    neo2, t = {}, 0.0
+    for i in range(10):
+        neo2[i] = (t, t + 0.2)
+        t += 0.2 + (1.0 if ngat9[i] else 0.0)
+    ng2, mau2 = can_chu.do_ngat_tu_luot_nay(neo2, [tu], [ngat9])
+    assert mau2 >= 4, mau2
+    assert abs(ng2 - 1.0) < 0.05, (
+        f"tự đo ra {ng2}, đáng lẽ ~1,00s — nó đang dùng hằng số gõ cứng")
+
+
+def _moc_libass_ve(dong_dialogue: str, bat_dau: float):
+    r"""Dựng lại mốc mà LIBASS thật sự vẽ, từ chuỗi `\kf` nối tiếp.
+
+    Đây là chỗ duy nhất nói được sự thật: `moc_tu` là thứ ta tính, còn cái này
+    là thứ người xem thấy. Hai bên lệch nhau thì mọi phép đo trên `moc_tu` đều
+    nói về một video không tồn tại.
+    """
+    than = dong_dialogue.split(",,", 1)[1] if ",," in dong_dialogue else ""
+    phan = re.split(r"\{\\kf(\d+)\}", than)
+    t, ra = bat_dau, []
+    # phan = [truoc, cs1, chu1, cs2, chu2, ...]
+    for i in range(1, len(phan) - 1, 2):
+        cs, chu = int(phan[i]), phan[i + 1]
+        if chu.strip():
+            ra.append((chu.strip(), round(t, 3)))
+        t += cs / 100.0
+    return ra, round(t, 3)
+
+
+def test_ASS_giu_duoc_KHE_giua_hai_tu_chu_khong_chi_do_dai_tu():
+    r"""`\kf` chỉ mã hoá ĐỘ DÀI từng từ thì cả dòng chạy sớm dần.
+
+    libass chạy `\kf` NỐI TIẾP từ mốc đầu Dialogue; nó không biết `moc_tu`
+    tồn tại. Bản đầu bỏ khe, và đo 07/09 trên một đoạn dựng tay có khe 1,00s:
+
+        từ   mốc THẬT   libass vẽ ở   lệch
+        t3     1,60s        0,60s    -1,00s
+        t4     1,90s        0,90s    -1,00s
+
+    Tức mọi công nội suy — kể cả quãng ngắt 0,36s vừa vá — KHÔNG lên tới màn
+    hình. Cửa đếm điểm ảnh vàng vẫn xanh, vì nó chứng minh chữ CÓ quét, chưa
+    từng chứng minh quét ĐÚNG LÚC.
+    """
+    import tempfile
+    from pathlib import Path as _P
+
+    moc_tu = [[(0.0, 0.3), (0.3, 0.6), (1.6, 1.9), (1.9, 2.2)]]
+    p = can_chu.viet_ass(["một hai ba bốn"], [(0.0, 3.0)], moc_tu,
+                         _P(tempfile.mkdtemp()) / "x.ass")
+    dong = [d for d in p.read_text(encoding="utf-8").splitlines()
+            if d.startswith("Dialogue")][0]
+    ve, tong = _moc_libass_ve(dong, 0.0)
+
+    assert len(ve) == 4, ve
+    for (chu, t_ve), (bd, _kt) in zip(ve, moc_tu[0]):
+        assert abs(t_ve - bd) <= 0.01, (
+            f"libass vẽ {chu!r} ở {t_ve}s, mốc thật {bd}s — khe không được "
+            f"mã hoá: {dong}")
+    assert abs(tong - 3.0) <= 0.02, (
+        f"tổng kf {tong}s ≠ đoạn dài 3,00s — vệt sáng kết thúc sai chỗ")
+
+
+def test_ASS_va_MOC_TU_khop_nhau_tren_LUOT_THAT(tmp_path):
+    """Ca đối chứng trên dữ liệu thật, không phải số dựng tay.
+
+    Bài trên dùng bốn từ gõ tay. Chỉ có nó thì một bộ sinh `.ass` chỉ đúng cho
+    ca ấy vẫn qua. Đây chạy bộ căn thật rồi so TỪNG từ.
+    """
+    import re as _re
+
+    if not can_chu.tim_bo_can():
+        pytest.skip("KHÔNG ĐO ĐƯỢC: máy này chưa có bộ căn chữ")
+    import core.phong_alpha as pa
+
+    doan = [c.strip() + "." for c in _kich_ban_du_dai().split(".")
+            if c.strip()][:6]
+    wav, moc, ly_do = pa.doc_giong_theo_doan(doan, tmp_path)
+    if wav is None or not moc:
+        pytest.skip(f"KHÔNG ĐO ĐƯỢC: {ly_do}")
+    kq = can_chu.can_tung_tu(wav, doan[:len(moc)], moc, tmp_path / "t.ass")
+    if kq["trang_thai"] != "PASS":
+        pytest.skip(f"KHÔNG ĐO ĐƯỢC: bộ căn trả {kq['trang_thai']}")
+
+    chu = (tmp_path / "t.ass").read_text(encoding="utf-8")
+    dong = [d for d in chu.splitlines() if d.startswith("Dialogue")]
+    assert len(dong) == len(moc), (len(dong), len(moc))
+    for i, d in enumerate(dong):
+        ve, tong = _moc_libass_ve(d, moc[i][0])
+        assert abs(tong - moc[i][1]) <= 0.05, (
+            f"đoạn {i}: vệt sáng kết thúc ở {tong}s, đoạn hết ở {moc[i][1]}s")
+        assert ve, d
+        # Từ đầu và từ cuối phải nằm trong đoạn của nó.
+        assert moc[i][0] - 0.05 <= ve[0][1] <= moc[i][1], (i, ve[0])
+        assert ve[-1][1] <= moc[i][1] + 0.05, (i, ve[-1])
+
+
+def test_ASS_KEP_moc_vao_trong_doan():
+    r"""Mốc từ vượt biên đoạn thì phần vượt không bao giờ được vẽ.
+
+    Mốc từ do bộ nhận dạng trả theo thời gian TOÀN TỆP, còn `moc_doan` đến từ
+    phép ghép TTS — nên có từ chạy quá đoạn. Đo 07/09: đoạn 1 có vệt sáng chạy
+    quá **0,26s**, và tổng `\kf` không còn khớp độ dài dòng.
+
+    Bài này chạy trong 0,01 giây. Bản đầu chỉ có bài chạy thật (80 giây), và
+    khi gieo thì nó bị bộ lọc `-k` loại ra — cửa báo mù cho một cửa CHƯA TỪNG
+    CHẠY, lần thứ hai trong ngày.
+    """
+    import tempfile
+    from pathlib import Path as _P
+
+    # Từ cuối kết thúc ở 5,0s trong khi đoạn hết ở 3,0s.
+    moc_tu = [[(0.0, 0.3), (0.3, 0.6), (0.6, 2.0), (2.0, 5.0)]]
+    p = can_chu.viet_ass(["một hai ba bốn"], [(0.0, 3.0)], moc_tu,
+                         _P(tempfile.mkdtemp()) / "x.ass")
+    dong = [d for d in p.read_text(encoding="utf-8").splitlines()
+            if d.startswith("Dialogue")][0]
+    _ve, tong = _moc_libass_ve(dong, 0.0)
+    assert abs(tong - 3.0) <= 0.02, (
+        f"tổng kf {tong}s ≠ đoạn dài 3,00s — mốc chưa bị kẹp vào đoạn: {dong}")
+
+    # VÀ MỐC NGƯỢC THỨ TỰ CŨNG PHẢI BỊ KẸP. Phép kẹp có hai nửa — trần `kt` và
+    # mốc `truoc` — và gieo bỏ nửa sau (`s = mt[j][0]`) thì bài trên VẪN XANH,
+    # vì `e` còn kẹp nên tổng vẫn khớp. Một cửa chỉ canh được nửa cặp thì nửa
+    # kia mục đi mà không ai biết.
+    lon_xon = [[(0.0, 0.3), (2.5, 2.8), (1.0, 1.3), (4.0, 4.5)]]
+    p2 = can_chu.viet_ass(["một hai ba bốn"], [(0.0, 3.0)], lon_xon,
+                          _P(tempfile.mkdtemp()) / "y.ass")
+    d2 = [d for d in p2.read_text(encoding="utf-8").splitlines()
+          if d.startswith("Dialogue")][0]
+    ve2, tong2 = _moc_libass_ve(d2, 0.0)
+    moc_ve = [t for _c, t in ve2]
+    assert moc_ve == sorted(moc_ve), (
+        f"libass vẽ các từ KHÔNG theo thứ tự: {moc_ve} — mốc chưa bị kẹp "
+        f"theo `truoc`: {d2}")
+    assert all(0.0 <= t <= 3.0 + 1e-6 for t in moc_ve), (moc_ve, d2)
+    assert abs(tong2 - 3.0) <= 0.02, (tong2, d2)
+
+
+def test_DUONG_THAT_dung_CUNG_quang_ngat_voi_phep_giu_lai(monkeypatch, tmp_path):
+    """Vá một nửa của một cặp: phép đo chấm một bộ nội suy KHÁC bộ đang chạy.
+
+    `sai_so_noi_suy` tự đo quãng ngắt rồi dùng nó; nếu đường sinh `.ass` dùng
+    một con số khác thì mọi con số p90 nói về một video không tồn tại. Gieo
+    `ng_giay -> 0.0` ở đường thật hồi 07/09 mà cả bộ vẫn xanh.
+
+    Ở đây dựng một lượt có quãng ngắt **1,00s** — khác hẳn hằng số 0,36 — và
+    đòi `.ass` vẽ từ được nội suy đúng chỗ mà quãng ngắt ấy quy định.
+    """
+    monkeypatch.setattr(can_chu, "tim_bo_can", lambda: "python")
+    tu = [f"t{i}" for i in range(12)]
+    # Dấu phẩy sau các từ chẵn -> đủ mẫu để tự đo quãng ngắt.
+    loi = " ".join(w + ("," if i % 2 == 0 else "") for i, w in enumerate(tu))
+    nhan, t = [], 0.0
+    for i, w in enumerate(tu):
+        nhan.append({"bd": round(t, 3), "kt": round(t + 0.2, 3), "chu": w})
+        t += 0.2 + (1.0 if i % 2 == 0 else 0.0)
+    # BỎ từ số 9 khỏi bản nhận -> nó phải được NỘI SUY, và từ 8 có dấu phẩy.
+    nhan_thieu = [x for x in nhan if x["chu"] != "t9"]
+
+    class _R:
+        returncode = 0
+        stderr = ""
+        stdout = json.dumps({"tu": nhan_thieu, "model": "small"},
+                            ensure_ascii=False)
+
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: _R())
+    kq = can_chu.can_tung_tu(tmp_path / "a.wav", [loi], [(0.0, t)],
+                             tmp_path / "x.ass")
+    assert kq["so"]["sai_so"]["ngat_giay"] > 0.8, (
+        f"không tự đo được quãng ngắt 1,00s: {kq['so']['sai_so']}")
+    if kq["trang_thai"] != "PASS":
+        pytest.skip(f"KHÔNG ĐO ĐƯỢC: {kq['vi_sao']}")
+
+    dong = [d for d in (tmp_path / "x.ass").read_text(encoding="utf-8")
+            .splitlines() if d.startswith("Dialogue")][0]
+    ve, _tong = _moc_libass_ve(dong, 0.0)
+    o_t9 = dict(ve)["t9"]
+    # SUY RA, KHÔNG ĐOÁN. `t8` bắt đầu ở 8×0,2 + 4×1,0 = 5,6s và dài 0,2s, nên
+    # có quãng ngắt thì `t9` ở **6,8s**; bỏ quãng ngắt thì nó rơi về **5,8s**.
+    # Hai đáp án cách nhau đúng 1,0s nên bài không thể qua bằng may rủi.
+    #
+    # Bản đầu của bài này chốt `> 10,3` — một con số gõ ra chứ không tính ra —
+    # và đỏ ngay dù mã đúng. Lần thứ hai trong ngày.
+    assert o_t9 > 6.3, (
+        f"`.ass` vẽ t9 ở {o_t9}s — đường thật đang bỏ quãng ngắt mà phép giữ "
+        f"lại vẫn tính có: {dong}")
 
 
 def _dung_video_thu(d, ass_hay_srt, ten_ra):

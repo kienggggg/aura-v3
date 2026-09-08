@@ -187,16 +187,29 @@ def test_dem_du_ba_de_dung_nguong_da_dang_ky(tmp_path):
         f"hành vi {hanh_vi}/3 — còn hỏng: {'; '.join(hong)}")
 
 
-def test_go_van_con_no_va_KHONG_duoc_khai_la_da_sua():
-    """`go` chưa trả nợ, và tệp đặc tả phải nói ra điều đó.
+def test_go_DA_TRA_NO_va_dac_ta_phai_mang_phep_do():
+    """`go` đã trả nợ 08/09/2026 — và bài này đổi chiều cùng lúc với đặc tả.
 
-    Máy này không có trình biên dịch Go, nên mọi câu về bản dịch Go chỉ là
-    **đọc thấy**. Bài này canh đúng một thứ: đừng để lượt sau đọc §5e rồi tưởng
-    `go` đã xong. Nó neo vào ĐẶC TẢ, không neo vào mã — chỗ dễ trôi là chỗ chữ.
+    Bản trước của bài này đòi §5e còn câu *"`go` KHÔNG ĐỘNG TỚI TRONG LƯỢT
+    NÀY"*, để lượt sau đừng đọc rồi tưởng `go` đã xong. Nay `go` xong thật —
+    có trình biên dịch trên máy, có phép đo — nên **câu ấy phải đi, và bài này
+    phải đi theo cùng lúc**. Vá một nửa của một cặp thì phá vỡ sự ăn khớp của
+    chúng (bài học 06/09 chiều).
+
+    Điều được canh vẫn y nguyên, chỉ đổi chiều: **đừng khai `go` đã xong nếu
+    không có phép đo kèm theo.** Nên bài này đòi đặc tả mang đúng con số nền
+    và con số sau khi vá — xoá câu khai thì dễ, xoá con số thì lộ.
     """
     from core.paths import PROJECT_ROOT
 
     spec = (PROJECT_ROOT / "KY_LUAT_THUC_THI.md").read_text(encoding="utf-8")
-    assert "`go` KHÔNG ĐỘNG TỚI TRONG LƯỢT NÀY" in spec, (
-        "§5e đã bỏ câu khai `go` còn nợ — nếu thật sự đã sửa thì phải có "
-        "trình biên dịch Go trên máy và một phép đo, không phải chỉ xoá câu")
+    m = re.search(r"<!-- CHOT:bo-dich-go -->(.*?)<!-- /CHOT:bo-dich-go -->",
+                  spec, re.S)
+    assert m, "mất neo CHOT:bo-dich-go — `go` không được khai là xong mà không có đặc tả"
+    khoi = m.group(1)
+    for cum in ("0/3",                 # nền: chưa từng biên dịch được
+                "3/3",                 # sau khi vá
+                "go1.27.1",            # bản trình biên dịch đã dùng
+                "a3911b5e",            # SHA-256 đã so trước khi bung
+                "non-declaration statement outside function body"):
+        assert cum in khoi, f"khối bo-dich-go mất {cum!r}"

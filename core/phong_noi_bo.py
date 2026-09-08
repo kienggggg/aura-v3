@@ -460,6 +460,16 @@ _CHO_TIM = {
     "node": (r"C:\Program Files\nodejs\node.exe",),
     "bash": (r"C:\Program Files\Git\bin\bash.exe",
              r"C:\Program Files\Git\usr\bin\bash.exe"),
+    # Go 1.27.1 bung từ zip vào thư mục người dùng (08/09/2026) — tài khoản
+    # này không phải Administrator nên không dùng MSI, và `~/go-sdk/go/bin`
+    # KHÔNG nằm trên PATH.
+    #
+    # Đó chính là lý do nó phải có mặt ở đây. Sổ bệnh án có ca *"cùng mã, cùng
+    # đề, hai phán quyết — biến thứ ba là PATH"*: một bản dịch bị bác từ Git
+    # Bash và được PASS từ máy chủ, chỉ vì `bash` có trên PATH ở nơi này mà
+    # không ở nơi kia. Dựa vào PATH là để phán quyết phụ thuộc chỗ gõ lệnh.
+    "gofmt": (str(Path.home() / "go-sdk" / "go" / "bin" / "gofmt.exe"),),
+    "go": (str(Path.home() / "go-sdk" / "go" / "bin" / "go.exe"),),
 }
 
 
@@ -479,6 +489,13 @@ def _tim_trinh(ten: str):
 TRINH_KIEM = {
     "javascript": ("node", ["--check"], _tim_trinh("node")),
     "bash": ("bash", ["-n"], _tim_trinh("bash")),
+    # `gofmt -e` là bản đối ứng của `bash -n`: nó PHÂN TÍCH tệp và trả mã 2 khi
+    # sai cú pháp, mã 0 khi hợp lệ — không cần dựng cả gói như `go build`.
+    #
+    # Và nó chỉ là NỬA phép đo, đúng như bash đã dạy 06/09: `bash -n` gật đầu
+    # trong khi vòng lặp đã biến mất khỏi bản dịch. Nửa còn lại — chạy thật rồi
+    # so đầu ra với bản Python — nằm ở `tests/test_bo_dich_go_chay_that.py`.
+    "go": ("gofmt", ["-e"], _tim_trinh("gofmt")),
 }
 
 

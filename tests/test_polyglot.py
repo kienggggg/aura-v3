@@ -48,19 +48,37 @@ def test_chuyen_doi_ngon_ngu_python_sang_javascript():
 
 
 def test_chuyen_doi_ngon_ngu_python_sang_go():
-    """Kiểm tra chuyển đổi từ Python sang Go."""
+    """Chuyển đổi Python sang Go.
+
+    BÀI NÀY TỪNG KHOÁ CHÍNH CÁI LỖI (sửa 08/09/2026). Nó khẳng định
+    `"func TinhTong(" in ma_go` — PascalCase — và xanh suốt, trong khi bản dịch
+    Go **chưa từng biên dịch được lần nào**: khai `func TinhTong` rồi gọi
+    `tinh_tong(...)` là định danh không tồn tại.
+
+    Một bài chỉ dò CHUỖI trong đầu ra, chưa bao giờ đưa đầu ra ấy cho trình
+    biên dịch, thì nó giữ nguyên cái hỏng thay vì bắt. Đo bằng `go build` thật
+    ngày 08/09: **cú pháp 0/3, hành vi 0/3**.
+
+    Nay bài này đòi tên khai TRÙNG tên gọi, và phần chạy thật nằm ở
+    `tests/test_bo_dich_go_chay_that.py` — nơi có `go build` + `go run`.
+    """
     ma_py = """def tinh_tong(nums):
     tong = 0
     for x in nums:
         tong += x
     return tong
+
+print(tinh_tong([1, 2, 3]))
 """
     res = chuyen_doi_ngon_ngu(ma_py, "python", "go")
     assert res["status"] == "PASS"
     ma_go = res["ma_dich"]
     assert "package main" in ma_go
-    assert "func TinhTong(" in ma_go
+    assert "func tinh_tong(" in ma_go, (
+        "tên khai báo phải TRÙNG tên gọi — PascalCase làm định danh biến mất")
+    assert "tinh_tong(" in ma_go.split("func main")[1], "chỗ gọi mất hàm"
     assert "for _, x := range nums" in ma_go
+    assert "func main() {" in ma_go, "câu lệnh cấp gói phải nằm trong main"
 
 
 def test_chuyen_doi_ngon_ngu_python_sang_rust():

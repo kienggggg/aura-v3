@@ -343,13 +343,126 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
         # GOM TÊN HÀM TRƯỚC KHI SINH DÒNG NÀO. Đệ quy gọi chính nó ngay trong
         # thân nó, nên gom dần theo thứ tự gặp thì `fibonacci` bên trong
         # `fibonacci` vẫn chưa biết là hàm. Đi một vòng riêng thì hết.
-        if self.target == "bash":
+        if self.target in ("bash", "go"):
             for stmt in ast.walk(node):
                 if isinstance(stmt, ast.FunctionDef):
                     self.ham_tu_khai.add(stmt.name)
 
+        # GO: CÂU LỆNH CẤP GÓI PHẢI VÀO `func main()`.
+        #
+        # Đo nền 08/09 bằng `go build` thật, cả ba đề cùng một lỗi:
+        #     main.go:15:1: syntax error: non-declaration statement outside
+        #                   function body
+        # Go chỉ cho khai báo ở cấp gói, còn `fmt.Println(...)` và `nums := ...`
+        # là CÂU LỆNH. Lỗi này chặn ở dòng đầu tiên nên nó CHE ba lỗi còn lại —
+        # parser dừng, và ba cái sau chưa từng được trình biên dịch nhìn thấy.
+        if self.target == "go":
+            ham = [s for s in node.body if isinstance(s, ast.FunctionDef)]
+            con_lai = [s for s in node.body if not isinstance(s, ast.FunctionDef)]
+            for stmt in ham:
+                self.visit(stmt)
+            self._emit("func main() {")
+            self.indent_level += 1
+            for stmt in con_lai:
+                self.visit(stmt)
+            self.indent_level -= 1
+            self._emit("}")
+            return
+
         for stmt in node.body:
             self.visit(stmt)
+
+    def _suy_kieu_go(self, node: ast.FunctionDef):
+        """Suy kiểu Go cho tham số và giá trị trả về của một hàm.
+
+        VÌ SAO CẦN (08/09/2026). Bản cũ khai mọi thứ là `any`, và Go **không có
+        toán tử cho `any`**: `n <= 1`, `tong += x`, `n - 1` đều là lỗi biên
+        dịch. Nó chỉ chưa lộ ra vì lỗi "câu lệnh ngoài thân hàm" ở dòng 15 làm
+        parser dừng trước.
+
+        SUY ĐƯỢC TỚI ĐÂU THÌ NÓI TỚI ĐÓ — đây là bộ suy kiểu HẸP, không phải
+        bộ suy kiểu đầy đủ:
+
+            tham số so sánh/tính với số     -> int
+            tham số bị `for ... in` duyệt   -> []int
+            trả về toàn hằng chuỗi          -> string
+            còn lại                         -> any, và GHI VÀO `bo_sot`
+
+        Chỗ không suy được vẫn ra `any`, tức vẫn hỏng nếu có số học — nhưng
+        người đọc kết quả biết là nó yếu ở đâu. Im lặng để `any` mới là thứ
+        làm một bản dịch hỏng trông như bản dịch xong.
+        """
+        ten_ts = {a.arg for a in node.args.args}
+        kieu: Dict[str, str] = {}
+        khong_suy: List[str] = []
+
+        # `for x in <tham số>` -> tham số là lát cắt.
+        for con in ast.walk(node):
+            if isinstance(con, ast.For) and isinstance(con.iter, ast.Name):
+                if con.iter.id in ten_ts:
+                    kieu[con.iter.id] = "[]int"
+
+        # So sánh hoặc tính toán với một hằng SỐ -> int.
+        for con in ast.walk(node):
+            ve = []
+            if isinstance(con, ast.Compare):
+                ve = [con.left] + list(con.comparators)
+            elif isinstance(con, ast.BinOp):
+                ve = [con.left, con.right]
+            if not any(isinstance(v, ast.Constant) and isinstance(v.value, (int, float))
+                       and not isinstance(v.value, bool) for v in ve):
+                continue
+            for v in ve:
+                if isinstance(v, ast.Name) and v.id in ten_ts:
+                    kieu.setdefault(v.id, "int")
+
+        for a in node.args.args:
+            if a.arg not in kieu:
+                kieu[a.arg] = "any"
+                khong_suy.append(a.arg)
+
+        # Biến cục bộ được gán một hằng số nguyên: `tong = 0` -> `tong` là số.
+        bien_so = {t.id
+                   for c in ast.walk(node) if isinstance(c, ast.Assign)
+                   for t in c.targets
+                   if isinstance(t, ast.Name)
+                   and isinstance(c.value, ast.Constant)
+                   and isinstance(c.value.value, int)
+                   and not isinstance(c.value.value, bool)}
+
+        # Kiểu trả về. Chỉ nhìn `return` của CHÍNH hàm này, không nhìn hàm lồng.
+        tra = [c for c in ast.walk(node)
+               if isinstance(c, ast.Return) and c.value is not None]
+        if not tra:
+            kieu_tra = ""          # Go: không trả gì thì bỏ trống, không `any`
+        elif all(isinstance(t.value, ast.Constant) and isinstance(t.value.value, str)
+                 for t in tra):
+            kieu_tra = "string"
+        elif all(self._la_so_go(t.value, kieu, bien_so) for t in tra):
+            kieu_tra = "int"
+        else:
+            kieu_tra = "any"
+            khong_suy.append("giá trị trả về")
+        return kieu, kieu_tra, khong_suy
+
+    def _la_so_go(self, e, kieu: Dict[str, str], bien_so: set) -> bool:
+        """Biểu thức này có CHẮC là số nguyên không? Thà nói KHÔNG còn hơn đoán.
+
+        Đoán bừa ra `int` thì bản dịch biên dịch được mà chạy sai — tệ hơn hẳn
+        một lỗi biên dịch, vì lỗi biên dịch thì ai cũng thấy.
+        """
+        if isinstance(e, ast.Constant):
+            return isinstance(e.value, int) and not isinstance(e.value, bool)
+        if isinstance(e, ast.Name):
+            return kieu.get(e.id) == "int" or e.id in bien_so
+        if isinstance(e, ast.BinOp):
+            return (self._la_so_go(e.left, kieu, bien_so)
+                    and self._la_so_go(e.right, kieu, bien_so))
+        if isinstance(e, ast.Call) and isinstance(e.func, ast.Name):
+            # Đệ quy: hàm đang dịch gọi chính nó. Chưa biết kiểu của nó, nhưng
+            # nếu mọi nhánh KHÁC là số thì nhánh đệ quy cũng là số.
+            return e.func.id in self.ham_tu_khai
+        return False
 
     def visit_FunctionDef(self, node: ast.FunctionDef):
         name = node.name
@@ -362,9 +475,22 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
             ts_args = [f"{arg}: any" for arg in args]
             self._emit(f"function {name}({', '.join(ts_args)}): any {{")
         elif self.target == "go":
-            pascal_name = name.title().replace("_", "")
-            go_args = [f"{arg} any" for arg in args]
-            self._emit(f"func {pascal_name}({', '.join(go_args)}) any {{")
+            # GIỮ NGUYÊN TÊN PYTHON, bỏ PascalCase — có chủ ý.
+            #
+            # Bản cũ khai `func Fibonacci` rồi gọi `fibonacci(...)`: định danh
+            # không tồn tại. Trong `package main` không có gì cần xuất ra ngoài,
+            # và Go cho phép gạch dưới trong định danh — nên giữ tên gốc là
+            # XOÁ HẲN một lớp lệch, không phải né nó. Đẹp theo lối Go mà không
+            # biên dịch được thì không phải đẹp.
+            kieu_ts, kieu_tra, khong_suy = self._suy_kieu_go(node)
+            for ten_bien in khong_suy:
+                # `any` không sai, nhưng nó là chỗ bản dịch YẾU đi. Ghi vào
+                # `bo_sot` để người đọc kết quả biết, thay vì im lặng.
+                self.bo_sot.append(
+                    f"kiểu Go không suy được cho `{ten_bien}` trong `{name}` "
+                    f"(dòng {node.lineno}) — để `any`, số học sẽ không biên dịch")
+            go_args = [f"{a} {kieu_ts.get(a, 'any')}" for a in args]
+            self._emit(f"func {name}({', '.join(go_args)}) {kieu_tra} {{")
         elif self.target == "rust":
             self._emit(f"fn {name}({args_str}) {{")
         elif self.target == "cpp":
@@ -599,7 +725,15 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
             if self.target in ("javascript", "typescript"):
                 return f"[{', '.join(elts)}]"
             elif self.target == "go":
-                return f"[]any{{{', '.join(elts)}}}"
+                # `[]any` không cộng được: `tong += x` với `x any` là lỗi biên
+                # dịch. Toàn số nguyên thì nói thẳng là `[]int`; lẫn lộn thì
+                # vẫn `[]any` và hỏng — nhưng hỏng ở chỗ đúng, không phải hỏng
+                # vì bộ dịch lười.
+                toan_so = bool(expr.elts) and all(
+                    isinstance(e, ast.Constant) and isinstance(e.value, int)
+                    and not isinstance(e.value, bool) for e in expr.elts)
+                kieu = "[]int" if toan_so else "[]any"
+                return f"{kieu}{{{', '.join(elts)}}}"
             elif self.target == "rust":
                 return f"vec![{', '.join(elts)}]"
             elif self.target == "cpp":

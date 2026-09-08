@@ -1820,11 +1820,22 @@ trở về đúng chỗ của nó: *phán quyết đi theo TRÌNH THẬT, không
 dịch tự khai.* Một bài mượn cái hỏng thật là bài phụ thuộc vào việc nó **ở lại
 hỏng**.
 
-**`go` KHÔNG ĐỘNG TỚI TRONG LƯỢT NÀY.** Máy này không có trình biên dịch Go, nên
-mọi câu nói về bản dịch Go chỉ là **đọc thấy**. Sửa một thứ không đo được rồi
-báo "đã sửa" là đúng loại câu cả tệp này sinh ra để chống. Nợ `go` ở lại sổ, ghi
-nguyên trạng: `func Fibonacci` khai rồi gọi `fibonacci`, và câu lệnh mức module
-nằm ngoài `func main`.
+**`go` ĐÃ TRẢ NỢ 08/09/2026** — xem mục *"Bộ dịch `go`"* ở trên.
+
+Câu ở đây trước 08/09 là: *"`go` KHÔNG ĐỘNG TỚI TRONG LƯỢT NÀY. Máy này không có
+trình biên dịch Go, nên mọi câu nói về bản dịch Go chỉ là đọc thấy."* Giữ lại
+nguyên văn vì nó đúng **vào lúc ấy**, và vì nó ghi đúng hai lỗi đọc-thấy-được:
+`func Fibonacci` khai rồi gọi `fibonacci`, và câu lệnh mức module nằm ngoài
+`func main`.
+
+Cài Go 1.27.1 xong thì đo được, và đo ra **hai lỗi NỮA mà đọc không thấy**: `:=`
+ở cấp gói, và số học trên `any`. Nền thật là **cú pháp 0/3 · hành vi 0/3**; sau
+khi vá là **3/3 · 3/3**, chấm bằng `go build` + `go run` rồi so đầu ra với bản
+Python chạy thật.
+
+Đó là bài học riêng của lượt này: *"đọc thấy"* bắt được 2 trong 4 lỗi. Nửa còn
+lại chỉ lộ ra khi có trình thật, và lỗi đầu tiên **che ba lỗi kia** — parser
+dừng ở dòng 15 nên ba cái sau chưa từng được nhìn thấy.
 
 ## CHƯƠNG III: CƠ CHẾ BẢO MẬT & BỘ LỌC DỮ LIỆU NHẠY CẢM (REDACTION)
 - Mọi file log lỗi (`raw/error.txt`) phải đi qua bộ lọc tập trung (Centralized Redactor).
@@ -1993,6 +2004,56 @@ Gieo 8 phép, cả 8 đỏ. Lượt đầu **1 cửa mù**: bài canh tài liệ
 `cụm in spec` — mà cụm *"ra mạng"* còn nằm ở bảng đo nền, nên gieo xoá **hàng**
 cảnh báo vẫn xanh. `x in y` lần thứ chín. Nay đòi cụm ấy nằm **cùng một dòng**
 với `CHƯA CHẶN ĐƯỢC`.
+
+<!-- CHOT:bo-dich-go -->
+### Bộ dịch `go` — trả nợ 08/09/2026
+
+Nợ này mở từ 06/09 với đúng một câu: *"máy không có trình biên dịch Go"*. Sếp
+duyệt cài thật 08/09, nên nó chuyển từ **KHÔNG ĐO ĐƯỢC** sang **đo được**.
+
+**Cài gì:** `go1.27.1.windows-amd64.zip` · 78.931.360 byte · từ `dl.google.com`
+· SHA-256 `a3911b5e…dd95d` **so khớp trước khi bung**. Bung vào
+`~/go-sdk/go` — zip chứ không phải MSI, vì tài khoản này **không phải
+Administrator**. `go version` chạy: `go1.27.1 windows/amd64`.
+
+**ĐO NỀN bằng trình biên dịch THẬT, ba đề y hệt bộ `bash`/`node`:**
+
+```
+cú pháp (go build)  0/3      hành vi (go run)  0/3
+main.go:15:1: syntax error: non-declaration statement outside function body
+```
+
+**Bốn lỗi, và lỗi đầu CHE ba lỗi kia** — parser dừng ở dòng 15 nên ba cái sau
+chưa từng được trình biên dịch nhìn thấy:
+
+| lỗi | vì sao chắc chắn hỏng |
+|---|---|
+| không có `func main()` | Go cấm câu lệnh ngoài thân hàm |
+| tên khai báo ≠ tên gọi | khai `func Fibonacci`, gọi `fibonacci(…)` |
+| `:=` ở cấp gói | `nums := []any{…}` ngoài hàm là lỗi cú pháp |
+| số học trên `any` | `n <= 1`, `tong += x` — Go không có toán tử cho `any` |
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| cú pháp `go build`, 3 đề | **3/3** |
+| hành vi `go run` khớp bản Python, 3 đề | **3/3** |
+| kiểu suy được | `int` · `string` · `[]int` khi suy ra; **`any` + NÓI RA** khi không |
+| không có `go` trên máy | **KHÔNG ĐO ĐƯỢC**, không phải PASS |
+
+**Tìm `go` KHÔNG chỉ bằng PATH.** Sổ bệnh án có ca *"cùng mã, cùng đề, hai phán
+quyết — biến thứ ba là PATH"*: cùng một bản dịch bị bác từ Git Bash và được
+PASS từ máy chủ, chỉ vì `bash` có trên PATH ở nơi này mà không ở nơi kia.
+`go.exe` nằm ở `~/go-sdk/go/bin` và **không** trên PATH, nên nó phải vào
+`_CHO_TIM` — cùng khuôn `node` và `bash` đã dùng.
+
+**PascalCase bị bỏ, có chủ ý.** Bản cũ khai `func Fibonacci` rồi gọi
+`fibonacci(…)`. Trong `package main` không có gì cần xuất ra ngoài, mà Go cho
+phép gạch dưới trong định danh — nên giữ nguyên tên Python là **xoá hẳn một
+lớp lệch**, không phải tránh né nó. Đẹp theo lối Go mà không biên dịch được thì
+không phải đẹp.
+<!-- /CHOT:bo-dich-go -->
 
 <!-- CHOT:tra-cuu -->
 ### Kho tra cứu cục bộ (08/09/2026)

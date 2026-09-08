@@ -54,8 +54,14 @@ CUA_VAO = ("aura_chat.py",)
 # phình.
 CUA_VAO_PHONG = ("interface/noi_bo_api.py",)
 
-# Toàn bộ AURA v3.  19 tệp.  Mọi thứ khác trong repo là KHO PHỤ TÙNG của v2:
-# vẫn nằm đó, vẫn đọc được, nhưng v3 không được phép với tay sang.
+# Toàn bộ AURA v3.  20 tệp — TRẦN LÀ 20, tức DANH SÁCH NÀY ĐÃ ĐẦY.
+#
+# 08/09/2026: `core/tra_cuu.py` ăn ô cuối cùng, và Sếp duyệt đúng cái giá đó
+# (`docs/KE_HOACH_KHO_TRA_CUU_2026-09-08.md`). Từ đây, thêm bất cứ thứ gì vào
+# đường chat đều phải BỎ một thứ khác ra — không còn chỗ để "tiện tay thêm".
+#
+# Mọi thứ khác trong repo là KHO PHỤ TÙNG của v2: vẫn nằm đó, vẫn đọc được,
+# nhưng v3 không được phép với tay sang.
 V3 = frozenset({
     "aura_chat.py",
     "core/chat_contract.py",       # hợp đồng Codex chốt ở lượt 003
@@ -71,6 +77,7 @@ V3 = frozenset({
     "core/paths.py",               # thay core/config.py 1.029 dòng
     "core/redact.py",
     "core/secret_guard.py",        # AURA không đọc mật khẩu ra màn hình
+    "core/tra_cuu.py",             # `tra kho:` — BA đoạn kèm nguồn, máy trả lời
     "core/user_memory.py",         # trí nhớ Markdown Sếp sửa tay được
     "core/web_search.py",          # tra mạng CÓ NGUỒN, fail-closed
     "interface/chat_adapters.py",  # composition root

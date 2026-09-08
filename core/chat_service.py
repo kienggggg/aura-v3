@@ -25,6 +25,7 @@ from core.chat_contract import (
     valid_citations,
 )
 from core.kiem_tien import gan_canh_bao
+from core.tra_cuu import la_lenh as la_lenh_tra_kho, tra_giup
 from core.loai_cau_hoi import (
     SANG_TAC as LOAI_SANG_TAC,
     TRA_CUU as LOAI_TRA_CUU,
@@ -416,6 +417,31 @@ class ChatService:
             # From this point on, raw request.text is out of scope. The guard's
             # transcript_text is the only text model, web, and store may see.
             safe_request = replace(request, text=content_check.transcript_text)
+
+            # `tra kho: ...` — MÁY trả lời thẳng, không qua model.
+            #
+            # Đặt SAU bộ che (câu hỏi đã sạch bí mật) và TRƯỚC lịch sử/tra mạng:
+            # lượt này không cần lịch sử và tuyệt đối không gọi ra ngoài, nên
+            # `used_web=False` và `sources=()` là đúng nghĩa đen của trường ấy —
+            # *"lượt này AURA có gửi câu của tôi ra ngoài không?"*.
+            #
+            # Không để model diễn đạt lại: top-1 chỉ đúng 4/10 trên bộ câu hỏi
+            # giữ riêng (xem `core/tra_cuu.py`), nên đoạn văn phải tới tay Sếp
+            # NGUYÊN VĂN kèm tên tệp. Một đoạn sai được viết thành câu trôi chảy
+            # là thứ khó cãi nhất.
+            if la_lenh_tra_kho(safe_request.text):
+                stage = CHAT_STAGE_MODEL
+                return await self._finalize(
+                    request,
+                    ChatStatus.OK,
+                    text=await tra_giup(safe_request.text),
+                    used_web=False,
+                    started=started,
+                    deadline=deadline,
+                    persist=True,
+                    transcript_request=safe_request,
+                    stage=stage,
+                )
 
             stage = CHAT_STAGE_HISTORY
             raw_history = tuple(

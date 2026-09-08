@@ -1994,6 +1994,72 @@ Gieo 8 phép, cả 8 đỏ. Lượt đầu **1 cửa mù**: bài canh tài liệ
 cảnh báo vẫn xanh. `x in y` lần thứ chín. Nay đòi cụm ấy nằm **cùng một dòng**
 với `CHƯA CHẶN ĐƯỢC`.
 
+<!-- CHOT:tra-cuu -->
+### Kho tra cứu cục bộ (08/09/2026)
+
+Kế hoạch đầy đủ: [`docs/KE_HOACH_KHO_TRA_CUU_2026-09-08.md`](docs/KE_HOACH_KHO_TRA_CUU_2026-09-08.md).
+Sếp duyệt 08/09: **tra cứu tường minh, chấp nhận ăn ô cuối của hàng rào.**
+
+**Kho công nghệ chỉ sai đường và đó là phát hiện đầu.** Nó ghi Docling
+`BENCHMARKED` 8,2s · MarkItDown `BENCHMARKED` 8,1s · MinerU `INSTALLED` là
+"đường rẻ nhất, đã đo trên máy này". `find_spec` ở cả ba venv: **false, false,
+false**. Và corpus **đã là Markdown sẵn**, nên hai bộ chuyển đổi ấy giải một
+bài toán kho này không có. Thứ bắc được cầu từ vựng nằm sẵn trên máy 3 ngày mà
+không ai gọi: **`bge-m3` 1,2 GB trong Ollama**.
+
+**CHẤM BẰNG DẤU HIỆU, KHÔNG BẰNG TÊN TỆP.** Mỗi câu hỏi kèm một chuỗi phải có
+mặt trong đoạn tìm được. Tên tệp là nhãn của tôi; chuỗi thì ai cũng kiểm lại
+được.
+
+**HAI BỘ CÂU HỎI, BỘ B VIẾT TRƯỚC KHI BIẾT THIẾT KẾ NÀO THẮNG:**
+
+| | bộ A (dùng để CHỌN) | **bộ B (giữ riêng)** |
+|---|---|---|
+| RRF, bỏ `docs/lich_su/` — top-1 | **7/10** | **4/10** |
+| RRF, bỏ `docs/lich_su/` — top-3 | 8/10 | **8/10** |
+
+**top-1 tụt 7 → 4.** Đó là hình dạng của việc chỉnh theo 10 câu. `top-3 = 8/10`
+là con số ổn định duy nhất, và nó QUYẾT ĐỊNH THIẾT KẾ: hiện **ba** đoạn, không
+hiện một, và không gọi đoạn nào là "câu trả lời".
+
+**CỔNG "KHÔNG TÌM THẤY": KHÔNG LÀM ĐƯỢC.** Khe giữa nhóm có đáp án
+(8,55–22,60) và nhóm không có (7,59–8,54) là **0,01** trên thang rộng 15 điểm
+— trùng hợp, không phải tách rời. Dựng cổng theo nó rồi chạy bộ B: **3/10 câu
+đúng bị chặn nhầm** và **1/3 ca đối chứng vẫn lọt**. Bỏ cổng, hiện ba đoạn kèm
+tên tệp, để Sếp tự chấm.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| top-3 trên bộ A | **≥ 8/10** |
+| top-3 trên bộ B (giữ riêng) | **≥ 8/10** |
+| top-1 | **KHÔNG đặt ngưỡng** — 8/10 và 4/10, không tin được |
+| số đoạn hiện ra | **đúng 3**, mỗi đoạn kèm tên tệp + tiêu đề |
+| nhúng một câu hỏi — GIỮA của 5 lượt trong MỘT vòng lặp | **< 300 ms** |
+| gói Python ngoài | **vẫn đúng 2** |
+| `V3` sau khi thêm `core/tra_cuu.py` | **20/20 — hết chỗ** |
+
+**BA TRẠNG THÁI, KHÔNG GỘP THÀNH HAI:**
+
+```
+chưa dựng chỉ mục   -> NÓI RA, không được trả "không tìm thấy"
+Ollama không gọi được -> NÓI RA, tụt về BM25 và BÁO là đã tụt
+chạy đủ              -> RRF (BM25 + bge-m3)
+```
+
+Tụt về BM25 **im lặng** là thứ nguy hiểm nhất ở đây: kết quả vẫn ra, vẫn trông
+như thường, chỉ kém đi — và không ai biết để đo lại.
+
+**KHÔNG tự chèn vào mọi lượt chat.** top-1 đúng 4/10 trên bộ giữ riêng, nên tự
+chèn đoạn hạng nhất là rót một đoạn sai vào 6/10 lượt. `CLAUDE.md` §4 đã đo
+được rằng *"lời dặn không phải phép đo"* — nguồn nói sai thì model tin.
+
+**Lượt tra kho KHÔNG gọi mạng.** `used_web` phải là `False` và `sources` rỗng:
+trường ấy trả lời đúng câu *"lượt này AURA có gửi câu của tôi ra ngoài không?"*,
+và câu trả lời ở đây là không.
+<!-- /CHOT:tra-cuu -->
+
 <!-- CHOT:path-noi-doi -->
 ### PATH nói có, chạy thì không (08/09/2026)
 

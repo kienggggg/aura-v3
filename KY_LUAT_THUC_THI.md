@@ -1347,11 +1347,19 @@ thấy**, không phải **đo được**.
      mục tạm; chỉ có một trần thời gian. Và `alpha.py::verify_anti_cheat_keys()`
      trả về bảy chuỗi `"PASS"` gõ cứng — không đo gì cả.
 
+     <!-- CHOT:no-network -->
      **08/09/2026 — vá được MỘT PHẦN, xem mục hộp cát ở dưới.** Nay có
      `core/hop_cat.py`: cwd riêng · biến môi trường sạch (87 → 9) · trần RAM
      256 MB · giết cả cây tiến trình. Nhưng **ngắt mạng thì VẪN CHƯA CHẶN
      ĐƯỢC** — đo lại 08/09, `urlopen` vẫn trả mã 200. Dòng "no-network" ở trên
      vẫn là một lời hứa chưa giao.
+
+     **Đã thử và thất bại, ghi lại để lần sau khỏi thử lại từ đầu:** máy không
+     có Docker/WSL và tài khoản không phải Administrator, nên tường lửa loại.
+     AppContainer tạo được profile nhưng **Python không khởi động nổi bên
+     trong** (mã thoát 106 → 1 → không ghi nổi cả tệp lỗi). Cần quyền admin
+     hoặc một môi trường container mới giao được.
+     <!-- /CHOT:no-network -->
   2. Giới hạn ngân sách tài nguyên nghiêm ngặt (timeout, CPU/RAM/disk budget).
   3. Chặn mã sửa đổi bộ test hoặc import mock thư viện kiểm thử.
   4. Kiểm tra cú pháp và tính an toàn bằng AST parser trước khi thực thi.
@@ -1884,9 +1892,11 @@ thật.)*
 | biến môi trường | **0 biến tên nghi bí mật**, tổng < 15 | đo được |
 | cấp phát 300 MB | **BỊ CHẶN** (trần `RAM_MB = 256`) | đo được |
 | tiến trình mồ côi | **KHÔNG sống sót** | đo được |
+<!-- CHOT:hop-cat-con-lo -->
 | **ghi tệp bằng đường dẫn tuyệt đối** | **VẪN ĐƯỢC** | **CHƯA CHẶN ĐƯỢC** |
 | **đọc tệp bất kỳ / liệt kê HOME** | **VẪN ĐƯỢC** | **CHƯA CHẶN ĐƯỢC** |
 | **ra mạng** | **VẪN ĐƯỢC** | **CHƯA CHẶN ĐƯỢC** |
+<!-- /CHOT:hop-cat-con-lo -->
 
 **`RAM_MB = 256` là con số CHỌN** — cùng con số kế hoạch 19/08 đã hứa mà không
 giao được. Python rỗng tốn ~25 MB, nên 256 rộng rãi cho một đoạn mã ngắn.
@@ -1924,6 +1934,56 @@ nhất ở đây** — nó biến "chưa chặn" thành "đã chặn" mà không
 **đỏ khi ai đó vá thêm** — và đó là lúc phải sửa tài liệu cùng lúc, chứ không
 phải xoá bài. Không có chúng thì chữ "CHƯA chặn được" trôi dần thành "đã chặn"
 mà không ai đo lại.
+
+**NGẮT MẠNG — ĐÃ THỬ, VÀ VẪN CHƯA CHẶN ĐƯỢC (08/09/2026).**
+
+Đo trước: máy này **không có Docker, không có WSL, và tài khoản KHÔNG phải
+Administrator** — nên luật tường lửa (thứ duy nhất chặn mạng theo chương trình
+trên Windows) **loại ngay từ đầu**.
+
+Còn đúng một đường không cần quyền admin: **AppContainer** không cấp năng lực
+`internetClient`. Thử theo đúng bài 19/08 — nguyên mẫu trước, sản phẩm sau:
+
+```
+1. CreateAppContainerProfile          OK, lấy được SID
+2. icacls cấp RX cho temp + venv\Scripts   -> chạy python, mã thoát 106
+3. cấp thêm base_prefix + prefix           -> mã thoát 1
+4. cho cháu tự ghi traceback ra tệp        -> KHÔNG ghi nổi cả tệp lỗi
+```
+
+Bước 4 là chỗ kết luận: cháu hỏng **trước khi chạy dòng mã Python nào**, nên
+không phải thiếu một thư mục nào nữa — trình thông dịch không khởi động nổi
+trong AppContainer. Cấp thêm quyền là đoán, không phải đo.
+
+**KẾT LUẬN: `no-network` VẪN CHƯA GIAO.** Muốn giao thì cần **một trong hai**:
+quyền Administrator để đặt luật tường lửa theo chương trình, hoặc một môi
+trường chạy dạng container. Cả hai đều là thay đổi lớn hơn hẳn phạm vi này.
+
+**VÀ CỐ Ý KHÔNG GIAO MỘT BẢN NỬA VỜI.** Có thể chặn `socket` ở tầng Python
+(gỡ `_socket` khỏi `sys.modules`, chặn `import`), và nó sẽ đổi dòng "ra mạng
+ĐƯỢC" thành "bị chặn". Nhưng nó **vượt được bằng `ctypes` hoặc bằng một tiến
+trình con**, mà người đọc tài liệu sẽ nhớ mỗi chữ "đã chặn". Một lời hứa an
+toàn vượt được bằng một dòng thì **tệ hơn là không có** — nó làm người ta thôi
+cẩn thận. Chỗ dựa thật vẫn là: `/api/polyglot/run` không đặt ra Internet.
+
+**Dọn sạch sau khi thử — và LƯỢT DỌN ĐẦU KHÔNG TỚI NƠI.** ACL cấp cho
+AppContainer SID đã gỡ khỏi thư mục Python và `venv`: đo lại bằng `icacls`,
+**còn 0 mục**. Nhưng câu *"profile đã xoá (`HRESULT 0`)"* viết ban đầu là
+**sai** — `HRESULT 0` là lời khai của API, không phải trạng thái của máy. Đo
+thẳng vào máy thì:
+
+```
+TRƯỚC:  registry AppContainer\Mappings  CÒN 'aurapolyglotnonet'
+        %LOCALAPPDATA%\Packages\...      CÒN thư mục (6 thư mục rỗng)
+gọi lại DeleteAppContainerProfile      HRESULT 0x00000000
+SAU:    registry hết  |  thư mục hết
+```
+
+Tức profile nằm lại trên máy **suốt từ lúc tài liệu này khẳng định nó đã bị
+xoá**. Đúng ca [*"Trạng thái tự khai không phải trạng thái"*](SO_BENH_AN.md) —
+lần này chính tôi là bên tự khai. Một nguyên mẫu để lại quyền trên máy là một
+cái nợ không ai nhớ; một nguyên mẫu để lại quyền **kèm câu "đã dọn"** thì tệ
+hơn, vì không ai đi kiểm nữa.
 
 **Ba dòng CHƯA CHẶN ĐƯỢC ở trên phải ở lại tài liệu và ở lại `mo_ta`.** Chặn
 được ba thứ không cho phép viết "đã cô lập". Chỗ dựa thật vẫn là

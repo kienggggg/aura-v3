@@ -28,6 +28,7 @@ thứ nguy hiểm nhất tệp này canh.
 """
 from __future__ import annotations
 
+import re
 import sys
 import time
 from pathlib import Path
@@ -167,29 +168,68 @@ def test_VAN_CHUA_chan_duoc_RA_MANG():
         "ra mạng đã bị chặn — sửa tài liệu cùng lúc")
 
 
-def test_TAI_LIEU_van_GIU_ba_dong_CHUA_CHAN_DUOC():
-    """Chặn được ba thứ KHÔNG cho phép viết "đã cô lập".
+def _khoi_chot(ten: str) -> str:
+    """Đọc đúng khối nằm giữa `<!-- CHOT:ten -->` và `<!-- /CHOT:ten -->`.
 
-    Bài này neo vào ĐẶC TẢ, không neo vào mã — chỗ dễ trôi là chỗ chữ. Cùng
-    khuôn với bài canh `go` ở `tests/test_bo_dich_bash_chay_that.py`.
+    VÌ SAO PHẢI CÓ NEO CÓ TÊN — `x in y` lần thứ MƯỜI và MƯỜI MỘT (08/09/2026).
+
+    Hai bản trước của các bài dưới hỏi *"cụm chữ có ở đâu đó trong tệp 100 KB
+    không"*. Gieo xoá đúng dòng lời hứa mà cửa vẫn xanh, vì **chính tôi vừa
+    thêm một bảng ghi phép đo** cũng chứa cụm ấy:
+
+        gieo xoá hàng "ra mạng | VẪN ĐƯỢC | CHƯA CHẶN ĐƯỢC"
+          -> vẫn xanh, vì bảng ĐO SAU KHI VÁ có dòng
+             "6. ra mạng ... CHƯA CHẶN ĐƯỢC"
+        gieo xoá đoạn ghi AppContainer
+          -> vẫn xanh, vì chữ "AppContainer" còn ở mục hộp cát
+
+    Sửa cả LOẠI BỆNH, không sửa một ca: neo có tên chỉ đúng MỘT chỗ, và bảng
+    ghi phép đo nằm ngoài neo nên không cứu được lời hứa nữa.
     """
     spec = (PROJECT_ROOT / "KY_LUAT_THUC_THI.md").read_text(encoding="utf-8")
-    # HỎI THEO CẤU TRÚC, KHÔNG HỎI "CÓ CỤM CHỮ Ở ĐÂU ĐÓ KHÔNG".
-    #
-    # Bản đầu viết `cum in spec` và gieo xoá HÀNG cảnh báo vẫn xanh — vì cụm
-    # "ra mạng" còn nằm ở bảng đo nền ("6. RA MẠNG ĐƯỢC — mã 200"). Cụm chữ
-    # sống sót ở chỗ khác, còn lời hứa thì đã đổi. `x in y` lần thứ chín.
-    #
-    # Nay đòi cụm ấy nằm CÙNG MỘT DÒNG với "CHƯA CHẶN ĐƯỢC".
-    dong_canh_bao = [d for d in spec.splitlines() if "CHƯA CHẶN ĐƯỢC" in d]
-    gop = chr(10).join(dong_canh_bao)
+    m = re.search(rf"<!-- CHOT:{ten} -->(.*?)<!-- /CHOT:{ten} -->", spec, re.S)
+    assert m, f"mất neo CHOT:{ten} trong đặc tả"
+    return m.group(1)
+
+
+def test_TAI_LIEU_van_GIU_ba_dong_CHUA_CHAN_DUOC():
+    """Chặn được ba thứ KHÔNG cho phép viết "đã cô lập"."""
+    khoi = _khoi_chot("hop-cat-con-lo")
     for cum in ("ghi tệp bằng đường dẫn tuyệt đối",
                 "đọc tệp bất kỳ / liệt kê HOME",
                 "ra mạng"):
-        assert cum in gop, (
-            f"đặc tả không còn dòng nào vừa nói {cum!r} vừa nói CHƯA CHẶN ĐƯỢC "
-            f"— lời hứa đã trôi. Các dòng còn lại: {dong_canh_bao}")
+        assert cum in khoi and "CHƯA CHẶN ĐƯỢC" in khoi, (
+            f"khối CHOT:hop-cat-con-lo không còn nói {cum!r} là CHƯA CHẶN "
+            f"ĐƯỢC — khối đang là: {khoi!r}")
+    assert khoi.count("CHƯA CHẶN ĐƯỢC") == 3, (
+        f"khối phải có đúng 3 dòng CHƯA CHẶN ĐƯỢC, thấy "
+        f"{khoi.count('CHƯA CHẶN ĐƯỢC')} — khối đang là: {khoi!r}")
     nguon = (PROJECT_ROOT / "core" / "hop_cat.py").read_text(encoding="utf-8")
     assert "CHƯA CHẶN ĐƯỢC" in nguon, "mã đã bỏ lời cảnh báo"
-    assert "không" in nguon and "cô lập" in nguon, (
+    assert "cô lập" in nguon, (
         "mất câu 'chặn được bốn thứ không cho phép viết đã cô lập'")
+
+
+def test_LOI_HUA_no_network_van_duoc_danh_dau_CHUA_GIAO():
+    """`no-network` là khoá số 1 trong "7 Khoá Chống Gian Lận" của đặc tả.
+
+    Nó **chưa giao**, và đã thử thật ngày 08/09:
+
+        không Docker · không WSL · KHÔNG Administrator  -> tường lửa loại
+        AppContainer: profile OK, SID OK
+          + icacls temp/venv        -> mã thoát 106
+          + icacls base_prefix      -> mã thoát 1
+          + cho cháu ghi traceback  -> KHÔNG ghi nổi cả tệp lỗi
+
+    Cháu hỏng **trước khi chạy dòng Python nào**, nên cấp thêm quyền là đoán
+    chứ không phải đo.
+    """
+    khoi = _khoi_chot("no-network")
+    assert "vẫn là một lời hứa chưa giao" in khoi, (
+        "dòng no-network đã mất nhãn CHƯA GIAO — nếu thật sự giao được thì "
+        "phải có phép đo cho thấy `urlopen` bị chặn, và sửa cả "
+        "`test_VAN_CHUA_chan_duoc_RA_MANG` cùng lúc")
+    # Lý do THẤT BẠI phải ở lại — không có nó thì lần sau thử lại từ đầu.
+    for cum in ("AppContainer", "Administrator", "không khởi động nổi"):
+        assert cum in khoi, (
+            f"khối no-network mất phần ghi {cum!r} — khối đang là: {khoi!r}")

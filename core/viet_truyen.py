@@ -93,6 +93,28 @@ SO_CAU_KHAC_MIN = 11
 LAP_TOI_DA = 2
 TRAN_SO_LAN = 3
 
+# TRẦN SỐ CÂU — SUY RA TỪ PHÒNG ALPHA, KHÔNG PHẢI CHỌN (07/09/2026).
+#
+#     SO_CAU_TOI_DA = DAI_MIN / GIAY_TOI_THIEU_MOI_THE = 55,0 / 2,5 = 22
+#
+# Từ 07/09 Alpha dựng MỘT THẺ MỘT CÂU, và chặn ở `dài / 2,5` thẻ. Kịch bản
+# nhiều câu hơn thế thì Alpha buộc phải gộp lại, và độ lệch giữa các thẻ quay
+# về đúng cái vừa vá sáng nay (từ ít nhất 11 · nhiều nhất 32 · lệch 2,9 lần).
+#
+# VÀ LỖ NÀY CÓ THẬT, KHÔNG PHẢI GIẢ ĐỊNH. Đo 5 lượt `viet_kich_ban` ngày 07/09:
+#
+#     lượt 3   233 từ · 12 câu · 19,4 từ/câu    -
+#     lượt 4   238 từ · 36 câu ·  6,6 từ/câu    VƯỢT
+#
+# `qwen3.5:4b` thật sự sinh 36 câu ngắn, và mọi cửa cũ đều gật: 238 từ nằm
+# trong 215–250, 36 câu khác nhau vượt sàn 11, và `TRAN_TU_MOI_CAU` chỉ chặn
+# câu DÀI. Không cửa nào hỏi "quá nhiều câu ngắn".
+#
+# Con số 22 để RỜI ở đây chứ không `import` từ `core/phong_alpha.py` — cấu hình
+# đi theo thứ cần nó. Cửa `test_hai_phong_KHOP_tran_so_cau` giữ hai bên khỏi
+# trôi khỏi nhau.
+SO_CAU_TOI_DA = 22
+
 # 250 / 11 = 22,73. VẪN LÀ HỆ QUẢ, không phải phép đo — nó chưa bao giờ nói
 # "câu dài hơn thế thì video xấu". Nó chỉ nói: viết dài hơn thì hai ràng buộc
 # (số từ, số câu khác nhau) không thể cùng đúng, và không cách cắt nào cứu được.
@@ -103,6 +125,19 @@ TRAN_SO_LAN = 3
 #     lời BÀI NÓI                 1/10            6/10
 # Lời truyện không mất gì; văn giải thích (22,0–22,4 từ/câu) từ 1/10 lên 6/10.
 TRAN_TU_MOI_CAU = SO_TU_MAX / SO_CAU_KHAC_MIN
+
+# SÀN TỪ/CÂU — MẶT ĐỐI XỨNG CỦA TRẦN TRÊN, và cùng một lý lẽ (07/09/2026).
+#
+#     SAN_TU_MOI_CAU = SO_TU_MIN / SO_CAU_TOI_DA = 215 / 22 = 9,77
+#
+# Trần trên nói: câu DÀI hơn 22,7 thì hai ràng buộc không thể cùng đúng. Sàn
+# này nói điều ngược lại và cũng đúng: câu NGẮN hơn 9,77 thì cắt kiểu gì cũng
+# trượt — cắt xuống 22 câu là mất luôn cửa sổ từ.
+#
+# Đo được ngay khi thêm `SO_CAU_TOI_DA`: model giả trả 40 câu × 9 từ = 360 từ.
+# `cat_cho_vua` cắt còn 22 câu × 9 = **198 từ**, dưới sàn 215. Không có sàn này
+# thì mỗi lượt như thế đốt một lần cắt rồi vẫn trượt, im lặng.
+SAN_TU_MOI_CAU = SO_TU_MIN / SO_CAU_TOI_DA
 
 # Xin dài dư để còn chỗ mà cắt. 320 cho 4/5 lọt cửa sau khi cắt giữa.
 SO_TU_XIN = 320
@@ -158,6 +193,9 @@ def do_kich_ban(van_ban: str) -> Tuple[str, List[str], Dict[str, Any]]:
         ly_do.append(f"{so['so_tu']} từ, cần {SO_TU_MIN}–{SO_TU_MAX}")
     if so["so_cau_khac"] < SO_CAU_KHAC_MIN:
         ly_do.append(f"{so['so_cau_khac']} câu khác nhau, cần ≥ {SO_CAU_KHAC_MIN}")
+    if so["so_cau"] > SO_CAU_TOI_DA:
+        ly_do.append(f"{so['so_cau']} câu, Alpha chỉ dựng nổi {SO_CAU_TOI_DA} thẻ "
+                     f"— nhiều hơn thì thẻ phải ôm 2 câu")
     if so["lap_nhieu_nhat"] > LAP_TOI_DA:
         ly_do.append(f"một câu lặp {so['lap_nhieu_nhat']} lần, cho tối đa {LAP_TOI_DA}")
     return ("DAT" if not ly_do else "KHONG_DAT"), ly_do, so
@@ -242,6 +280,13 @@ def cat_cho_vua(van_ban: str) -> Tuple[str, int]:
 
     Giữ câu MỞ và câu KẾT, bỏ dần câu ở giữa. Cắt từ dưới lên cũng lọt cửa 4/5
     y hệt, nhưng câu cuối thành một câu giữa truyện — video kết thúc lửng.
+
+    CẮT THEO CẢ HAI RÀNG BUỘC, KHÔNG CHỈ THEO TỪ (07/09/2026). Trần
+    `SO_CAU_TOI_DA` thêm cùng ngày, và bản đầu của nó chỉ vá `do_kich_ban` —
+    hàm CHẤM — mà quên hàm CẮT. Đo được ngay: model trả 40 câu × 9 từ = 360 từ,
+    `cat_cho_vua` cắt còn **243 từ / 27 câu** — lọt cửa sổ từ nhưng vẫn vượt
+    trần câu, nên vòng lặp trả về một văn bản mà chính phép chấm của nó BÁC.
+    Đúng bài "vá một nửa của một cặp", lần thứ ba trong tuần.
     """
     cau = _tach_cau(van_ban)
     if len(cau) <= 2:
@@ -249,7 +294,8 @@ def cat_cho_vua(van_ban: str) -> Tuple[str, int]:
     giu = list(cau)
     bo = 0
     i = 1                              # không bao giờ đụng câu đầu
-    while len(" ".join(giu).split()) > SO_TU_MAX and len(giu) > 2:
+    while ((len(" ".join(giu).split()) > SO_TU_MAX
+            or len(giu) > SO_CAU_TOI_DA) and len(giu) > 2):
         if i >= len(giu) - 1:          # cũng không bao giờ đụng câu cuối
             i = 1
         giu.pop(i)
@@ -429,6 +475,15 @@ def viet_kich_ban(chu_de: str, tran: int = TRAN_SO_LAN, hat_dau: int = 1,
             lan.append({"hat": hat_dau + i, "trang_thai": "KHONG_DAT", "so": truoc,
                         "vi_sao": [f"{truoc['tu_moi_cau']} từ/câu, quá trần "
                                    f"{TRAN_TU_MOI_CAU:.1f} — cắt kiểu gì cũng trượt"],
+                        "giay": round(giay, 1)})
+            continue
+        # VÀ MẶT ĐỐI XỨNG: câu quá NGẮN thì cắt xuống trần số câu là rơi khỏi
+        # cửa sổ từ. Cùng lý lẽ, chiều ngược lại.
+        if truoc["so_cau"] > SO_CAU_TOI_DA and truoc["tu_moi_cau"] < SAN_TU_MOI_CAU:
+            lan.append({"hat": hat_dau + i, "trang_thai": "KHONG_DAT", "so": truoc,
+                        "vi_sao": [f"{truoc['so_cau']} câu × {truoc['tu_moi_cau']} "
+                                   f"từ/câu, dưới sàn {SAN_TU_MOI_CAU:.1f} — cắt "
+                                   f"xuống {SO_CAU_TOI_DA} câu là mất cửa sổ từ"],
                         "giay": round(giay, 1)})
             continue
 

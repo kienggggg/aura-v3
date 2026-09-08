@@ -28,6 +28,21 @@ DAC_TA_TU_MIN, DAC_TA_TU_MAX = 215, 250
 DAC_TA_CAU_KHAC_MIN = 11        # 13 -> 11 ngày 04/09/2026
 DAC_TA_LAP_TOI_DA = 2
 DAC_TA_TRAN_SO_LAN = 3
+# Chép TAY. `22` KHÔNG phải con số chọn — nó SUY RA từ hai hằng số của Alpha:
+# `DAI_MIN / GIAY_TOI_THIEU_MOI_THE = 55,0 / 2,5`. Bài
+# `test_hai_phong_KHOP_tran_so_cau` giữ phép suy ấy khỏi trôi.
+DAC_TA_SO_CAU_TOI_DA = 22
+
+# KỊCH BẢN "HỢP LỆ" CHUẨN của tệp này. Trước 07/09 nó là `_van_ban(SO_CAU_DAT, TU_MOI_CAU_DAT)` —
+# 26 câu × 9 từ = 234 từ, hợp lệ dưới ba ràng buộc khi ấy. Trần số câu 22 làm
+# nó hết hợp lệ, và **7 bài đỏ** trong lượt bộ đủ.
+#
+# Con số 26 chưa bao giờ là phép đo — nó là số dựng tay, chọn tuỳ ý trong cửa
+# sổ 215–250 từ. Nên chỗ phải sửa là fixture, không phải trần. Đặt tên để lần
+# sau ai đổi ràng buộc thì sửa MỘT chỗ.
+#
+#     22 câu × 10 từ = 220 từ   (trong 215–250 · 22 ≤ 22 · 10 ≤ 22,7)
+SO_CAU_DAT, TU_MOI_CAU_DAT = 22, 10
 
 # Số từ/câu dùng cho các mẫu PHẢI VƯỢT TRẦN. Suy từ hằng số ĐẶC TẢ ở trên, không
 # đọc từ mã — hai vế cùng đổi thì gieo không bắt được.
@@ -42,7 +57,7 @@ def _van_ban(so_cau: int, tu_moi_cau: int = 8) -> str:
     """Sinh văn bản có ĐÚNG số câu và ĐÚNG số từ mỗi câu.
 
     Bản đầu đếm sai phần cố định: `"Cau so 1"` là 3 từ và `"o day."` là 2, tức
-    5 từ khung, nhưng tôi trừ 4. Mỗi câu dôi một từ, và `_van_ban(26, 9)` ra 260
+    5 từ khung, nhưng tôi trừ 4. Mỗi câu dôi một từ, và `_van_ban(SO_CAU_DAT, TU_MOI_CAU_DAT)` ra 260
     từ thay vì 234 — nằm ngoài cửa sổ 215–250, nên bài "phải ĐẠT" đỏ oan.
 
     Nhạc cụ đo sai trước khi thứ được đo sai. Có `test_ham_phu_dem_dung_so_tu`
@@ -73,6 +88,131 @@ def test_hang_so_trong_ma_khop_DAC_TA():
     assert vt.SO_CAU_KHAC_MIN == DAC_TA_CAU_KHAC_MIN
     assert vt.LAP_TOI_DA == DAC_TA_LAP_TOI_DA
     assert vt.TRAN_SO_LAN == DAC_TA_TRAN_SO_LAN
+    assert vt.SO_CAU_TOI_DA == DAC_TA_SO_CAU_TOI_DA
+
+
+def test_hai_phong_KHOP_tran_so_cau():
+    """Trần số câu là HỆ QUẢ của Alpha, không phải một con số riêng.
+
+    `SO_CAU_TOI_DA` để RỜI trong `viet_truyen` chứ không `import` từ
+    `phong_alpha` — cấu hình đi theo thứ cần nó. Nhưng để rời thì hai bên trôi
+    khỏi nhau được, nên bài này giữ phép suy:
+
+        SO_CAU_TOI_DA = DAI_MIN / GIAY_TOI_THIEU_MOI_THE = 55,0 / 2,5 = 22
+
+    Hạ `GIAY_TOI_THIEU_MOI_THE` mà quên trần này thì Alpha dựng được nhiều thẻ
+    hơn nhưng `viet_truyen` vẫn bác kịch bản dài — hai phòng cãi nhau trong im
+    lặng.
+    """
+    import core.viet_truyen as vt
+    from core.phong_alpha import DAI_MIN, GIAY_TOI_THIEU_MOI_THE
+
+    assert vt.SO_CAU_TOI_DA == int(DAI_MIN / GIAY_TOI_THIEU_MOI_THE), (
+        f"viet_truyen khai {vt.SO_CAU_TOI_DA} câu, Alpha dựng nổi "
+        f"{int(DAI_MIN / GIAY_TOI_THIEU_MOI_THE)} thẻ")
+
+
+def test_SAN_tu_moi_cau_la_MAT_DOI_XUNG_cua_tran():
+    """Trần trên nói câu DÀI quá thì cắt kiểu gì cũng trượt. Sàn nói câu NGẮN
+    quá cũng thế — và nó chỉ tồn tại vì có trần số câu.
+
+        SAN_TU_MOI_CAU = SO_TU_MIN / SO_CAU_TOI_DA = 215 / 22 = 9,77
+        TRAN_TU_MOI_CAU = SO_TU_MAX / SO_CAU_KHAC_MIN = 250 / 11 = 22,73
+
+    Đo được ngay khi thêm trần: model giả trả 40 câu × 9 từ = 360 từ,
+    `cat_cho_vua` cắt còn 22 câu × 9 = **198 từ**, dưới sàn 215. Không có sàn
+    này thì mỗi lượt như thế đốt một lần cắt rồi vẫn trượt, im lặng.
+    """
+    import core.viet_truyen as vt
+
+    assert abs(vt.SAN_TU_MOI_CAU - vt.SO_TU_MIN / vt.SO_CAU_TOI_DA) < 1e-9
+    assert vt.SAN_TU_MOI_CAU < vt.TRAN_TU_MOI_CAU, "sàn phải thấp hơn trần"
+
+    # Cắt 40×9 thì KHÔNG cách nào lọt cả hai cửa — chứng minh bằng phép cắt thật.
+    van, _bo = vt.cat_cho_vua(_van_ban(40, 9))
+    tt, ly_do, so = vt.do_kich_ban(van)
+    assert so["so_cau"] <= vt.SO_CAU_TOI_DA, so
+    assert so["so_tu"] < vt.SO_TU_MIN, (
+        f"cắt xong còn {so['so_tu']} từ — nếu vẫn ≥ {vt.SO_TU_MIN} thì sàn này "
+        f"không có việc gì")
+    assert tt == "KHONG_DAT", (tt, ly_do)
+
+
+def test_DUOI_SAN_thi_SINH_LAI_NGAY_khong_phi_mot_lan_cat(monkeypatch):
+    """Nhánh sàn phải đi tới `viet_kich_ban`, không chỉ tồn tại trong hằng số.
+
+    Gieo `if truoc[...] < SAN_TU_MOI_CAU` → `if False:` mà cả 45 bài vẫn xanh —
+    không bài nào lái một kịch bản DƯỚI SÀN qua vòng lặp. Cùng hình dạng với
+    bốn chỗ mù đã bắt ở `phong_alpha.py`: chấm được một hàm không chứng minh
+    kết quả của nó đi tới đâu.
+
+    40 câu × 9 từ: cắt xuống 22 câu chỉ còn 198 từ, dưới sàn 215. Phải nói
+    "dưới sàn" ngay, đừng đốt một lần cắt rồi mới trượt.
+    """
+    import core.viet_truyen as vt
+
+    gia = _GiaModel([_van_ban(40, 9), _van_ban(40, 9), _van_ban(40, 9)])
+    monkeypatch.setattr("core.viet_truyen._xin_model", gia)
+    kq = viet_kich_ban(DE_KHOP_VAN_MAU)
+
+    assert kq["trang_thai"] != "DAT", kq["lan"]
+    ly = " ".join(x for l in kq["lan"] for x in (l.get("vi_sao") or []))
+    assert "sàn" in ly, f"không nói ra là DƯỚI SÀN: {ly}"
+    # Và KHÔNG được tốn một lần cắt: `cau_da_bo` chỉ có ở đường đã cắt.
+    assert all("cau_da_bo" not in l for l in kq["lan"]), (
+        f"vẫn cắt rồi mới trượt: {kq['lan']}")
+
+
+def test_cat_cho_vua_CAT_theo_CA_HAI_rang_buoc():
+    """Vá `do_kich_ban` mà quên `cat_cho_vua` là vá một nửa của một cặp.
+
+    Đo 07/09: model trả 40 câu × 9 từ, hàm cắt cũ chỉ đếm TỪ nên dừng ở
+    **243 từ / 27 câu** — lọt cửa sổ từ nhưng vẫn vượt trần câu, và vòng lặp
+    trả về một văn bản mà chính phép chấm của nó BÁC. Lần thứ ba trong tuần
+    cùng hình dạng.
+    """
+    import core.viet_truyen as vt
+
+    van, bo = vt.cat_cho_vua(_van_ban(30, 12))
+    so = vt._dem(vt._tach_cau(van))
+    assert bo > 0, "không cắt gì cả"
+    assert so["so_cau"] <= vt.SO_CAU_TOI_DA, so
+    assert so["so_tu"] <= vt.SO_TU_MAX, so
+    assert vt.do_kich_ban(van)[0] == "DAT", vt.do_kich_ban(van)[1]
+
+
+def test_QUA_NHIEU_CAU_NGAN_bi_bac():
+    """Lỗ này CÓ THẬT, không phải giả định. Đo 5 lượt `viet_kich_ban` 07/09:
+
+        lượt 3   233 từ · 12 câu · 19,4 từ/câu    -
+        lượt 4   238 từ · 36 câu ·  6,6 từ/câu    VƯỢT trần 22
+
+    `qwen3.5:4b` thật sự sinh 36 câu ngắn, và mọi cửa cũ đều gật: 238 từ nằm
+    trong 215–250, 36 câu khác nhau vượt sàn 11, và `TRAN_TU_MOI_CAU` chỉ chặn
+    câu DÀI. Không cửa nào hỏi "quá nhiều câu ngắn".
+
+    Với 36 câu thì Alpha chặn ở 22 thẻ, 14 thẻ phải ôm 2 câu, và độ lệch quay
+    về đúng cái vừa vá sáng nay (11 → 32 từ, lệch 2,9 lần).
+    """
+    import core.viet_truyen as vt
+
+    # 36 câu, mỗi câu ~6,6 từ -> tổng ~238 từ, đúng hình dạng lượt 4 đo được.
+    nhieu = " ".join(
+        f"Cảnh thứ {i} mở ra một hình ảnh khác." for i in range(1, 37))
+    tt, ly_do, so = vt.do_kich_ban(nhieu)
+    assert so["so_cau"] == 36, so
+    assert tt == "KHONG_DAT", (tt, ly_do, so)
+    assert any("Alpha" in x for x in ly_do), ly_do
+
+    # CA ĐỐI CHỨNG: đúng trần thì phải qua được cửa số câu. Không có nó thì một
+    # bản vá bác MỌI kịch bản cũng đi qua bài trên.
+    vua = " ".join(
+        f"Cảnh thứ {i} mở ra một hình ảnh hoàn toàn khác hẳn cảnh trước nó."
+        for i in range(1, 23))
+    _tt2, ly_do2, so2 = vt.do_kich_ban(vua)
+    assert so2["so_cau"] == DAC_TA_SO_CAU_TOI_DA, so2
+    assert not any("Alpha" in x for x in ly_do2), (
+        f"đúng trần {DAC_TA_SO_CAU_TOI_DA} câu mà vẫn bị bác: {ly_do2}")
 
 
 def test_tran_tu_moi_cau_la_he_qua_cua_hai_nguong_kia():
@@ -136,7 +276,7 @@ def test_cham_bac_cau_lap_qua_hai_lan():
 
 def test_cham_cho_DAT_khi_dung_chuan():
     """Máy chấm phải chứng minh nó biết nói ĐẠT — không thì mọi 'KHÔNG ĐẠT' vô nghĩa."""
-    tt, ly, so = do_kich_ban(_van_ban(26, 9))
+    tt, ly, so = do_kich_ban(_van_ban(SO_CAU_DAT, TU_MOI_CAU_DAT))
     assert tt == "DAT", (ly, so)
     assert DAC_TA_TU_MIN <= so["so_tu"] <= DAC_TA_TU_MAX
     assert so["so_cau_khac"] >= DAC_TA_CAU_KHAC_MIN
@@ -171,7 +311,7 @@ def test_cat_giu_cau_MO_va_cau_KET():
 
 
 def test_cat_khong_dung_toi_van_ban_da_vua():
-    van = _van_ban(26, 9)
+    van = _van_ban(SO_CAU_DAT, TU_MOI_CAU_DAT)
     ra, bo = cat_cho_vua(van)
     assert bo == 0 and ra == van, "đã vừa rồi thì đừng cắt"
 
@@ -227,7 +367,7 @@ class _GiaModel:
 
 
 def test_dat_ngay_lan_dau_thi_KHONG_thu_them(monkeypatch):
-    gia = _GiaModel([_van_ban(26, 9)])
+    gia = _GiaModel([_van_ban(SO_CAU_DAT, TU_MOI_CAU_DAT)])
     monkeypatch.setattr("core.viet_truyen._xin_model", gia)
     kq = viet_kich_ban(DE_KHOP_VAN_MAU)
     assert kq["trang_thai"] == "DAT"
@@ -241,7 +381,7 @@ def test_SO_LAN_THU_khong_bi_giau(monkeypatch):
     Cùng luật với sổ phiên phải mang `latency_ms`: đừng in ra một phán quyết mà
     không kèm con số tạo ra nó.
     """
-    gia = _GiaModel([_van_ban(5, 8), _van_ban(5, 8), _van_ban(26, 9)])
+    gia = _GiaModel([_van_ban(5, 8), _van_ban(5, 8), _van_ban(SO_CAU_DAT, TU_MOI_CAU_DAT)])
     monkeypatch.setattr("core.viet_truyen._xin_model", gia)
     kq = viet_kich_ban(DE_KHOP_VAN_MAU)
     assert kq["trang_thai"] == "DAT"
@@ -279,7 +419,7 @@ def test_mot_luot_hong_mot_luot_do_duoc_thi_KHONG_phai_khong_do_duoc(monkeypatch
 def test_cau_qua_dai_thi_SINH_LAI_ngay_khong_phi_cong_cat(monkeypatch):
     """Quá trần từ/câu thì cắt kiểu gì cũng trượt — đo trước, đừng cắt rồi mới biết."""
     assert TU_MOI_CAU_QUA_TRAN > DAC_TA_TU_MAX / DAC_TA_CAU_KHAC_MIN
-    gia = _GiaModel([_van_ban(21, TU_MOI_CAU_QUA_TRAN), _van_ban(26, 9)])
+    gia = _GiaModel([_van_ban(21, TU_MOI_CAU_QUA_TRAN), _van_ban(SO_CAU_DAT, TU_MOI_CAU_DAT)])
     monkeypatch.setattr("core.viet_truyen._xin_model", gia)
     kq = viet_kich_ban(DE_KHOP_VAN_MAU)
     assert kq["trang_thai"] == "DAT"
@@ -293,7 +433,7 @@ def test_van_ban_tra_ve_PHAI_qua_duoc_phep_cham(monkeypatch):
     Cùng hình dạng với chỗ mù đã bắt bốn lần ở `phong_alpha.py`: chấm được một
     hàm không chứng minh kết quả của nó đi tới đâu.
     """
-    gia = _GiaModel([_van_ban(26, 9)])
+    gia = _GiaModel([_van_ban(SO_CAU_DAT, TU_MOI_CAU_DAT)])
     monkeypatch.setattr("core.viet_truyen._xin_model", gia)
     kq = viet_kich_ban(DE_KHOP_VAN_MAU)
     assert kq["trang_thai"] == "DAT"
@@ -312,7 +452,11 @@ def test_tra_ve_ban_DA_CAT_chu_khong_phai_ban_tho(monkeypatch):
     không đưa được giá trị xấu vào nhánh cần kiểm. Ở đây phải cho model giả trả
     văn bản QUÁ DÀI, để bản cắt và bản thô khác nhau thật.
     """
-    tho = _van_ban(40, 9)                       # 360 từ — quá cửa sổ
+    # 30 CÂU × 12 TỪ, KHÔNG PHẢI 40 × 9. Từ 07/09 có thêm trần số câu 22 và sàn
+    # 9,77 từ/câu; `40 × 9` rơi DƯỚI sàn nên nay bị sinh lại ngay chứ không cắt,
+    # và bài này cần một văn bản CẮT ĐƯỢC. `30 × 12 = 360 từ` cắt còn 20 câu ×
+    # 12 = 240 từ — lọt cả hai cửa.
+    tho = _van_ban(30, 12)                      # 360 từ — quá cửa sổ
     assert len(tho.split()) > DAC_TA_TU_MAX, "văn bản thử phải QUÁ DÀI mới đo được"
     gia = _GiaModel([tho])
     monkeypatch.setattr("core.viet_truyen._xin_model", gia)
@@ -451,7 +595,7 @@ def test_phan_quyet_NEU_DE_di_toi_ket_qua_cua_viet_kich_ban(monkeypatch):
     mọi bài đều gọi thẳng hàm thuần. Bài này chạy CẢ vòng `viet_kich_ban` với
     một văn bản đủ dài, đủ câu — chỉ sai mỗi chỗ không nêu đề.
     """
-    gia = _GiaModel([_van_ban(26, 9)])
+    gia = _GiaModel([_van_ban(SO_CAU_DAT, TU_MOI_CAU_DAT)])
     monkeypatch.setattr("core.viet_truyen._xin_model", gia)
 
     # Ca đối chứng TRƯỚC: cùng văn bản ấy, đề khớp thì phải ĐẠT. Thiếu ca này
@@ -475,7 +619,7 @@ def test_de_khong_do_duoc_thi_KHONG_dot_mot_luot_model(monkeypatch):
     Mỗi lượt sinh tốn 64–96 giây; hỏi câu này sau ba lượt là đốt tới 4,8 phút
     để nói ra thứ biết được ngay từ đầu.
     """
-    gia = _GiaModel([_van_ban(26, 9)])
+    gia = _GiaModel([_van_ban(SO_CAU_DAT, TU_MOI_CAU_DAT)])
     monkeypatch.setattr("core.viet_truyen._xin_model", gia)
 
     kq = viet_kich_ban("vì sao thì mà là")
@@ -551,7 +695,7 @@ def test_viet_kich_ban_NO_voi_the_loai_la_KE_CA_khi_tran_bang_0(monkeypatch):
 
     Không có phép kiểm ở đầu `viet_kich_ban` thì thể loại sai lọt qua im lặng.
     """
-    gia = _GiaModel([_van_ban(26, 9)])
+    gia = _GiaModel([_van_ban(SO_CAU_DAT, TU_MOI_CAU_DAT)])
     monkeypatch.setattr("core.viet_truyen._xin_model", gia)
 
     with pytest.raises(ValueError):
@@ -572,7 +716,7 @@ def test_the_loai_DI_TOI_loi_nhac_that_su_goi_len_model(monkeypatch):
 
     def bat(loi, hat):
         da_thay.append(loi)
-        return _van_ban(26, 9), 1.0
+        return _van_ban(SO_CAU_DAT, TU_MOI_CAU_DAT), 1.0
 
     monkeypatch.setattr("core.viet_truyen._xin_model", bat)
 

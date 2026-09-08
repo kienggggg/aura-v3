@@ -775,6 +775,82 @@ lệch** (thẻ dày chữ nhất không quá 2 lần thẻ mỏng nhất). Cử
 quan trọng nhất — chỉ đếm "13 → 15" thì một bản vá làm 15 thẻ lệch hơn nữa vẫn
 qua. Gieo 5 phép, cả 5 đỏ.
 
+### 2b-ter. TRẦN SỐ CÂU — TRẢ NỢ MÀ CHÍNH §2b-bis SINH RA (07/09/2026)
+
+§2b-bis phải đặt `GIAY_TOI_THIEU_MOI_THE = 2,5` làm **con số chọn** vì
+`core/viet_truyen.py` có sàn `SO_CAU_KHAC_MIN = 11` nhưng **không có trần**.
+Nợ ấy ghi ngay trong chú thích. Nay trả.
+
+**LỖ CÓ THẬT, KHÔNG PHẢI GIẢ ĐỊNH.** Đo 5 lượt `viet_kich_ban` ngày 07/09:
+
+```
+lượt 3   233 từ · 12 câu · 19,4 từ/câu    -
+lượt 4   238 từ · 36 câu ·  6,6 từ/câu    VƯỢT
+```
+
+`qwen3.5:4b` **thật sự** sinh 36 câu ngắn, và **mọi cửa cũ đều gật**: 238 từ
+nằm trong 215–250, 36 câu khác nhau vượt sàn 11, và `TRAN_TU_MOI_CAU` chỉ chặn
+câu **DÀI**. Không cửa nào hỏi *"quá nhiều câu ngắn"*. Với 36 câu thì Alpha
+chặn ở 22 thẻ, 14 thẻ phải ôm 2 câu, và độ lệch quay về đúng cái vừa vá sáng
+nay.
+
+*(3/5 lượt còn lại không sinh được kịch bản đạt — con số riêng, chưa đụng tới.)*
+
+**Đặc tả — SUY RA, không chọn:**
+
+```
+SO_CAU_TOI_DA = DAI_MIN / GIAY_TOI_THIEU_MOI_THE = 55,0 / 2,5 = 22
+```
+
+Khác `2,5` ở chỗ: `2,5` không suy ra từ đâu cả, còn `22` là hệ quả của hai hằng
+số đã có. Ghi rõ cái nào là cái nào.
+
+**HẰNG SỐ ĐỂ RỜI, KHÔNG `import` — VÀ CÓ CỬA GIỮ.** `viet_truyen` không lấy
+`from core.phong_alpha import …`: cấu hình đi theo thứ cần nó. Nhưng để rời thì
+hai bên trôi khỏi nhau được, nên `test_hai_phong_KHOP_tran_so_cau` giữ chính
+phép suy ấy. Gieo hạ `GIAY_TOI_THIEU_MOI_THE` bên Alpha mà không đụng
+`viet_truyen` → **bài ấy đỏ**, đúng việc của nó.
+
+**Ca đối chứng bắt buộc:** kịch bản đúng 22 câu phải QUA. Không có nó thì một
+bản vá bác *mọi* kịch bản cũng đi qua bài "36 câu bị bác".
+
+**VÀ BẢN VÁ ĐẦU CHỈ ĐÚNG MỘT NỬA — bộ đủ bắt được, 7 bài đỏ.**
+
+Bản đầu chỉ vá `do_kich_ban` (hàm **CHẤM**) mà quên `cat_cho_vua` (hàm **CẮT**).
+Đúng bài *"vá một nửa của một cặp"*, lần thứ ba trong tuần. Hai chỗ hỏng, tìm
+ra theo thứ tự:
+
+1. **Hàm cắt chỉ đếm TỪ.** Model trả 40 câu × 9 từ = 360 từ; `cat_cho_vua` cắt
+   còn **243 từ / 27 câu** — lọt cửa sổ từ nhưng vẫn vượt trần câu, nên vòng lặp
+   trả về một văn bản mà **chính phép chấm của nó BÁC**. Vá: cắt theo cả hai.
+
+2. **Cắt theo cả hai thì lộ ra một mặt đối xứng chưa ai đặt tên.** 40 câu × 9 từ
+   cắt xuống 22 câu chỉ còn **198 từ**, dưới sàn 215 — *không cách cắt nào cứu
+   được*. Đó đúng là câu đã viết cho `TRAN_TU_MOI_CAU`, chỉ ở chiều ngược:
+
+```
+TRAN_TU_MOI_CAU = SO_TU_MAX / SO_CAU_KHAC_MIN = 250 / 11 = 22,73   (câu DÀI)
+SAN_TU_MOI_CAU  = SO_TU_MIN / SO_CAU_TOI_DA   = 215 / 22 =  9,77   (câu NGẮN)
+```
+
+   Dưới sàn thì **sinh lại ngay**, đừng đốt một lần cắt rồi mới trượt — y hệt
+   nhánh đã có cho trần trên.
+
+**Bảy bài đỏ đều dùng `_van_ban(26, 9)` làm kịch bản "hợp lệ" chuẩn.** Con số 26
+chưa bao giờ là phép đo — nó là số dựng tay, chọn tuỳ ý trong cửa sổ 215–250 từ.
+Nên chỗ phải sửa là **fixture**, không phải trần. Đặt tên `SO_CAU_DAT,
+TU_MOI_CAU_DAT = 22, 10` để lần sau ai đổi ràng buộc thì sửa MỘT chỗ.
+
+**Gieo 7 phép, và lượt đầu 2 cửa mù — một trong hai là phép gieo không tới nơi,
+lần thứ năm:** dòng `SAN_TU_MOI_CAU = SO_TU_MIN / SO_CAU_TOI_DA` xuất hiện **hai
+lần** — một trong chú thích, một trong mã. `Phep.so_lan` mặc định 1 nên nó sửa
+**chú thích**, và công cụ in *"CỬA MÙ"* cho một cửa chưa hề bị đụng tới. Neo
+thêm ký tự xuống dòng ở đầu thì khớp đúng dòng mã. Cửa mù thật là nhánh sàn —
+chưa bài nào lái một kịch bản dưới sàn qua vòng lặp.
+
+Lượt cuối: **7/7 đỏ**.
+
+
 ### 2c. BỘ DỰNG THỨ HAI: REMOTION (06/09/2026)
 
 `sinh_the_hinh` vẽ ảnh **TĨNH** bằng PIL rồi ffmpeg chiếu mỗi ảnh một khoảng —

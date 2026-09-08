@@ -1994,6 +1994,45 @@ Gieo 8 phép, cả 8 đỏ. Lượt đầu **1 cửa mù**: bài canh tài liệ
 cảnh báo vẫn xanh. `x in y` lần thứ chín. Nay đòi cụm ấy nằm **cùng một dòng**
 với `CHƯA CHẶN ĐƯỢC`.
 
+<!-- CHOT:path-noi-doi -->
+### PATH nói có, chạy thì không (08/09/2026)
+
+`opencode` nằm trên PATH, `command -v` **tìm thấy**, chạy thì báo thiếu tệp —
+cả thư mục `node_modules/opencode-ai` đã biến mất, chỉ còn ba vỏ script npm
+trỏ vào hư không. Đo cả thư mục npm toàn cục: **45 vỏ script / 15 lệnh, 1/15
+trỏ vào hư không**.
+
+Vì sao nó biến mất thì **KHÔNG ĐO ĐƯỢC**, và không được bịa: Defender có 0 mục
+trong lịch sử phát hiện (bảo vệ thời gian thực đang bật); không có
+`package.json` nào trong thư mục npm toàn cục nên không phải `npm i -g` prune
+nhầm; npm chỉ giữ 11 log và cả 11 đều của sáng cùng ngày.
+
+**Đây không phải chuyện của một công cụ ngoài lề.** Sổ bệnh án đã có ca [*"cùng
+mã, cùng đề, hai phán quyết — biến thứ ba là PATH"*](SO_BENH_AN.md): cùng một
+bản dịch bị bác từ Git Bash và được PASS từ máy chủ, chỉ vì `bash` có trên PATH
+ở nơi này mà không có ở nơi kia. Một lệnh **có trên PATH mà chạy không nổi** là
+đúng cái biến thứ ba ấy, ở dạng khó thấy hơn.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| vỏ script npm trỏ vào hư không | **0** |
+| số lệnh máy đo đọc được, ít hơn thì MÁY ĐO HỎNG chứ không phải sạch | **≥ 3** |
+| lệnh bộ test dựa vào — tìm thấy trên PATH thì phải chạy được | `node` · `npx` · `ffmpeg` · `ffprobe` |
+
+**CA ĐỐI CHỨNG LÀ BÀI CHỊU LỰC, không phải phép quét.** Phép quét chạy trên máy
+thật nên hôm nay nó xanh, và một máy đo hỏng cũng cho ra đúng chữ "xanh" ấy —
+regex hỏng thì đọc được 0 vỏ, và 0 vỏ hỏng đọc y hệt 0 vỏ chết. Nên cửa canh
+phải có một thư mục tạm dựng sẵn **1 vỏ sống + 1 vỏ chết**, và máy đo phải báo
+đúng **1**. Bài ấy kín, không phụ thuộc máy, và nó là thứ chứng minh phép quét
+biết đỏ.
+
+Ngưỡng "≥ 3 lệnh đọc được" là nửa còn lại của cùng một ý: thư mục có vỏ mà đọc
+ra 0 lệnh thì phải **ĐỎ**, chứ không được đọc thành sạch. Thư mục không tồn tại
+mới là KHÔNG ĐO ĐƯỢC.
+<!-- /CHOT:path-noi-doi -->
+
 <!-- CHOT:khe-dua -->
 **KHE ĐUA `Popen` → job: ĐO TRƯỚC KHI VÁ (08/09/2026).**
 

@@ -1994,6 +1994,71 @@ Gieo 8 phép, cả 8 đỏ. Lượt đầu **1 cửa mù**: bài canh tài liệ
 cảnh báo vẫn xanh. `x in y` lần thứ chín. Nay đòi cụm ấy nằm **cùng một dòng**
 với `CHƯA CHẶN ĐƯỢC`.
 
+<!-- CHOT:khe-dua -->
+**KHE ĐUA `Popen` → job: ĐO TRƯỚC KHI VÁ (08/09/2026).**
+
+Bản vá hôm qua tự ghi lại lỗ này rồi để đó, kèm một câu **sai**: *"muốn kín thì
+phải bỏ `Popen` và gọi thẳng `CreateProcessW`"*. Không phải — `Popen` nhận
+`creationflags`, và `CREATE_SUSPENDED` đi qua đó được. Thứ `Popen` không đưa ra
+là **handle luồng**; mà luồng thì tìm lại được bằng `Toolhelp32`.
+
+Đo bề rộng khe, **52 lượt**:
+
+| | nhỏ nhất | giữa | lớn nhất | cháu sống sót |
+|---|---|---|---|---|
+| máy rảnh, 12 lượt | 0,077 ms | 0,103 ms | 0,232 ms | **0/12** |
+| 8 tiến trình quay vòng trên 4 nhân, 40 lượt | 0,037 ms | 0,052 ms | **0,095 ms** | — |
+
+Khe **không nở ra dưới tải** — nó hẹp lại. Cách đọc đầu tiên của tôi là *"luồng
+cha đang giữ suất chạy của mình"*, và đó là một **lời giải thích đoán ra**. Đo
+tiếp thì lộ biến thứ ba, và nó không phải tải:
+
+| con Python **không treo** mất bao lâu mới ghi được mốc | nhỏ nhất | giữa | lớn nhất |
+|---|---|---|---|
+| máy rảnh, 30 lượt — **chạy trước, cache lạnh** | 290,3 ms | 465,2 ms | **837,9 ms** |
+| 8 tiến trình quay vòng, 30 lượt — chạy sau, cache nóng | 5,9 ms | 25,9 ms | 299,9 ms |
+
+Máy "bận" sinh tiến trình **nhanh hơn máy rảnh 28 lần**. Biến thứ ba là **cache
+nóng** — lượt sau dùng lại DLL của Python đã nằm sẵn trong bộ nhớ, và ở lượt
+rảnh thì CPU còn đang chạy xung thấp. Cùng bài *"cùng mã, cùng đề, hai phán
+quyết"*: cái khác nhau không nằm trong hai thứ mình đang so.
+
+Riêng `CreateProcess` của Python tốn 17–24 ms, nên tiến trình con là Python
+**không thể** thắng cuộc đua này. Kết luận ấy không đổi; chỉ lý do đưa ra cho
+việc khe hẹp lại là sai.
+
+**Vẫn vá, và vá theo kiểu XOÁ HẲN KHE chứ không thu hẹp.** Một lời hứa "giết cả
+cây tiến trình" không được phép dựa vào chuyện đối phương chậm hơn mình 200 lần
+— con số ấy đúng hôm nay, trên máy này, với tiến trình con là Python. Đổi một
+trong ba thứ đó thì lời hứa đổi theo mà không ai đo lại.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | sau khi vá |
+|---|---|
+| tiến trình sinh ra ở trạng thái | **TREO** (`CREATE_SUSPENDED = 0x4`) |
+| số lệnh con đã chạy lúc gắn vào job | **0** |
+| `CHO_TREO_MS` — đợi bao lâu để chứng minh nó đang treo | **3000** ms |
+| không thả được luồng | **giết con** + `hop_cat` nói ra — fail-closed |
+
+**Không đo được "khe hở = 0 ms" bằng đồng hồ.** Đó chính là thứ phải chứng minh
+bằng cách khác — cửa canh đo bằng **hành vi**, không đo bằng thời gian:
+
+```
+gắn xong, KHÔNG thả, đợi CHO_TREO_MS  ->  con phải CHƯA ghi gì
+đối chứng: y hệt, bỏ CREATE_SUSPENDED ->  con PHẢI ghi trong CHO_TREO_MS
+```
+
+Ca đối chứng là chỗ bài này khác bài hôm qua: thiếu nó thì một tiến trình con
+hỏng ngay từ đầu cũng "chưa ghi gì", và cửa vẫn xanh.
+
+**`CHO_TREO_MS = 3000` là số SUY RA, không phải số gõ.** Bản đầu tôi gõ `500`
+— và ca đối chứng đỏ ngay lượt chạy đầu, vì con Python cần tới 837,9 ms. Ngưỡng
+lấy từ **lớn nhất đo được × 3,6**, và hai vế dùng CHUNG một hằng số vì chúng
+ràng buộc lẫn nhau: khoảng đợi phải đủ dài để một con khoẻ đã kịp ghi, nếu
+không thì "chưa ghi gì" chẳng chứng minh được là đang treo.
+<!-- /CHOT:khe-dua -->
+
 ### Cổng vào của `/api/polyglot/run` (04/09/2026)
 
 Đường này **chạy mã tuỳ ý** trong tiến trình con. Đo trước khi vá, bằng một

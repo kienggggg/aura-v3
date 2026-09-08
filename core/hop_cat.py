@@ -36,6 +36,13 @@ BỐN THỨ CHẶN ĐƯỢC, BA THỨ KHÔNG — và ba thứ ấy phải ở l�
 
 Chặn được bốn thứ **không** cho phép viết "đã cô lập". Chỗ dựa thật vẫn là
 `/api/polyglot/run` không được đặt ra Internet.
+
+08/09 chiều — KHE ĐUA `Popen` → job ĐÃ ĐÓNG. Bản sáng gắn tiến trình vào job
+sau khi nó đã chạy; đo 52 lượt thì khe rộng 0,037–0,232 ms và **không ai bắn
+trúng** (cháu sống sót 0/12). Vẫn vá, vì khe hẹp là nhờ `CreateProcess` của
+Python tốn 17–24 ms — nhờ đối phương chậm, không nhờ mã ở đây. Nay sinh với
+`CREATE_SUSPENDED` rồi `tha_tien_trinh()` sau khi gắn: lúc gắn, con **chưa
+chạy lệnh nào**. Thả hỏng thì giết con và nói ra — fail-closed.
 """
 from __future__ import annotations
 
@@ -58,6 +65,14 @@ _JOB_OBJECT_LIMIT_PROCESS_MEMORY = 0x00000100
 _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
 _PROCESS_SET_QUOTA = 0x0100
 _PROCESS_TERMINATE = 0x0001
+
+# Sinh tiến trình ở trạng thái TREO rồi mới gắn vào job — xoá hẳn khe đua thay
+# vì thu hẹp nó. `subprocess.Popen` nhận cờ này qua `creationflags`.
+CREATE_SUSPENDED = 0x00000004
+
+_TH32CS_SNAPTHREAD = 0x00000004
+_THREAD_SUSPEND_RESUME = 0x0002
+_RESUME_LOI = 0xFFFFFFFF  # ResumeThread trả (DWORD)-1 khi hỏng
 
 _LA_WINDOWS = sys.platform == "win32"
 
@@ -93,6 +108,15 @@ if _LA_WINDOWS:
                     ("PeakProcessMemoryUsed", ctypes.c_size_t),
                     ("PeakJobMemoryUsed", ctypes.c_size_t)]
 
+    class _THREADENTRY32(ctypes.Structure):
+        _fields_ = [("dwSize", _wt.DWORD),
+                    ("cntUsage", _wt.DWORD),
+                    ("th32ThreadID", _wt.DWORD),
+                    ("th32OwnerProcessID", _wt.DWORD),
+                    ("tpBasePri", ctypes.c_long),
+                    ("tpDeltaPri", ctypes.c_long),
+                    ("dwFlags", _wt.DWORD)]
+
 
 def moi_truong_sach() -> Dict[str, str]:
     """Biến môi trường tối thiểu. Khoá API sống ở đây nên mặc định là BỎ HẾT."""
@@ -126,13 +150,61 @@ def tao_job(ram_mb: int = RAM_MB) -> Tuple[Any, str]:
         return None, f"{type(e).__name__}: {e}"
 
 
+def tha_tien_trinh(pid: int) -> Tuple[bool, str]:
+    """Thả mọi luồng của một tiến trình sinh ra với `CREATE_SUSPENDED`.
+
+    VÌ SAO CÓ HÀM NÀY (08/09/2026) — xoá khe đua `Popen` → job.
+
+    Bản 07/09 gán tiến trình vào job SAU khi nó đã chạy. Đo bề rộng khe, 52
+    lượt: máy rảnh 0,077–0,232 ms, dưới tải (8 tiến trình quay vòng / 4 nhân)
+    0,037–0,095 ms — khe **hẹp lại** dưới tải chứ không nở ra, vì luồng cha
+    đang giữ suất chạy. Cháu sống sót **0/12**: riêng `CreateProcess` của
+    Python đã tốn 17–24 ms nên không tiến trình con Python nào thắng nổi.
+
+    Vá vẫn phải vá, vì lời hứa "giết cả cây" không được dựa vào chuyện đối
+    phương chậm hơn 200 lần — con số ấy đúng với **máy này, hôm nay, con là
+    Python**. Đổi một trong ba là lời hứa đổi theo mà không ai đo lại.
+
+    Chú thích cũ ở đây viết *"phải bỏ `Popen` và gọi thẳng `CreateProcessW`"*
+    — SAI. `Popen` nhận `creationflags`, `CREATE_SUSPENDED` đi qua đó được;
+    thứ nó không đưa ra là handle luồng, mà luồng tìm lại được bằng
+    `Toolhelp32`. Một câu "phải viết lại từ đầu" chưa kiểm là một cái nợ tự
+    tạo ra.
+    """
+    if not _LA_WINDOWS:
+        return False, f"không phải Windows ({sys.platform})"
+    snap = _k32.CreateToolhelp32Snapshot(_TH32CS_SNAPTHREAD, 0)
+    if snap == -1 or not snap:
+        return False, f"CreateToolhelp32Snapshot lỗi {ctypes.get_last_error()}"
+    try:
+        te = _THREADENTRY32()
+        te.dwSize = ctypes.sizeof(_THREADENTRY32)
+        if not _k32.Thread32First(_wt.HANDLE(snap), ctypes.byref(te)):
+            return False, f"Thread32First lỗi {ctypes.get_last_error()}"
+        so_tha = 0
+        while True:
+            if te.th32OwnerProcessID == pid:
+                h_t = _k32.OpenThread(_THREAD_SUSPEND_RESUME, False,
+                                      te.th32ThreadID)
+                if h_t:
+                    if _k32.ResumeThread(_wt.HANDLE(h_t)) != _RESUME_LOI:
+                        so_tha += 1
+                    _k32.CloseHandle(_wt.HANDLE(h_t))
+            if not _k32.Thread32Next(_wt.HANDLE(snap), ctypes.byref(te)):
+                break
+        # FAIL-CLOSED: thả 0 luồng nghĩa là tiến trình treo vĩnh viễn. Bên gọi
+        # phải giết nó, không được `communicate()` rồi đợi mãi.
+        return (so_tha > 0), ("" if so_tha else "không thả được luồng nào")
+    finally:
+        _k32.CloseHandle(_wt.HANDLE(snap))
+
+
 def gan_vao_job(h_job: Any, pid: int) -> bool:
     """Gán tiến trình vào job.
 
-    CÓ MỘT KHE ĐUA, nói ra chứ không giấu: tiến trình được `Popen` khởi động
-    RỒI mới gán, nên giữa hai bước ấy nó chạy tự do vài mili giây. Muốn kín thì
-    phải `CREATE_SUSPENDED` — mà `subprocess.Popen` không đưa handle luồng ra,
-    nên phải bỏ `Popen` và gọi thẳng `CreateProcessW`. Chưa làm; ghi lại.
+    KHE ĐUA ĐÃ ĐÓNG từ 08/09: bên gọi sinh tiến trình với `CREATE_SUSPENDED`
+    rồi gọi `tha_tien_trinh()` SAU hàm này, nên lúc gắn con chưa chạy lệnh nào.
+    Hàm này không tự biết điều đó — nó chỉ gắn; cửa canh mới là chỗ chứng minh.
     """
     if not _LA_WINDOWS or not h_job:
         return False

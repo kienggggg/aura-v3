@@ -1110,17 +1110,35 @@ def _chay_co_hop_cat(cmd, thu_muc, timeout_s):
     cả cháu mà `timeout` của `run` không với tới (đo 08/09: cháu SỐNG SÓT qua
     timeout ở bản cũ).
     """
-    from core.hop_cat import RAM_MB, dong_job, gan_vao_job, moi_truong_sach, tao_job
+    from core.hop_cat import (CREATE_SUSPENDED, RAM_MB, dong_job, gan_vao_job,
+                              moi_truong_sach, tao_job, tha_tien_trinh)
 
     h_job, ly_do = tao_job()
+    # TREO NGAY TỪ LÚC SINH (08/09). Bản 07/09 gắn vào job sau khi con đã chạy,
+    # để hở 0,077–0,232 ms (đo 52 lượt, cháu sống sót 0/12 — không ai bắn trúng,
+    # nhưng khe hẹp là nhờ Python khởi động chậm 17–24 ms, không nhờ mã này).
     p = subprocess.Popen(cmd, cwd=str(thu_muc), env=moi_truong_sach(),
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                         text=True, encoding="utf-8", errors="replace")
+                         text=True, encoding="utf-8", errors="replace",
+                         creationflags=CREATE_SUSPENDED if h_job else 0)
     da_gan = gan_vao_job(h_job, p.pid) if h_job else False
     # BA TRẠNG THÁI CHO CHÍNH HỘP CÁT. Không có trường này thì lời hứa "có hộp
     # cát" là một câu chữ không kiểm được — đúng thứ CLAUDE.md mục 7 cấm.
     hop_cat = ("job" if da_gan
                else ("khong: " + (ly_do or "AssignProcessToJobObject thất bại")))
+    if h_job:
+        # FAIL-CLOSED. Con đang TREO; không thả được thì `communicate` sẽ đợi
+        # hết timeout rồi mới về, tức một lỗi im lặng đội lốt "mã chạy lâu".
+        # Giết thẳng và nói ra trong `hop_cat`.
+        da_tha, vi_sao = tha_tien_trinh(p.pid)
+        if not da_tha:
+            try:
+                p.kill()
+            except OSError:
+                pass
+            dong_job(h_job)
+            return 1, "", f"hộp cát: không thả nổi tiến trình — {vi_sao}", \
+                f"khong: {vi_sao}"
     try:
         out, err = p.communicate(timeout=timeout_s)
         return p.returncode, out, err, hop_cat

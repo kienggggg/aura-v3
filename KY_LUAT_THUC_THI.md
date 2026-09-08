@@ -851,6 +851,98 @@ chưa bài nào lái một kịch bản dưới sàn qua vòng lặp.
 Lượt cuối: **7/7 đỏ**.
 
 
+### 1c. SIẾT LỜI NHẮC `truyen` ĐỂ CÂU MỞ NÊU ĐỀ (08/09/2026)
+
+Đăng ký **TRƯỚC KHI SỬA**.
+
+**ĐO NỀN, 8 đề, ghi lý do TỪNG lượt thử** (mỗi đề tới `TRAN_SO_LAN = 3` lần):
+
+```
+5/8 đề ra kịch bản ĐẠT
+11 lượt thử hỏng, lý do:
+  10  "câu mở không nêu đề"     <- 91%
+   1  "202 từ, cần 215–250"
+```
+
+Không phải cửa số từ, không phải trần số câu thêm 07/09. Là **cửa NÊU ĐỀ**.
+
+```
+TRƯỢT 3/3 lần thử              ĐẠT ngay lần 1
+"bảng điều khiển tài chính"    "con hẻm nhỏ buổi sáng"
+"một bài test luôn xanh"       "người thợ sửa khoá đầu ngõ"
+"chuyến đi cuối năm"           "cơn mưa đầu mùa ở thành phố"
+                               "chiếc la bàn gãy kim"
+```
+
+Model mở bài bằng **cảnh** — *"Buổi sáng đẹp…"*, *"Mưa đang rơi…"*, *"Mặt trời
+bắt đầu…"*. Đề nào tự nó **là một vật trong cảnh** thì câu mở tình cờ chứa nó;
+đề trừu tượng thì không. Đây là **lệch giữa cửa và lời nhắc**, không phải model
+kém — cửa đòi một thứ lời nhắc chưa hề yêu cầu.
+
+**CHỖ VÁ ĐÃ CÓ SẴN Ở THỂ LOẠI KIA.** `_loi_bai_noi` có câu *"Mở bằng một câu
+nêu rõ đang nói về cái gì"*, và chú thích của nó ghi kết quả đo 03/09:
+
+```
+                    cửa ĐỀ    cửa ĐỘ DÀI
+lời truyện           ?/3         5/5
+lời bài nói          3/3         3/5      <- câu dài hơn, rụng 2/5
+```
+
+Nên **cái giá đã biết trước**: siết quá tay thì câu dài ra và rụng ở cửa độ dài.
+Bản vá phải nói *"câu đầu tiên phải chứa từ của đề"* mà **không** đổi giọng kể
+sang giọng giảng.
+
+**Ngưỡng — chép TAY, đặt TRƯỚC khi đo lại:**
+
+* **So sánh GHÉP CẶP: cùng 8 đề, trước và sau.** Đổi đề thì không tách được
+  "lời nhắc tốt hơn" khỏi "đề dễ hơn".
+* `lỗi NÊU ĐỀ` phải giảm còn **≤ 5** (nền 10).
+* `số đề ĐẠT` **không được tụt** dưới nền **5/8**.
+* `lỗi ĐỘ DÀI` không được vượt **nền + 2** (nền 1) — đây là cửa canh cái giá đã
+  biết của `_loi_bai_noi`.
+
+**ĐO SAU KHI SIẾT — cùng 8 đề, ghép cặp:**
+
+```
+                  nền        sau       ngưỡng đặt TRƯỚC
+lỗi NÊU ĐỀ        10          0        ≤ 5        ĐẠT
+số đề ĐẠT        5/8        8/8        ≥ 5/8      ĐẠT
+lỗi ĐỘ DÀI         1          0        ≤ 3        ĐẠT
+tổng lượt hỏng    11          1
+```
+
+**10 → 0.** Ba đề trước trượt 3/3 nay qua ngay lần đầu: *"bảng điều khiển tài
+chính cá nhân"*, *"một bài test luôn xanh"*, *"chuyến đi cuối năm"*. Và thời
+gian tụt theo: phần lớn đề chỉ còn **một** lượt thử (77–140s) thay vì ba.
+
+**Câu thêm vào, cố ý hẹp:**
+
+```
+BẮT BUỘC: câu đầu tiên phải nhắc tới {chu_de} — dùng lại chính những
+chữ đó trong câu mở, rồi mới kể tiếp bình thường.
+```
+
+Ràng buộc **đúng câu đầu**, và *"rồi mới kể tiếp bình thường"* để giữ giọng kể.
+
+**VÀ CÁI GIÁ ĐÃ BIẾT TRƯỚC CŨNG HIỆN RA — đo được, phải nói:**
+
+```
+từ/câu trung vị    nền 16,9  →  sau 19,2     (+2,3)
+1 lượt chạm trần   23,65 > 22,73 → "cắt kiểu gì cũng trượt", sinh lại thì qua
+giá trị sát trần   22,18 · 22,73 · 21,73
+```
+
+Câu **dài ra thật**, đúng như chú thích `_loi_bai_noi` cảnh báo từ 03/09. Nó
+nhỏ vì câu thêm vào chỉ ràng buộc câu đầu — nhưng ba lượt đã nằm sát trần
+22,73. **Nếu trần ấy có ngày bị siết, chỗ này gãy trước.** Ghi ra để lần sau ai
+động vào `TRAN_TU_MOI_CAU` thì biết nó không còn nhiều biên.
+
+Gieo 4 phép, cả 4 đỏ.
+
+**n = 8 LÀ NHỎ, nói ra chứ không giấu.** Model có nhiệt độ 0,8; hai lượt cùng
+đề ra hai kết quả khác nhau. Ghép cặp cùng đề bù được phần lớn nhưng không hết.
+Một thay đổi làm 10 → 6 chưa chắc là thật; 10 → 0 thì khó là nhiễu.
+
 ### 2c. BỘ DỰNG THỨ HAI: REMOTION (06/09/2026)
 
 `sinh_the_hinh` vẽ ảnh **TĨNH** bằng PIL rồi ffmpeg chiếu mỗi ảnh một khoảng —

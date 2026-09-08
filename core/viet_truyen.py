@@ -392,8 +392,26 @@ def _loi_nhac(chu_de: str, the_loai: str = "truyen") -> str:
 
 
 def _loi_truyen(chu_de: str) -> str:
-    """Văn kể chuyện — mở bằng dựng cảnh. Bản chạy từ 03/09/2026."""
+    """Văn kể chuyện — mở bằng dựng cảnh. Bản chạy từ 03/09/2026.
+
+    SIẾT CÂU MỞ NGÀY 08/09/2026 — VÌ CỬA ĐÒI MỘT THỨ LỜI NHẮC CHƯA HỀ YÊU CẦU.
+    Đo 8 đề, ghi lý do từng lượt thử: **10/11 lượt hỏng là "câu mở không nêu
+    đề"**, chỉ 1 là cửa độ dài. Model mở bài bằng cảnh — *"Buổi sáng đẹp…"*,
+    *"Mưa đang rơi…"* — nên đề nào tự nó là một vật trong cảnh thì câu mở tình
+    cờ chứa nó, còn đề trừu tượng thì không:
+
+        TRƯỢT 3/3            ĐẠT ngay lần 1
+        bảng điều khiển…     con hẻm nhỏ buổi sáng
+        một bài test…        chiếc la bàn gãy kim
+
+    CÁI GIÁ ĐÃ BIẾT TRƯỚC, nên câu thêm vào phải hẹp. `_loi_bai_noi` đã có câu
+    *"Mở bằng một câu nêu rõ đang nói về cái gì"* và đo 03/09 cho: cửa đề 3/3
+    nhưng cửa độ dài rụng còn 3/5 — nó kéo cả bài sang giọng giảng, câu dài ra.
+    Ở đây chỉ ràng buộc ĐÚNG CÂU ĐẦU, và nói rõ vẫn là truyện.
+    """
     return (f"Viết một truyện ngắn tiếng Việt hoàn chỉnh về: {chu_de}. "
+            f"BẮT BUỘC: câu đầu tiên phải nhắc tới {chu_de} — dùng lại chính "
+            f"những chữ đó trong câu mở, rồi mới kể tiếp bình thường. "
             f"Có mở đầu và kết thúc rõ ràng, dài khoảng {SO_TU_XIN} từ, "
             f"chia thành ít nhất 18 câu. "
             f"Chỉ trả về truyện, không giải thích, không tiêu đề.")

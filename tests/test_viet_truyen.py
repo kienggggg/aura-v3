@@ -666,6 +666,57 @@ def test_mac_dinh_KHONG_doi_hanh_vi_cu():
     assert "truyện ngắn" in _loi_nhac("X")
 
 
+def test_loi_TRUYEN_doi_cau_mo_phai_neu_de():
+    """Cửa NÊU ĐỀ đòi một thứ lời nhắc chưa hề yêu cầu — đo 08/09/2026.
+
+    8 đề, ghi lý do TỪNG lượt thử: **10/11 lượt hỏng là "câu mở không nêu đề"**,
+    chỉ 1 là cửa độ dài. Model mở bài bằng cảnh, nên đề nào tự nó là một vật
+    trong cảnh thì câu mở tình cờ chứa nó, đề trừu tượng thì không.
+
+    Siết lời nhắc rồi đo lại **cùng 8 đề** (ghép cặp — đổi đề thì không tách
+    được "lời nhắc tốt hơn" khỏi "đề dễ hơn"):
+
+                      nền        sau      ngưỡng đặt TRƯỚC
+        lỗi NÊU ĐỀ     10         0        ≤ 5
+        đề ĐẠT        5/8       8/8        ≥ 5/8
+        lỗi ĐỘ DÀI      1         0        ≤ 3
+
+    Bài này canh cái làm nên con số ấy: đề phải xuất hiện **hai lần** trong lời
+    nhắc — một lần làm chủ đề, một lần trong ràng buộc câu mở.
+    """
+    from core.viet_truyen import _loi_truyen
+
+    de = "chuyến đi cuối năm"
+    loi = _loi_truyen(de)
+    assert loi.count(de) >= 2, (
+        f"đề chỉ xuất hiện {loi.count(de)} lần — ràng buộc câu mở đã mất: {loi}")
+    assert "câu đầu tiên" in loi, f"không còn ràng buộc CÂU ĐẦU: {loi}"
+
+
+def test_loi_TRUYEN_van_la_TRUYEN_khong_thanh_bai_giang():
+    """Ca đối chứng cho bài trên, và nó canh một CÁI GIÁ ĐÃ ĐO ĐƯỢC.
+
+    `_loi_bai_noi` đã có câu *"Mở bằng một câu nêu rõ đang nói về cái gì"*, và
+    chú thích của nó ghi đo 03/09: cửa đề lên 3/3 nhưng cửa độ dài **rụng còn
+    3/5** — nó kéo cả bài sang giọng giảng nên câu dài ra.
+
+    Đo 08/09 sau khi siết: từ/câu trung vị **16,9 → 19,2** (+2,3), một lượt
+    chạm trần 22,73 và phải sinh lại. Cái giá là thật, chỉ là nhỏ vì câu thêm
+    vào chỉ ràng buộc ĐÚNG CÂU ĐẦU. Bài này giữ nó ở mức ấy: chép nguyên câu
+    của `bai_noi` sang thì đỏ.
+    """
+    from core.viet_truyen import _loi_bai_noi, _loi_truyen
+
+    truyen = _loi_truyen("X")
+    assert "truyện ngắn" in truyen, truyen
+    assert "rồi mới kể tiếp" in truyen, (
+        f"mất câu giữ giọng kể — lời nhắc dễ trôi sang giọng giảng: {truyen}")
+    # KHÔNG được nuốt nguyên câu của thể loại kia.
+    assert "không kể chuyện" not in truyen, truyen
+    assert "không dựng nhân vật" not in truyen, truyen
+    assert truyen != _loi_bai_noi("X")
+
+
 def test_hai_the_loai_ra_hai_loi_nhac_KHAC_nhau():
     """Không có bài này thì `_loi_bai_noi = _loi_truyen` cũng xanh hết."""
     from core.viet_truyen import _loi_nhac

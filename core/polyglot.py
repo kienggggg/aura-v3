@@ -15,7 +15,9 @@ Tính năng:
   - Tra cứu metadata và template chuẩn của từng ngôn ngữ.
   - Chuyển đổi mã logic AST từ Python sang các ngôn ngữ đích (Transpiler).
   - Kiểm tra cú pháp độc lập (Syntax Validator) cho từng ngôn ngữ.
-  - Chạy mã trong một tiến trình con, CÓ trần thời gian nhưng KHÔNG có hộp cát.
+  - Chạy mã trong tiến trình con có HỘP CÁT MỘT PHẦN (Windows Job Object):
+    cwd riêng · biến môi trường sạch · trần RAM · giết cả cây tiến trình.
+    CHƯA chặn: ghi/đọc tệp bằng đường dẫn tuyệt đối, và ra mạng.
 """
 from __future__ import annotations
 
@@ -1100,6 +1102,36 @@ def kiem_tra_cu_phap_da_ngon_ngu(ma: str, lang: str = "python") -> Dict[str, Any
 # 3. BỘ THỰC THI MÃ AN TOÀN TRONG TIẾN TRÌNH CÔ LẬP (ISOLATED RUNNER)
 # ==============================================================================
 
+def _chay_co_hop_cat(cmd, thu_muc, timeout_s):
+    """Chạy `cmd` trong hộp cát, trả `(returncode, stdout, stderr, hop_cat)`.
+
+    Dùng `Popen` chứ không `subprocess.run`: phải có `pid` mới gán được vào Job
+    Object. Và `finally: dong_job` là chỗ `KILL_ON_JOB_CLOSE` giết cả cây — kể
+    cả cháu mà `timeout` của `run` không với tới (đo 08/09: cháu SỐNG SÓT qua
+    timeout ở bản cũ).
+    """
+    from core.hop_cat import RAM_MB, dong_job, gan_vao_job, moi_truong_sach, tao_job
+
+    h_job, ly_do = tao_job()
+    p = subprocess.Popen(cmd, cwd=str(thu_muc), env=moi_truong_sach(),
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                         text=True, encoding="utf-8", errors="replace")
+    da_gan = gan_vao_job(h_job, p.pid) if h_job else False
+    # BA TRẠNG THÁI CHO CHÍNH HỘP CÁT. Không có trường này thì lời hứa "có hộp
+    # cát" là một câu chữ không kiểm được — đúng thứ CLAUDE.md mục 7 cấm.
+    hop_cat = ("job" if da_gan
+               else ("khong: " + (ly_do or "AssignProcessToJobObject thất bại")))
+    try:
+        out, err = p.communicate(timeout=timeout_s)
+        return p.returncode, out, err, hop_cat
+    finally:
+        try:
+            p.kill()
+        except OSError:
+            pass
+        dong_job(h_job)
+
+
 def chay_ma_da_ngon_ngu(
     ma: str,
     lang: str = "python",
@@ -1143,22 +1175,17 @@ def chay_ma_da_ngon_ngu(
 
         try:
             cmd = [sys.executable, "-X", "utf8", temp_path]
-            res = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=timeout_s
-            )
+            ma_thoat, out, err, hop_cat = _chay_co_hop_cat(
+                cmd, os.path.dirname(temp_path), timeout_s)
             t_ms = round((time.monotonic() - t0) * 1000, 1)
             return {
-                "status": "PASS" if res.returncode == 0 else "FAIL",
-                "exit_code": res.returncode,
-                "stdout": res.stdout,
-                "stderr": res.stderr,
+                "status": "PASS" if ma_thoat == 0 else "FAIL",
+                "exit_code": ma_thoat,
+                "stdout": out,
+                "stderr": err,
                 "latency_ms": t_ms,
-                "language": "python"
+                "language": "python",
+                "hop_cat": hop_cat,
             }
         except subprocess.TimeoutExpired:
             return {
@@ -1167,7 +1194,8 @@ def chay_ma_da_ngon_ngu(
                 "stdout": "",
                 "stderr": f"Quá thời gian thực thi cho phép ({timeout_s}s).",
                 "latency_ms": round((time.monotonic() - t0) * 1000, 1),
-                "language": "python"
+                "language": "python",
+                "hop_cat": "job",
             }
         except Exception as e:
             return {
@@ -1192,22 +1220,17 @@ def chay_ma_da_ngon_ngu(
 
         try:
             cmd = ["node", temp_path]
-            res = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=timeout_s
-            )
+            ma_thoat, out, err, hop_cat = _chay_co_hop_cat(
+                cmd, os.path.dirname(temp_path), timeout_s)
             t_ms = round((time.monotonic() - t0) * 1000, 1)
             return {
-                "status": "PASS" if res.returncode == 0 else "FAIL",
-                "exit_code": res.returncode,
-                "stdout": res.stdout,
-                "stderr": res.stderr,
+                "status": "PASS" if ma_thoat == 0 else "FAIL",
+                "exit_code": ma_thoat,
+                "stdout": out,
+                "stderr": err,
                 "latency_ms": t_ms,
-                "language": "javascript"
+                "language": "javascript",
+                "hop_cat": hop_cat,
             }
         except subprocess.TimeoutExpired:
             return {

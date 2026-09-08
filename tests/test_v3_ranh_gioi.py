@@ -83,6 +83,7 @@ V3 = frozenset({
 # Trần 8, không phải 20: phần này nhỏ hơn hẳn và phải giữ cho nó nhỏ. Đang 3.
 V3_PHONG = frozenset({
     "core/can_chu.py",        # gắn mốc TỪNG TỪ, gọi bộ căn ở tiến trình riêng
+    "core/hop_cat.py",        # Job Object: trần RAM + giết cả cây tiến trình
     "core/phong_alpha.py",    # dựng video dọc thật, verifier độc lập
     "core/phong_noi_bo.py",   # beta · delta · gamma · omega · zeta, MỘT tệp
     "core/polyglot.py",

@@ -1346,6 +1346,12 @@ thấy**, không phải **đo được**.
      gốc kho với đủ quyền tài khoản Windows và GHI ĐƯỢC tệp ra ngoài thư
      mục tạm; chỉ có một trần thời gian. Và `alpha.py::verify_anti_cheat_keys()`
      trả về bảy chuỗi `"PASS"` gõ cứng — không đo gì cả.
+
+     **08/09/2026 — vá được MỘT PHẦN, xem mục hộp cát ở dưới.** Nay có
+     `core/hop_cat.py`: cwd riêng · biến môi trường sạch (87 → 9) · trần RAM
+     256 MB · giết cả cây tiến trình. Nhưng **ngắt mạng thì VẪN CHƯA CHẶN
+     ĐƯỢC** — đo lại 08/09, `urlopen` vẫn trả mã 200. Dòng "no-network" ở trên
+     vẫn là một lời hứa chưa giao.
   2. Giới hạn ngân sách tài nguyên nghiêm ngặt (timeout, CPU/RAM/disk budget).
   3. Chặn mã sửa đổi bộ test hoặc import mock thư viện kiểm thử.
   4. Kiểm tra cú pháp và tính an toàn bằng AST parser trước khi thực thi.
@@ -1833,6 +1839,100 @@ cần:
 Bốn trạng thái mỗi bước và phép chấm cả chuỗi dùng CHUNG với `/api/pipeline/run`
 (`chay_chuoi_phong`, `trang_thai_chuoi`) — hai bản riêng thì chúng trôi khỏi
 nhau, và bản ít người nhìn hơn sẽ là bản mục.
+
+### HỘP CÁT cho `/api/polyglot/run` — TRẢ NỢ "CHƯA CHẶN ĐƯỢC" (08/09/2026)
+
+Đăng ký **TRƯỚC KHI VIẾT MÃ**. Đây là **lời hứa an toàn**, nên luật mục 7 số 3
+áp dụng nguyên văn: *kiểm được thì kiểm; kiểm không được thì viết "CHƯA chặn
+được", đừng viết "đã chặn".*
+
+**ĐO NỀN — 8 đơn chạy qua chính `chay_ma_da_ngon_ngu`:**
+
+```
+1. cwd                    D:\AURA_v3        <- gốc kho, không phải thư mục tạm
+2. GHI tệp ngoài          ĐƯỢC
+3. đọc `.env` của kho     đường đọc MỞ (kho hiện không có .env)
+4. liệt kê HOME           87 mục
+5. biến môi trường        87 biến, có tên nghi là bí mật (`CLAUDE_*`)
+6. RA MẠNG                ĐƯỢC — mã 200
+7. cấp phát 300 MB        ĐƯỢC
+8. TIẾN TRÌNH MỒ CÔI      SỐNG SÓT qua timeout
+```
+
+**Mục 8 chưa ai ghi, và nó là chỗ nặng nhất:** `subprocess.run(timeout=)` chỉ
+giết **con trực tiếp**. Một dòng `Popen` là cháu sống tiếp — tức **bảo vệ duy
+nhất đang có bị vượt bằng một dòng**.
+
+**THỬ TRƯỚC KHI VIẾT VÀO SẢN PHẨM** — bài 19/08 (`import resource` không tồn
+tại trên Windows) bắt phải làm thế. Nguyên mẫu Job Object trên chính máy này:
+
+```
+KILL_ON_JOB_CLOSE     cha báo 'DA SINH chau' -> đóng job -> cháu KHÔNG sống sót
+PROCESS_MEMORY        trần 128 MB, xin 300 MB -> mã thoát 1, CHẶN ĐƯỢC
+```
+
+*(Lượt thử đầu **vô nghĩa**: kịch bản cháu lỗi cú pháp vì đường dẫn Windows nằm
+trong chuỗi lồng, nên cháu chưa từng sinh ra — mà kết quả đọc ra như "job giết
+được cháu". Đúng bài phép đo không tới nơi. Tách cháu ra tệp riêng thì mới đo
+thật.)*
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | sau khi vá | ghi chú |
+|---|---|---|
+| cwd | **thư mục tạm riêng**, không phải gốc kho | đo được |
+| biến môi trường | **0 biến tên nghi bí mật**, tổng < 15 | đo được |
+| cấp phát 300 MB | **BỊ CHẶN** (trần `RAM_MB = 256`) | đo được |
+| tiến trình mồ côi | **KHÔNG sống sót** | đo được |
+| **ghi tệp bằng đường dẫn tuyệt đối** | **VẪN ĐƯỢC** | **CHƯA CHẶN ĐƯỢC** |
+| **đọc tệp bất kỳ / liệt kê HOME** | **VẪN ĐƯỢC** | **CHƯA CHẶN ĐƯỢC** |
+| **ra mạng** | **VẪN ĐƯỢC** | **CHƯA CHẶN ĐƯỢC** |
+
+**`RAM_MB = 256` là con số CHỌN** — cùng con số kế hoạch 19/08 đã hứa mà không
+giao được. Python rỗng tốn ~25 MB, nên 256 rộng rãi cho một đoạn mã ngắn.
+
+**BA TRẠNG THÁI CHO CHÍNH HỘP CÁT, KHÔNG GỘP.** Kết quả trả về phải mang trường
+`hop_cat` nói **thật sự đã áp được gì**: `"job"` (đủ) · `"khong"` (không tạo
+được Job Object — chạy như cũ) · lý do. Không có trường ấy thì lời hứa "có hộp
+cát" là một câu chữ không kiểm được — đúng thứ mục 7 cấm.
+
+**ĐO SAU KHI VÁ — và một DƯƠNG TÍNH GIẢ suýt lọt:**
+
+```
+đơn                              nền             sau          phán quyết
+1. cwd                           D:/AURA_v3      C:/../Temp   đổi mặc định
+2. ghi tệp đường tuyệt đối       ĐƯỢC            VẪN ĐƯỢC     CHƯA CHẶN ĐƯỢC
+3. đọc tệp bất kỳ trong kho      mở              25.583 byte  CHƯA CHẶN ĐƯỢC
+4. liệt kê HOME (đường gõ cứng)  87 mục          87 mục       CHƯA CHẶN ĐƯỢC
+5. biến môi trường               87, có bí mật   9, sạch      CHẶN ĐƯỢC
+6. ra mạng                       ĐƯỢC            VẪN ĐƯỢC     CHƯA CHẶN ĐƯỢC
+7. cấp phát 300 MB               ĐƯỢC            BỊ CHẶN      CHẶN ĐƯỢC
+8. tiến trình mồ côi             SỐNG SÓT        KHÔNG        CHẶN ĐƯỢC
+```
+
+**MỤC 4 SUÝT BỊ CHẤM NHẦM LÀ ĐÃ CHẶN.** Lượt đo đầu sau khi vá cho nó `FAIL`,
+đọc ra như *"hệ tệp đã kín"*. Thật ra `os.path.expanduser('~')` cần
+`USERPROFILE` — biến vừa bị lọc — nên nó hỏng vì **thiếu biến**, không phải vì
+bị chặn. Đường dẫn **gõ cứng** vẫn đọc được 87 mục, và `CLAUDE.md` vẫn đọc được
+25.583 byte. **Một dương tính giả trong một lời hứa an toàn là thứ nguy hiểm
+nhất ở đây** — nó biến "chưa chặn" thành "đã chặn" mà không ai nói dối.
+
+**Chốt: 3 chặn được · 4 chưa chặn được · 1 chỉ đổi mặc định.** Ít hơn hẳn chữ
+"sandbox".
+
+**BỐN BÀI CANH KHẲNG ĐỊNH RẰNG VẪN CÒN LỖ.** `test_VAN_CHUA_chan_duoc_*` sẽ
+**đỏ khi ai đó vá thêm** — và đó là lúc phải sửa tài liệu cùng lúc, chứ không
+phải xoá bài. Không có chúng thì chữ "CHƯA chặn được" trôi dần thành "đã chặn"
+mà không ai đo lại.
+
+**Ba dòng CHƯA CHẶN ĐƯỢC ở trên phải ở lại tài liệu và ở lại `mo_ta`.** Chặn
+được ba thứ không cho phép viết "đã cô lập". Chỗ dựa thật vẫn là
+`/api/polyglot/run` không được đặt ra Internet.
+
+Gieo 8 phép, cả 8 đỏ. Lượt đầu **1 cửa mù**: bài canh tài liệu hỏi
+`cụm in spec` — mà cụm *"ra mạng"* còn nằm ở bảng đo nền, nên gieo xoá **hàng**
+cảnh báo vẫn xanh. `x in y` lần thứ chín. Nay đòi cụm ấy nằm **cùng một dòng**
+với `CHƯA CHẶN ĐƯỢC`.
 
 ### Cổng vào của `/api/polyglot/run` (04/09/2026)
 

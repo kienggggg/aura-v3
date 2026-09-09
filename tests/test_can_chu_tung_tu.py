@@ -362,8 +362,27 @@ def test_ASS_va_MOC_TU_khop_nhau_tren_LUOT_THAT(tmp_path):
     assert len(dong) == len(moc), (len(dong), len(moc))
     for i, d in enumerate(dong):
         ve, tong = _moc_libass_ve(d, moc[i][0])
+        # THÔNG BÁO PHẢI ĐỦ ĐỂ CHẨN ĐOÁN — bài này MONG MANH và đã đỏ thật.
+        #
+        # Đo 09/09/2026, 4 lượt: 1 đỏ · 2 xanh · 1 KHÔNG ĐO ĐƯỢC. Lượt đỏ lệch
+        # **0,050938s** so với trần 0,05 — quá 0,9 mili giây. Dựng lại tình
+        # huống ấy bằng mốc gõ tay thì `viet_ass` phát đúng khe cuối `{\kf5}`
+        # và chỉ lệch 0,003s, tức KHÔNG tái hiện được bằng số sạch.
+        #
+        # Đo riêng phần làm tròn (`\kf` tính bằng centi-giây nguyên): 0,003s
+        # cho 3 từ đến 0,017s cho 40 từ — chưa tới một nửa trần, nên làm tròn
+        # KHÔNG giải thích được lượt đỏ. Phần còn lại đến từ chỗ mốc của bộ căn
+        # bị KẸP vào biên đoạn TTS, và lượng bị kẹp phụ thuộc nội dung.
+        #
+        # Nên KHÔNG nới trần cho nó xanh — đó là fit hằng số vào mẫu. Thay vào
+        # đó in đủ dữ kiện để lần đỏ sau chẩn đoán được ngay, thay vì lại phải
+        # đoán như lần này.
         assert abs(tong - moc[i][1]) <= 0.05, (
-            f"đoạn {i}: vệt sáng kết thúc ở {tong}s, đoạn hết ở {moc[i][1]}s")
+            f"đoạn {i}: vệt sáng kết thúc ở {tong}s, đoạn hết ở {moc[i][1]}s "
+            f"(lệch {abs(tong - moc[i][1]):.6f}s, trần 0,05)\n"
+            f"  đoạn      : {moc[i][0]:.6f} → {moc[i][1]:.6f}s\n"
+            f"  số vệt    : {len(ve)}, vệt cuối {ve[-1] if ve else '(không có)'}\n"
+            f"  dòng .ass : {d[:300]}")
         assert ve, d
         # Từ đầu và từ cuối phải nằm trong đoạn của nó.
         assert moc[i][0] - 0.05 <= ve[0][1] <= moc[i][1], (i, ve[0])

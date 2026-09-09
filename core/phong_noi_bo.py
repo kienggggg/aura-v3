@@ -450,7 +450,8 @@ def phong_beta(task_id: str, yeu_cau: str = "", so_lan: int = BETA_SO_LAN_MAC_DI
 # khác trong tệp test — hai lời khai đối chiếu nhau, không vế nào chạm tới máy.
 # Nay `test_KIEM_DUOC_phai_theo_KIP_thu_may_THAT_SU_kiem_duoc` nối thẳng nó với
 # trình kiểm tìm được trên đĩa.
-KIEM_DUOC = {"javascript": ".js", "bash": ".sh", "python": ".py", "go": ".go"}
+KIEM_DUOC = {"javascript": ".js", "bash": ".sh", "python": ".py",
+             "go": ".go", "cpp": ".cpp", "rust": ".rs"}
 TRAN_KIEM_GIAY = 30
 
 # ĐÍCH MẶC ĐỊNH BỎ CHÍNH NGÔN NGỮ NGUỒN. `python` ở lại `KIEM_DUOC` vì nó là bộ
@@ -485,6 +486,15 @@ _CHO_TIM = {
     # không ở nơi kia. Dựa vào PATH là để phán quyết phụ thuộc chỗ gõ lệnh.
     "gofmt": (str(Path.home() / "go-sdk" / "go" / "bin" / "gofmt.exe"),),
     "go": (str(Path.home() / "go-sdk" / "go" / "bin" / "go.exe"),),
+    # WinLibs (MinGW-w64 + g++ 16.2.0) và Rust, bung vào `D:\sdk` ngày
+    # 09/09/2026 — KHÔNG phải `C:` như Go: đo cùng ngày, C: còn 17,3 GB trong
+    # khi D: còn 62,7 GB, và hai bộ này bung ra ~2,5 GB.
+    #
+    # Cả hai đều KHÔNG trên PATH, nên không có dòng này thì `_tim_trinh` trượt
+    # và mọi bài Rust/C++ tụt về KHÔNG ĐO ĐƯỢC — cả tệp xanh trong khi chưa đo
+    # gì. Đó đúng là bài PATH của sổ bệnh án.
+    "g++": (r"D:\sdk\winlibs\mingw64\bin\g++.exe",),
+    "rustc": (r"D:\sdk\rustup\toolchains\stable-x86_64-pc-windows-gnu\bin\rustc.exe",),
 }
 
 
@@ -511,6 +521,14 @@ TRINH_KIEM = {
     # trong khi vòng lặp đã biến mất khỏi bản dịch. Nửa còn lại — chạy thật rồi
     # so đầu ra với bản Python — nằm ở `tests/test_bo_dich_go_chay_that.py`.
     "go": ("gofmt", ["-e"], _tim_trinh("gofmt")),
+    # `-fsyntax-only` phân tích và kiểm kiểu mà KHÔNG sinh mã — bản đối ứng
+    # của `bash -n`. `-std=c++20` vì bộ dịch sinh `std::vector` và mẫu hàm.
+    "cpp": ("g++", ["-fsyntax-only", "-std=c++20"], _tim_trinh("g++")),
+    # `--emit=metadata` kiểm cú pháp VÀ kiểu, không liên kết ra tệp chạy —
+    # nhanh hơn hẳn dựng cả nhị phân. Nó ghi `lib*.rmeta` vào thư mục hiện
+    # hành, nên `kiem_ma_bang_trinh_that` chạy với `cwd` là thư mục của tệp.
+    "rust": ("rustc", ["--emit=metadata", "--crate-type=bin", "--edition", "2021"],
+             _tim_trinh("rustc")),
 }
 
 
@@ -537,8 +555,11 @@ def kiem_ma_bang_trinh_that(lang: str, tep: Path) -> Dict[str, str]:
                 "vi_sao": f"không tìm thấy {ten} trên máy này"}
     lenh = [duong] + co
     try:
+        # `cwd` là thư mục CỦA TỆP: `rustc --emit=metadata` ghi `lib*.rmeta`
+        # ra thư mục hiện hành, và thư mục hiện hành của máy chủ là gốc kho.
+        # Không đặt thì mỗi lượt kiểm Rust để lại rác trong `D:\AURA_v3`.
         r = subprocess.run(lenh + [str(tep)], capture_output=True, text=True,
-                           timeout=TRAN_KIEM_GIAY)
+                           timeout=TRAN_KIEM_GIAY, cwd=str(tep.parent))
     except (OSError, subprocess.SubprocessError) as e:
         # Thiếu `node`/`bash` trên máy khác là KHÔNG ĐO ĐƯỢC, không phải hỏng mã.
         return {"trang_thai": "KHONG_DO_DUOC", "vi_sao": f"{type(e).__name__}: {e}"}

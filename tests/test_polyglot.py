@@ -107,8 +107,14 @@ def test_chuyen_doi_ngon_ngu_python_sang_rust():
     res = chuyen_doi_ngon_ngu(ma_py, "python", "rust")
     assert res["status"] == "PASS"
     ma_rs = res["ma_dich"]
-    assert "fn tinh_tong(nums)" in ma_rs
+    # SỬA 09/09 CÙNG LÚC VỚI BẢN VÁ — bản cũ đòi `fn tinh_tong(nums)`, tức
+    # KHOÁ CHÍNH CÁI HỎNG (thiếu kiểu tham số và kiểu trả về). Nay Rust có
+    # trình biên dịch trên máy, và `tests/test_bo_dich_rust_cpp_chay_that.py`
+    # chấm bằng `rustc` chứ không bằng dò chuỗi.
+    assert "fn tinh_tong(nums: Vec<i32>) -> i32" in ma_rs, ma_rs
     assert "for x in nums" in ma_rs
+    assert "return tong;" in ma_rs, "early-return trần lại quay về"
+    assert "fn main() {" in ma_rs, "câu lệnh cấp module không có chỗ đứng"
 
 
 def test_chuyen_doi_ngon_ngu_python_sang_cpp():
@@ -128,8 +134,12 @@ def test_chuyen_doi_ngon_ngu_python_sang_cpp():
     assert res["status"] == "PASS"
     ma_cpp = res["ma_dich"]
     assert "#include <iostream>" in ma_cpp
-    assert "auto tinh_tong(" in ma_cpp
+    # SỬA 09/09 CÙNG LÚC VỚI BẢN VÁ. `auto tinh_tong(auto n)` là mẫu hàm rút
+    # gọn C++20, và ĐỆ QUY với kiểu trả về suy diễn thì g++ bác: *"use of
+    # `fibonacci` before deduction of `auto`"*. Kiểu nói thẳng thì hết.
+    assert "int tinh_tong(const std::vector<int>& nums)" in ma_cpp, ma_cpp
     assert "for (const auto& x : nums)" in ma_cpp
+    assert "int main() {" in ma_cpp, "câu lệnh ở cấp tệp — g++ bác ngay dòng đầu"
 
 
 def test_chuyen_doi_loi_cu_phap_python_nguon():

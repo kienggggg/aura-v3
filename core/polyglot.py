@@ -343,7 +343,7 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
         # GOM TÊN HÀM TRƯỚC KHI SINH DÒNG NÀO. Đệ quy gọi chính nó ngay trong
         # thân nó, nên gom dần theo thứ tự gặp thì `fibonacci` bên trong
         # `fibonacci` vẫn chưa biết là hàm. Đi một vòng riêng thì hết.
-        if self.target in ("bash", "go"):
+        if self.target in ("bash", "go", "cpp", "rust"):
             for stmt in ast.walk(node):
                 if isinstance(stmt, ast.FunctionDef):
                     self.ham_tu_khai.add(stmt.name)
@@ -356,23 +356,52 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
         # Go chỉ cho khai báo ở cấp gói, còn `fmt.Println(...)` và `nums := ...`
         # là CÂU LỆNH. Lỗi này chặn ở dòng đầu tiên nên nó CHE ba lỗi còn lại —
         # parser dừng, và ba cái sau chưa từng được trình biên dịch nhìn thấy.
-        if self.target == "go":
+        # BA NGÔN NGỮ BIÊN DỊCH ĐỀU CẤM CÂU LỆNH Ở CẤP TỆP.
+        #
+        # Đo nền bằng trình thật, cùng một bệnh, ba thông báo khác nhau:
+        #   go   08/09  main.go:15:1: syntax error: non-declaration statement
+        #                              outside function body
+        #   cpp  09/09  main.cpp:14:6: error: 'cout' in namespace 'std' does
+        #                              not name a type
+        #   rust 09/09  (xem đặc tả — `let mut` ở cấp module)
+        # Cả ba đều 0/3 cú pháp trước khi vá, và ở cả ba lỗi này CHẶN NGAY DÒNG
+        # ĐẦU nên nó che các lỗi phía sau.
+        if self.target in ("go", "cpp", "rust"):
+            mo, dong = {"go": ("func main() {", "}"),
+                        "cpp": ("int main() {", "    return 0;\n}"),
+                        "rust": ("fn main() {", "}")}[self.target]
             ham = [s for s in node.body if isinstance(s, ast.FunctionDef)]
             con_lai = [s for s in node.body if not isinstance(s, ast.FunctionDef)]
             for stmt in ham:
                 self.visit(stmt)
-            self._emit("func main() {")
+            self._emit(mo)
             self.indent_level += 1
             for stmt in con_lai:
                 self.visit(stmt)
             self.indent_level -= 1
-            self._emit("}")
+            self._emit(dong)
             return
 
         for stmt in node.body:
             self.visit(stmt)
 
-    def _suy_kieu_go(self, node: ast.FunctionDef):
+    # Bộ suy kiểu trả về KIỂU TRỪU TƯỢNG; mỗi ngôn ngữ dịch sang chữ của mình.
+    #
+    # `any` của Rust CỐ Ý là một định danh KHÔNG tồn tại. Go có `any` thật, C++
+    # có `auto`, Rust thì không có gì tương đương — và đoán đại một kiểu thì
+    # bản dịch BIÊN DỊCH ĐƯỢC mà CHẠY SAI, tệ hơn hẳn một lỗi biên dịch vì lỗi
+    # biên dịch thì ai cũng thấy. Fail-closed: để nó gãy, và gãy có tên.
+    # (Trên thực tế `bo_sot` đã chặn trước khi tới trình biên dịch.)
+    _KIEU_THEO_NGON_NGU = {
+        "go":   {"int": "int", "string": "string", "[]int": "[]int",
+                 "any": "any", "": ""},
+        "cpp":  {"int": "int", "string": "std::string",
+                 "[]int": "const std::vector<int>&", "any": "auto", "": "void"},
+        "rust": {"int": "i32", "string": "&'static str", "[]int": "Vec<i32>",
+                 "any": "KIEU_KHONG_SUY_DUOC", "": ""},
+    }
+
+    def _suy_kieu(self, node: ast.FunctionDef):
         """Suy kiểu Go cho tham số và giá trị trả về của một hàm.
 
         VÌ SAO CẦN (08/09/2026). Bản cũ khai mọi thứ là `any`, và Go **không có
@@ -438,14 +467,14 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
         elif all(isinstance(t.value, ast.Constant) and isinstance(t.value.value, str)
                  for t in tra):
             kieu_tra = "string"
-        elif all(self._la_so_go(t.value, kieu, bien_so) for t in tra):
+        elif all(self._la_so(t.value, kieu, bien_so) for t in tra):
             kieu_tra = "int"
         else:
             kieu_tra = "any"
             khong_suy.append("giá trị trả về")
         return kieu, kieu_tra, khong_suy
 
-    def _la_so_go(self, e, kieu: Dict[str, str], bien_so: set) -> bool:
+    def _la_so(self, e, kieu: Dict[str, str], bien_so: set) -> bool:
         """Biểu thức này có CHẮC là số nguyên không? Thà nói KHÔNG còn hơn đoán.
 
         Đoán bừa ra `int` thì bản dịch biên dịch được mà chạy sai — tệ hơn hẳn
@@ -456,8 +485,8 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
         if isinstance(e, ast.Name):
             return kieu.get(e.id) == "int" or e.id in bien_so
         if isinstance(e, ast.BinOp):
-            return (self._la_so_go(e.left, kieu, bien_so)
-                    and self._la_so_go(e.right, kieu, bien_so))
+            return (self._la_so(e.left, kieu, bien_so)
+                    and self._la_so(e.right, kieu, bien_so))
         if isinstance(e, ast.Call) and isinstance(e.func, ast.Name):
             # Đệ quy: hàm đang dịch gọi chính nó. Chưa biết kiểu của nó, nhưng
             # nếu mọi nhánh KHÁC là số thì nhánh đệ quy cũng là số.
@@ -474,27 +503,29 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
         elif self.target == "typescript":
             ts_args = [f"{arg}: any" for arg in args]
             self._emit(f"function {name}({', '.join(ts_args)}): any {{")
-        elif self.target == "go":
-            # GIỮ NGUYÊN TÊN PYTHON, bỏ PascalCase — có chủ ý.
-            #
-            # Bản cũ khai `func Fibonacci` rồi gọi `fibonacci(...)`: định danh
-            # không tồn tại. Trong `package main` không có gì cần xuất ra ngoài,
-            # và Go cho phép gạch dưới trong định danh — nên giữ tên gốc là
-            # XOÁ HẲN một lớp lệch, không phải né nó. Đẹp theo lối Go mà không
-            # biên dịch được thì không phải đẹp.
-            kieu_ts, kieu_tra, khong_suy = self._suy_kieu_go(node)
+        elif self.target in ("go", "cpp", "rust"):
+            # GIỮ NGUYÊN TÊN PYTHON — có chủ ý, xem `_KIEU_THEO_NGON_NGU`.
+            # Bản Go cũ khai `func Fibonacci` rồi gọi `fibonacci(...)`.
+            kieu_ts, kieu_tra, khong_suy = self._suy_kieu(node)
+            bang = self._KIEU_THEO_NGON_NGU[self.target]
             for ten_bien in khong_suy:
-                # `any` không sai, nhưng nó là chỗ bản dịch YẾU đi. Ghi vào
-                # `bo_sot` để người đọc kết quả biết, thay vì im lặng.
+                # Chỗ bản dịch YẾU đi phải TỰ KHAI. `bo_sot` khác rỗng thì
+                # phòng `epsilon` trả KHÔNG ĐO ĐƯỢC và không đưa cho trình biên
+                # dịch — nên một bản dịch đoán kiểu không bao giờ được chấm ĐẠT.
                 self.bo_sot.append(
-                    f"kiểu Go không suy được cho `{ten_bien}` trong `{name}` "
-                    f"(dòng {node.lineno}) — để `any`, số học sẽ không biên dịch")
-            go_args = [f"{a} {kieu_ts.get(a, 'any')}" for a in args]
-            self._emit(f"func {name}({', '.join(go_args)}) {kieu_tra} {{")
-        elif self.target == "rust":
-            self._emit(f"fn {name}({args_str}) {{")
-        elif self.target == "cpp":
-            self._emit(f"auto {name}({', '.join([f'auto {a}' for a in args])}) {{")
+                    f"kiểu {self.target} không suy được cho `{ten_bien}` trong "
+                    f"`{name}` (dòng {node.lineno})")
+            ts = [(a, bang.get(kieu_ts.get(a, "any"), bang["any"])) for a in args]
+            ra = bang.get(kieu_tra, bang["any"]) if kieu_tra else bang[""]
+            if self.target == "go":
+                self._emit(f"func {name}({', '.join(f'{a} {k}' for a, k in ts)})"
+                           f"{(' ' + ra) if ra else ''} {{")
+            elif self.target == "cpp":
+                self._emit(f"{ra or 'void'} {name}"
+                           f"({', '.join(f'{k} {a}' for a, k in ts)}) {{")
+            else:   # rust
+                self._emit(f"fn {name}({', '.join(f'{a}: {k}' for a, k in ts)})"
+                           f"{(' -> ' + ra) if ra else ''} {{")
         elif self.target == "bash":
             self._emit(f"{name}() {{")
         else:
@@ -536,7 +567,19 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
             elif self.target == "go":
                 self._emit(f"return {val}")
             elif self.target == "rust":
-                self._emit(f"{val}")
+                # `return {val};`, KHÔNG phải `{val}` trần.
+                #
+                # Bản cũ sinh biểu thức trần, và đó là lỗi NGỮ NGHĨA, nặng hơn
+                # một lỗi biên dịch. `def fibonacci: if n<=1: return n` ra:
+                #     if n <= 1 { n }
+                #     fibonacci(n - 1) + fibonacci(n - 2)
+                # Trong Rust chỉ biểu thức CUỐI hàm mới là giá trị trả về, nên
+                # `if n <= 1 { n }` thành một biểu thức bị vứt đi và hàm LUÔN
+                # chạy tiếp xuống nhánh đệ quy — early-return biến mất.
+                #
+                # Một cửa chỉ hỏi cú pháp không bao giờ thấy chỗ này; đây đúng
+                # họ với `while` dịch sang bash mà vòng lặp biến mất (06/09).
+                self._emit(f"return {val};")
             elif self.target == "bash":
                 self._emit(f"echo {val}\n{self._indent()}return 0")
             else:
@@ -724,20 +767,21 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
             elts = [self._expr_to_str(e) for e in expr.elts]
             if self.target in ("javascript", "typescript"):
                 return f"[{', '.join(elts)}]"
-            elif self.target == "go":
-                # `[]any` không cộng được: `tong += x` với `x any` là lỗi biên
-                # dịch. Toàn số nguyên thì nói thẳng là `[]int`; lẫn lộn thì
-                # vẫn `[]any` và hỏng — nhưng hỏng ở chỗ đúng, không phải hỏng
-                # vì bộ dịch lười.
+            elif self.target in ("go", "cpp", "rust"):
+                # KIỂU PHẦN TỬ PHẢI NÓI RA. `[]any` / `auto{...}` không cộng
+                # được: `tong += x` với `x` kiểu mơ hồ là lỗi biên dịch. Toàn
+                # số nguyên thì nói thẳng; lẫn lộn thì vẫn hỏng — nhưng hỏng ở
+                # chỗ đúng, không phải hỏng vì bộ dịch lười.
                 toan_so = bool(expr.elts) and all(
                     isinstance(e, ast.Constant) and isinstance(e.value, int)
                     and not isinstance(e.value, bool) for e in expr.elts)
-                kieu = "[]int" if toan_so else "[]any"
-                return f"{kieu}{{{', '.join(elts)}}}"
-            elif self.target == "rust":
-                return f"vec![{', '.join(elts)}]"
-            elif self.target == "cpp":
-                return f"{{{', '.join(elts)}}}"
+                than = ", ".join(elts)
+                if self.target == "go":
+                    return f"{'[]int' if toan_so else '[]any'}{{{than}}}"
+                if self.target == "cpp":
+                    return (f"std::vector<int>{{{than}}}" if toan_so
+                            else f"{{{than}}}")
+                return f"vec![{than}]"
             elif self.target == "bash":
                 return f"({' '.join(elts)})"
             return f"[{', '.join(elts)}]"
@@ -791,7 +835,19 @@ class PythonToPolyglotVisitor(ast.NodeVisitor):
                 elif self.target == "go":
                     return f'fmt.Println({args_str})'
                 elif self.target == "rust":
-                    return f'println!("{{:?}}", {args_str})'
+                    # `{}` (Display), KHÔNG phải `{:?}` (Debug).
+                    #
+                    # Đo 09/09 bằng `rustc` thật: bản `{:?}` cho cú pháp 3/3
+                    # nhưng hành vi 2/3 — `print("gioi")` ra `"gioi"` KÈM DẤU
+                    # NHÁY, vì Debug bọc chuỗi lại. Python thì không.
+                    #
+                    # Đây đúng là thứ chỉ CHẠY mới thấy: `rustc` gật đầu cả ba
+                    # đề, và một cửa chỉ hỏi cú pháp sẽ báo ĐẠT.
+                    #
+                    # Giá phải trả, nói thẳng: `{}` đòi `Display`, mà `Vec`
+                    # không có. In một danh sách sẽ KHÔNG biên dịch được —
+                    # hỏng to và thấy ngay, hơn là in ra một dạng khác Python.
+                    return f'println!("{{}}", {args_str})'
                 elif self.target == "cpp":
                     return f'std::cout << {args_str} << std::endl'
                 elif self.target == "bash":

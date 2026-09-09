@@ -1371,8 +1371,8 @@ def test_epsilon_KHONG_lo_duong_dan_tuyet_doi_ra_ly_do(monkeypatch):
 
 # Chép TAY từ `KY_LUAT_THUC_THI.md` mục 5d. Không viết `phong_noi_bo.KIEM_DUOC`
 # ở đây: gieo đổi hằng số trong mã thì hai vế cùng đổi và cửa vẫn xanh.
-DAC_TA_EPSILON_KIEM_DUOC = {"javascript", "bash", "python", "go"}
-DAC_TA_EPSILON_DICH_MAC_DINH = ("bash", "go", "javascript")
+DAC_TA_EPSILON_KIEM_DUOC = {"javascript", "bash", "python", "go", "cpp", "rust"}
+DAC_TA_EPSILON_DICH_MAC_DINH = ("bash", "cpp", "go", "javascript", "rust")
 
 # Đuôi tệp CHÉP TAY, không đọc lại từ `KIEM_DUOC`. Bản đầu của
 # `test_HIEN_VAT_phai_mang_dung_duoi_tep...` lấy đuôi từ chính `KIEM_DUOC` —
@@ -1380,7 +1380,7 @@ DAC_TA_EPSILON_DICH_MAC_DINH = ("bash", "go", "javascript")
 # và cửa vẫn xanh. Đúng bẫy tautological mà bài kế bên vừa sinh ra để chữa,
 # mắc lại ngay trong bài chữa nó.
 DAC_TA_DUOI_TEP = {"bash": ".sh", "go": ".go", "javascript": ".js",
-                   "python": ".py"}
+                   "python": ".py", "cpp": ".cpp", "rust": ".rs"}
 
 
 def test_epsilon_hang_so_khop_DAC_TA():

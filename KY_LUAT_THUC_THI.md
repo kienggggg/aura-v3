@@ -2052,6 +2052,68 @@ Gieo 8 phép, cả 8 đỏ. Lượt đầu **1 cửa mù**: bài canh tài liệ
 cảnh báo vẫn xanh. `x in y` lần thứ chín. Nay đòi cụm ấy nằm **cùng một dòng**
 với `CHƯA CHẶN ĐƯỢC`.
 
+<!-- CHOT:bo-dich-rust-cpp -->
+### Bộ dịch `rust` và `cpp` — trả nợ 09/09/2026
+
+Nợ mở từ 04/09 với một câu đúng: *"máy này không có `rustc`/`g++`, nên mọi câu
+về bản dịch Rust/C++ chỉ là **đọc thấy**"*. Sếp duyệt cài 09/09.
+
+**Cài gì, và vì sao chọn thế:**
+
+| | tệp | cỡ | băm |
+|---|---|---|---|
+| C++ | `winlibs-x86_64-posix-seh-gcc-16.2.0-mingw-w64ucrt-14.0.0-r1.zip` | **274.029.684 byte** | SHA-256 `c1f52294…fcc4` **khớp** |
+| Rust | `rustup-init.exe` → toolchain `x86_64-pc-windows-gnu` | ~9 MB + ~300 MB | SHA-256 `6f4bef66…db7e` **khớp** |
+
+**KHÔNG dùng `w64devkit`** dù nó chỉ 61 MB: bản v2.9.1 chỉ còn phát hành
+`.7z.exe` **tự bung** và **không công bố SHA-256**. Một tệp thực thi 61 MB
+không đối chiếu được thì không tải — luật đã theo lúc cài Go. WinLibs công bố
+`.sha256` kèm từng `.zip`, và `.zip` thì `zipfile` bung được.
+
+**Rust dùng host `x86_64-pc-windows-gnu`, không phải `msvc`:** host msvc cần
+Visual Studio Build Tools cho `link.exe`, tức thêm vài GB nữa. Toolchain gnu
+mang trình liên kết riêng.
+
+**Đặt trên `D:\sdk`, không phải `C:` như Go:** đo 09/09, C: còn **17,3 GB**
+trong khi D: còn **62,7 GB**; hai bộ này bung ra ~2,5 GB.
+
+**ĐO NỀN bằng trình thật, ba đề y hệt bộ `bash`/`node`/`go`:**
+
+```
+cpp   cú pháp 0/3 · hành vi 0/3
+      main.cpp:14:6: error: 'cout' in namespace 'std' does not name a type
+rust  cú pháp 0/3 · hành vi 0/3
+```
+
+**"ĐỌC THẤY" LẠI CHỈ BẮT ĐƯỢC MỘT PHẦN — y như Go 08/09:**
+
+| | đọc thấy trước khi cài | chỉ lộ khi có trình thật |
+|---|---|---|
+| rust | `fn fibonacci(n)` thiếu kiểu · `let mut` ở cấp module | — |
+| cpp | `std::cout` ở cấp tệp · `auto f(auto n)` đệ quy | — |
+| **rust** | | **`return n` → `n` TRẦN: early-return biến mất** |
+
+Lỗi cuối là **lỗi NGỮ NGHĨA, nặng hơn lỗi biên dịch**: trong Rust chỉ biểu
+thức CUỐI hàm mới là giá trị trả về, nên `if n <= 1 { n }` thành một biểu thức
+bị vứt đi và hàm **luôn** chạy xuống nhánh đệ quy. Đúng họ với `while` dịch
+sang bash mà vòng lặp biến mất (06/09) — thứ `bash -n` gật đầu.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| cú pháp, 3 đề, mỗi ngôn ngữ | **3/3** |
+| hành vi khớp bản Python chạy thật | **3/3** |
+| `KIEM_DUOC` sau khi nối | `bash · cpp · go · javascript · python · rust` — **6** |
+| `DICH_MAC_DINH` (bỏ nguồn `python`) | **5** ngôn ngữ |
+| kiểu không suy được | **`bo_sot` khác rỗng** → phòng trả KHÔNG ĐO ĐƯỢC, không đưa cho trình biên dịch |
+
+**Kiểu `any` của Rust CỐ Ý là một định danh KHÔNG tồn tại**
+(`KIEU_KHONG_SUY_DUOC`). Go có `any` thật, C++ có `auto`, Rust không có gì
+tương đương — mà đoán đại một kiểu thì bản dịch **biên dịch được và chạy sai**,
+tệ hơn hẳn một lỗi biên dịch vì lỗi biên dịch thì ai cũng thấy.
+<!-- /CHOT:bo-dich-rust-cpp -->
+
 <!-- CHOT:bo-dich-go -->
 ### Bộ dịch `go` — trả nợ 08/09/2026
 

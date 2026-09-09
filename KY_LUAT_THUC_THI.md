@@ -2052,6 +2052,64 @@ Gieo 8 phép, cả 8 đỏ. Lượt đầu **1 cửa mù**: bài canh tài liệ
 cảnh báo vẫn xanh. `x in y` lần thứ chín. Nay đòi cụm ấy nằm **cùng một dòng**
 với `CHƯA CHẶN ĐƯỢC`.
 
+<!-- CHOT:can-cuong-buc -->
+### Căn cưỡng bức (nợ "WhisperX") — ĐÓNG 10/09/2026, đo được mà KHÔNG ĐẠT
+
+Kế hoạch: [`docs/KE_HOACH_CAN_CUONG_BUC_2026-09-09.md`](docs/KE_HOACH_CAN_CUONG_BUC_2026-09-09.md).
+Sếp duyệt 09/09: *"dùng bản apache-2.0, đo thử xem có hơn không"*.
+
+**KHÔNG cài gói `whisperx`.** Nó chặn `<3.14` (cả hai venv đều 3.14) và kéo
+theo `pyannote-audio` — phân tách người nói, việc AURA không làm — cùng 21 gói
+nữa. Thứ thật sự cần chỉ là `wav2vec2` + CTC: `torch` **124,1 MB bản CPU** +
+`transformers` + `torchaudio`, trong venv riêng `F:\aura-align` (2,2 GB cả
+model). **KHÔNG chen vào `F:\aura-stt`** đang chạy được và đang giữ bộ test
+xanh.
+
+Model: `dragonSwing/wav2vec2-base-vietnamese`, **apache-2.0**, 755,7 MB.
+(Bản WhisperX chọn sẵn cho tiếng Việt là `cc-by-nc-4.0` — cấm dùng thương mại.)
+
+**ĐO ĐƯỢC GÌ — cùng WAV, cùng lời, chỉ đổi bộ căn (ổn định qua 3 lượt):**
+
+| | bộ hiện tại | căn cưỡng bức |
+|---|---|---|
+| từ có neo **đo được** | 87/114 = 76,3% | **114/114 = 100%** |
+| thời gian | 68,6s | **13,6s** (nhanh 5×) |
+| mốc không tăng dần / vượt biên | — | **0 / 0** |
+
+**Nhưng phủ 100% mà đặt mốc SAI CHỖ thì không phải hơn.** Không có nhãn tay,
+nên phải có **trọng tài độc lập với cả hai bộ**: ngưỡng "có tiếng" suy ra từ
+chính tệp âm thanh (giữa log của phân vị 10 và 90), rồi chấm recall/precision.
+
+| | recall | precision | **F1** |
+|---|---|---|---|
+| **bộ hiện tại** | 95,2% | 77,9% | **85,7%** |
+| căn cưỡng bức — thô | 65,4% | 85,6% | 74,1% |
+| căn cưỡng bức — kéo tới từ kế | 97,6% | 73,0% | 83,5% |
+
+**KẾT LUẬN: KHÔNG ĐẠT ngưỡng đã đăng ký, nên KHÔNG GIAO.** Kế hoạch mục 5 chốt
+trước: *"phải thấp hơn hẳn bản hiện tại"*. Nó không hơn — nó **kém 2,2 điểm F1**.
+
+**Vì sao kém:** CTC phát ra **gai nhọn**, khoảng ký tự "hoạt động" hẹp hơn hẳn
+độ dài âm học của từ. Đo được: bản thô khai **11,9 giây trong 30 giây là "giữa
+các từ"** — với lời nói liên tục thì đó là sai. Kéo mỗi từ tới điểm khởi phát
+của từ kế chữa được recall (65,4 → 97,6%) nhưng đánh đổi precision, và F1 vẫn
+thấp hơn.
+
+**HAI CHỖ SUÝT RA SỐ ĐẸP SAI:**
+
+1. Bản CTC tôi **tự viết** bỏ blank giữa các nhãn cho gọn, và đo ra **5 mốc
+   không tăng dần + 5 mốc vượt biên đoạn** trên 114 từ. Dùng
+   `torchaudio.functional.forced_align` chuẩn thì cả hai về **0**. Một phép đo
+   có lỗi thì không kết luận được gì.
+2. Nếu dừng ở *"114/114 và nhanh 5×"* thì đã giao một thứ **tệ hơn**. Chỉ
+   trọng tài độc lập mới thấy — và nó phải độc lập với **cả hai** bên, nếu
+   không thì lại là bẫy tautological.
+
+**CỠ MẪU: MỘT tệp 30 giây, 114 từ.** Đủ để nói *"chưa chứng minh được là hơn"*,
+**không** đủ để nói *"chắc chắn kém"*. Ai muốn mở lại nợ này thì đo trên nhiều
+mẫu hơn, và phải giữ nguyên trọng tài độc lập.
+<!-- /CHOT:can-cuong-buc -->
+
 <!-- CHOT:bo-dich-rust-cpp -->
 ### Bộ dịch `rust` và `cpp` — trả nợ 09/09/2026
 

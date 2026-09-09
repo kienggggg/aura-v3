@@ -1292,4 +1292,13 @@ Cái duy nhất đạt là chính cái đã dùng để đặt ngưỡng. Tính 
 
 **Nhưng không đổi ngưỡng.** Ca đối chứng dựng để chứng minh cửa mới biết đỏ — kịch bản lặp khuôn — lần chạy sau ra **81,4%** thay vì 27,1%, sai số nội suy vẫn nhỏ. Cửa mới **chưa từng đỏ**. Đổi sang một cửa chưa ai đi qua là thay một điểm tự thưởng bằng một điểm tự thưởng khác — nên nó ở lại thành nợ, có tên.
 
-**Còn nợ, nói rõ:** đây là **nhận dạng rồi ghép mốc**, chưa phải **căn cưỡng bức** lời đã biết. 17/245 từ không khớp được nội suy giữa hai từ kề — chúng là **suy ra**, không phải **đo được**. WhisperX làm đúng việc thứ hai và sẽ phủ 100%, nhưng kéo theo `torch` ≈ 2–2,5 GB và **chưa chạy trên máy này**, nên mọi câu về nó là *đọc thấy*.
+**Nợ này ĐÃ ĐÓNG 10/09/2026 — đo được mà KHÔNG ĐẠT, xem [`KY_LUAT_THUC_THI.md`](KY_LUAT_THUC_THI.md) mục *Căn cưỡng bức*.**
+
+Câu ở đây trước 10/09 là: *"17/245 từ không khớp được nội suy giữa hai từ kề… WhisperX sẽ phủ 100%, nhưng kéo theo `torch` ≈ 2–2,5 GB"*. Giữ nguyên vì nó đúng **kiểu bệnh** — nhưng **cả hai con số đều sai**, và cả hai đều đọc từ tài liệu chứ không đo trên máy này:
+
+| | câu cũ | **đo lại** |
+|---|---|---|
+| từ là suy ra | 17/245 = 6,9% | **27/114 = 23,7%** |
+| `torch` | ≈ 2–2,5 GB | **124,1 MB** (bản CPU; con số cũ là bản CUDA, mà máy này KHÔNG có GPU rời) |
+
+Sổ nhẹ hơn thực tế ở phía **hại** và nặng hơn ở phía **chi phí** — đúng ca *"đo cái app KHÔNG chạy thì mọi con số đều là số của người khác"*, lần này chính tôi là người chép lại.

@@ -731,3 +731,40 @@ def test_DUOI_NGUONG_thi_LUI_ve_srt_chu_KHONG_lam_hong_ca_video(tmp_path,
     # bước nung `.srt` đã chạy — đúng hành vi từ 06/09.
     assert "chua_nung_phu_de" in ten, (
         f"không lui về nung .srt — video có thể đang KHÔNG có chữ: {ten}")
+
+
+def test_DAC_TA_can_cuong_buc_van_o_lai_tai_lieu():
+    """Nợ "WhisperX" đóng 10/09 bằng phép đo — con số phải ở lại cùng kết luận.
+
+    ĐÂY LÀ CỬA CANH MỘT LỜI TỪ CHỐI, không phải một tính năng. Nó tồn tại vì
+    "114/114 từ, nhanh 5×" đọc rất giống một thắng lợi, và ai chỉ đọc hai con
+    số ấy sẽ mở lại nợ rồi giao một thứ **kém hơn 2,2 điểm F1**.
+
+    Trọng tài độc lập (ngưỡng "có tiếng" suy ra từ chính tệp âm thanh) chấm:
+
+        bộ hiện tại            F1 85,7%   <- cao nhất
+        cưỡng bức thô          F1 74,1%
+        cưỡng bức kéo tới từ kế F1 83,5%
+
+    Muốn mở lại thì đo trên nhiều mẫu hơn — cỡ mẫu hiện tại là MỘT tệp 30 giây.
+    """
+    import re as _re
+
+    from core.paths import PROJECT_ROOT
+
+    spec = (PROJECT_ROOT / "KY_LUAT_THUC_THI.md").read_text(encoding="utf-8")
+    m = _re.search(r"<!-- CHOT:can-cuong-buc -->(.*?)<!-- /CHOT:can-cuong-buc -->",
+                   spec, _re.S)
+    assert m, "mất neo CHOT:can-cuong-buc trong đặc tả"
+    khoi = m.group(1)
+    for cum in ("85,7%",              # bộ hiện tại — cao nhất
+                "83,5%",              # biến thể tốt nhất của cưỡng bức
+                "114/114",            # phủ 100%, thứ dễ đọc nhầm thành thắng
+                "KHÔNG ĐẠT",          # kết luận
+                "124,1 MB",           # torch bản CPU, không phải 2-2,5 GB
+                "apache-2.0",         # giấy phép Sếp chọn
+                "MỘT tệp 30 giây"):   # cỡ mẫu, nói thẳng
+        assert cum in khoi, f"khối can-cuong-buc mất {cum!r}"
+    assert "KHÔNG GIAO" in khoi, (
+        "mất câu kết luận KHÔNG GIAO — nếu thật sự đã giao thì phải có phép đo "
+        "cho thấy F1 cao hơn 85,7%, và sửa cả bài này cùng lúc")

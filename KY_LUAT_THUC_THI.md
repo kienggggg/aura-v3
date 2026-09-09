@@ -1614,25 +1614,72 @@ dịch nằm ngay trong kho.
 **Đo trước khi nối. Hỏi trình biên dịch THẬT, không hỏi `status`:**
 
 ```
-             polyglot tự khai   HỎI TRÌNH BIÊN DỊCH
-bash         PASS               FAIL                <-- LỆCH
+             polyglot tự khai   HỎI TRÌNH BIÊN DỊCH   (04/09)
+bash         PASS               FAIL                  <-- LỆCH
 javascript   PASS               PASS
 sql          FAIL               (không có bộ kiểm)
 cpp go rust typescript  PASS    KHÔNG ĐO ĐƯỢC
 ```
 
-Máy này chỉ có `node` và `bash`. Không có go · rustc · g++ · sqlite3.
+*(Bảng trên là ĐO NGÀY 04/09 và giữ nguyên. `go` đã đổi — xem ngay dưới.)*
+
+Máy này khi ấy chỉ có `node` và `bash`. Không có go · rustc · g++ · sqlite3.
 
 Hai chỗ hỏng đọc thấy mà **không bộ kiểm nào trên máy này chứng minh được**:
 `go` khai `func Fibonacci` rồi gọi `fibonacci` (hàm không tồn tại); `rust` sinh
 `fn fibonacci(n)` không kiểu tham số, không kiểu trả về. Ghi lại là **đọc thấy**,
 không phải **đo được** — hai câu khác nhau.
 
+<!-- CHOT:epsilon-go -->
+**08–09/09/2026 — `go` ĐÃ SANG ĐO ĐƯỢC, VÀ PHÒNG SUÝT KHÔNG BIẾT.**
+
+Cài Go 1.27.1 (mục *"Bộ dịch `go`"*) thì `gofmt -e` vào được `TRINH_KIEM` và
+kiểm Go **cả hai chiều**: tệp hợp lệ → `PASS`, tệp hỏng → `FAIL` kèm
+`:2:15: expected '}', found 'EOF'`.
+
+Nhưng `KIEM_DUOC` — danh sách phòng THẬT SỰ hỏi — **vẫn chỉ có ba chữ**
+`javascript · bash · python`. Tức máy kiểm được Go từ 08/09 mà phòng vẫn trả
+`KHONG_DO_DUOC`, đúng ca *"một khả năng có sẵn mà không ai gọi thì bằng
+không"*. Bản vá hôm trước nối `TRINH_KIEM` mà quên `KIEM_DUOC` — **vá một nửa
+của một cặp**, lần thứ hai.
+
+**VÀ CỬA CANH KHÔNG BẮT ĐƯỢC, VÌ NÓ TAUTOLOGICAL.**
+`test_epsilon_hang_so_khop_DAC_TA` so `set(KIEM_DUOC)` với
+`DAC_TA_EPSILON_KIEM_DUOC` — **hai danh sách gõ tay, so với nhau**. Không vế
+nào đối chiếu với thứ máy làm được, nên nó xanh vĩnh viễn dù thực tế đổi thế
+nào. Cùng họ với `_co_ollama` và `_tim_trinh` bắt được hôm 08/09: máy dò và
+thứ bị dò là một.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| `KIEM_DUOC` | `bash · go · javascript · python` — **4** |
+| `DICH_MAC_DINH` (suy ra, bỏ nguồn `python`) | `bash · go · javascript` |
+| phòng chạy `MA_TOT` với 3 đích | **PASS · 3 ngôn ngữ qua trình thật** |
+| ràng buộc MỚI, KHÔNG tautological | mọi ngôn ngữ có trình kiểm **tìm thấy trên đĩa** phải nằm trong `KIEM_DUOC` |
+
+Ràng buộc cuối là thứ đáng giá: nó nối **danh sách khai** với **năng lực đo
+được**, chứ không nối hai danh sách khai với nhau. Cắm thêm một bộ kiểm mà quên
+cho phòng dùng thì nó ĐỎ.
+
+Chiều ngược lại **cố ý không có cửa**: `KIEM_DUOC` được phép kể tên một ngôn
+ngữ mà máy này chưa có trình kiểm — khi ấy phòng trả `KHONG_DO_DUOC`, và đó là
+đúng ba trạng thái. Bắt nó đỏ thì mọi máy thiếu công cụ đều đỏ, và cửa ấy chỉ
+đo được máy chứ không đo được mã.
+<!-- /CHOT:epsilon-go -->
+
 **Đặc tả — chép TAY vào cửa canh:**
 
-* `DAC_TA_EPSILON_KIEM_DUOC = javascript · bash · python` — đúng ba ngôn ngữ có
-  bộ kiểm trên máy này. Mọi ngôn ngữ khác trả `KHONG_DO_DUOC`, **không** trả
-  `PASS`. `node --check` · `bash -n` · `ast.parse`.
+* `DAC_TA_EPSILON_KIEM_DUOC = javascript · bash · python · go` — đúng **bốn**
+  ngôn ngữ có bộ kiểm trên máy này kể từ 09/09. Mọi ngôn ngữ khác trả
+  `KHONG_DO_DUOC`, **không** trả `PASS`. `node --check` · `bash -n` ·
+  `ast.parse` · `gofmt -e`.
+
+  > Dòng này trước 09/09 ghi *"đúng ba ngôn ngữ"* và đúng lúc ấy. Cài Go xong
+  > thì nó tụt lại sau phép đo suốt một ngày — cùng bệnh với câu *"đúng 17
+  > tệp"* mà `CLAUDE.md` đã ghi. Nay có cửa canh nối thẳng danh sách này với
+  > trình kiểm tìm được trên đĩa, nên nó không tụt lại lần nữa.
 * `DAC_TA_EPSILON_DICH_MAC_DINH = bash · javascript` — **đích mặc định bỏ chính
   ngôn ngữ nguồn.** `python` ở lại danh sách KIỂM ĐƯỢC (nó là bộ kiểm), nhưng
   làm ĐÍCH thì nó là phép đồng nhất.

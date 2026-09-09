@@ -435,7 +435,22 @@ def phong_beta(task_id: str, yeu_cau: str = "", so_lan: int = BETA_SO_LAN_MAC_DI
 # Đúng ba ngôn ngữ có bộ kiểm trên máy này. Đăng ký ở `KY_LUAT_THUC_THI.md` mục
 # 5d. Thêm ngôn ngữ vào đây thì phải có bộ kiểm THẬT đi kèm — `KHONG_DO_DUOC`
 # là câu trả lời đúng cho go · rust · cpp · typescript · sql, không phải `PASS`.
-KIEM_DUOC = {"javascript": ".js", "bash": ".sh", "python": ".py"}
+# DANH SÁCH PHÒNG THẬT SỰ HỎI. Không phải danh sách ngôn ngữ bộ dịch biết —
+# đó là `polyglot.DANH_SACH_NGON_NGU`, và nó nói được 8 thứ tiếng mà không
+# chứng minh được cái nào.
+#
+# `go` VÀO ĐÂY NGÀY 09/09/2026, MỘT NGÀY SAU KHI ĐÁNG LẼ PHẢI VÀO. Bản vá 08/09
+# nối `gofmt -e` vào `TRINH_KIEM` và đo được cả hai chiều (tệp hợp lệ -> PASS,
+# tệp hỏng -> FAIL kèm `:2:15: expected '}', found 'EOF'`) — nhưng quên dòng
+# này, nên phòng vẫn trả `KHONG_DO_DUOC` cho Go suốt một ngày. Đúng ca "một khả
+# năng có sẵn mà không ai gọi thì bằng không", và là "vá một nửa của một cặp"
+# lần thứ hai.
+#
+# Cửa canh cũ không bắt được vì nó so DANH SÁCH NÀY với một danh sách gõ tay
+# khác trong tệp test — hai lời khai đối chiếu nhau, không vế nào chạm tới máy.
+# Nay `test_KIEM_DUOC_phai_theo_KIP_thu_may_THAT_SU_kiem_duoc` nối thẳng nó với
+# trình kiểm tìm được trên đĩa.
+KIEM_DUOC = {"javascript": ".js", "bash": ".sh", "python": ".py", "go": ".go"}
 TRAN_KIEM_GIAY = 30
 
 # ĐÍCH MẶC ĐỊNH BỎ CHÍNH NGÔN NGỮ NGUỒN. `python` ở lại `KIEM_DUOC` vì nó là bộ

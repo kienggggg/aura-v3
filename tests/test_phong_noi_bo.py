@@ -1347,15 +1347,113 @@ def test_epsilon_KHONG_lo_duong_dan_tuyet_doi_ra_ly_do(monkeypatch):
 
 # Chép TAY từ `KY_LUAT_THUC_THI.md` mục 5d. Không viết `phong_noi_bo.KIEM_DUOC`
 # ở đây: gieo đổi hằng số trong mã thì hai vế cùng đổi và cửa vẫn xanh.
-DAC_TA_EPSILON_KIEM_DUOC = {"javascript", "bash", "python"}
-DAC_TA_EPSILON_DICH_MAC_DINH = ("bash", "javascript")
+DAC_TA_EPSILON_KIEM_DUOC = {"javascript", "bash", "python", "go"}
+DAC_TA_EPSILON_DICH_MAC_DINH = ("bash", "go", "javascript")
+
+# Đuôi tệp CHÉP TAY, không đọc lại từ `KIEM_DUOC`. Bản đầu của
+# `test_HIEN_VAT_phai_mang_dung_duoi_tep...` lấy đuôi từ chính `KIEM_DUOC` —
+# tức so một thứ với chính nó, nên gieo `".go" -> ".txt"` thì HAI VẾ CÙNG ĐỔI
+# và cửa vẫn xanh. Đúng bẫy tautological mà bài kế bên vừa sinh ra để chữa,
+# mắc lại ngay trong bài chữa nó.
+DAC_TA_DUOI_TEP = {"bash": ".sh", "go": ".go", "javascript": ".js",
+                   "python": ".py"}
 
 
 def test_epsilon_hang_so_khop_DAC_TA():
+    """CHÉP TAY từ đặc tả — nhưng một mình bài này KHÔNG đủ, xem bài kế bên.
+
+    Nó so hai danh sách GÕ TAY với nhau: `KIEM_DUOC` trong mã và hằng số ở
+    đây. Không vế nào chạm tới máy, nên nó xanh vĩnh viễn dù thực tế đổi thế
+    nào — và đó đúng là chuyện đã xảy ra 08/09: cài Go, nối `gofmt` vào
+    `TRINH_KIEM`, đo được cả hai chiều, mà phòng vẫn trả `KHONG_DO_DUOC` suốt
+    một ngày vì `KIEM_DUOC` không có `go`. Bài này xanh cả ngày hôm ấy.
+
+    Nó vẫn đáng giữ: đổi `KIEM_DUOC` mà không đổi đặc tả thì nó đỏ. Nhưng thứ
+    bắt được cái lỗi kia là `test_KIEM_DUOC_phai_theo_KIP_thu_may_THAT_SU...`.
+    """
     import core.phong_noi_bo as _p
 
     assert set(_p.KIEM_DUOC) == DAC_TA_EPSILON_KIEM_DUOC
     assert tuple(_p.DICH_MAC_DINH) == DAC_TA_EPSILON_DICH_MAC_DINH
+
+
+def test_KIEM_DUOC_phai_theo_KIP_thu_may_THAT_SU_kiem_duoc():
+    """Cắm thêm một bộ kiểm mà quên cho phòng dùng thì phải ĐỎ.
+
+    ĐÂY LÀ VẾ KHÔNG TAUTOLOGICAL. Nó không so hai lời khai với nhau — nó hỏi
+    `TRINH_KIEM` xem trình kiểm nào THẬT SỰ tìm thấy trên đĩa, rồi đòi phòng
+    phải chịu hỏi chúng.
+
+    Đo 08–09/09: `gofmt -e` tìm thấy ở `~/go-sdk/go/bin`, kiểm Go cả hai chiều
+    — mà `KIEM_DUOC` không có `go`, nên năng lực ấy bằng không suốt một ngày.
+
+    CHIỀU NGƯỢC LẠI CỐ Ý KHÔNG CÓ CỬA. `KIEM_DUOC` được phép kể tên một ngôn
+    ngữ mà máy này chưa có trình kiểm — khi ấy phòng trả `KHONG_DO_DUOC`, đúng
+    ba trạng thái. Bắt nó đỏ thì mọi máy thiếu công cụ đều đỏ, và cửa ấy đo
+    được cái MÁY chứ không đo được cái MÃ.
+    """
+    import core.phong_noi_bo as _p
+
+    tim_duoc = {lang for lang, (_, _, duong) in _p.TRINH_KIEM.items() if duong}
+    thieu = tim_duoc - set(_p.KIEM_DUOC)
+    assert not thieu, (
+        f"{sorted(thieu)} có trình kiểm TÌM THẤY TRÊN ĐĨA nhưng `KIEM_DUOC` "
+        f"không kể tên, nên phòng không bao giờ hỏi và trả KHONG_DO_DUOC. "
+        f"Một khả năng có sẵn mà không ai gọi thì bằng không.")
+    assert tim_duoc, (
+        "KHÔNG trình kiểm nào tìm thấy — bài này đang không đo gì cả. "
+        "Nếu máy thật sự trống thì `TRINH_KIEM` phải rỗng, không phải đầy mà "
+        "đường dẫn nào cũng None.")
+
+
+def test_HIEN_VAT_phai_mang_dung_duoi_tep_cua_ngon_ngu():
+    """Bản dịch Go để lại trên đĩa phải tên `.go`, không phải `.txt`.
+
+    BẮT ĐƯỢC BẰNG PHÉP GIEO (09/09): đổi `"go": ".go"` thành `".txt"` mà cả 82
+    bài **vẫn xanh** — vì `gofmt -e` phân tích tệp bất kể đuôi, nên phán quyết
+    không đổi. Chỉ hiện vật đổi.
+
+    Mà `.agents/rules/agent_discipline.md` nói *"bằng chứng trên đĩa là chân lý
+    duy nhất"*. Một tệp mã Go tên `ban_dich.txt` là bằng chứng nói dối về
+    chính nó: người mở thư mục bằng chứng sáu tháng sau không biết nó là gì,
+    và không công cụ nào mở đúng nó.
+    """
+    import core.phong_noi_bo as _p
+
+    kq = phong_epsilon("test_eps_duoi_tep", MA_TOT,
+                       cac_lang=DAC_TA_EPSILON_DICH_MAC_DINH)
+    ten_hv = {h["kind"]: h for h in kq["artifacts"]}
+    for lang in DAC_TA_EPSILON_DICH_MAC_DINH:
+        h = ten_hv.get(f"ban_dich_{lang}")
+        assert h, f"không có hiện vật cho {lang}: {sorted(ten_hv)}"
+        duoi = DAC_TA_DUOI_TEP[lang]
+        assert h["path"].endswith(duoi), (
+            f"bản dịch {lang} để lại tên {h['path']!r}, phải kết thúc bằng "
+            f"{duoi!r} — trình kiểm không quan tâm đuôi tệp, nhưng người đọc "
+            f"bằng chứng thì có")
+
+
+def test_DAC_TA_epsilon_go_van_o_lai_tai_lieu():
+    """Con số tạo ra luật phải ở lại cùng luật.
+
+    Bài này sinh ra vì phép gieo: xoá neo `CHOT:epsilon-go` mà cả tệp vẫn
+    xanh. Tôi viết khối đặc tả có neo rồi **quên viết cửa đọc nó** — một cái
+    neo không ai kéo thì chỉ là chữ.
+    """
+    import re
+
+    from core.paths import PROJECT_ROOT
+
+    spec = (PROJECT_ROOT / "KY_LUAT_THUC_THI.md").read_text(encoding="utf-8")
+    m = re.search(r"<!-- CHOT:epsilon-go -->(.*?)<!-- /CHOT:epsilon-go -->",
+                  spec, re.S)
+    assert m, "mất neo CHOT:epsilon-go trong đặc tả"
+    khoi = m.group(1)
+    for cum in ("gofmt -e",
+                "KHONG_DO_DUOC",           # thứ phòng trả suốt ngày 08/09
+                "tautological",            # vì sao cửa cũ không bắt được
+                str(len(DAC_TA_EPSILON_KIEM_DUOC))):   # 4
+        assert cum in khoi, f"khối epsilon-go mất {cum!r}"
 
 
 def test_epsilon_dich_MAC_DINH_khong_chua_ngon_ngu_NGUON():
@@ -1370,11 +1468,18 @@ def test_epsilon_dich_MAC_DINH_khong_chua_ngon_ngu_NGUON():
     assert _p.NGUON_MAC_DINH not in _p.DICH_MAC_DINH
 
 
-def test_epsilon_chay_MAC_DINH_dung_hai_ngon_ngu():
-    """Đo HÀNH VI, không đọc hằng số: gọi phòng rồi đếm ngôn ngữ nó thật sự xin."""
+def test_epsilon_chay_MAC_DINH_dung_so_ngon_ngu_da_dang_ky():
+    """Đo HÀNH VI, không đọc hằng số: gọi phòng rồi đếm ngôn ngữ nó thật sự xin.
+
+    Tên cũ là `..._dung_hai_ngon_ngu` và dòng cuối gõ cứng `== 2`. Thêm `go`
+    vào `KIEM_DUOC` (09/09) thì nó đỏ — **đỏ đúng**, vì hành vi đã đổi thật.
+    Nhưng số `2` ấy là con số thứ HAI của cùng một sự thật, gõ lại bằng tay
+    cạnh một dòng đã lấy từ đặc tả. Hai bản sao của một con số thì có ngày
+    lệch nhau; nay chỉ còn một nguồn.
+    """
     kq = phong_epsilon("test_eps_macdinh", MA_TOT)
     assert set(kq["so"]["theo_ngon_ngu"]) == set(DAC_TA_EPSILON_DICH_MAC_DINH)
-    assert kq["so"]["so_ngon_ngu_xin"] == 2
+    assert kq["so"]["so_ngon_ngu_xin"] == len(DAC_TA_EPSILON_DICH_MAC_DINH)
 
 
 def test_epsilon_MOT_ngon_ngu_chua_do_duoc_thi_ca_phong_KHONG_duoc_PASS():

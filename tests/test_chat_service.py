@@ -912,14 +912,33 @@ def test_timeout_ignores_adapter_that_swallows_cancel_and_returns_late_ok(monkey
     assert len(guard.outputs) == 1
 
 
-@pytest.mark.skip(reason=
-    "TREO VÔ HẠN — và đây là LỖI THẬT, không phải test mong manh. "
-    "Test huỷ tác vụ rồi `await task`; nó mong ChatService.reply() nuốt "
-    "lệnh huỷ, dọn dẹp, rồi trả CANCELLED. Thực tế await không bao giờ về. "
-    "Đo 18/08/2026: 28/29 test trong tệp xong dưới 20s, riêng test này treo "
-    "vô hạn kể cả khi máy rảnh — nó làm CẢ BỘ TEST v3 treo, ba lần liền. "
-    "Bỏ qua để bộ test chạy được; đường huỷ của ChatService cần sửa THẬT.")
 def test_external_cancellation_is_finalized_and_scrubbed_once():
+    """BẬT LẠI 09/09/2026 sau 22 ngày tắt — và chẩn đoán cũ SAI.
+
+    Nhãn `skip` từ 18/08 viết: *"TREO VÔ HẠN — và đây là LỖI THẬT, không phải
+    test mong manh… đường huỷ của ChatService cần sửa THẬT."* Câu ấy đọc rất
+    thuyết phục, và nó **giữ một bài test chết suốt 22 ngày** trong khi sản
+    phẩm không hỏng gì.
+
+    Đo lại 09/09 trong tiến trình con có trần 8 giây, in mốc trước khi huỷ:
+
+        (không in được gì)     <- treo TRƯỚC `task.cancel()`
+        đổi sang KHONG_CAN_MANG:
+        da huy task
+        VE DUOC: ChatStatus.CANCELLED
+
+    Chỗ treo là `await model.started.wait()`, tức **model chưa từng được gọi**.
+    Câu mẫu mặc định *"AURA là gì?"* bị `DeterministicFreshnessPolicy` xếp vào
+    loại CẦN TRA MẠNG, nên lượt đi đường có nguồn, gặp `_NullWebSearch` trả 0
+    nguồn, và thoát ra `WEB_UNAVAILABLE` trước khi chạm tới model.
+
+    ĐÓ LÀ ĐÚNG LỖI ĐÃ GHI Ở DÒNG 34–42 CỦA CHÍNH TỆP NÀY — *"5 test đỏ, một
+    nguyên nhân. Sai là ở test: chọn nhầm câu mẫu."* Năm bài kia được chữa
+    bằng `KHONG_CAN_MANG`; bài này thì bị đọc thành lỗi sản phẩm rồi tắt đi.
+
+    Bài học: một nhãn `skip` mang theo lời chẩn đoán thì lời ấy **không ai
+    kiểm lại**, và nó sống lâu hơn hẳn một bài đỏ.
+    """
     class WaitingModel:
         def __init__(self):
             self.started = asyncio.Event()
@@ -930,7 +949,10 @@ def test_external_cancellation_is_finalized_and_scrubbed_once():
             return ModelReply("too late")
 
     async def scenario():
-        request = _request()
+        # `KHONG_CAN_MANG`, KHÔNG phải câu mặc định — xem docstring. Câu mặc
+        # định thoát ra WEB_UNAVAILABLE trước khi chạm model, nên `started`
+        # không bao giờ được set và bài này chờ mãi.
+        request = _request(text=KHONG_CAN_MANG)
         store = FakeStore()
         model = WaitingModel()
         guard = FakeGuard(output_prefix="SAFE: ")

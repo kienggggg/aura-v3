@@ -87,7 +87,20 @@ V3 = frozenset({
 
 # Hệ thống Phòng nội bộ — chỉ những tệp KHÔNG có trong V3.
 #
-# Trần 8, không phải 20: phần này nhỏ hơn hẳn và phải giữ cho nó nhỏ. Đang 3.
+# Trần 8, không phải 20: phần này nhỏ hơn hẳn và phải giữ cho nó nhỏ.
+#
+# Con số "đang có bao nhiêu" KHÔNG viết ở đây nữa. Dòng này từng ghi *"Đang 3"*
+# trong khi danh sách đã lên **7** — chú thích tụt lại sau phép đo, đúng bệnh
+# câu *"đúng 17 tệp"* mà `CLAUDE.md` ghi, và nó nằm đó cho tới 09/09 dù
+# `docs/KE_HOACH_KHO_TRA_CUU_2026-09-08.md` đã chỉ đích danh (*"Chưa sửa vì
+# ngoài phạm vi"*).
+#
+# Nay số ấy là `DAC_TA_V3_PHONG_DANG_CO` bên dưới, có cửa canh. Một con số nằm
+# trong chú thích thì không ai kiểm; nằm trong `assert` thì đổi là đỏ.
+# Chép TAY. Đổi danh sách mà quên đổi số này thì ĐỎ — đó là chỗ dựa, vì
+# `len()` tự đếm thì không ai phải cố ý.
+DAC_TA_V3_PHONG_DANG_CO = 7
+
 V3_PHONG = frozenset({
     "core/can_chu.py",        # gắn mốc TỪNG TỪ, gọi bộ căn ở tiến trình riêng
     "core/hop_cat.py",        # Job Object: trần RAM + giết cả cây tiến trình
@@ -222,6 +235,10 @@ def test_moi_file_phong_deu_ton_tai(ten):
 
 def test_he_thong_phong_van_con_nho():
     """Trần riêng, 8. Gộp vào trần 20 của chat thì không biết bên nào phình."""
+    assert len(V3_PHONG) == DAC_TA_V3_PHONG_DANG_CO, (
+        f"V3_PHONG có {len(V3_PHONG)} tệp, đặc tả ghi "
+        f"{DAC_TA_V3_PHONG_DANG_CO} — thêm/bớt thì sửa cả hai, ĐỪNG chỉ sửa "
+        f"danh sách. Con số này từng nằm trong một chú thích và tụt lại 4 mục.")
     assert len(V3_PHONG) <= 8, (
         f"hệ thống Phòng đã phình lên {len(V3_PHONG)} tệp — dừng lại xem lại đi"
     )

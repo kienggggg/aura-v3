@@ -82,7 +82,22 @@ print(tinh_tong([1, 2, 3]))
 
 
 def test_chuyen_doi_ngon_ngu_python_sang_rust():
-    """Kiểm tra chuyển đổi từ Python sang Rust."""
+    """CHỤP LẠI DẠNG ĐẦU RA HIỆN NAY — **không** chứng minh Rust chạy được.
+
+    Máy này không có `rustc`/`cargo` (đo 09/09), nên chưa trình biên dịch nào
+    từng nhìn thấy đầu ra này. `status == "PASS"` dưới đây là **bộ dịch tự
+    khai**, không phải phán quyết của ai.
+
+    VÀ NÓ ĐANG KHOÁ MỘT CÁI HỎNG. `fn tinh_tong(nums)` thiếu kiểu tham số và
+    kiểu trả về — Rust không nhận. Đặc tả §5e đã ghi đúng chỗ ấy từ 04/09.
+
+    ĐỌC KỸ TRƯỚC KHI SỬA BỘ DỊCH: vá cho đúng Rust thì bài này ĐỎ, và đỏ là
+    ĐÚNG. Đừng revert bản vá để bài xanh lại — đó chính là cái bẫy đã giữ bộ
+    dịch Go hỏng: `test_chuyen_doi_ngon_ngu_python_sang_go` khẳng định
+    `"func TinhTong(" in ma_go` và xanh suốt trong khi bản dịch chưa từng biên
+    dịch được lần nào. Sửa bài này CÙNG LÚC với bản vá, và thêm một bài chạy
+    thật như `tests/test_bo_dich_go_chay_that.py`.
+    """
     ma_py = """def tinh_tong(nums):
     tong = 0
     for x in nums:
@@ -97,7 +112,12 @@ def test_chuyen_doi_ngon_ngu_python_sang_rust():
 
 
 def test_chuyen_doi_ngon_ngu_python_sang_cpp():
-    """Kiểm tra chuyển đổi từ Python sang C++."""
+    """CHỤP LẠI DẠNG ĐẦU RA HIỆN NAY — **không** chứng minh C++ biên dịch được.
+
+    Máy này không có `g++`/`gcc`/`clang++` (đo 09/09). `status == "PASS"` là
+    bộ dịch tự khai. Cùng cảnh báo như bài Rust ngay trên: vá bộ dịch cho đúng
+    thì bài này đỏ, và đỏ là ĐÚNG — sửa nó cùng lúc với bản vá, đừng revert.
+    """
     ma_py = """def tinh_tong(nums):
     tong = 0
     for x in nums:

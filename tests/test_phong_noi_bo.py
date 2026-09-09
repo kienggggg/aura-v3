@@ -1243,31 +1243,55 @@ def test_epsilon_ma_RONG_khong_duoc_la_PASS():
         assert kq["artifacts"] == [], rong
 
 
-def test_epsilon_ngon_ngu_KHONG_kiem_duoc_thi_khong_phai_PASS():
+@pytest.mark.parametrize("cach", ["đường dẫn None", "không có mục nào"])
+def test_epsilon_ngon_ngu_KHONG_kiem_duoc_thi_khong_phai_PASS(monkeypatch, cach):
     """Không đo được ≠ đã đo, không sao.
 
-    VÁ XONG CÁI HỎNG THÌ MẤT LUÔN CA ĐỐI CHỨNG (08/09/2026). Bài này mượn
-    *"máy này không có go"* làm ví dụ KHÔNG ĐO ĐƯỢC. Trả nợ `go` xong — cài
-    go1.27.1, nối `gofmt -e` vào `TRINH_KIEM` — thì ví dụ ấy biến mất và bài
-    đỏ. Đúng ca đã ghi trong sổ bệnh án khi vá bộ dịch bash.
+    THOÁT KHỎI CÁI VÒNG LUẨN QUẨN (09/09/2026). Hai bản trước của bài này mượn
+    một công cụ CHƯA CÀI làm thước:
 
-    Đổi sang `rust` và `cpp`: đo 08/09, máy này **không có** `rustc`, `cargo`,
-    `g++`, `gcc`, `clang++`. Điều được canh không đổi một chữ — chỉ ví dụ đổi.
-    Ngày nào cài nốt hai bộ ấy thì bài này lại đỏ, và lại phải đi tìm ví dụ
-    mới; đó là giá của việc dùng một cái hỏng thật làm thước.
+        06/09  mượn "máy không có go"      -> cài Go 08/09, bài đỏ
+        08/09  đổi sang "không có rustc"   -> cài Rust thì lại đỏ
+
+    Mỗi lần trả một món nợ là mất ca đối chứng và phải đi tìm ví dụ mới. Cái
+    giá ấy không phải của điều được canh — nó là của **cách canh**: dùng trạng
+    thái máy làm thước thì thước đổi theo máy.
+
+    Nay TIÊM sự vắng mặt thay vì mượn nó. `go` có bộ dịch thật, có bộ kiểm
+    thật; gỡ bộ kiểm đi bằng `monkeypatch` là dựng đúng tình huống cần đo, trên
+    mọi máy, mãi mãi. Cùng họ với `tools/gieo.py`: gieo hỏng một thứ rồi xem
+    cửa có đọc đúng không.
+
+    HAI ĐƯỜNG KHÁC NHAU trong `kiem_ma_bang_trinh_that`, nên đo cả hai:
+    `TRINH_KIEM` có mục mà đường dẫn `None`, và `TRINH_KIEM` không có mục nào.
+
+    (Ghi để khỏi hiểu nhầm: máy này 09/09 vẫn không có `rustc`, `cargo`, `g++`,
+    `gcc`, `clang++` — nhưng bài này KHÔNG còn dựa vào chuyện đó.)
     """
-    kq = phong_epsilon("test_eps_chua_do", MA_TOT, cac_lang=("rust", "cpp"))
+    import core.phong_noi_bo as _p
+
+    moi = dict(_p.TRINH_KIEM)
+    if cach == "đường dẫn None":
+        moi["go"] = ("gofmt", ["-e"], None)
+    else:
+        moi.pop("go", None)
+    monkeypatch.setattr(_p, "TRINH_KIEM", moi)
+
+    kq = phong_epsilon("test_eps_chua_do", MA_TOT, cac_lang=("go",))
+    assert kq["so"]["khong_do_duoc"] == ["go"], kq["so"]
+    assert kq["so"]["dat"] == [], (
+        f"không có bộ kiểm mà vẫn chấm ĐẠT — đó đúng là 'chưa đo được' đội lốt "
+        f"'đã đo, không sao': {kq['so']}")
     assert kq["trang_thai"] == "KHONG_CHAY_DUOC", kq
-    assert set(kq["so"]["khong_do_duoc"]) == {"rust", "cpp"}
-    assert kq["so"]["dat"] == []
 
 
 def test_epsilon_go_NAY_DA_DO_DUOC_va_khong_duoc_tut_lai():
     """Nửa kia của cặp: `go` đã trả nợ, phòng phải ĐO được nó.
 
-    Bài trên chỉ nói `rust`/`cpp` chưa đo được. Không có bài này thì gỡ `go`
-    khỏi `TRINH_KIEM` cũng chẳng ai thấy — phòng lại tụt về KHÔNG ĐO ĐƯỢC và
-    mọi bài vẫn xanh, đúng cái bẫy "tụt im lặng".
+    Bài trên TIÊM sự vắng mặt của bộ kiểm `go` rồi đòi phòng nói KHÔNG ĐO
+    ĐƯỢC. Một mình nó thì gỡ `go` khỏi `TRINH_KIEM` THẬT cũng chẳng ai thấy —
+    phòng tụt về KHÔNG ĐO ĐƯỢC và cả hai bài vẫn xanh, đúng bẫy "tụt im lặng".
+    Bài này là vế còn lại: KHÔNG vá gì cả, và đòi `go` phải đo được thật.
     """
     kq = phong_epsilon("test_eps_go_do_duoc", MA_TOT, cac_lang=("go",))
     assert "go" not in kq["so"]["khong_do_duoc"], (
@@ -1482,7 +1506,7 @@ def test_epsilon_chay_MAC_DINH_dung_so_ngon_ngu_da_dang_ky():
     assert kq["so"]["so_ngon_ngu_xin"] == len(DAC_TA_EPSILON_DICH_MAC_DINH)
 
 
-def test_epsilon_MOT_ngon_ngu_chua_do_duoc_thi_ca_phong_KHONG_duoc_PASS():
+def test_epsilon_MOT_ngon_ngu_chua_do_duoc_thi_ca_phong_KHONG_duoc_PASS(monkeypatch):
     """Xin mà chưa đo được thì cả lượt chưa kết luận được — không phải PASS.
 
     Bản trước trả PASS khi `hong` rỗng và có ít nhất một cái đạt, và nó đẻ ra
@@ -1491,15 +1515,20 @@ def test_epsilon_MOT_ngon_ngu_chua_do_duoc_thi_ca_phong_KHONG_duoc_PASS():
     nên KHÔNG ĐO ĐƯỢC, `hong` rỗng, và phòng báo **PASS**. Cùng mã, cùng đề,
     khác nhau ở PATH của tiến trình gọi.
     """
-    # `go` ĐÃ đo được từ 08/09 nên nó không còn làm ví dụ "chưa đo được" nữa —
-    # xem `test_epsilon_ngon_ngu_KHONG_kiem_duoc_thi_khong_phai_PASS`. Máy này
-    # vẫn không có `rustc`, và đó mới là ví dụ còn đúng.
-    kq = phong_epsilon("test_eps_thieu", MA_TOT, cac_lang=("javascript", "rust"))
+    # TIÊM sự vắng mặt, không mượn một công cụ chưa cài. Bản 06/09 dùng `go`,
+    # bản 08/09 đổi sang `rust` — mỗi lần trả một món nợ công cụ là bài này lại
+    # đỏ và phải đi tìm ví dụ mới. Gỡ bộ kiểm của `go` bằng `monkeypatch` thì
+    # tình huống dựng được trên mọi máy, và điều được canh không đổi một chữ.
+    import core.phong_noi_bo as _p
+
+    monkeypatch.setattr(_p, "TRINH_KIEM",
+                        {**_p.TRINH_KIEM, "go": ("gofmt", ["-e"], None)})
+    kq = phong_epsilon("test_eps_thieu", MA_TOT, cac_lang=("javascript", "go"))
     assert kq["so"]["dat"] == ["javascript"], kq["so"]
-    assert kq["so"]["khong_do_duoc"] == ["rust"], kq["so"]
+    assert kq["so"]["khong_do_duoc"] == ["go"], kq["so"]
     assert kq["trang_thai"] == "KHONG_CHAY_DUOC", (
         "một ngôn ngữ chưa đo được mà cả phòng vẫn báo " + kq["trang_thai"])
-    assert "rust" in kq["vi_sao"] and "javascript" in kq["vi_sao"], kq["vi_sao"]
+    assert "go" in kq["vi_sao"] and "javascript" in kq["vi_sao"], kq["vi_sao"]
 
 
 def test_epsilon_GHI_RO_trinh_nao_da_cham():

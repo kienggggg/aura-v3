@@ -6,9 +6,9 @@ Tách khỏi `CLAUDE.md` ngày 06/09/2026, khi tệp ấy lên **83.047 byte** �
 
 `CLAUDE.md` giữ **luật**, mỗi luật một dòng kèm con số tạo ra nó. Chi tiết nằm ở đây. Đọc một ca khi luật tương ứng sắp được áp dụng, hoặc khi muốn biết vì sao nó tồn tại.
 
-**34 ca dưới đây đều là một lần trả giá trên chính máy này** — không chép từ đâu về.
+**35 ca dưới đây đều là một lần trả giá trên chính máy này** — không chép từ đâu về.
 
-> **Tách ra KHÔNG làm bài học dính hơn.** 34 ca này đã được đọc, và riêng ngày
+> **Tách ra KHÔNG làm bài học dính hơn.** 35 ca này đã được đọc, và riêng ngày
 > 06/09 vẫn bị phá: `x in y` bốn lần, dấu chéo qua vỏ shell lần thứ mười một,
 > hằng số fit từ chính mẫu dùng để kiểm — bài học ấy viết buổi sáng, dính bẫy
 > buổi chiều. Thứ bắt được là `tools/gieo.py`.
@@ -1401,3 +1401,39 @@ giữa các nhãn cho gọn, ra **5 mốc không tăng dần + 5 mốc vượt b
 
 **Một chỉ số tăng không phải một cải thiện.** Phải có trọng tài độc lập với cả
 hai bên — độc lập với một bên thôi thì lại là bẫy tautological.
+
+---
+
+### Một ngưỡng SÀN không buộc ai phải cố ý, nên con số bên cạnh nó tụt lại
+
+`tests/test_luat_khong_phinh_lai.py` giữ `SO_CA_TOI_THIEU` và khẳng định
+`len(ca) >= SO_CA_TOI_THIEU`. Ngày 10/09/2026 sổ lên 34 ca, cửa vẫn xanh — vì 34 ≥ 31. **Thêm
+ca không làm ai phải sửa gì cả**, nên năm chỗ trong văn xuôi ở lại con số cũ:
+
+```
+CLAUDE.md:122     **31 ca, toàn văn ở ...
+CLAUDE.md:124     ... trong một ngày: 31 bài học đã ghi, ...
+CLAUDE.md:182     ... 31 bài học đã ghi ở đây
+SO_BENH_AN.md:9   **31 ca dưới đây ...
+SO_BENH_AN.md:11  ... 31 ca này đã được đọc ...
+```
+
+Cùng họ với *"đúng 17 tệp mã"* tụt lại khi danh sách đóng lên 19, và chú thích
+*"Đang 3"* của `V3_PHONG` khi thật ra đã 7. Nhưng đây là lần đầu đọc ra được
+**cơ chế**: `>=` là một cửa chỉ đỏ khi người ta làm ÍT đi. Kho thì chỉ lớn lên.
+
+**Và cửa đầu tiên viết ra để chữa đúng bệnh này bắt được 3/5.** Nó tìm hai dấu
+sao dính liền con số; dòng 11 có dấu cách sau `**`, dòng 124 không có sao nào.
+Nếu chỉ gieo một chỗ rồi thấy đỏ thì đã ghi "đạt" — **phép gieo phải tua lại
+TỪNG chỗ một**, không phải một chỗ đại diện.
+
+Cùng ngày, cùng bệnh, ở kế hoạch: `KE_HOACH_VIET_TRUYEN_2026-09-03.md` để
+nguyên *"Trạng thái: CHỜ DUYỆT. Chưa viết dòng mã nào."* suốt **bảy ngày** sau
+khi `core/viet_truyen.py` đã chạy với 44 bài test, và
+`KE_HOACH_VO_TRONG_SUOT_2026-09-05.md` không có dòng trạng thái nào trong khi
+nó giao đúng một nửa. Chữa bằng neo `<!-- KET_CUC:... -->` mà cửa canh **không
+tin** — nó đi xem tệp mã có trên đĩa không.
+
+**Luật:** một con số đứng trong văn xuôi thì phải có cửa đọc nó. Ngưỡng sàn
+canh được chiều teo đi, không canh được chiều phình ra — và tài liệu chỉ tụt
+lại theo chiều phình.

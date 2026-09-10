@@ -1,5 +1,7 @@
 # Kế hoạch — Kho tra cứu cục bộ cho AURA (08/09/2026)
 
+<!-- KET_CUC:DA_GIAO · 08/09/2026 -->
+
 **Trạng thái: SẾP DUYỆT 08/09/2026 — "tra cứu tường minh, ăn ô cuối cũng
 được". Đã giao; xem mục 9 cho những con số đổi sau khi chạy thật.**
 

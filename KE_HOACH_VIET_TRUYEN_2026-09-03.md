@@ -1,6 +1,13 @@
 # Kế hoạch — `core/viet_truyen.py`: AURA viết kịch bản, Alpha dựng video
 
-**Trạng thái: CHỜ DUYỆT. Chưa viết dòng mã nào.**
+<!-- KET_CUC:DA_GIAO · 10/09/2026 -->
+**Trạng thái: ĐÃ GIAO.** `core/viet_truyen.py` chạy từ 03/09/2026, 44 bài test
+trong `tests/test_viet_truyen.py`. Xem mục 9 cho những gì đổi sau khi chạy thật.
+
+*(Câu này từ 03/09 tới 10/09 vẫn ghi "CHỜ DUYỆT. Chưa viết dòng mã nào." —*
+*bảy ngày sau khi mã đã chạy. Và trạng thái mới này suy ra từ ĐĨA, không từ*
+*một lời duyệt: không tìm được câu duyệt của Sếp cho kế hoạch này trong tài*
+*liệu. Thứ chứng minh được là tệp mã và bộ test, nên chỉ ghi đúng thứ ấy.)*
 
 Theo `CLAUDE.md` mục 7: dựng mới một hệ thống thì gửi kế hoạch trước. Và người
 duyệt phải **chạy thử** mọi con số, không đọc kỹ. Mọi số dưới đây em đã chạy;
@@ -148,7 +155,7 @@ Gộp một danh sách thì trần mất nghĩa — "25 tệp" không nói đư�
 | số từ | **215–250** | 3,9 từ/s × 55–65 s; đã kiểm 235 PASS, 266 FAIL |
 | câu khác nhau | **≥ 13** | số thẻ = round(60/4,5) = 13 |
 | một câu lặp tối đa | **2 lần** | cùng ngưỡng 0,25 của cửa nội dung Alpha |
-| trần số lần thử | **3** | xem mục 5 — CHƯA ĐO, có thể phải đổi |
+| trần số lần thử | **3** | ĐO 10/09/2026 — mục 9. 24/24 đạt trong 3 lần, 0/24 cần lần 4 |
 
 Chép tay vào cửa canh, **không** `import` từ mã — bài học tautological ngày
 02/09: khẳng định `(RONG, CAO) == (RONG, CAO)` thì gieo `640, 1136` vẫn xanh.
@@ -164,11 +171,14 @@ Chép tay vào cửa canh, **không** `import` từ mã — bài học tautologi
 | 215–250 từ lọt cửa sổ video | chạy `dung_video` thật | **ĐÃ ĐO** — 235 PASS |
 | cắt bằng máy thì lọt cửa | 5 lượt, ba cách cắt | **ĐANG CHẠY** |
 | cắt xong truyện còn ra truyện | đọc câu cuối của mỗi cách | **ĐANG CHẠY** |
-| trần 3 lần là đủ | phụ thuộc kết quả trên | **CHƯA ĐO** |
+| trần 3 lần là đủ | 24 lượt, hai bộ đề viết trước | **ĐÃ ĐO 10/09** — 24/24 trong 3 lần; chặn trên 95% cho phần hỏng là 12,5%, không phải 0 |
 | không đi qua `web_search` | gọi hàm, xem có request nào không | chưa làm |
 | hàng rào thứ hai bắt được | gieo ≥6 lỗi vào chính nó | chưa làm |
 
 **Ba dòng cuối chưa có số. Em không viết mã trước khi ba dòng ấy có số.**
+
+> *Câu trên viết 03/09. Mã vẫn được viết, và dòng "trần 3 lần là đủ" ở lại*
+> ***CHƯA ĐO** thêm bảy ngày — xem mục 9.*
 
 ### Ba cách cắt đang đo
 
@@ -215,3 +225,37 @@ phải quay lại — không nới ngưỡng cho vừa.
    phải hạ trần số lần thử xuống 2?
 3. **Nếu cả ba cách cắt đều trượt** thì dừng lại bàn tiếp, hay Sếp muốn em thử
    hướng khác luôn (ví dụ: sinh 3 bản song song rồi chọn bản gần cửa sổ nhất)?
+
+---
+
+## 9. ĐÓNG LẠI — 10/09/2026
+
+**Đã giao:** `core/viet_truyen.py`, 44 bài trong `tests/test_viet_truyen.py`.
+Hàng rào thứ hai (mục 3 phần B) đã dựng: `tests/test_v3_ranh_gioi.py` giữ
+`V3_PHONG` với trần 8, đang 7 — kế hoạch này đoán "đang 5, sẽ thành 6".
+
+**Nợ cuối cùng của kế hoạch, trả hôm nay.** Bảng mục 5 để dòng *"trần 3 lần là
+đủ — CHƯA ĐO"* suốt bảy ngày. Phép đo 08/09 không đóng được nó: nó chạy trên
+đúng 8 đề đã dùng để chỉnh lời nhắc, và chỉ thể loại `truyen`.
+
+Hai bộ đề mới, viết CÙNG LÚC trước khi chạy lượt nào, chạy `tran=6` để nhìn
+được cả phần trên trần đang dùng:
+
+```
+              ≤1 lần   ≤2 lần   ≤3 lần   ≥4 lần
+bộ A            8/12    11/12    12/12      0
+bộ B (thước)    9/12    10/12    12/12      0
+CỘNG           17/24    21/24    24/24     0/24
+```
+
+Trần 3 vừa khít: hạ xuống 2 mất 3/24, nâng lên 4 mua được 0/24. **Nhưng 0/24
+không phải 0%** — chặn trên 95% là 12,5%. Toàn văn ở khối `CHOT:tran-so-lan`
+trong `KY_LUAT_THUC_THI.md`.
+
+**Và câu hỏi số 2 của mục 8 tự trả lời:** trần 3 tức tới ~4,5 phút, nhưng trung
+vị thật là **1 lượt** (17/24), tức ~90 giây. Cái giá 4,5 phút chỉ rơi vào 3/24.
+
+**Còn để mở, nói rõ:** mục 6 viết *"cửa canh không biết truyện hay hay dở"* —
+vẫn đúng, không vá được bằng thêm ngưỡng. Và 9/10 lượt hỏng đều rụng ở đúng
+`TRAN_TU_MOI_CAU`, ba lượt trong 0,7% của trần; vòng lặp này gần như chỉ là một
+lần gieo lại MỘT cửa. Chưa ai đo xem đặt trần ấy chỗ khác thì được gì.

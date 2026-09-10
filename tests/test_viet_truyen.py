@@ -777,3 +777,44 @@ def test_the_loai_DI_TOI_loi_nhac_that_su_goi_len_model(monkeypatch):
     da_thay.clear()
     viet_kich_ban(DE_KHOP_VAN_MAU)
     assert da_thay and "truyện ngắn" in da_thay[0], da_thay[:1]
+
+
+def test_DAC_TA_TRAN_SO_LAN_khop_khoi_dac_ta_tren_dia():
+    """Con số 3 phải có phép đo đứng sau, và phép đo ấy phải ở ngoài mã.
+
+    Từ 03/09 tới 10/09 `TRAN_SO_LAN = 3` là số gõ tay; kế hoạch ghi thẳng
+    "CHƯA ĐO". Đo 10/09 trên hai bộ đề viết trước: 24/24 đạt trong 3 lần,
+    0/24 cần lần thứ 4. Khối `CHOT:tran-so-lan` giữ số ấy; bài này giữ cho
+    khối và mã khỏi trôi khỏi nhau.
+    """
+    import re as _re
+
+    from core.paths import PROJECT_ROOT as _R
+
+    khoi = _re.search(r"<!-- CHOT:tran-so-lan -->(.*?)<!-- /CHOT:tran-so-lan -->",
+                      (_R / "KY_LUAT_THUC_THI.md").read_text(encoding="utf-8"),
+                      _re.S)
+    assert khoi, "mất khối đặc tả CHOT:tran-so-lan"
+    van = khoi.group(1)
+    m = _re.search(r"`TRAN_SO_LAN` \| \*\*(\d+)\*\*", van)
+    assert m, "khối đặc tả không còn ghi ngưỡng TRAN_SO_LAN"
+    assert int(m.group(1)) == DAC_TA_TRAN_SO_LAN, (
+        f"đặc tả ghi {m.group(1)}, cửa canh chép tay {DAC_TA_TRAN_SO_LAN}")
+
+    # Phép đo phải ở lại tài liệu — cắt mất nó thì con số 3 quay về là số gõ
+    # tay, đúng chỗ nó vừa đi ra. Và phải giữ CẢ chặn trên: "0/24" đọc một
+    # mình thành "không bao giờ hỏng", mà đó là điều phép đo KHÔNG nói.
+    #
+    # `x in y` LẦN THỨ MƯỜI BỐN, gieo bắt được ngay trong phiên vừa chữa lần
+    # thứ mười ba. Bản đầu viết `assert "24/24" in van` — gieo cắt HÀNG bảng
+    # ghi 24/24 thì bài VẪN XANH, vì chuỗi ấy còn nằm ở hàng `CỘNG` phía trên.
+    # `"12,5%"` cũng thế: nó còn trong đoạn văn. Hỏi cả khối 40 dòng thì gần
+    # như luôn tìm thấy. Neo vào ĐÚNG HÀNG mới đo được cái định đo.
+    hang = dict(_re.findall(r"^\| (.+?) \| (.+?) \|$", van, _re.M))
+    dat = hang.get("đề đạt trong 3 lần, 24 lượt hai bộ")
+    assert dat and "24/24" in dat, f"hàng kết quả đo mất hoặc đổi: {dat!r}"
+    can4 = hang.get("số lượt cần ≥ 4 lần")
+    assert can4 and "0/24" in can4, f"hàng số lượt cần ≥4 mất hoặc đổi: {can4!r}"
+    assert can4 and "12,5%" in can4, (
+        "cắt mất chặn trên 95% khỏi CHÍNH hàng ghi 0/24 — đứng một mình nó "
+        f"đọc thành 'không bao giờ hỏng': {can4!r}")

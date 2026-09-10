@@ -2,6 +2,21 @@
 
 *Gửi Sếp duyệt trước khi viết dòng mã nào. Theo `CLAUDE.md` mục 7.*
 
+<!-- KET_CUC:GIAO_MOT_NUA · 10/09/2026 -->
+**Trạng thái: GIAO MỘT NỬA.** Kiểm trên đĩa 10/09/2026:
+
+```
+mốc tiến độ    ĐÃ CÓ    interface/noi_bo_api.py: _ghi_tien_do · /api/tien_do/{id}
+                        data/tien_do/<id>.jsonl · noi_bo_app.py có tuyến
+stream token   CHƯA     "stream": False vẫn ở CẢ BỐN chỗ —
+                        local_first_gateway · omega · phong_noi_bo · viet_truyen
+```
+
+Mục 2 của chính kế hoạch này viết *"hai cơ chế, không cái nào thay cái nào"*.
+Một nửa đã dựng, nửa kia chưa — và **không có dòng nào trong tệp nói ra điều
+đó** cho tới hôm nay. Một kế hoạch không mang kết cục thì đọc như thể cả hai
+nửa còn đang chờ, hoặc cả hai đã xong; cả hai cách đọc đều sai.
+
 Sếp yêu cầu: *"nhìn được từng công đoạn, giống cái vỏ trong suốt bên ngoài cỗ
 máy — có thể nhìn không hiểu gì nhưng nhất định phải nhìn."*
 

@@ -43,7 +43,7 @@ TRAN_BYTE_CLAUDE = 32_000
 # vẫn xanh — mà bốn chỗ trong tài liệu ghi "31 ca" đã tụt lại đúng vì không ai
 # phải cố ý. Nâng sàn buộc người thêm ca phải sửa cả con số, và cửa dưới bắt
 # nốt phần chữ.
-SO_CA_TOI_THIEU = 34
+SO_CA_TOI_THIEU = 35
 
 
 def _muc4(chu: str) -> str:
@@ -209,41 +209,67 @@ def test_MOI_NEO_CHOT_deu_DONG_lai_dung_cach():
 
 
 def test_SO_CA_ghi_trong_CHU_khop_so_ca_THAT():
-    r"""Con số trong câu chữ phải khớp số ca đếm được.
+    r"""Con số trong câu chữ phải khớp số ca đếm được, HOẶC phải mang ngày.
 
-    NĂM chỗ ghi *"31 ca"* / *"31 bài học"* đã tụt lại sau khi sổ lên 34 — ba
-    trong `CLAUDE.md` (dòng 122, 124, 182), hai trong `SO_BENH_AN.md` (dòng 9,
-    11). `SO_CA_TOI_THIEU` là ngưỡng SÀN nên thêm ca vẫn xanh, tức không ai
-    phải cố ý sửa chữ.
+    NĂM chỗ ghi *"31 ca"* / *"31 bài học"* tụt lại sau khi sổ lên 34 — ba
+    trong `CLAUDE.md`, hai trong `SO_BENH_AN.md`. `SO_CA_TOI_THIEU` là ngưỡng
+    SÀN nên thêm ca vẫn xanh: `>=` chỉ đỏ khi người ta làm ÍT đi, mà kho thì
+    chỉ lớn lên.
 
-    VÀ CỬA ĐẦU TIÊN CỦA BÀI NÀY BẮT ĐƯỢC 3/5, RỒI TÔI SUÝT GHI LÀ ĐỦ.
-    Nó tìm hai dấu sao dính liền con số. Nhưng dòng 11 viết `.** 34 ca này`
-    (có dấu cách sau `**`) và dòng 124 viết `: 34 bài học` (không sao nào).
-    Phép gieo tua lại TỪNG chỗ một mới lộ ra:
+    CỬA ĐẦU TIÊN CỦA BÀI NÀY BẮT ĐƯỢC 3/5, RỒI TÔI SUÝT GHI LÀ ĐỦ. Nó tìm hai
+    dấu sao dính liền con số; dòng 11 có dấu cách sau `**`, dòng 124 không có
+    sao nào. Phép gieo tua lại TỪNG chỗ một mới lộ — gieo một chỗ đại diện rồi
+    thấy đỏ là ghi "đạt" và bỏ sót hai chỗ.
 
-        CLAUDE.md 122      ĐỎ
-        CLAUDE.md 182      ĐỎ
-        SO_BENH_AN 9       ĐỎ
-        SO_BENH_AN 11      VẪN XANH — CỬA MÙ     <- và dòng 124 chưa ai sờ tới
+    VÀ BẢN RỘNG KÊU OAN NGAY TRONG NGÀY, đúng cái giá đã ghi trước:
 
-    Nên cửa này cố ý RỘNG: mọi `<số> ca` và `<số> bài học` trong hai tệp đều
-    phải khớp. Rộng thì có ngày kêu oan một câu tử tế — nhưng hẹp thì nó mù,
-    mà mù là đúng cái bệnh đang chữa. Loại trừ duy nhất là phân số (`8/11 ca
-    chấm sai` ở `SO_BENH_AN.md`), bắt bằng lookbehind chứ không bằng danh sách
-    tên — một danh sách tên cũng sẽ tụt lại y hệt con số vừa tụt.
+        SO_BENH_AN.md:1410-1418   khối ``` chép nguyên văn năm dòng hỏng
+        CLAUDE.md:163             "Sổ lên 34 ca mà >= 31 vẫn xanh"
+
+    Cả ba là **trích dẫn cái lỗi**, không phải lời khai. Chữa bằng đúng bài
+    học cùng ngày — *nhãn không mang ngày thì đọc thành thì hiện tại*:
+
+      * khối ``` bị bỏ qua: đó là bản CHÉP, không phải câu khai.
+      * câu văn xuôi phải hoặc khớp số hiện tại, hoặc **mang ngày** trên cùng
+        dòng. Mang ngày thì nó tự nói ra rằng nó đang kể chuyện cũ.
+
+    Không dùng danh sách dòng được miễn — danh sách ấy sẽ tụt lại y hệt con số
+    vừa tụt. Loại trừ duy nhất còn lại là phân số (`8/11 ca chấm sai`), bắt
+    bằng lookbehind.
     """
-    so_that = len(re.findall(r"^### (.+)$", SO.read_text(encoding="utf-8"), re.M))
+    van_so = SO.read_text(encoding="utf-8")
+    so_that = len(re.findall(r"^### (.+)$", van_so, re.M))
     assert so_that >= SO_CA_TOI_THIEU
     mau = re.compile(r"(?<![\d/])(\d+) (?:ca|bài học)\b")
+    co_ngay = re.compile(r"\d{1,2}/\d{2}")
     lech = []
     for tep in (LUAT, SO):
+        trong_khoi = False
         for k, dong in enumerate(tep.read_text(encoding="utf-8").splitlines(), 1):
+            if dong.lstrip().startswith("```"):
+                trong_khoi = not trong_khoi
+                continue
+            if trong_khoi:
+                continue
             for m in mau.finditer(dong):
+                # NGÀY PHẢI ĐỨNG TRƯỚC CON SỐ, không phải "có ở đâu đó trên
+                # dòng". Bản đầu của luật này hỏi cả dòng, và nó vừa mở một lỗ
+                # ngay tại dòng quan trọng nhất:
+                #
+                #   **35 ca, toàn văn ở …** Tách ra 06/09/2026 vì tệp này lên…
+                #
+                # Ngày ấy nói về việc TÁCH TỆP, không nói gì về con số 35 —
+                # nhưng "dòng có ngày" thì con số được miễn, và chỗ tụt lại
+                # đầu tiên trong năm chỗ lại thành chỗ không ai canh.
+                # Cùng bệnh `x in y`: hỏi một vùng rộng thì gần như luôn thấy.
+                if co_ngay.search(dong[max(0, m.start() - 40):m.start()]):
+                    continue
                 if int(m.group(1)) != so_that:
                     lech.append(
                         f"{tep.name}:{k} ghi {m.group(1)} — {dong.strip()[:70]}")
     assert not lech, (
-        f"đếm được {so_that} ca, nhưng {len(lech)} chỗ trong câu chữ nói khác:"
+        f"đếm được {so_that} ca, nhưng {len(lech)} chỗ trong câu chữ nói khác "
+        "và không chỗ nào mang ngày:"
         + "".join("\n  " + d for d in lech))
 
 

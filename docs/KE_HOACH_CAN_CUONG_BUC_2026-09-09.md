@@ -1,5 +1,7 @@
 # Kế hoạch — Căn cưỡng bức thật (nợ "WhisperX"), 09/09/2026
 
+<!-- KET_CUC:KHONG_GIAO · 10/09/2026 -->
+
 **Trạng thái: SẾP DUYỆT 09/09 — "dùng bản apache-2.0, đo thử xem có hơn
 không". ĐO XONG 10/09: KHÔNG ĐẠT, KHÔNG GIAO — xem mục 6.**
 

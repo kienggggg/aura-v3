@@ -2052,6 +2052,112 @@ Gieo 8 phép, cả 8 đỏ. Lượt đầu **1 cửa mù**: bài canh tài liệ
 cảnh báo vẫn xanh. `x in y` lần thứ chín. Nay đòi cụm ấy nằm **cùng một dòng**
 với `CHƯA CHẶN ĐƯỢC`.
 
+<!-- CHOT:tran-so-lan -->
+### `TRAN_SO_LAN = 3` — gõ tay từ 03/09, ĐO ĐƯỢC 10/09/2026
+
+Kế hoạch 03/09 đăng ký ngưỡng này với ô "lấy từ đâu" ghi thẳng: *"xem mục 5 —
+**CHƯA ĐO**, có thể phải đổi"*. Nó ở trong mã bảy ngày mà chưa có phép đo nào
+đứng sau.
+
+Phép đo 08/09 **không đóng được nợ này**: nó chạy trên đúng 8 đề đã dùng để
+chỉnh lời nhắc, tức tập fit. Và nó chỉ chạy thể loại `truyen`.
+
+**HAI BỘ ĐỀ, VIẾT CÙNG LÚC TRƯỚC KHI CHẠY LƯỢT NÀO.** Bộ A để chọn, bộ B là
+thước — không sửa để số đẹp hơn. Cả hai chạy với `tran=6` chứ không phải 3, để
+còn nhìn được phần TRÊN trần đang dùng. 6 đề × 2 thể loại × 2 bộ = **24 lượt**:
+
+```
+              ≤1 lần   ≤2 lần   ≤3 lần   ≥4 lần
+bộ A truyen     4/6      5/6      6/6      0
+bộ A bai_noi    4/6      6/6      6/6      0
+bộ B truyen     5/6      6/6      6/6      0
+bộ B bai_noi    4/6      4/6      6/6      0
+CỘNG           17/24    21/24    24/24     0/24
+```
+
+**Trần 3 vừa khít.** Hạ xuống 2 thì mất **3/24 (12,5%)**; nâng lên 4 mua được
+**0/24**. Bộ B đồng ý với bộ A ở cả hai đầu.
+
+**VÀ ĐÂY LÀ CHỖ PHẢI NÓI RÕ:** 0/24 KHÔNG chứng minh trần 3 luôn đủ. Với 0 ca
+trong 24 lượt, chặn trên 95% là **3/24 = 12,5%** — tức phép đo này chỉ loại
+được giả thuyết "hỏng sau 3 lần hay xảy ra hơn 12,5%". Muốn nói con số nhỏ hơn
+thì phải chạy nhiều lượt hơn, và mỗi lượt tốn 67–133 giây.
+
+**Lượt hỏng đi đâu — 10 lượt, 9 cùng một cửa:**
+
+```
+9/10   "N từ/câu, quá trần 22,7 — cắt kiểu gì cũng trượt"
+1/10   "10 câu khác nhau, cần ≥ 11"
+0/10   "câu mở không nêu đề"
+```
+
+Ba lượt hỏng của bộ A nằm trong **0,7%** của trần: 22,78 · 22,81 · 22,88 so
+với 22,727. Số học thì đúng — 11 câu × 22,88 = 251,7 từ, vượt 250, và cắt câu
+không đổi được từ/câu nên thật sự vô phương. Nhưng nó nói ra thứ chưa ai ghi:
+**vòng lặp này gần như chỉ là một lần gieo lại đúng MỘT cửa**, và model hay đáp
+sát ngay bên kia vạch.
+
+**0/10 vì "câu mở không nêu đề"** trên 12 đề chưa từng thấy. Bản vá lời nhắc
+08/09 đo được 10 → 0 trên chính 8 đề của nó; đây là lần đầu nó được kiểm bằng
+đề nằm ngoài tập ấy.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| `TRAN_SO_LAN` | **3** |
+| đề đạt trong 3 lần, 24 lượt hai bộ | **24/24** |
+| số lượt cần ≥ 4 lần | **0/24** — chặn trên 95% là 12,5%, KHÔNG phải 0 |
+| giây một lượt model | **67–133**, trung vị ~90 — trần 3 tức tới ~4,5 phút |
+<!-- /CHOT:tran-so-lan -->
+
+<!-- CHOT:ket-cuc-ke-hoach -->
+### Kế hoạch phải mang KẾT CỤC, và kết cục phải khớp ĐĨA (10/09/2026)
+
+`CLAUDE.md` mục 7 bắt gửi kế hoạch trước khi viết mã. Nó **không** nói gì về
+việc đóng kế hoạch lại. Đo 10/09/2026, 4 kế hoạch trên đĩa:
+
+```
+KE_HOACH_VIET_TRUYEN_2026-09-03    "CHỜ DUYỆT. Chưa viết dòng mã nào."
+                                   -> core/viet_truyen.py chạy từ 03/09,
+                                      44 bài test. Tụt lại BẢY NGÀY.
+KE_HOACH_VO_TRONG_SUOT_2026-09-05  không có dòng trạng thái NÀO
+                                   -> giao đúng một nửa: mốc tiến độ CÓ,
+                                      stream token CHƯA ("stream": False
+                                      còn ở cả 4 chỗ)
+KE_HOACH_KHO_TRA_CUU_2026-09-08    có câu trạng thái, viết kiểu riêng
+KE_HOACH_CAN_CUONG_BUC_2026-09-09  có câu trạng thái, viết kiểu khác nữa
+```
+
+**Ba kiểu câu khác nhau và một tệp không viết gì** — nên không máy nào đọc
+được, và người đọc thì tin dòng đầu tiên họ nhìn thấy.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+Mỗi `KE_HOACH_*.md` mang **đúng một** neo `<!-- KET_CUC:<trạng thái> · <dd/mm/yyyy> -->`,
+trạng thái lấy trong danh sách đóng:
+
+| trạng thái | nghĩa |
+|---|---|
+| `CHUA_DUYET` | gửi đi rồi, chưa ai đụng vào mã |
+| `DANG_LAM` | đang dựng, chưa xong |
+| `DA_GIAO` | giao đủ |
+| `GIAO_MOT_NUA` | giao một phần — phần còn lại PHẢI kể ra |
+| `KHONG_GIAO` | đo xong, quyết định không giao |
+
+**Và cửa KHÔNG được tin cái neo.** *"Trạng thái tự khai không phải trạng
+thái"* — 02/09 bảy phòng nội bộ tự khai `ONLINE`. Nên:
+
+* neo ghi `CHUA_DUYET` mà tệp mã kế hoạch nhắc tới (`core/…py`, `tools/…py`,
+  `interface/…py`) **đã nằm trên đĩa** → ĐỎ.
+* neo ghi `DA_GIAO` / `GIAO_MOT_NUA` mà **không chỉ ra được tệp mã nào** →
+  ĐỎ. Không có chiều này thì nhánh trên không bao giờ chạy, và cửa thành mù.
+
+**Đếm trước đã.** `test_CO_ke_hoach_de_ma_kiem` đòi tìm được ≥ 4 tệp: một cửa
+`parametrize` trên danh sách rỗng thì **xanh vì rỗng**, và đó là `KHÔNG ĐO
+ĐƯỢC` đội lốt `đạt`.
+<!-- /CHOT:ket-cuc-ke-hoach -->
+
 <!-- CHOT:so-ca-benh-an -->
 ### Số ca trong sổ bệnh án — con số nằm trong VĂN XUÔI thì không ai kiểm (10/09/2026)
 
@@ -2080,7 +2186,7 @@ thì đã ghi "đạt" và bỏ sót hai chỗ.
 
 | đơn | ngưỡng |
 |---|---|
-| `SO_CA_TOI_THIEU` | **34** — nâng cùng lúc với sổ, để thêm ca là phải cố ý |
+| `SO_CA_TOI_THIEU` | **35** — nâng cùng lúc với sổ, để thêm ca là phải cố ý |
 | mọi `<số> ca` trong `CLAUDE.md` + `SO_BENH_AN.md` | **= số ca đếm được** |
 | mọi `<số> bài học` trong hai tệp ấy | **= số ca đếm được** |
 | loại trừ | phân số (`8/11 ca chấm sai`), bắt bằng lookbehind |

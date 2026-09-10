@@ -2052,6 +2052,120 @@ Gieo 8 phép, cả 8 đỏ. Lượt đầu **1 cửa mù**: bài canh tài liệ
 cảnh báo vẫn xanh. `x in y` lần thứ chín. Nay đòi cụm ấy nằm **cùng một dòng**
 với `CHƯA CHẶN ĐƯỢC`.
 
+<!-- CHOT:trang-thai-phong-mang-ngay -->
+### Trạng thái phòng ĐO ĐƯỢC nhưng không mang NGÀY, và `/api/status` chưa học bài (10/09/2026)
+
+Bắt được bằng cách chạy app nội bộ thật, không bằng đọc mã.
+
+**Nửa đã học bài.** `GET /api/rooms` đọc trạng thái từ
+`data/noi_bo/trang_thai_phong.json`, phòng nào thiếu thì ghi `CHUA_DO` — đúng
+bản vá của ca *"trạng thái tự khai không phải trạng thái"* (02/09, bảy phòng
+tự khai `ONLINE`).
+
+**Nửa chưa.** `GET /api/status` ngay cạnh trả:
+
+```
+"rooms_online": 7            <- HẰNG SỐ GÕ THẲNG trong mã
+"rooms": DANH_MUC_PHONG      <- danh mục THÔ, không phủ trạng thái đo được
+"system_mode": "Local-First Active"
+```
+
+Con số 7 không tính ra từ đâu cả. Xoá một phòng khỏi `DANH_MUC_PHONG`, hay để
+cả bảy phòng hỏng, nó vẫn là 7. Đúng ca *"vá xong một trường không nói gì về
+trường bên cạnh"* — lần này hai trường nằm cách nhau **mười dòng trong cùng
+một tệp**.
+
+Và **giao diện không đọc `rooms_online` lần nào** — nó là một lời khai không
+ai tiêu thụ, nên không ai phát hiện nó sai.
+
+**LỖI NẶNG HƠN: phép đo KHÔNG MANG NGÀY RA TỚI CỬA.**
+
+```
+tệp trạng thái đo lúc   2026-09-03T20:26:18
+commit đụng vào mã phòng kể từ đó   34
+API trả ra ngày ấy      KHÔNG — chỉ trả đường dẫn tệp
+```
+
+Người đọc thấy `CHAY_THAT` và hiểu là **thì hiện tại**. Đây đúng ca vừa ghi vào
+sổ sáng nay — *"nhãn đã đo không mang ngày thì đọc thành thì hiện tại"* — lần
+ấy là kho công nghệ, lần này là chính sản phẩm.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| `rooms_online` | **SUY RA** từ tệp đo, = số phòng có `CHAY_THAT`; không có tệp thì **0** |
+| `/api/status` và `/api/rooms` | cùng trả `do_luc` và `so_ngay_truoc` |
+| phòng thiếu trong tệp đo | **`CHUA_DO`**, ở CẢ HAI cửa — không cửa nào trả danh mục thô |
+| không có tệp đo | mọi phòng `CHUA_DO`, `rooms_online` **0** — fail-closed |
+
+**Không đặt ngưỡng "bao nhiêu ngày thì cũ".** Một con số như thế sẽ là số gõ
+tay, đúng thứ tệp này sinh ra để chống. Cửa chỉ bắt buộc **ngày phải ra tới
+cửa**; già bao nhiêu là chuyện người đọc tự phán, và họ chỉ phán được khi nhìn
+thấy nó.
+
+**ĐO SAU KHI VÁ — gọi thật hai cửa trên máy chủ đang chạy:**
+
+```
+                          /api/status   /api/rooms
+so_phong_chay_that              7            7      <- SUY RA, không gõ
+trang_thai_do_luc      2026-09-10T13:30:29  cùng    <- ngày ra tới cửa
+trang_thai_so_ngay_truoc        0            0
+rooms_online còn không?      KHÔNG           —
+rooms[0] có trang_thai?       CÓ             CÓ
+hai cửa khớp nhau                    CÓ
+```
+
+**VÀ PHÉP ĐO ĐƯỢC CHẠY LẠI, không chỉ dán nhãn:**
+
+```
+             03/09 20:26      10/09 13:30
+aura         CHAY_THAT 169,3s  CHAY_THAT  68,4s
+alpha        CHAY_THAT  34,1s  CHAY_THAT  72,3s   (18 tệp -> 21 tệp)
+beta         CHAY_THAT 106,9s  CHAY_THAT  97,9s
+delta        CHAY_THAT   0,9s  CHAY_THAT   1,7s
+gamma        CHAY_THAT  23,6s  CHAY_THAT  17,0s
+omega        CHAY_THAT   0,4s  CHAY_THAT   1,6s
+zeta         CHAY_THAT   5,3s  CHAY_THAT   7,0s
+                        7/7               7/7
+```
+
+**Lời khai cũ HOÁ RA VẪN ĐÚNG** — và đó chính là chỗ đắt: **không ai biết được
+điều đó cho tới khi chạy lại**. Một nhãn đúng mà không kiểm được thì không khác
+gì một nhãn sai; cả hai đều buộc người đọc phải tin.
+
+**BỐN LẦN BẢN VÁ CỦA TÔI HỎNG, CẢ BỐN ĐỀU DO CỬA CANH BẮT:**
+
+```
+relative_to() NÉM khi sổ đo nằm ngoài repo              3 bài đỏ
+"rooms_online": 7 còn trong CHÚ THÍCH của chính bản vá  1 bài đỏ   (x in y lần 16)
+... rồi còn trong DOCSTRING sau khi lọc chú thích       1 bài đỏ   (x in y lần 17)
+```
+
+Lần 16 vá bằng `tokenize` bỏ COMMENT; lần 17 lộ ra docstring là **STRING** chứ
+không phải COMMENT. Cứ vá từng lớp thì còn lớp thứ ba. Chữa cả LOẠI: hỏi `ast`
+xem trong mã có `dict` nào mang khoá ấy không — **văn xuôi không dựng nổi một
+nút `ast.Dict`**.
+
+
+**VÀ BỘ ĐỦ BẮT ĐƯỢC MỘT THỨ BỐN CỬA KIA KHÔNG THẤY.**
+`test_API_lay_trang_thai_tu_so_do_chu_khong_tu_danh_muc` — cửa canh của chính
+ca *"trạng thái tự khai"* 02/09 — **ĐỎ**, vì nó gieo vào `doc_trang_thai_da_do`
+còn bản vá cho `/api/rooms` gọi thẳng `doc_so_do()`. Phép gieo của nó **không
+còn tới nơi**, đúng loại `KHÔNG ĐO ĐƯỢC` mà `CLAUDE.md` bắt phải kiểm trước khi
+ghi "cửa mù".
+
+Chỗ chữa **không** phải giữ cái bọc cũ cho phép gieo bám vào. Một khớp nối chỉ
+còn test gọi thì sẽ mục, và hai hàm cùng đọc một tệp thì trạng thái với ngày
+trôi khỏi nhau được — đúng bệnh vừa vá. **Một hàm đọc, một khớp nối:** bỏ
+`doc_trang_thai_da_do`, sửa cả bốn chỗ trong cửa cũ sang `doc_so_do`.
+
+Rồi gieo lại chính cửa cũ để chứng minh nó còn cắn được sau khi khớp nối đổi
+chỗ — **3/3 đỏ**, kể cả phép tua lại đúng thứ nó sinh ra để chống (trả thẳng
+danh mục thô ra ngoài).
+
+<!-- /CHOT:trang-thai-phong-mang-ngay -->
+
 <!-- CHOT:khong-bia-loi-cua-sep -->
 ### AURA bịa ra một lỗi Sếp chưa hề mắc — 7/18 lượt (10/09/2026)
 

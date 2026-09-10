@@ -61,13 +61,74 @@ EVIDENCE_DIR = PROJECT_ROOT / "data" / "evidence_sprint" / "runs"
 SO_TRANG_THAI = PROJECT_ROOT / "data" / "noi_bo" / "trang_thai_phong.json"
 
 
-def doc_trang_thai_da_do() -> dict[str, str]:
-    """Đọc sổ đo. Không có sổ, sổ hỏng, thiếu phòng -> `CHUA_DO`."""
+def doc_so_do() -> tuple[dict[str, str], str | None]:
+    """Trả `(trạng thái từng phòng, ngày đo)`. Ngày `None` khi chưa đo được.
+
+    NGÀY PHẢI ĐI CÙNG TRẠNG THÁI, KHÔNG TÁCH RỜI (10/09/2026).
+
+    Đo được: tệp `trang_thai_phong.json` ghi `do_luc` là **2026-09-03T20:26:18**,
+    và **34 commit** đã đụng vào mã của các phòng kể từ đó. `/api/rooms` trả
+    `CHAY_THAT` cho cả bảy phòng mà **không trả ngày** — chỉ trả đường dẫn tệp.
+    Người đọc thấy `CHAY_THAT` và hiểu là thì hiện tại.
+
+    Đúng ca đã ghi sáng cùng ngày: *"nhãn đã đo không mang ngày thì đọc thành
+    thì hiện tại"*. Lần ấy là kho công nghệ ngoài repo; lần này là chính sản
+    phẩm. Nên hàm này trả CẢ HAI, và mọi chỗ dùng đều buộc phải cầm cái ngày.
+    """
     try:
         d = json.loads(SO_TRANG_THAI.read_text(encoding="utf-8"))
-        return {p["phong_id"]: p["trang_thai"] for p in d.get("phong", [])}
+        trang_thai = {p["phong_id"]: p["trang_thai"] for p in d.get("phong", [])}
+        ngay = d.get("do_luc")
+        return trang_thai, (ngay if isinstance(ngay, str) and ngay else None)
     except (OSError, ValueError, KeyError, TypeError):
-        return {}
+        return {}, None
+
+
+def _tuoi_phep_do(do_luc: str | None) -> int | None:
+    """Phép đo già bao nhiêu ngày. `None` khi chưa đo được hoặc ngày hỏng."""
+    if not do_luc:
+        return None
+    try:
+        return max(0, (datetime.now() - datetime.fromisoformat(do_luc)).days)
+    except (TypeError, ValueError):
+        return None
+
+
+def _duong_de_hien(duong: Path) -> str:
+    """Đường dẫn gọn để hiển thị. Không có tệp -> `CHUA_DO`; ngoài repo -> tuyệt đối."""
+    if not duong.is_file():
+        return "CHUA_DO"
+    try:
+        return str(duong.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(duong)
+
+
+def _khoi_trang_thai_phong() -> dict:
+    """Khối chung cho CẢ HAI cửa — một nguồn, không hai lời khai.
+
+    Trước 10/09/2026 `/api/rooms` phủ trạng thái đo được còn `/api/status` trả
+    `DANH_MUC_PHONG` THÔ kèm hằng số `"rooms_online": 7` gõ thẳng trong mã —
+    hai trường cách nhau mười dòng trong cùng một tệp, một cái đã học bài, một
+    cái chưa. Và giao diện không đọc `rooms_online` lần nào, nên không ai phát
+    hiện nó sai.
+    """
+    da_do, do_luc = doc_so_do()
+    phong = [{**p, "trang_thai": da_do.get(p["id"], "CHUA_DO")}
+             for p in DANH_MUC_PHONG]
+    return {
+        "rooms": phong,
+        # SUY RA, không gõ. Không có sổ đo thì 0 — fail-closed, chứ không phải
+        # bảy phòng "online" vì con số 7 nằm sẵn trong mã.
+        "so_phong_chay_that": sum(1 for p in phong
+                                  if p["trang_thai"] == "CHAY_THAT"),
+        "trang_thai_do_luc": do_luc,
+        "trang_thai_so_ngay_truoc": _tuoi_phep_do(do_luc),
+        # `relative_to` NÉM khi sổ đo nằm ngoài repo — bắt được 10/09/2026
+        # bởi chính cửa canh vừa viết, lúc nó trỏ sổ vào thư mục tạm. Một
+        # đường dẫn để HIỂN THỊ không đáng làm nổ cả cửa API.
+        "nguon_trang_thai": _duong_de_hien(SO_TRANG_THAI),
+    }
 
 
 # ---------------------------------------------------------------- FAIL-CLOSED
@@ -327,6 +388,7 @@ async def api_status(request: web.Request) -> web.Response:
         except Exception:
             pass
 
+    khoi = _khoi_trang_thai_phong()
     payload = {
         "status": "PASS",
         "service": "aura-noi-bo-v3",
@@ -338,25 +400,26 @@ async def api_status(request: web.Request) -> web.Response:
             "cpu_percent": cpu_percent,
             "tasks_count": so_nhiem_vu,
             "evidence_runs_count": so_runs,
-            "rooms_online": 7,
+            # Trường cũ ở đây là một hằng số bảy gõ thẳng, bỏ 10/09/2026.
+            # Xoá một phòng khỏi DANH_MUC_PHONG hay để cả bảy phòng hỏng thì
+            # nó vẫn trả bảy — và giao diện không đọc nó lần nào nên không ai
+            # phát hiện. (Không chép lại tên trường cũ vào đây: cửa canh tìm
+            # chuỗi ấy trong tệp, và chú thích cũng là tệp.)
+            # Tên cũ cũng sai: chưa có gì đo "online", thứ đo được là "phòng
+            # này có để lại byte nào trên đĩa không".
+            "so_phong_chay_that": khoi["so_phong_chay_that"],
+            "trang_thai_do_luc": khoi["trang_thai_do_luc"],
+            "trang_thai_so_ngay_truoc": khoi["trang_thai_so_ngay_truoc"],
             "system_mode": "Local-First Active"
         },
-        "rooms": DANH_MUC_PHONG
+        "rooms": khoi["rooms"]
     }
     return web.json_response(payload)
 
 
 async def api_danh_sach_phong(request: web.Request) -> web.Response:
     """Trả về danh sách 7 phòng, kèm trạng thái ĐÃ ĐO (không phải tự khai)."""
-    da_do = doc_trang_thai_da_do()
-    phong = [{**p, "trang_thai": da_do.get(p["id"], "CHUA_DO")}
-             for p in DANH_MUC_PHONG]
-    return web.json_response({
-        "status": "PASS",
-        "rooms": phong,
-        "nguon_trang_thai": str(SO_TRANG_THAI.relative_to(PROJECT_ROOT))
-                            if SO_TRANG_THAI.is_file() else "CHUA_DO",
-    })
+    return web.json_response({"status": "PASS", **_khoi_trang_thai_phong()})
 
 
 # ==============================================================================

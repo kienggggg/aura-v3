@@ -85,9 +85,9 @@ def test_khong_con_chuoi_tu_khai_trong_danh_muc(chuoi):
 
 
 def test_api_doc_trang_thai_tu_so_do():
-    from interface.noi_bo_api import SO_TRANG_THAI, doc_trang_thai_da_do
+    from interface.noi_bo_api import SO_TRANG_THAI, doc_so_do
     assert SO_TRANG_THAI.name.endswith(".json")
-    d = doc_trang_thai_da_do()
+    d, _ngay = doc_so_do()
     assert isinstance(d, dict)
     for v in d.values():
         assert v in ("CHAY_THAT", "CHUA_CHAY_THAT", "KHONG_DO_DUOC"), v
@@ -101,10 +101,10 @@ def test_so_do_hong_thi_tra_ve_rong_chu_khong_no(tmp_path, monkeypatch):
         gia = tmp_path / "so.json"
         gia.write_text(noi_dung, encoding="utf-8")
         monkeypatch.setattr(noi_bo_api, "SO_TRANG_THAI", gia)
-        assert noi_bo_api.doc_trang_thai_da_do() == {}, noi_dung[:20]
+        assert noi_bo_api.doc_so_do() == ({}, None), noi_dung[:20]
 
     monkeypatch.setattr(noi_bo_api, "SO_TRANG_THAI", tmp_path / "khong-co.json")
-    assert noi_bo_api.doc_trang_thai_da_do() == {}
+    assert noi_bo_api.doc_so_do() == ({}, None)
 
 
 def test_ba_trang_thai_TACH_ROI_trong_may_do():
@@ -185,8 +185,18 @@ def test_API_lay_trang_thai_tu_so_do_chu_khong_tu_danh_muc(monkeypatch):
 
     from interface import noi_bo_api
 
-    monkeypatch.setattr(noi_bo_api, "doc_trang_thai_da_do",
-                        lambda: {"gamma": "CHAY_THAT"})
+    # KHỚP NỐI ĐỔI TÊN 10/09/2026, và chính bài này bắt được.
+    #
+    # Bản vá "trạng thái phòng phải mang NGÀY" cho `/api/rooms` gọi thẳng
+    # `doc_so_do()` — trả `(trạng thái, ngày)` trong MỘT lượt đọc — nên phép
+    # gieo vá vào `doc_trang_thai_da_do` không còn tới nơi và bài này ĐỎ trong
+    # bộ đủ. Đúng việc nó sinh ra để làm.
+    #
+    # Chỗ chữa KHÔNG phải giữ lại cái bọc cũ cho phép gieo bám vào: một khớp
+    # nối chỉ còn test gọi thì sẽ mục, và hai hàm đọc cùng một tệp thì trạng
+    # thái với ngày trôi khỏi nhau được. Một hàm đọc, một khớp nối.
+    monkeypatch.setattr(noi_bo_api, "doc_so_do",
+                        lambda: ({"gamma": "CHAY_THAT"}, "2026-01-01T00:00:00"))
     r = asyncio.run(noi_bo_api.api_danh_sach_phong(None))
     d = _json.loads(r.body.decode("utf-8"))
     theo_id = {p["id"]: p["trang_thai"] for p in d["rooms"]}

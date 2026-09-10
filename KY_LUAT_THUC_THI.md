@@ -2052,6 +2052,152 @@ Gieo 8 phép, cả 8 đỏ. Lượt đầu **1 cửa mù**: bài canh tài liệ
 cảnh báo vẫn xanh. `x in y` lần thứ chín. Nay đòi cụm ấy nằm **cùng một dòng**
 với `CHƯA CHẶN ĐƯỢC`.
 
+<!-- CHOT:mo-ho-khi-bo-dau-loai-cau-hoi -->
+### Bỏ dấu gộp `đô` · `độ` · `đo` thành `do`, và `do` là từ TRỎ NGỮ CẢNH (10/09/2026)
+
+`core/loai_cau_hoi.py`:
+
+```
+_TRO_VE_NGU_CANH = (?<!\w)(?:nay|do|kia|vua roi|vua noi|tren|duoi|…)(?!\w)
+if _HOI_DINH_NGHIA.search(moc) and not _TRO_VE_NGU_CANH.search(moc):
+    return TRA_CUU
+```
+
+Ý định đúng và đã trả giá: *"lỗi này là gì"*, *"hàm vừa rồi là gì"* — đáp án nằm
+trong cuộc trò chuyện, đẩy đi tra là vừa chậm vừa đẩy chuyện riêng ra ngoài.
+
+Nhưng sau `_bo_dau`, **`đô` (thủ đô) · `độ` (chế độ, nhiệt độ, mức độ) · `đo`
+(đo lường)** đều thành `do`; **`đuôi`** thành `duoi` y như `dưới`. Chúng là
+những từ khác hẳn, và câu chứa chúng không trỏ vào ngữ cảnh nào cả.
+
+**ĐO NỀN — 15 câu cần nguồn, 6 ca đối chứng:**
+
+```
+cần tra nguồn mà LỌT       15/15
+trỏ ngữ cảnh, giữ đúng      6/6
+```
+
+**Và tác hại đo được trên app THẬT, không phải suy luận:**
+
+```
+hỏi:  "mức độ lạm phát Việt Nam năm ngoái là gì"
+đáp:  status=ok · nguồn=0
+      "Theo số liệu chính thức từ Tổng cục Thống kê, mức giá trung bình
+       tại Việt Nam tăng khoảng 2,91% trong năm 2024..."
+```
+
+AURA **dẫn tên một cơ quan nhà nước** kèm một con số cụ thể, với **0 nguồn** —
+và còn sai năm (từ 2026, *"năm ngoái"* là 2025). Đây đúng cách bịa của
+13/08/2026 khi nó dựng nguyên một tiểu sử trong 5,2 giây; bản vá hôm ấy vẫn
+đứng, chỉ là câu hỏi đi vòng qua nó qua khe bỏ dấu.
+
+**CHỖ CHỮA ĐÃ CÓ SẴN Ở TỆP BÊN CẠNH.** `core/web_search.py` giữ
+`_MO_HO_KHI_BO_DAU` cho đúng bệnh này — từ nào bỏ dấu thì trùng với từ khác thì
+**chỉ khớp bản CÓ DẤU**. `loai_cau_hoi` đã học luật ranh giới từ nhưng chưa học
+luật này. Lại là *"vá xong một trường không nói gì về trường bên cạnh"*.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| 15 câu cần nguồn | **0/15 lọt** (nền 15/15) |
+| 6 ca đối chứng trỏ ngữ cảnh | **6/6 giữ nguyên** — không được đổi |
+| từ MỜ khi bỏ dấu | **`này` · `đó` · `dưới`** — chỉ khớp bản CÓ DẤU |
+| từ rõ khi bỏ dấu | `kia`, `vừa rồi`, `vừa nói`, `trên`, `bên trên`, `ở trên`, `trên đây`, `ban đầu`, `lúc này`, `phía trên` — vẫn khớp bản không dấu |
+
+**CÁI GIÁ, nói ra trước:** gõ không dấu *"loi nay la gi"* thì từ nay **sẽ** đi
+tra nguồn. Đó là chiều an toàn — chậm hơn và tra thừa, thay vì bịa kèm tên một
+cơ quan có thật. Cùng lựa chọn `web_search.py` đã làm cho `_MO_HO_KHI_BO_DAU`.
+
+**ĐO SAU KHI VÁ:**
+
+```
+                          nền     sau    ngưỡng đặt TRƯỚC
+15 câu cần nguồn LỌT     15/15    0/15   0/15            ĐẠT
+6 ca đối chứng giữ đúng    6/6     6/6   6/6             ĐẠT
+```
+
+Trên app THẬT, cùng ba câu:
+
+```
+"mức độ lạm phát Việt Nam năm ngoái là gì"
+   trước  ok · 0 nguồn · "Theo Tổng cục Thống kê … 2,91% … năm 2024"
+   sau    web_unavailable · "chưa lấy đủ nguồn đáng tin cậy"
+"thủ đô nước Pháp là gì"
+   trước  ok · 0 nguồn
+   sau    ok · 4 nguồn · "Thủ đô nước Pháp là Paris [1][2][3]"
+"lỗi này là gì"   (đối chứng)
+   trước  tu_nghi, 0 nguồn      sau  y nguyên
+```
+
+**Từ chối thật thà thắng bịa tự tin** — đó là cả điểm của đường fail-closed
+13/08.
+
+**VÀ BA BÀI TEST MƯỢN ĐÚNG CÁI HỎNG LÀM CA MẪU.** Bộ đủ đỏ 3 bài sau bản vá:
+
+```
+test_luot_hong_van_vao_so::test_luot_thanh_cong_van_vao_so_nhu_cu
+test_mat_mang_noi_that::test_chi_hoi_mang_KHI_DA_tra_hut
+test_used_web_noi_that::test_KHONG_goi_mang_thi_van_phai_bao_la_khong
+```
+
+Cả ba dùng chung mẫu **"Thủ đô Việt Nam là gì?"** làm *"lượt bình thường,
+không cần mạng"* — và nó chỉ "không cần mạng" **vì đúng cái lỗi vừa vá**. Thủ
+đô là dữ kiện kiểm chứng được ngoài đời; nó PHẢI đi tra nguồn.
+
+Đúng ca *"vá xong cái hỏng thì mất luôn ca đối chứng"*. Mẫu mới —
+`giải thích đệ quy giúp tôi` — không dựa vào lỗi nào.
+
+**Và đi tìm mẫu mới thì lộ ra một chỗ KHÔNG NHẤT QUÁN, ghi lại chứ chưa vá:**
+
+```
+"closure trong JavaScript là gì"   -> tra_cuu, đi tra mạng, 59,8 giây
+"giải thích đệ quy giúp tôi"       -> tu_nghi, model tự trả lời
+```
+
+Cùng một loại câu — giải thích một khái niệm lập trình — hai phán quyết ngược
+nhau, và biến duy nhất là **cách hỏi có chữ "là gì" hay không**. Chưa đo được
+cách nào đúng hơn: siết cho cả hai đi tra thì mỗi câu khái niệm tốn ~60 giây và
+đúng cái *"tra thừa"* mà `chat_service` gọi là chi phí đắt nhất của chat riêng;
+nới cho cả hai tự trả lời thì mở lại đường bịa. **Cần một phép đo, chưa có.**
+
+---
+
+### HAI NỢ CÒN MỞ, tìm được cùng lượt đo, CHƯA vá (10/09/2026)
+
+Đo `core/nho_lai.py` bằng cách gắn ba dữ kiện ở lượt 1-3, đẩy 12 lượt rác để
+chúng rơi khỏi cửa sổ 24 tin, rồi hỏi lại ở lượt 16-18:
+
+```
+"mã đơn hàng của tôi là gì"   ĐÚNG NGUYÊN VĂN   DH-2026-XK7734 [1]
+"con gái tôi tên gì"          ĐÚNG NGUYÊN VĂN   Phạm Nhã Uyên
+"biển số xe tôi là gì"        KHÔNG NHẮC TỚI    web_unavailable, 52,7 giây
+                              2/3
+```
+
+**Nợ 1 — câu hỏi về dữ liệu RIÊNG của Sếp bị đẩy ra máy chủ tìm kiếm.** Đo:
+`requires_web` trả `True` cho *"biển số xe tôi là gì"*, *"mã đơn hàng của tôi
+là gì"*, *"số điện thoại của tôi là gì"* — trong khi `nho_lai` lôi được đáp án
+ra từ sổ phiên. Trả lời được hay không phụ thuộc vào chuyện một phép tra mạng
+**không liên quan** có trả về nguồn nào không: hai câu may mắn có nguồn thì
+model dùng được dữ kiện, câu thứ ba không có nguồn thì lượt chết ở
+`web_unavailable` và dữ kiện bị vứt.
+
+Cùng họ với ca *"câu hỏi về sổ phiên bị đẩy đi tra mạng"* vá sáng nay, nhưng
+KHÔNG vá được bằng cùng một cách: `hoi_ve_so_phien` là bộ nhận diện **không cần
+lịch sử**, còn "sổ phiên có trả lời được câu này không" thì cần — `nho_lai` đo
+độ chồng lấp từ với các lượt cũ. `requires_web(request)` không cầm lịch sử.
+
+**Nợ 2 — trích dẫn `[1]` gắn vào dữ kiện lấy từ SỔ PHIÊN.** Câu trả lời
+*"Mã đơn hàng của bạn là DH-2026-XK7734 [1]"* mang một cái mốc nguồn trỏ vào
+một trang web **không hề chứa** con số ấy. Nguồn không đỡ được điều nó đang đỡ.
+Đây là họ nặng nhất trong sổ — *"lời dặn không phải phép đo"* — vì cái mốc ấy
+chính là thứ người đọc dùng để tin.
+
+Cả hai ghi lại kèm số, **chưa vá**. Không viết là đã vá.
+
+<!-- /CHOT:mo-ho-khi-bo-dau-loai-cau-hoi -->
+
 <!-- CHOT:trang-thai-phong-mang-ngay -->
 ### Trạng thái phòng ĐO ĐƯỢC nhưng không mang NGÀY, và `/api/status` chưa học bài (10/09/2026)
 

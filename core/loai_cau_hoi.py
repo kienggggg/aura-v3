@@ -102,10 +102,43 @@ _HOI_DINH_NGHIA = re.compile(r"(?<!\w)la\s+(?:gi|cai gi)(?!\w)")
 # (Sếp vừa dán một khối lỗi), "hàm vừa rồi là gì". Đáp án nằm trong lịch sử,
 # không nằm ngoài Internet — đẩy đi tra là vừa chậm vừa sai chỗ, và còn đẩy
 # chuyện riêng của Sếp ra ngoài.
-_TRO_VE_NGU_CANH = re.compile(
-    r"(?<!\w)(?:nay|do|kia|vua roi|vua noi|tren|duoi|ben tren|o tren|"
+# BỎ DẤU GỘP HAI TỪ KHÁC HẲN LÀM MỘT (10/09/2026).
+#
+# Mẫu cũ khớp trên bản BỎ DẤU, nên `do` bắt luôn `đô` (thủ đô) · `độ` (chế độ,
+# nhiệt độ, mức độ) · `đo` (đo lường), và `duoi` bắt luôn `đuôi`. Đo được:
+# **15/15** câu cần nguồn thoát khỏi đường bắt buộc có nguồn.
+#
+# Tác hại đo trên app THẬT, không phải suy luận:
+#
+#     hỏi  "mức độ lạm phát Việt Nam năm ngoái là gì"
+#     đáp  status=ok · nguồn=0
+#          "Theo số liệu chính thức từ Tổng cục Thống kê, mức giá trung bình
+#           tại Việt Nam tăng khoảng 2,91% trong năm 2024..."
+#
+# Dẫn tên một cơ quan nhà nước kèm con số cụ thể, 0 nguồn, và sai cả năm. Đúng
+# cách bịa của 13/08/2026 — bản vá hôm ấy vẫn đứng, câu hỏi chỉ đi vòng qua nó.
+#
+# Chỗ chữa đã có sẵn ở `core/web_search.py`: `_MO_HO_KHI_BO_DAU` — từ nào bỏ
+# dấu thì trùng từ khác thì CHỈ khớp bản có dấu. Tệp này đã học luật ranh giới
+# từ nhưng chưa học luật này.
+#
+# CÁI GIÁ, nói ra trước: gõ không dấu "loi nay la gi" thì từ nay SẼ đi tra
+# nguồn. Chiều an toàn — chậm hơn và tra thừa, thay vì bịa kèm tên một cơ quan
+# có thật.
+_TRO_NGU_CANH_RO = re.compile(
+    r"(?<!\w)(?:kia|vua roi|vua noi|tren|ben tren|o tren|"
     r"tren day|ban dau|luc nay|phia tren)(?!\w)"
 )
+_TRO_NGU_CANH_MO = re.compile(r"(?<!\w)(?:này|đó|dưới)(?!\w)")
+
+
+def _tro_ve_ngu_canh(text: str, moc: str) -> bool:
+    """Câu có trỏ vào thứ NGAY TRONG cuộc trò chuyện không?
+
+    Hai mẫu, không một: từ rõ khớp bản bỏ dấu, từ mờ đòi bản có dấu.
+    """
+    return bool(_TRO_NGU_CANH_RO.search(moc)
+                or _TRO_NGU_CANH_MO.search((text or "").lower()))
 
 # Vị từ hỏi một DỮ KIỆN cụ thể — trả lời sai là sai hẳn, không phải "diễn đạt
 # khác đi". Có thực thể viết hoa đi kèm thì bắt buộc tra.
@@ -212,7 +245,7 @@ def loai(text: str) -> str:
         return TRA_CUU
     # Xét SAU `_CHU_DO_MOI`: "giá vàng hôm nay là gì" đã thành TRA_CUU ở trên,
     # nên chữ "nay" trong "hôm nay" không kịp bị hiểu nhầm là trỏ ngữ cảnh.
-    if _HOI_DINH_NGHIA.search(moc) and not _TRO_VE_NGU_CANH.search(moc):
+    if _HOI_DINH_NGHIA.search(moc) and not _tro_ve_ngu_canh(text, moc):
         return TRA_CUU
     # Dữ kiện cụ thể CHỈ tính khi có tên riêng: "ở đâu" trong "lỗi này nằm ở
     # đâu" là hỏi về mã của Sếp, không phải hỏi địa chỉ một nơi có thật.

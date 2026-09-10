@@ -141,9 +141,21 @@ def test_luot_TU_CHOI_VI_BI_MAT_thi_TUYET_DOI_khong_vao_so():
 
 
 def test_luot_thanh_cong_van_vao_so_nhu_cu():
+    # MẪU ĐỔI 10/09/2026 — trước là "Thủ đô Việt Nam là gì?".
+    #
+    # Câu ấy được chọn làm mẫu "lượt bình thường, không cần mạng" CHÍNH VÌ
+    # một lỗi: `_TRO_VE_NGU_CANH` khớp trên bản bỏ dấu, nên `đô` trong
+    # "thủ đô" thành `do` và trùng với `đó`. Vá lỗi ấy thì câu này ra
+    # `tra_cuu` — đúng như nó phải thế, vì thủ đô là dữ kiện kiểm chứng
+    # được ngoài đời. Bài test mượn đúng cái hỏng làm ca mẫu.
+    #
+    # Đúng ca đã ghi: *"vá xong cái hỏng thì mất luôn ca đối chứng"*.
+    # Mẫu mới KHÔNG dựa vào lỗi nào: `giải thích đệ quy giúp tôi` là
+    # `tu_nghi` vì không hỏi định nghĩa một thực thể có tên riêng, và
+    # `tinh_giup` không chèn dữ kiện gì vào nó.
     ket_qua, so = _hoi(
         _Model(reply=ModelReply(text="Hà Nội.", requires_web=False)),
-        text="Thủ đô Việt Nam là gì?",
+        text="giải thích đệ quy giúp tôi",
     )
     assert ket_qua.status is ChatStatus.OK
-    assert so.da_ghi == [("Thủ đô Việt Nam là gì?", "Hà Nội.")]
+    assert so.da_ghi == [("giải thích đệ quy giúp tôi", "Hà Nội.")]

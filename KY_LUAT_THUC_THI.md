@@ -2573,6 +2573,88 @@ lượt sau vá model không cãi lại nó lần nào, nhưng chuỗi ấy vẫ
 phải 1.489"*). Chưa đủ bằng chứng để nói bản vá này chữa luôn cả nó; nhiều khả
 năng nó chỉ **bớt cớ** để model cãi. Đây là chỗ thiếu **đã biết**.
 
+
+---
+
+**SỬA LỜI KHAI Ở TRÊN — CHIỀU CÙNG NGÀY.** Dòng *"TỔNG 7/27 → 0/27"* là
+đúng số đo, nhưng **không đại diện**, và cách tôi đọc nó sai.
+
+Gõ đúng *"tính giúp tôi 8934 chia 6"* qua **giao diện thật** thì lượt đầu tiên ra:
+
+```
+"Không đúng, kết quả chính xác là $8934 \div 6 = 1489$."
+```
+
+Đo lại riêng câu *"tính hộ 91234 trừ 7658"* sau bản vá câu chữ:
+
+```
+lượt sáng (bộ B)      0/3
+lượt chiều thứ nhất   4/10
+lượt chiều thứ hai    0/5
+lượt chiều thứ ba     5/20
+GỘP                   9/38 ≈ 24%
+```
+
+Tôi đã ghi chặn trên 95% của 0/27 là 11% — đúng về toán, và đúng là cảnh báo
+cần ghi. Nhưng rồi tôi vẫn gọi lỗi thứ hai (*dấu chấm hàng nghìn*) là
+*"nhiều khả năng chỉ bớt cớ"*. **Hoá ra nó là nguyên nhân chính còn lại.**
+
+**KIỂM GIẢ THUYẾT, ĐỐI CHỨNG MỘT BIẾN, XEN KẼ TỪNG LƯỢT:** cùng dạng câu, cùng
+số hạng đầu 91234, chỉ đổi số hạng sau để kết quả rơi dưới 1000 — chuỗi dữ kiện
+mất dấu chấm. Xen kẽ để hai nhóm chịu cùng độ trôi của máy.
+
+```
+                                     dữ kiện máy          bịa lỗi
+"tính hộ 91234 trừ 7658"             "= 83.576."           5/20
+"tính hộ 91234 trừ 91111"            "= 123."              0/20
+```
+
+**Lượt N=5 trước đó cho 0/15 so với 0/15 — không phân biệt được gì.** Ô 5 lượt
+quá nhỏ cho một tỉ lệ ~25%: P(0/5) = 0,75⁵ ≈ 24%. Nếu dừng ở đó tôi đã ghi
+*"giả thuyết bị bác"*.
+
+Và các câu hỏng tự nói nguyên nhân:
+
+```
+"…kết quả là số âm (-83576), không phải 83.576 như bạn đã ghi."
+"Không đúng, kết quả chính xác là 83576."
+"Kết quả đúng là 83576, không phải 83.576."
+```
+
+Model đọc `83.576` thành *tám mươi ba phẩy năm bảy sáu*. Trừ hai số nguyên mà
+ra số lẻ thì vô lý, nên nó **bắt lỗi MÁY** — rồi dựng ra một người đã ghi sai.
+Chia thì ra số lẻ là hợp lý, nên `1.489` ít bị cãi hơn.
+
+**ĐẶC TẢ LẦN HAI — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| số nguyên trong chuỗi dữ kiện | **chữ số trần**, không dấu chấm hàng nghìn |
+| câu có dấu chấm, xen kẽ N=20 | **≤ 1/20** (nền 5/20) |
+| câu đối chứng không dấu chấm | **ở lại 0/20** |
+| số sai | **0/40** |
+
+**Không đụng số thập phân** (`7,5000`): chưa đo được nó hỏng, và dấu phẩy
+thập phân là mặt đối xứng của cùng bệnh — đổi mù là đổi lỗi lấy lỗi.
+
+
+**ĐO SAU BẢN VÁ LẦN HAI — cùng thiết kế xen kẽ N=20:**
+
+```
+                                     dữ kiện máy        nền    sau
+"tính hộ 91234 trừ 7658"             "= 83576."         5/20   0/20
+"tính hộ 91234 trừ 91111"  (đối chứng) "= 123."          0/20   0/20
+số sai                                                  0/40   0/40
+```
+
+Đạt ngưỡng đặt trước (≤ 1/20). **Và 0/20 cũng không phải 0%** — chặn trên
+95% là **3/20 = 15%**. Sáng nay tôi đã ghi đúng câu ấy cho 0/27 rồi vẫn đọc
+như thể lỗi đã hết; lần này để nó ở ngay cạnh con số.
+
+**Bài học riêng của lượt này:** giả thuyết đúng suýt bị ghi là **bị bác**, vì
+lượt đầu chỉ có 5 lần mỗi ô. Một tỉ lệ ~25% cho ra 0/5 với xác suất ~24% — gần
+một lần trong bốn. Ô nhỏ không bác được gì; nó chỉ **im**.
+
 <!-- /CHOT:khong-bia-loi-cua-sep -->
 
 <!-- CHOT:so-phien-khong-di-tra-mang -->

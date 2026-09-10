@@ -85,7 +85,9 @@ def test_chuoi_doc_hai_bi_tu_choi(doc):
 
 
 @pytest.mark.parametrize("hoi,ket_qua", [
-    ("Tính giúp tôi 1247 * 38 bằng bao nhiêu?", "47.386"),
+    # Chữ số TRẦN từ 10/09/2026: "47.386" làm model đọc thành số lẻ rồi
+    # bắt lỗi máy — xem `_goi_gon`. Bài này kiểm CON SỐ, không kiểm dấu.
+    ("Tính giúp tôi 1247 * 38 bằng bao nhiêu?", "47386"),
     ("cho hỏi 1000 - 275 là mấy", "725"),
     ("em ơi 84 / 4 ra bao nhiêu vậy", "21"),
 ])
@@ -166,12 +168,12 @@ def test_bat_duoc_toan_tu_viet_bang_chu():
 
     ra = tinh_giup("1247 nhân 38 bằng bao nhiêu")
     assert ra is not None, "máy tính không bắt được 'nhân' -> model tự đoán"
-    assert "47.386" in ra
+    assert "47386" in ra   # chữ số trần — xem `_goi_gon`
 
     assert "350" in (tinh_giup("100 cộng 250") or "")
     assert "999" in (tinh_giup("1000 trừ 1") or "")
     assert "12" in (tinh_giup("144 chia 12") or "")
-    assert "1.024" in (tinh_giup("2 mũ 10") or "")
+    assert "1024" in (tinh_giup("2 mũ 10") or "")
 
 
 def test_khong_bat_nham_chu_thuong_ngay():
@@ -329,3 +331,41 @@ def test_KET_QUA_do_van_o_lai_TAI_LIEU():
     assert DAC_TA_CHAN_TREN in phang, (
         "cắt mất chặn trên 95% — 0/27 đứng một mình đọc thành 'không bao giờ "
         "hỏng nữa', mà đó là điều phép đo KHÔNG nói")
+
+
+# ---------------------------------------------------------------------------
+# SỐ NGUYÊN TRONG CHUỖI DỮ KIỆN KHÔNG MANG DẤU CHẤM HÀNG NGHÌN (10/09/2026)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("cau,so", [
+    ("tính hộ 91234 trừ 7658", "83576"),       # nền 5/20 bịa lỗi
+    ("1247 nhân 38 bằng bao nhiêu", "47386"),
+    ("tính hộ 12 nhân 1250", "15000"),         # "15.000" đọc được thành 15
+    ("100 cộng 1000000", "1000100"),
+])
+def test_so_nguyen_trong_du_kien_la_CHU_SO_TRAN(cau, so):
+    """Model đọc "83.576" thành số lẻ, rồi bắt lỗi MÁY và bịa ra người sai.
+
+    Đo xen kẽ N=20: có dấu chấm 5/20 bịa lỗi, không dấu chấm 0/20.
+    """
+    import re as _re
+
+    ra = tinh_giup(cau)
+    assert ra is not None, cau
+    trong_ngoac = _re.search(r'"([^"]+)"', ra).group(1)
+    assert so in trong_ngoac, f"mất con số {so}: {trong_ngoac!r}"
+    assert not _re.search(r"\d\.\d{3}\b", trong_ngoac), (
+        f"dấu chấm hàng nghìn quay lại: {trong_ngoac!r}")
+
+
+def test_SO_THAP_PHAN_giu_nguyen_vi_CHUA_DO():
+    """Ca đối chứng của bản vá: nó chỉ đụng số NGUYÊN.
+
+    Số thập phân vẫn ra dấu phẩy kiểu Việt. Chưa đo được nó hỏng, nên chưa
+    đổi — bài này giữ cho ai đổi nó phải đổi CỐ Ý, kèm một phép đo.
+    """
+    from core.may_tinh import _goi_gon
+
+    assert _goi_gon(7.5) == "7,5000"
+    assert _goi_gon(47386) == "47386"
+    assert _goi_gon(47386.0) == "47386"

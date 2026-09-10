@@ -215,10 +215,32 @@ def _rut_bieu_thuc(text: str) -> str | None:
 
 
 def _goi_gon(so: float) -> str:
+    """Số để đưa cho MODEL đọc — không phải để Sếp đọc.
+
+    SỐ NGUYÊN RA CHỮ SỐ TRẦN, KHÔNG DẤU CHẤM HÀNG NGHÌN (10/09/2026). Bản cũ
+    viết `83576` thành `83.576` theo lối Việt, và model đọc thành *tám mươi ba
+    phẩy năm bảy sáu*. Trừ hai số nguyên mà ra số lẻ thì vô lý, nên nó BẮT LỖI
+    MÁY rồi dựng ra một người đã ghi sai:
+
+        "…kết quả là số âm (-83576), không phải 83.576 như bạn đã ghi."
+        "Kết quả đúng là 83576, không phải 83.576."
+
+    Đo, đối chứng một biến, xen kẽ từng lượt — cùng dạng câu, cùng số hạng đầu
+    91234, chỉ đổi số hạng sau:
+
+        "= 83.576."   bịa lỗi 5/20
+        "= 123."      bịa lỗi 0/20
+
+    Lượt N=5 trước đó cho 0/15 so với 0/15 và suýt được đọc thành "giả thuyết
+    bị bác" — ô 5 lượt quá nhỏ cho một tỉ lệ ~25%.
+
+    Số thập phân GIỮ NGUYÊN (`7,5000`): chưa đo được nó hỏng, và dấu phẩy thập
+    phân là mặt đối xứng của cùng một bệnh — đổi mù là đổi lỗi lấy lỗi.
+    """
     if isinstance(so, float) and so.is_integer():
         so = int(so)
     if isinstance(so, int):
-        return f"{so:,}".replace(",", ".")
+        return str(so)
     return f"{so:,.4f}".replace(",", "_").replace(".", ",").replace("_", ".")
 
 

@@ -46,7 +46,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
-from core.paths import PROJECT_ROOT
+from core.paths import DATA_DIR, PROJECT_ROOT
 
 TRAN_DEM_TEST_GIAY = 180
 TRAN_TOK_GIAY = 120
@@ -72,8 +72,25 @@ def _hien_vat(p: Path, loai: str, nhan: str) -> Dict[str, Any]:
             "sha256": _bam(p), "type": loai, "kind": nhan}
 
 
+def _duong_gon(duong: Path) -> str:
+    """Đường gọn để HIỂN THỊ. Ngoài repo thì trả nguyên đường tuyệt đối.
+
+    `relative_to` NÉM khi tệp nằm ngoài `PROJECT_ROOT` — bẫy đã cắn một lần ở
+    `interface/noi_bo_api.py` sáng 10/09/2026. Một chuỗi để hiện không đáng
+    làm nổ cả phòng Omega.
+    """
+    try:
+        return duong.relative_to(PROJECT_ROOT).as_posix()
+    except ValueError:
+        return duong.as_posix()
+
+
 def _thu_muc(phong: str, task_id: str) -> Path:
-    d = PROJECT_ROOT / "data" / phong / task_id
+    # `DATA_DIR`, không phải `PROJECT_ROOT / "data"` (10/09/2026): tính lại gốc
+    # ngay trong thân hàm thì bộ test không chuyển hướng được, và nó đã ghi
+    # hàng nghìn thư mục `task_*` vào `data/` thật. `DATA_DIR` là tên toàn cục
+    # của module, tra lúc GỌI — `tests/conftest.py` vá được nó.
+    d = DATA_DIR / phong / task_id
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -172,7 +189,7 @@ def phong_gamma(task_id: str, yeu_cau: str = "") -> Dict[str, Any]:
 
 # --------------------------------------------------------------------- OMEGA
 
-SO_CAI = PROJECT_ROOT / "data" / "omega" / "so_cai.jsonl"
+SO_CAI = DATA_DIR / "omega" / "so_cai.jsonl"
 
 
 def phong_omega(task_id: str, yeu_cau: str = "") -> Dict[str, Any]:
@@ -212,7 +229,7 @@ def phong_omega(task_id: str, yeu_cau: str = "") -> Dict[str, Any]:
     d = _thu_muc("omega", task_id)
     bc = d / "bao_cao_so_cai.md"
     dong = [f"# Báo cáo sổ cái — {task_id}", "",
-            f"Nguồn: `{SO_CAI.relative_to(PROJECT_ROOT).as_posix()}`",
+            f"Nguồn: `{_duong_gon(SO_CAI)}`",
             f"SHA-256: `{so['sha256_so_cai']}`", "",
             f"- **{so['so_dong']:,} dòng** · {so['so_byte']:,} byte",
             f"- dòng hỏng (không đọc được JSON): **{hong}**", "", "## Theo phòng", ""]

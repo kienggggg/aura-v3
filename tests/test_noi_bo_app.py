@@ -90,7 +90,12 @@ class TestNoiBoApp(AioHTTPTestCase):
                     "kiem": {"so": {}}, "ms": 1.0, "vi_sao": ""}
 
         def _phong_gia(task_id, yeu_cau="", *a, **k):
-            d = PROJECT_ROOT / "data" / "thu_fail_closed" / task_id
+            # Thư mục DỮ LIỆU của lượt test này, không phải `data/` thật —
+            # `tests/conftest.py` đã trỏ `noi_bo_api.DATA_DIR` vào thư mục tạm.
+            # Bản cũ ghi `PROJECT_ROOT / "data" / "thu_fail_closed"` và để lại
+            # thư mục ấy trong kho sau mỗi lượt chạy (10/09/2026).
+            from interface import noi_bo_api as _nba
+            d = _nba.DATA_DIR / "thu_fail_closed" / task_id
             d.mkdir(parents=True, exist_ok=True)
             (d / "hien_vat.json").write_text("{}", encoding="utf-8")
             return {"trang_thai": "PASS",

@@ -2052,6 +2052,59 @@ Gieo 8 phép, cả 8 đỏ. Lượt đầu **1 cửa mù**: bài canh tài liệ
 cảnh báo vẫn xanh. `x in y` lần thứ chín. Nay đòi cụm ấy nằm **cùng một dòng**
 với `CHƯA CHẶN ĐƯỢC`.
 
+<!-- CHOT:bo-test-khong-ban-data -->
+### Bộ test ghi vào `data/` THẬT — sổ cái 12.119 dòng, 9.170 dòng là `"thử"` (10/09/2026)
+
+Tìm thấy khi đi soi nửa "mốc tiến độ" của kế hoạch Vỏ trong suốt: `data/tien_do/`
+có **8.278 tệp**, và tên tệp lặp **cùng một giây** — dáng của thứ sinh hàng
+loạt. Chỉ **13 tệp** mang tiền tố `pipe_ui` (từ giao diện thật).
+
+Sổ cái Omega — thứ `/api/status` đếm ra `tasks_count` và `/api/ledger` hiện
+cho Sếp xem:
+
+```
+12.119 dòng · 2,61 MB
+ 9.170  "thử"
+   528  "vì sao thì mà là"          <- ca đề không còn từ nội dung
+~1.300  "Thực thi tác vụ kiểm thử cho phòng …"
+```
+
+Chương I của tệp này gọi bằng chứng trên đĩa là **chân lý duy nhất**. Bộ test đã
+viết vào đó hàng nghìn dòng giả, và giao diện đếm chúng như việc thật.
+
+**ĐO NỀN — chụp cây `data/` trước và sau MỘT lượt bộ đủ:**
+
+```
+tệp MỚI     71   40 tiến độ · ~30 thư mục task_* của aura/alpha
+tệp BỊ SỬA  57   epsilon/test_eps_* ghi đè mỗi lượt · beta/thu_beta_*
+sổ cái      +55 dòng
+```
+
+**Ba chỗ khai cùng một sổ cái:** `core/omega.py` (qua `DATA_DIR`),
+`core/phong_noi_bo.py` và `interface/noi_bo_api.py` (cả hai tự tính
+`PROJECT_ROOT / "data"`). `core/paths.py` có sẵn `DATA_DIR` từ trước — chỉ một
+tệp dùng nó.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| tệp mới trong data/ sau một lượt bộ đủ | **0** (nền 71) |
+| tệp bị sửa trong data/ | **0** (nền 57) |
+| dòng thêm vào sổ cái | **0** (nền +55) |
+| gốc dữ liệu | **một** — `DATA_DIR`, không còn `PROJECT_ROOT / "data"` trong tệp ghi |
+| `relative_to(PROJECT_ROOT)` không bọc `try` | **0** trong `core/` + `interface/` |
+
+**Cơ chế là cửa canh CẤP PHIÊN, không phải danh sách vá.** `tests/conftest.py`
+chụp `data/` thật lúc phiên bắt đầu, so lúc kết thúc, **có tệp nào đổi là cả
+phiên đỏ**. Danh sách đích ghi được chuyển hướng trong `_du_lieu_tam` là vá tay
+và sót được; cửa cấp phiên bắt chỗ sót ngay lượt đầu.
+
+**KHÔNG DỌN đống đã bẩn.** 12 nghìn dòng sổ cái và 8 nghìn tệp tiến độ vẫn nằm
+đó. Sổ cái là một tệp **trộn** dòng thật với dòng test, và nó là bằng chứng
+gốc — xoá là việc khó đảo ngược, để Sếp quyết.
+<!-- /CHOT:bo-test-khong-ban-data -->
+
 <!-- CHOT:cau-hoi-rieng-khong-ra-mang -->
 ### Câu hỏi về dữ liệu RIÊNG của Sếp bị đẩy ra máy chủ tìm kiếm (10/09/2026)
 

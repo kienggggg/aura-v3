@@ -28,7 +28,7 @@ from uuid import uuid4
 
 from aiohttp import web
 
-from core.paths import PROJECT_ROOT
+from core.paths import DATA_DIR, PROJECT_ROOT
 from core.polyglot import (
     DANH_SACH_NGON_NGU,
     chay_ma_da_ngon_ngu,
@@ -39,8 +39,8 @@ from core.polyglot import (
 
 # Thư mục giao diện Web nội bộ
 WEB_DIR = Path(__file__).resolve().parent / "web"
-OMEGA_SO_CAI = PROJECT_ROOT / "data" / "omega" / "so_cai.jsonl"
-EVIDENCE_DIR = PROJECT_ROOT / "data" / "evidence_sprint" / "runs"
+OMEGA_SO_CAI = DATA_DIR / "omega" / "so_cai.jsonl"
+EVIDENCE_DIR = DATA_DIR / "evidence_sprint" / "runs"
 
 
 # Trạng thái phòng KHÔNG nằm trong danh mục này nữa.
@@ -58,7 +58,7 @@ EVIDENCE_DIR = PROJECT_ROOT / "data" / "evidence_sprint" / "runs"
 #
 # Nay `api_danh_sach_phong` đọc trạng thái TỪ SỔ ĐO. Chưa đo thì hiện
 # `CHUA_DO` — không phòng nào được tự khai ONLINE nữa.
-SO_TRANG_THAI = PROJECT_ROOT / "data" / "noi_bo" / "trang_thai_phong.json"
+SO_TRANG_THAI = DATA_DIR / "noi_bo" / "trang_thai_phong.json"
 
 
 def doc_so_do() -> tuple[dict[str, str], str | None]:
@@ -92,6 +92,21 @@ def _tuoi_phep_do(do_luc: str | None) -> int | None:
         return max(0, (datetime.now() - datetime.fromisoformat(do_luc)).days)
     except (TypeError, ValueError):
         return None
+
+
+def _duong_trong_kho(duong: Path) -> str:
+    """Đường gọn cho HIỆN VẬT: tương đối nếu trong kho, tuyệt đối nếu ngoài.
+
+    `relative_to(PROJECT_ROOT)` NÉM khi tệp nằm ngoài kho — bẫy ấy cắn BỐN lần
+    trong ngày 10/09/2026, và lần thứ tư ở đây: `tests/conftest.py` chuyển
+    `DATA_DIR` sang thư mục tạm cho bộ test khỏi ghi vào `data/` thật, thế là
+    19 bài đỏ với `ValueError`. Mã sản phẩm đã ngầm giả định MỌI dữ liệu nằm
+    dưới `PROJECT_ROOT` — giả định ấy chỉ đúng vì chưa ai từng chuyển nó đi.
+    """
+    try:
+        return duong.relative_to(PROJECT_ROOT).as_posix()
+    except ValueError:
+        return duong.as_posix()
 
 
 def _duong_de_hien(duong: Path) -> str:
@@ -541,7 +556,7 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
         from core.phong_alpha import dung_video
 
         _kq = await asyncio.to_thread(
-            dung_video, PROJECT_ROOT / "data" / "alpha" / task_id)
+            dung_video, DATA_DIR / "alpha" / task_id)
         _phong_tra_ve = _kq["trang_thai"]
         artifacts = _kq["artifacts"]
         _so = _kq["kiem"].get("so", {})
@@ -580,13 +595,13 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
         _so = _kq["so"]
 
         if _kq["trang_thai"] == "DAT":
-            _thu_muc = PROJECT_ROOT / "data" / "aura" / task_id
+            _thu_muc = DATA_DIR / "aura" / task_id
             _thu_muc.mkdir(parents=True, exist_ok=True)
             _tep = _thu_muc / "kich_ban.md"
             _tep.write_text(_kq["van_ban"] + "\n", encoding="utf-8")
             artifacts.append({
                 "name": _tep.name,
-                "path": _tep.relative_to(PROJECT_ROOT).as_posix(),
+                "path": _duong_trong_kho(_tep),
                 "size_bytes": _tep.stat().st_size,
                 "sha256": hashlib.sha256(_tep.read_bytes()).hexdigest(),
                 "type": "MARKDOWN", "kind": "kich_ban_cho_alpha",
@@ -1002,7 +1017,7 @@ async def api_danh_sach_the_quy_trinh(request: web.Request) -> web.Response:
 TRAN_BUOC_TUY_BIEN = 8
 
 
-THU_MUC_TIEN_DO = PROJECT_ROOT / "data" / "tien_do"
+THU_MUC_TIEN_DO = DATA_DIR / "tien_do"
 
 # `pipeline_id` đi thẳng vào TÊN TỆP ở cả hai đầu — client gửi lên khi chạy, và
 # gửi lại khi poll. Một luật, dùng ở cả hai chỗ: hai luật thì chúng trôi khỏi
@@ -1196,12 +1211,12 @@ async def chay_chuoi_phong(ke_hoach: List[tuple], chu_de: str,
             kich_ban = _kq.get("van_ban", "")
             hv: List[Dict[str, Any]] = []
             if kich_ban:
-                d = PROJECT_ROOT / "data" / "aura" / task_id
+                d = DATA_DIR / "aura" / task_id
                 d.mkdir(parents=True, exist_ok=True)
                 tep = d / "kich_ban.md"
                 tep.write_text(kich_ban + "\n", encoding="utf-8")
                 hv = [{"name": tep.name,
-                       "path": tep.relative_to(PROJECT_ROOT).as_posix(),
+                       "path": _duong_trong_kho(tep),
                        "size_bytes": tep.stat().st_size,
                        "sha256": hashlib.sha256(tep.read_bytes()).hexdigest(),
                        "type": "MARKDOWN", "kind": "kich_ban_cho_alpha"}]
@@ -1222,7 +1237,7 @@ async def chay_chuoi_phong(ke_hoach: List[tuple], chu_de: str,
                 da_gay = True
                 continue
             _kq = await asyncio.to_thread(
-                dung_video, PROJECT_ROOT / "data" / "alpha" / task_id, kich_ban)
+                dung_video, DATA_DIR / "alpha" / task_id, kich_ban)
             tt = _kq["trang_thai"]
             hv = _kq["artifacts"]
             _so = _kq["kiem"].get("so", {})

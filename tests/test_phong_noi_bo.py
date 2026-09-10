@@ -310,12 +310,37 @@ def test_delta_chay_that_va_de_lai_hien_vat():
 
 # ------------------------------------------------------------- OMEGA: sổ cái
 
+def _so_cai_mau(so_dong: int) -> None:
+    """Viết một sổ cái RIÊNG với số dòng biết trước vào đích đã chuyển hướng.
+
+    VÌ SAO (10/09/2026): hai bài dưới từng đọc sổ cái THẬT trong `data/omega/`
+    — 12.119 dòng, mà 9.170 dòng có yêu cầu là `"thử"`, tức phần lớn do chính
+    bộ test ghi vào. Chúng xanh vì máy TÌNH CỜ có tệp ấy; bài đếm dòng thì
+    `skip` khi không có. Xanh theo trạng thái máy, không theo mã — cùng họ
+    với ca *"phép đo lấy giờ thật là phép đo xanh theo lịch"*.
+
+    `tests/conftest.py` đã trỏ `phong_noi_bo.SO_CAI` vào thư mục tạm; ở đây
+    chỉ đổ vào đó một nội dung mà bài kiểm được.
+    """
+    import json as _json
+
+    from core import phong_noi_bo as _pnb
+
+    _pnb.SO_CAI.parent.mkdir(parents=True, exist_ok=True)
+    _pnb.SO_CAI.write_text(
+        "".join(_json.dumps({"task_id": f"mau_{i}", "phong_id": "aura",
+                             "trang_thai": "PASS"}) + "\n"
+                for i in range(so_dong)),
+        encoding="utf-8")
+
+
 def test_omega_KHONG_lay_so_cai_lam_bang_chung_cua_minh():
     """Mọi phòng đều ghi vào `so_cai.jsonl`, nên nó không chứng minh được gì.
 
     `tools/do_trang_thai_phong.py` cố ý loại tệp ấy ra khỏi ảnh chụp bằng chứng.
     Omega lấy dòng sổ của mình làm bằng chứng thì phòng nào cũng "đạt".
     """
+    _so_cai_mau(5)
     kq = phong_omega("thu_omega")
     assert kq["trang_thai"] == "PASS", kq["vi_sao"]
     ten = [a["name"] for a in kq["artifacts"]]
@@ -324,12 +349,15 @@ def test_omega_KHONG_lay_so_cai_lam_bang_chung_cua_minh():
 
 
 def test_omega_dem_dong_khop_dem_tay():
-    from core.phong_noi_bo import SO_CAI
-    if not SO_CAI.is_file():
-        pytest.skip("chưa có sổ cái")
+    """Số dòng BIẾT TRƯỚC, không phải "đếm lại chính tệp phòng vừa đếm".
+
+    Bản cũ so số phòng báo với số đếm tay trên CÙNG một tệp, và `skip` khi máy
+    không có sổ — nên nó chưa từng chạy trên máy sạch. Giờ đổ đúng 37 dòng rồi
+    đòi phòng báo 37: một con số không lấy từ thứ đang được kiểm.
+    """
+    _so_cai_mau(37)
     kq = phong_omega("thu_omega_dem")
-    tay = len(SO_CAI.read_text(encoding="utf-8", errors="replace").splitlines())
-    assert kq["so"]["so_dong"] == tay, f"phòng báo {kq['so']['so_dong']}, đếm tay {tay}"
+    assert kq["so"]["so_dong"] == 37, f"phòng báo {kq['so']['so_dong']}, đổ vào 37"
 
 
 def test_omega_khong_co_so_cai_thi_KHONG_CHAY_DUOC(monkeypatch, tmp_path):

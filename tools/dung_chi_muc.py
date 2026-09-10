@@ -31,7 +31,21 @@ from core.tra_cuu import CHI_MUC, MODEL_NHUNG  # noqa: E402
 
 CAP_CHU = 1500
 LO = 128
-BO_THU_MUC = ("docs/lich_su/",)
+# Loại BIÊN BẢN LÀM VIỆC, giữ SỰ THẬT HIỆN TẠI.
+#
+# `docs/lich_su/` — 60+ tệp bàn giao đã bị thay thế (08/09).
+# `docs/KE_HOACH_` — tệp kế hoạch: kết luận của chúng ĐÃ CHÉP vào đặc tả, nên
+#   trong kho chúng chỉ là bản sao thứ hai của cùng một sự thật, và bản sao thì
+#   chen chỗ bản gốc. Đo 10/09: viết hai tệp kế hoạch xong thì chỉ mục 437 ->
+#   482 đoạn và bộ B tụt top-3 8/10 -> 7/10 — chính chúng lên top-3 cho câu
+#   "máy có bao nhiêu RAM" vì chúng TRÍCH LẠI con số của `CLAUDE.md`.
+#
+# NÓI THẲNG CHỖ KHÔNG ĐẸP: bỏ chúng thì bộ B top-3 về 8/10 nhưng top-1 tụt
+# 4/10 -> 3/10. Đó đúng hình dạng của việc fit — cải thiện thước bị chấm, làm
+# xấu thước không bị chấm. Vẫn chọn bỏ, vì lý do KHÔNG phải con số: chúng là
+# biên bản, cùng loại với `lich_su`. Và `top-1` cố ý không có ngưỡng vì đã đo
+# được nó nhảy 8/10 -> 4/10 giữa hai bộ câu hỏi.
+BO_THU_MUC = ("docs/lich_su/", "docs/KE_HOACH_")
 NGOAI = (Path(r"D:\KHO_CONG_NGHE.md"), Path(r"D:\CONG_NGHE_TONG_HOP.md"))
 
 

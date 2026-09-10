@@ -88,6 +88,14 @@ DOI_CHUNG = ("giá vàng hôm nay bao nhiêu",
              "tỷ số trận Real Madrid tối qua")
 
 
+def _khoi_dac_ta(ten: str) -> str:
+    """Đọc đúng khối giữa `<!-- CHOT:ten -->` và `<!-- /CHOT:ten -->`."""
+    spec = (PROJECT_ROOT / "KY_LUAT_THUC_THI.md").read_text(encoding="utf-8")
+    m = re.search(rf"<!-- CHOT:{ten} -->(.*?)<!-- /CHOT:{ten} -->", spec, re.S)
+    assert m, f"mất neo CHOT:{ten} trong đặc tả"
+    return m.group(1)
+
+
 def _kho():
     k = tra_cuu.doc_chi_muc()
     if k is None:
@@ -383,3 +391,26 @@ def test_van_dung_HAI_goi_ngoai():
             (PROJECT_ROOT / "requirements.txt").read_text(encoding="utf-8")
             .splitlines() if d.strip() and not d.strip().startswith("#")]
     assert len(dong) == DAC_TA_GOI_NGOAI, f"{len(dong)} gói: {dong}"
+
+
+def test_DAC_TA_nhan_kho_cong_nghe_van_o_lai_tai_lieu():
+    """Kho công nghệ NẰM TRONG chỉ mục này, nên nhãn sai của nó là lỗi của đây.
+
+    Đo 10/09: 13 mục kho khai `BENCHMARKED`/`SMOKE_TESTED`/`INSTALLED` — tức
+    *"đã chạy thật trên máy này"* — thì **8/13 không còn thấy trên máy**. Nhãn
+    không mang ngày và không mang môi trường, nên người đọc hiểu là thì hiện
+    tại; mà `core/tra_cuu.py` đưa đúng những dòng ấy lại cho Sếp.
+
+    46 mục `DISCOVERED` thì KHÔNG phải nợ — chúng không khai gì. Bài này giữ
+    đúng chỗ phân biệt ấy khỏi trôi.
+    """
+    khoi = _khoi_dac_ta("nhan-kho-cong-nghe")
+    phang = " ".join(khoi.split())
+    for cum in ("5/13", "8/13",          # còn / mất
+                "Docling",               # ca đã trả giá thật
+                "NGÀY",                  # luật mới
+                "MÔI TRƯỜNG"):
+        assert cum in phang, f"khối nhan-kho-cong-nghe mất {cum!r}"
+    assert "46 mục `DISCOVERED` KHÔNG phải nợ" in phang, (
+        "mất câu phân biệt: mục DISCOVERED không khai gì nên không thể sai — "
+        "gộp chúng vào 'nợ chưa kiểm' là đi ngược chính luật của kho")

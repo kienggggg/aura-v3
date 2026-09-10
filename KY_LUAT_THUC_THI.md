@@ -2052,6 +2052,45 @@ Gieo 8 phép, cả 8 đỏ. Lượt đầu **1 cửa mù**: bài canh tài liệ
 cảnh báo vẫn xanh. `x in y` lần thứ chín. Nay đòi cụm ấy nằm **cùng một dòng**
 với `CHƯA CHẶN ĐƯỢC`.
 
+<!-- CHOT:nhan-kho-cong-nghe -->
+### Nhãn "đã đo" không mang ngày thì đọc thành thì hiện tại (10/09/2026)
+
+`D:\KHO_CONG_NGHE.md` **nằm trong chỉ mục của `core/tra_cuu.py`**, nên một
+nhãn sai trong đó được AURA đưa lại cho Sếp khi tra. Đây không phải chuyện của
+một tệp ngoài kho.
+
+**46 mục `DISCOVERED` KHÔNG phải nợ** — chính kho dặn *"mỗi lần định dùng một
+mục, kiểm nó trước, đừng kiểm cả loạt"*, và chúng không khai gì nên không thể
+sai. Tôi từng ghi nhầm chúng vào danh sách nợ.
+
+**Thứ SAI ĐƯỢC là 13 mục mang nhãn** `BENCHMARKED` / `SMOKE_TESTED` /
+`INSTALLED` — chúng khai *"đã chạy thật trên máy này"*. Kiểm hết 10/09:
+
+```
+CÒN  5/13   FFmpeg · Ollama Qwen · OpenClaw · Qwen Audio Agent · faster-whisper
+MẤT  8/13   Docling · MarkItDown · MinerU · Demucs v4 · Hermes Agent
+            Moonshine Voice · RTK · llama.cpp
+```
+
+**"Không thấy" KHÔNG có nghĩa nhãn ấy sai lúc viết.** Phần lớn đo trong thư mục
+`.tech` hoặc venv của kho cũ, nay đã xoá. Thứ sai là **cách đọc**: nhãn không
+mang ngày và không mang môi trường thì người đọc hiểu là *"bây giờ vẫn thế"*.
+
+**Đã trả giá một lần, 09/09:** kho khuyên dùng Docling/MarkItDown làm *"đường
+rẻ nhất, đã đo trên máy này"* cho nợ kho tra cứu. `find_spec` cho **false ở cả
+ba venv** — và kể cả có, chúng chuyển PDF→Markdown trong khi corpus **đã là
+Markdown sẵn**. Một câu khuyên dẫn sai đường **hai lần**.
+
+**LUẬT:** một nhãn đo phải mang **NGÀY** và **MÔI TRƯỜNG**.
+`SMOKE_TESTED (18/08, venv .tech của AURA_OS_v2)` đọc ra đúng thứ nó là. Nhãn
+trần thì mặc định phải hiểu là `DISCOVERED` **cho tới khi có ai kiểm lại** —
+vì đó đúng là điều nó chứng minh được.
+
+Cùng họ với [*"đo cái app KHÔNG chạy thì mọi con số đều là số của người
+khác"*](SO_BENH_AN.md) — lần này thứ không chạy là **môi trường đã biến mất**,
+và cái còn lại là một nhãn nói về nó ở thì hiện tại.
+<!-- /CHOT:nhan-kho-cong-nghe -->
+
 <!-- CHOT:bo-can-tat-dinh -->
 ### Bộ căn chữ KHÔNG tất định — gốc của một bài mong manh (10/09/2026)
 
@@ -2333,6 +2372,34 @@ chèn đoạn hạng nhất là rót một đoạn sai vào 6/10 lượt. `CLAUD
 **Lượt tra kho KHÔNG gọi mạng.** `used_web` phải là `False` và `sources` rỗng:
 trường ấy trả lời đúng câu *"lượt này AURA có gửi câu của tôi ra ngoài không?"*,
 và câu trả lời ở đây là không.
+
+**10/09 — BỘ B BẮT ĐƯỢC MỘT HỒI QUY DO CHÍNH TÔI GÂY RA.** Viết hai tệp kế
+hoạch và thêm chữ vào kho công nghệ thì chỉ mục **437 → 482 đoạn**, và bộ B
+tụt **top-3 8/10 → 7/10**. Các ca trượt chỉ thẳng nguyên nhân: chính hai tệp
+kế hoạch lên top-3 cho câu *"máy có bao nhiêu RAM"*, vì chúng **trích lại** con
+số của `CLAUDE.md` — bản sao chen chỗ bản gốc.
+
+Bốn con số, đo cả hai cấu hình trên cả hai bộ:
+
+| | top-1 | top-3 |
+|---|---|---|
+| 482 đoạn · bộ A | 7/10 | 8/10 |
+| 482 đoạn · **bộ B** | 4/10 | **7/10** |
+| bỏ `docs/KE_HOACH_*` (452) · bộ A | 7/10 | 8/10 |
+| bỏ `docs/KE_HOACH_*` (452) · **bộ B** | **3/10** | **8/10** |
+
+**NÓI THẲNG CHỖ KHÔNG ĐẸP:** bỏ tệp kế hoạch kéo top-3 về ngưỡng **nhưng làm
+top-1 tụt 4 → 3**. Đó đúng hình dạng của việc **fit**: cải thiện thước bị chấm,
+làm xấu thước không bị chấm. Ghi lại thay vì giấu.
+
+Vẫn chọn bỏ, và lý do **không phải con số**: tệp kế hoạch là **biên bản làm
+việc**, kết luận của chúng đã chép vào đặc tả, nên trong kho chúng chỉ là bản
+sao thứ hai của cùng một sự thật — **cùng loại với `docs/lich_su/`**, thứ đã bị
+loại từ 08/09 vì đúng lý do ấy. Và `top-1` cố ý không có ngưỡng vì đã đo được
+nó nhảy 8/10 → 4/10 giữa hai bộ câu hỏi.
+
+**Đây là lần bộ B làm đúng việc của một cái thước giữ riêng:** nó đỏ vì thế
+giới đổi, không vì mã đổi — và nó đỏ *trước khi* ai kịp quen với con số mới.
 <!-- /CHOT:tra-cuu -->
 
 <!-- CHOT:path-noi-doi -->

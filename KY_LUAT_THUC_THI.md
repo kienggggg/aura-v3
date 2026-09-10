@@ -2052,6 +2052,115 @@ Gieo 8 phép, cả 8 đỏ. Lượt đầu **1 cửa mù**: bài canh tài liệ
 cảnh báo vẫn xanh. `x in y` lần thứ chín. Nay đòi cụm ấy nằm **cùng một dòng**
 với `CHƯA CHẶN ĐƯỢC`.
 
+<!-- CHOT:khong-bia-loi-cua-sep -->
+### AURA bịa ra một lỗi Sếp chưa hề mắc — 7/18 lượt (10/09/2026)
+
+Chạy app THẬT, lượt đầu tiên chạm vào:
+
+```
+hỏi:  "1247 nhân 38 bằng bao nhiêu"
+đáp:  "Lỗi tính toán trong câu trả lời bạn cung cấp là không chính xác.
+       Kết quả đúng của phép nhân $1247 \times 38$ là **47.386**."
+```
+
+**Số ĐÚNG.** Nhưng Sếp không đưa ra câu trả lời nào để mà sai. Model đọc dữ
+kiện `ĐÃ TÍNH SẴN. Trả lời đúng ý này: "…"` thành lệnh **đính chính**, rồi
+dựng ra một người để đính chính.
+
+**MÁY ĐO BẢN ĐẦU ĐẾM 1/9, ĐỌC TAY RA 4/9.** Nó bắt `"không chính xác"` nhưng
+bỏ sót ba dạng thật sự hay gặp:
+
+```
+"Không, kết quả chính xác là 47.386."
+"8934 chia 6 bằng 1489, không phải 1.489."
+"Không, kết quả đó sai."          <- "đó" không trỏ vào đâu cả
+```
+
+Máy đo sai một lần thì không được tin nó lần hai: bản sau chép tay từ chính ba
+dạng ấy, kiểm lại trên 7 nhãn tay (7/7), và **vẫn in nguyên văn từng lượt**.
+
+**ĐO NỀN — ba bộ, viết trước khi chạy lượt nào, mỗi đề 3 lượt, MỖI LƯỢT MỘT
+PHIÊN MỚI** (sổ rỗng thì không có "đáp án trước" nào để model bám vào — nếu
+vẫn bịa thì nguồn là chuỗi dữ kiện, không phải lịch sử):
+
+```
+bộ A   4/9      bộ B   3/9      bộ C   0/9
+```
+
+**Bộ C là chỗ phép đo tự lật lại giả thuyết của tôi.** Nó chạy hai nhánh KIA
+của `may_tinh` — ngày tháng và phương trình — **dùng đúng cách hành văn ấy**,
+và **0/9**. Nên "cách hành văn" một mình không phải nguyên nhân.
+
+Đọc lại theo từng đề thì mẫu sắc hơn hẳn:
+
+```
+"tính giúp tôi 8934 chia 6"          3/3
+"tính hộ 91234 trừ 7658"             3/3
+                                    ----  dạng SAI KHIẾN:  6/6
+"1247 nhân 38 bằng bao nhiêu"        1/3
+"356 cộng 4821 là bao nhiêu"         0/3
+"2075 nhân 14 bằng bao nhiêu"        0/3
+"144 nhân 144 là bao nhiêu"          0/3
+                                    ----  dạng CÂU HỎI:   1/12
+```
+
+Lỗi dồn vào câu **sai khiến** — *"tính giúp/hộ"*, không có *"bao nhiêu"*. Câu
+ấy không tự nó là một câu hỏi, nên chuỗi dữ kiện chen vào đọc được thành **lời
+của người dùng đang chờ được chấm**.
+
+**Và một lỗi thứ hai, độc lập:** `_goi_gon(1489)` ra `"1.489"` — dấu chấm là
+phân cách hàng nghìn kiểu Việt, nhưng model đọc thành *một phẩy bốn tám chín*
+rồi **cãi lại chính dữ kiện được đưa**: *"bằng 1489, không phải 1.489"*.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| tổng bịa lỗi, 3 bộ | **≤ 2/27** (nền 7/27) |
+| riêng dạng sai khiến | **≤ 1/6** (nền 6/6) |
+| bộ C | **ở lại 0/9** — nó là ca đối chứng, không được hỏng theo |
+| đáp số đúng | **27/27** — sửa hành văn mà hỏng con số là đổi lỗi lấy lỗi nặng hơn |
+
+**Không đạt thì ghi KHÔNG ĐẠT, không dời ngưỡng.** Đây là hành vi của model,
+nó dao động; ngưỡng đặt trước chính là thứ chặn việc đọc dao động thành thắng
+lợi.
+
+**ĐO SAU KHI VÁ — cùng 3 bộ, cùng số lượt, ghép cặp:**
+
+```
+              nền    sau     ngưỡng đặt TRƯỚC
+bộ A          4/9    0/9
+bộ B          3/9    0/9
+bộ C          0/9    0/9     phải ở lại 0/9        ĐẠT
+TỔNG          7/27   0/27    ≤ 2/27                ĐẠT
+dạng sai khiến 6/6   0/6     ≤ 1/6                 ĐẠT
+đáp số đúng  27/27  27/27    27/27                 ĐẠT
+```
+
+**Đổi ĐÚNG MỘT biến:** câu chữ của chuỗi dữ kiện. Không đụng vào con số, không
+đụng vào `_goi_gon`, không đụng vào lời dặn hệ thống.
+
+```
+trước   ĐÃ TÍNH SẴN. Trả lời đúng ý này: "8934 / 6 = 1.489."
+sau     MÁY ĐÃ TÍNH SẴN — Sếp chỉ HỎI, chưa đưa ra đáp án nào.
+        Nói lại thành câu cho Sếp: "8934 / 6 = 1.489."
+```
+
+Bỏ chữ *"đúng"*, và **nói thẳng ra rằng không có gì để chấm**. Giữ khuôn CÂU
+MẪU đã trả giá ở nhánh ngày — đưa câu để chép, không đưa mệnh lệnh.
+
+**0/27 KHÔNG PHẢI 0%.** Với 0 ca trong 27 lượt, chặn trên 95% là **3/27 =
+11%**. Đây là hành vi model, nó dao động; phép đo này loại được giả thuyết
+*"vẫn hỏng hơn 11% số lượt"*, không hơn.
+
+**LỖI THỨ HAI CHƯA VÁ, ghi rõ:** `_goi_gon(1489)` vẫn ra `"1.489"`. Trong 27
+lượt sau vá model không cãi lại nó lần nào, nhưng chuỗi ấy vẫn đọc được thành
+*một phẩy bốn tám chín* — nền có đúng một lượt như thế (*"bằng 1489, không
+phải 1.489"*). Chưa đủ bằng chứng để nói bản vá này chữa luôn cả nó; nhiều khả
+năng nó chỉ **bớt cớ** để model cãi. Đây là chỗ thiếu **đã biết**.
+
+<!-- /CHOT:khong-bia-loi-cua-sep -->
+
 <!-- CHOT:so-phien-khong-di-tra-mang -->
 ### Câu hỏi về SỔ PHIÊN bị đẩy đi tra mạng — 5/6 cách hỏi (10/09/2026)
 

@@ -253,3 +253,79 @@ def test_phuong_trinh_xet_TRUOC_bieu_thuc_so():
 
     ra = tinh_giup("2x * 3 = 12, x bằng bao nhiêu")
     assert ra is not None and "x = 2" in ra
+
+
+# ---------------------------------------------------------------------------
+# CHUỖI DỮ KIỆN KHÔNG ĐƯỢC ĐỌC THÀNH LỆNH ĐÍNH CHÍNH (10/09/2026)
+#
+# Cửa canh CHUỖI, không canh model: hành vi model dao động nên đặt nó vào bộ
+# test là dựng một bài mong manh. Phép đo trên model nằm ở khối
+# `CHOT:khong-bia-loi-cua-sep`; ở đây canh đúng cái NGUYÊN NHÂN đã đo được.
+# ---------------------------------------------------------------------------
+
+# Chép TAY từ khối đặc tả.
+DAC_TA_NEN_TONG = "7/27"
+DAC_TA_SAU_TONG = "0/27"
+# `x in y` LẦN THỨ MƯỜI LĂM, gieo bắt được. Bản đầu chép tay đúng chuỗi "11%"
+# rồi hỏi cả khối 60 dòng — mà "11%" xuất hiện HAI lần trong đó:
+#
+#     chặn trên 95% là **3/27 = 11%**          <- chỗ phải giữ
+#     *"vẫn hỏng hơn 11% số lượt"*             <- câu diễn giải ngay dưới
+#
+# Cắt chỗ thứ nhất thì chỗ thứ hai vẫn làm cửa xanh. Neo vào CẢ CÂU khẳng
+# định, không vào con số trần.
+DAC_TA_CHAN_TREN = "chặn trên 95% là **3/27 = 11%**"
+_CAU_XOA_HIEU_LAM = "Sếp chỉ HỎI, chưa đưa ra đáp án nào"
+_CHU_DA_BO = "Trả lời đúng ý này"
+
+
+@pytest.mark.parametrize("cau", [
+    "1247 nhân 38 bằng bao nhiêu",          # nhánh số học
+    "tính giúp tôi 8934 chia 6",            # dạng SAI KHIẾN — nền 3/3 bịa lỗi
+    "còn bao nhiêu ngày nữa đến ngày 1 tháng 1",   # nhánh ngày
+    "9x = 4113",                            # nhánh phương trình
+])
+def test_du_kien_MAY_khong_doc_duoc_thanh_lenh_dinh_chinh(cau):
+    """Bốn nhánh, MỘT cách viết.
+
+    Đo 10/09/2026 trên app thật: chuỗi cũ làm model dựng ra một người để đính
+    chính — *"Lỗi tính toán trong câu trả lời bạn cung cấp là không chính
+    xác"* — trong khi Sếp chỉ hỏi. Nền 7/27, sau khi đổi câu chữ 0/27, và lỗi
+    dồn vào dạng sai khiến (6/6 -> 0/6).
+    """
+    from core.may_tinh import tinh_giup
+
+    ra = tinh_giup(cau)
+    assert ra is not None, f"máy không tính được: {cau!r}"
+    assert _CAU_XOA_HIEU_LAM in ra, (
+        f"mất câu nói rõ Sếp chưa đưa đáp án nào: {ra!r}")
+    assert _CHU_DA_BO not in ra, (
+        f"chữ 'đúng' quay lại — chính chữ đã đo được là gây hiểu lầm: {ra!r}")
+
+
+def test_KET_QUA_do_van_o_lai_TAI_LIEU():
+    """Cắt mất phép đo thì câu chữ mới thành một lựa chọn thẩm mỹ.
+
+    Và chặn trên phải ở lại cùng chỗ: *"0/27"* đứng một mình đọc thành "không
+    bao giờ hỏng nữa", mà đó là điều phép đo KHÔNG nói.
+    """
+    import re
+
+    from core.paths import PROJECT_ROOT
+
+    khoi = re.search(
+        r"<!-- CHOT:khong-bia-loi-cua-sep -->(.*?)"
+        r"<!-- /CHOT:khong-bia-loi-cua-sep -->",
+        (PROJECT_ROOT / "KY_LUAT_THUC_THI.md").read_text(encoding="utf-8"),
+        re.S)
+    assert khoi, "mất khối đặc tả CHOT:khong-bia-loi-cua-sep"
+    van = khoi.group(1)
+    dong = [d for d in van.splitlines() if d.strip().startswith("TỔNG")]
+    assert dong, "mất dòng TỔNG của bảng đo"
+    assert DAC_TA_NEN_TONG in dong[0] and DAC_TA_SAU_TONG in dong[0], (
+        f"dòng TỔNG không còn mang cả nền lẫn kết quả: {dong[0]!r}")
+    # Xuống dòng của markdown cắt ngang câu, nên ép về một dòng trước khi so.
+    phang = re.sub(r"\s+", " ", van)
+    assert DAC_TA_CHAN_TREN in phang, (
+        "cắt mất chặn trên 95% — 0/27 đứng một mình đọc thành 'không bao giờ "
+        "hỏng nữa', mà đó là điều phép đo KHÔNG nói")

@@ -162,7 +162,8 @@ def giai_phuong_trinh(text: str) -> str | None:
     if nghiem != nghiem or abs(nghiem) == float("inf"):   # NaN / vô cực
         return None
     return (
-        f'ĐÃ GIẢI SẴN. Trả lời đúng ý này: "{an} = {_goi_gon(nghiem)}." '
+        f'MÁY ĐÃ GIẢI SẴN — Sếp chỉ HỎI, chưa đưa ra đáp án nào. '
+        f'Nói lại thành câu cho Sếp: "{an} = {_goi_gon(nghiem)}." '
         f"Đây là đáp án MÁY giải ra, không phải model đoán — dùng đúng con số "
         f"này, đừng tính lại."
     )
@@ -295,11 +296,13 @@ def tinh_giup(text: str, *, now: datetime | None = None) -> str | None:
             # Cho sẵn câu để chép thì không còn chỗ nào để đặt vụng.
             if cach >= 0:
                 return (
-                    f"ĐÃ TÍNH SẴN. Trả lời đúng ý này: "
+                    f"MÁY ĐÃ TÍNH SẴN — Sếp chỉ HỎI, chưa đưa ra đáp án nào. "
+                    f"Nói lại thành câu cho Sếp: "
                     f"\"Còn {cach} ngày nữa đến {moc:%d/%m/%Y}.\""
                 )
             return (
-                f"ĐÃ TÍNH SẴN. Trả lời đúng ý này: "
+                f"MÁY ĐÃ TÍNH SẴN — Sếp chỉ HỎI, chưa đưa ra đáp án nào. "
+                f"Nói lại thành câu cho Sếp: "
                 f"\"{moc:%d/%m/%Y} đã qua {-cach} ngày rồi.\""
             )
 
@@ -311,8 +314,25 @@ def tinh_giup(text: str, *, now: datetime | None = None) -> str | None:
         bieu_thuc = _rut_bieu_thuc(goc) or ""
         ket_qua = tinh_bieu_thuc(bieu_thuc)
     if ket_qua is not None:
+        # "Trả lời đúng ý này" ĐỌC ĐƯỢC THÀNH "đáp án đúng là…", và model dựng
+        # ra một người để đính chính (10/09/2026, chạy app thật):
+        #
+        #     hỏi   "1247 nhân 38 bằng bao nhiêu"
+        #     đáp   "Lỗi tính toán trong câu trả lời bạn cung cấp là không
+        #            chính xác. Kết quả đúng … là 47.386."
+        #
+        # Số đúng, mà Sếp không hề đưa ra câu trả lời nào để mà sai. Đo 3 bộ ×
+        # 9 lượt: nền 7/27, và lỗi DỒN vào câu SAI KHIẾN — "tính giúp/hộ" 6/6,
+        # câu hỏi có "bao nhiêu" chỉ 1/12. Câu sai khiến tự nó không phải một
+        # câu hỏi, nên chuỗi dữ kiện chen vào đọc được thành lời của người dùng
+        # đang chờ được chấm.
+        #
+        # Nói thẳng ra rằng KHÔNG có gì để chấm, và bỏ chữ "đúng". Vẫn giữ
+        # khuôn CÂU MẪU đã trả giá ở nhánh ngày ngay trên: đưa câu để chép,
+        # không đưa mệnh lệnh.
         return (
-            f"ĐÃ TÍNH SẴN. Trả lời đúng ý này: "
+            f"MÁY ĐÃ TÍNH SẴN — Sếp chỉ HỎI, chưa đưa ra đáp án nào. "
+            f"Nói lại thành câu cho Sếp: "
             f"\"{bieu_thuc.strip()} = {_goi_gon(ket_qua)}.\""
         )
     return None

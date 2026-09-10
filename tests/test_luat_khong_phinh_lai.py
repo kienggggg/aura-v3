@@ -119,3 +119,85 @@ def test_KY_LUAT_khong_bi_keo_vao_CLAUDE():
     assert len(chu.encode("utf-8")) < len(
         (PROJECT_ROOT / "KY_LUAT_THUC_THI.md").read_bytes()), (
         "CLAUDE.md đã to hơn cả đặc tả — nó là tệp TÓM TẮT")
+
+
+def test_MOI_NEO_CHOT_trong_dac_ta_deu_co_CUA_DOC():
+    """Một cái neo không ai kéo thì chỉ là chữ.
+
+    BA LẦN TRONG BA NGÀY tôi viết một khối đặc tả có `<!-- CHOT:ten -->` rồi
+    QUÊN viết cửa đọc nó, và cả ba lần phép gieo báo "VẪN XANH — CỬA MÙ":
+
+        08/09  CHOT:epsilon-go
+        09/09  CHOT:bo-dich-rust-cpp
+        10/09  CHOT:bo-can-tat-dinh
+
+    Sửa từng ca thì lần thứ tư vẫn tới. Bài này sửa cả LOẠI BỆNH: mọi neo
+    trong đặc tả phải được ít nhất một tệp test nhắc tới. Neo sinh ra để cửa
+    canh đọc **đúng một chỗ** thay vì hỏi "cụm chữ có ở đâu đó trong tệp
+    100 KB không" — nên một neo không có cửa là một neo chưa làm việc gì.
+    """
+    import ast as _ast
+    import re as _re
+
+    spec = (PROJECT_ROOT / "KY_LUAT_THUC_THI.md").read_text(encoding="utf-8")
+    neo = sorted(set(_re.findall(r"<!-- CHOT:([a-z0-9-]+) -->", spec)))
+    assert neo, "không còn neo CHOT nào trong đặc tả — chúng đi đâu?"
+
+    # CHỈ ĐỌC CHUỖI THẬT TRONG MÃ, bỏ docstring.
+    #
+    # `x in y` LẦN THỨ MƯỜI BA, và lần này trong CHÍNH bài viết ra để chữa loại
+    # bệnh ấy. Bản đầu nối cả tệp lại rồi tìm — nên docstring ngay trên kia,
+    # chỗ liệt kê ba neo tôi từng quên, đã tự làm cho chúng "có cửa". Cửa canh
+    # thấy tên neo trong một đoạn KỂ CHUYỆN và tưởng đó là một chỗ dùng.
+    manh: list[str] = []
+    for tep in (PROJECT_ROOT / "tests").glob("test_*.py"):
+        cay = _ast.parse(tep.read_text(encoding="utf-8"))
+        la_docstring = set()
+        for nut in _ast.walk(cay):
+            than = getattr(nut, "body", None)
+            if isinstance(nut, (_ast.Module, _ast.ClassDef, _ast.FunctionDef,
+                                _ast.AsyncFunctionDef)) and than:
+                d = than[0]
+                if (isinstance(d, _ast.Expr)
+                        and isinstance(d.value, _ast.Constant)
+                        and isinstance(d.value.value, str)):
+                    la_docstring.add(id(d.value))
+        manh += [n.value for n in _ast.walk(cay)
+                 if isinstance(n, _ast.Constant) and isinstance(n.value, str)
+                 and id(n) not in la_docstring]
+    nguon = "\n".join(manh)
+    # Nhắc tới neo bằng HAI cách, và cả hai đều tính:
+    #   `re.search(r"<!-- CHOT:khe-dua -->…")`  — dán thẳng tên vào biểu thức
+    #   `_khoi_chot("no-network")`              — truyền tên làm đối số
+    # Bản đầu của bài này chỉ tìm `CHOT:<tên>`, nên nó báo `khe-dua` và
+    # `no-network` là mù trong khi cả hai ĐANG có cửa. Suýt đi "sửa" hai thứ
+    # không hỏng — một cửa canh quá chặt cũng là một cửa sai.
+    # `manh` là GIÁ TRỊ các chuỗi, không phải mã nguồn — nên tìm tên trần,
+    # đừng tìm tên kèm dấu nháy. (Bản trước tìm `'"no-network"'` trong một danh
+    # sách chỉ chứa `no-network`, và báo mù cho hai neo đang có cửa.)
+    dung_truc_tiep = set(manh)
+    thieu = [n for n in neo
+             if n not in dung_truc_tiep and f"CHOT:{n}" not in nguon]
+    assert not thieu, (
+        f"{len(thieu)}/{len(neo)} neo KHÔNG có cửa nào đọc: {thieu}. "
+        f"Viết một bài đọc khối giữa hai neo và đòi các con số ở lại — hoặc "
+        f"bỏ neo đi nếu nó không canh gì.")
+
+
+def test_MOI_NEO_CHOT_deu_DONG_lai_dung_cach():
+    """Neo mở mà không có neo đóng thì `re.search` nuốt tới cuối tệp.
+
+    Ca đối chứng của bài trên: một cửa vẫn "đọc được khối" khi khối ấy thật ra
+    là toàn bộ phần còn lại của đặc tả — và khi ấy nó bắt trúng mọi cụm chữ,
+    tức trở lại đúng bệnh `x in y` mà neo sinh ra để chữa.
+    """
+    import re as _re
+
+    spec = (PROJECT_ROOT / "KY_LUAT_THUC_THI.md").read_text(encoding="utf-8")
+    mo = _re.findall(r"<!-- CHOT:([a-z0-9-]+) -->", spec)
+    dong = _re.findall(r"<!-- /CHOT:([a-z0-9-]+) -->", spec)
+    assert sorted(mo) == sorted(dong), (
+        f"neo mở và neo đóng không khớp:\n  chỉ có neo MỞ : "
+        f"{sorted(set(mo) - set(dong))}\n  chỉ có neo ĐÓNG: "
+        f"{sorted(set(dong) - set(mo))}")
+    assert len(mo) == len(set(mo)), f"neo trùng tên: {mo}"

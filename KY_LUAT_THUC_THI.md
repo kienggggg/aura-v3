@@ -2052,6 +2052,53 @@ Gieo 8 phép, cả 8 đỏ. Lượt đầu **1 cửa mù**: bài canh tài liệ
 cảnh báo vẫn xanh. `x in y` lần thứ chín. Nay đòi cụm ấy nằm **cùng một dòng**
 với `CHƯA CHẶN ĐƯỢC`.
 
+<!-- CHOT:bo-can-tat-dinh -->
+### Bộ căn chữ KHÔNG tất định — gốc của một bài mong manh (10/09/2026)
+
+`test_ASS_va_MOC_TU_khop_nhau_tren_LUOT_THAT` đỏ một lượt trong bộ đủ 09/09,
+lệch **0,050938s** so với trần 0,05 — quá **0,9 mili giây**. Dựng lại bằng mốc
+gõ tay thì **không tái hiện được**, nên lúc ấy chỉ ghi lại là mong manh.
+
+**Tách nguồn dao động 10/09:** sinh giọng **MỘT lần**, chạy bộ căn **8 lượt**
+trên đúng tệp WAV ấy:
+
+```
+lượt 1,4,5,6,7   PASS  87/114 từ khớp   lệch lớn nhất 0,009062s
+lượt 2           PASS  71/114 từ khớp   lệch lớn nhất 0,031375s
+lượt 3, 8        KHONG_DAT — không ghi `.ass`
+```
+
+**Cùng một tệp âm thanh, cùng một lời, BA kết quả khác nhau.** Dao động nằm
+trong **chính bộ nhận dạng**, không ở TTS và không ở phép ghi `.ass`.
+
+**Vì sao:** `tools/can_tung_tu_worker.py` gọi
+`m.transcribe(wav, language=..., word_timestamps=True)` mà **không ghim
+`temperature`**. `faster-whisper` mặc định dùng **thang nhiệt độ dự phòng**
+`[0.0, 0.2, 0.4, 0.6, 0.8, 1.0]`: khi ngưỡng logprob hoặc tỉ lệ nén không đạt,
+nó **lấy mẫu ngẫu nhiên** lại ở nhiệt độ cao hơn.
+
+Đúng ca [*"cùng mã, cùng đề, hai phán quyết"*](SO_BENH_AN.md) — lần trước biến
+thứ ba là `PATH`, lần này nó nằm **bên trong bộ đo**.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| `temperature` | **`0.0`** — một giá trị, KHÔNG phải thang dự phòng |
+| `beam_size` | **`5`** — ghim rõ, không dựa vào mặc định của thư viện |
+| `condition_on_previous_text` | **`False`** |
+| chạy N lượt trên CÙNG một WAV | **kết quả giống hệt từng byte** |
+
+`condition_on_previous_text=False`: bật thì mỗi đoạn phụ thuộc văn bản đoạn
+trước, nên một chữ đổi ở đoạn 1 kéo lệch cả phần đuôi. Nó cũng là một đường
+dẫn dao động vào kết quả.
+
+**Ghi rõ cái KHÔNG đổi:** ghim nhiệt độ làm bộ căn **tất định**, không làm nó
+**chính xác hơn**. Số từ khớp vẫn là 87/114 như cũ; thứ mất đi là những lượt
+71/114 và `KHONG_DAT` ngẫu nhiên. Một bộ đo lúc nói thế này lúc nói thế khác
+thì mọi con số nó sinh ra đều phải hỏi lại "lượt nào".
+<!-- /CHOT:bo-can-tat-dinh -->
+
 <!-- CHOT:can-cuong-buc -->
 ### Căn cưỡng bức (nợ "WhisperX") — ĐÓNG 10/09/2026, đo được mà KHÔNG ĐẠT
 

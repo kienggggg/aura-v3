@@ -54,8 +54,32 @@ def main() -> int:
     m = WhisperModel(a.model, device="cpu", compute_type="int8")
     t_nap = time.monotonic() - t0
 
+    # GHIM NHIỆT ĐỘ — nếu không, CÙNG MỘT TỆP cho BA kết quả khác nhau.
+    #
+    # Đo 10/09/2026: sinh giọng một lần, chạy bộ căn 8 lượt trên đúng tệp ấy:
+    #     lượt 1,4,5,6,7   PASS  87/114 từ khớp   lệch lớn nhất 0,009062s
+    #     lượt 2           PASS  71/114 từ khớp   lệch lớn nhất 0,031375s
+    #     lượt 3, 8        KHONG_DAT — không ghi `.ass`
+    #
+    # `faster-whisper` mặc định dùng THANG NHIỆT ĐỘ DỰ PHÒNG
+    # [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]: ngưỡng logprob hoặc tỉ lệ nén không đạt
+    # thì nó LẤY MẪU NGẪU NHIÊN lại ở nhiệt độ cao hơn. Truyền đúng một giá trị
+    # `0.0` là tắt hẳn thang ấy.
+    #
+    # `condition_on_previous_text=False`: bật thì mỗi đoạn phụ thuộc văn bản
+    # đoạn trước, nên một chữ đổi ở đoạn 1 kéo lệch cả phần đuôi.
+    #
+    # `beam_size=5` ghim rõ dù trùng mặc định — mặc định của thư viện đổi được
+    # ở bản sau, và khi ấy không ai biết vì sao số đổi.
+    #
+    # NÓI RÕ CÁI KHÔNG ĐỔI: chỗ này làm bộ căn TẤT ĐỊNH, không làm nó CHÍNH XÁC
+    # HƠN. 87/114 vẫn là 87/114; thứ mất đi là những lượt 71/114 và KHONG_DAT
+    # ngẫu nhiên. Đây là ca "cùng mã, cùng đề, hai phán quyết" — lần trước biến
+    # thứ ba là PATH, lần này nó nằm BÊN TRONG bộ đo.
     t0 = time.monotonic()
-    doan, _ = m.transcribe(a.wav, language=a.lang, word_timestamps=True)
+    doan, _ = m.transcribe(a.wav, language=a.lang, word_timestamps=True,
+                           temperature=0.0, beam_size=5,
+                           condition_on_previous_text=False)
     tu = [{"bd": round(w.start, 3), "kt": round(w.end, 3), "chu": w.word}
           for d in doan for w in (d.words or [])]
     t_dich = time.monotonic() - t0

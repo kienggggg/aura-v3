@@ -768,3 +768,113 @@ def test_DAC_TA_can_cuong_buc_van_o_lai_tai_lieu():
     assert "KHÔNG GIAO" in khoi, (
         "mất câu kết luận KHÔNG GIAO — nếu thật sự đã giao thì phải có phép đo "
         "cho thấy F1 cao hơn 85,7%, và sửa cả bài này cùng lúc")
+
+
+# ---------------------------------------------------------------------------
+# BỘ CĂN PHẢI TẤT ĐỊNH — gốc của một bài mong manh (10/09/2026)
+# ---------------------------------------------------------------------------
+
+# Chép TAY từ đặc tả, mục "Bộ căn chữ KHÔNG tất định".
+DAC_TA_GIAI_MA = {"temperature": 0.0, "beam_size": 5,
+                  "condition_on_previous_text": False}
+
+
+def test_WORKER_ghim_du_ba_tham_so_giai_ma():
+    """Không ghim `temperature` thì CÙNG MỘT TỆP cho BA kết quả khác nhau.
+
+    Đo 10/09: sinh giọng một lần, chạy bộ căn 8 lượt trên đúng tệp ấy —
+        lượt 1,4,5,6,7   PASS  87/114   lệch 0,009062s
+        lượt 2           PASS  71/114   lệch 0,031375s
+        lượt 3, 8        KHONG_DAT, không ghi `.ass`
+    `faster-whisper` mặc định dùng thang nhiệt độ dự phòng
+    [0.0, 0.2, 0.4, 0.6, 0.8, 1.0] và LẤY MẪU NGẪU NHIÊN khi ngưỡng không đạt.
+
+    Đọc bằng AST chứ không dò chuỗi: `"temperature=0.0" in nguon` sẽ xanh cả
+    khi dòng ấy nằm trong một chú thích, và tệp này CÓ một chú thích dài nhắc
+    đúng những chữ ấy — `x in y` lần thứ mười ba nếu làm thế.
+    """
+    import ast as _ast
+
+    from core.paths import PROJECT_ROOT
+
+    nguon = (PROJECT_ROOT / "tools" / "can_tung_tu_worker.py").read_text(
+        encoding="utf-8")
+    goi = [n for n in _ast.walk(_ast.parse(nguon))
+           if isinstance(n, _ast.Call)
+           and isinstance(n.func, _ast.Attribute)
+           and n.func.attr == "transcribe"]
+    assert len(goi) == 1, f"mong đúng 1 chỗ gọi `transcribe`, thấy {len(goi)}"
+    kw = {k.arg: k.value for k in goi[0].keywords}
+    for ten, mong in DAC_TA_GIAI_MA.items():
+        assert ten in kw, (
+            f"`transcribe` không ghim `{ten}` — thư viện sẽ dùng mặc định của "
+            f"nó, và mặc định ấy đổi được ở bản sau mà không ai biết vì sao "
+            f"số đổi")
+        that = _ast.literal_eval(kw[ten])
+        assert that == mong, f"`{ten}` = {that!r}, đặc tả đòi {mong!r}"
+
+
+def test_BO_CAN_chay_hai_luot_tren_CUNG_tep_ra_GIONG_HET(tmp_path):
+    """Cùng WAV, cùng lời — hai lượt phải ra cùng một `.ass`, từng byte.
+
+    Đây là vế ĐO ĐƯỢC của bài trên. Bài trên đọc tham số; bài này chạy thật.
+    Thiếu nó thì ai đổi thư viện sang một bộ giải mã ngẫu nhiên khác vẫn xanh.
+
+    Dùng 2 đoạn thay vì 6 — đủ để bắt dao động, và rẻ hơn hẳn.
+    """
+    if not can_chu.tim_bo_can():
+        pytest.skip("KHÔNG ĐO ĐƯỢC: máy này chưa có bộ căn chữ")
+    import core.phong_alpha as pa
+
+    doan = [c.strip() + "." for c in _kich_ban_du_dai().split(".")
+            if c.strip()][:2]
+    wav, moc, ly_do = pa.doc_giong_theo_doan(doan, tmp_path)
+    if wav is None or not moc:
+        pytest.skip(f"KHÔNG ĐO ĐƯỢC: {ly_do}")
+    doan = doan[:len(moc)]
+
+    ra = []
+    for lan in (1, 2):
+        tep = tmp_path / f"l{lan}.ass"
+        kq = can_chu.can_tung_tu(wav, doan, moc, tep)
+        if not tep.is_file():
+            pytest.skip(f"KHÔNG ĐO ĐƯỢC: lượt {lan} trả {kq['trang_thai']}")
+        ra.append(tep.read_bytes())
+
+    assert ra[0] == ra[1], (
+        "hai lượt trên CÙNG một tệp âm thanh ra hai `.ass` khác nhau — bộ căn "
+        "không tất định, nên mọi con số nó sinh ra đều phải hỏi lại 'lượt nào'")
+
+
+def test_DAC_TA_bo_can_tat_dinh_van_o_lai_tai_lieu():
+    """Con số tạo ra luật phải ở lại cùng luật.
+
+    Bài này sinh ra vì phép gieo: xoá neo `CHOT:bo-can-tat-dinh` mà cả tệp
+    vẫn xanh — **lần thứ ba trong ba ngày** tôi viết khối đặc tả có neo rồi
+    quên cửa đọc nó. Nay `test_MOI_NEO_CHOT_trong_dac_ta_deu_co_CUA_DOC` canh
+    cả loại bệnh ấy, và chính nó chỉ ra bài này còn thiếu.
+    """
+    import re as _re
+
+    from core.paths import PROJECT_ROOT
+
+    spec = (PROJECT_ROOT / "KY_LUAT_THUC_THI.md").read_text(encoding="utf-8")
+    m = _re.search("<!-- CHOT:bo-can-tat-dinh -->(.*?)<!-- /CHOT:bo-can-tat-dinh -->",
+                   spec, _re.S)
+    assert m, "mất neo CHOT:bo-can-tat-dinh trong đặc tả"
+    khoi = m.group(1)
+    for cum in ("87/114",          # kết quả của 5/8 lượt
+                "71/114",          # lượt lệch — bằng chứng KHÔNG tất định
+                "KHONG_DAT",       # 2/8 lượt không ghi được .ass
+                "temperature",     # thứ đã ghim
+                "0,009062s"):      # lệch của lượt ổn định
+        assert cum in khoi, f"khối bo-can-tat-dinh mất {cum!r}"
+    # GỘP KHOẢNG TRẮNG trước khi đối chiếu: cụm này bị NGẮT DÒNG giữa chừng
+    # trong đặc tả, nên tìm nguyên văn thì trượt dù chữ vẫn ở đó. Một cửa canh
+    # tài liệu mà không chịu nổi việc xuống dòng thì nó canh cách gõ, không
+    # canh nội dung.
+    phang = " ".join(khoi.split())
+    assert "không làm nó **chính xác hơn**" in phang, (
+        "mất câu nói rõ ghim nhiệt độ chỉ làm bộ căn TẤT ĐỊNH, không làm nó "
+        "chính xác hơn — thiếu câu ấy thì lần sau có người đọc 8/8 giống nhau "
+        "rồi tưởng chất lượng đã tăng")

@@ -6,9 +6,9 @@ Tách khỏi `CLAUDE.md` ngày 06/09/2026, khi tệp ấy lên **83.047 byte** �
 
 `CLAUDE.md` giữ **luật**, mỗi luật một dòng kèm con số tạo ra nó. Chi tiết nằm ở đây. Đọc một ca khi luật tương ứng sắp được áp dụng, hoặc khi muốn biết vì sao nó tồn tại.
 
-**35 ca dưới đây đều là một lần trả giá trên chính máy này** — không chép từ đâu về.
+**36 ca dưới đây đều là một lần trả giá trên chính máy này** — không chép từ đâu về.
 
-> **Tách ra KHÔNG làm bài học dính hơn.** 35 ca này đã được đọc, và riêng ngày
+> **Tách ra KHÔNG làm bài học dính hơn.** 36 ca này đã được đọc, và riêng ngày
 > 06/09 vẫn bị phá: `x in y` bốn lần, dấu chéo qua vỏ shell lần thứ mười một,
 > hằng số fit từ chính mẫu dùng để kiểm — bài học ấy viết buổi sáng, dính bẫy
 > buổi chiều. Thứ bắt được là `tools/gieo.py`.
@@ -1437,3 +1437,60 @@ tin** — nó đi xem tệp mã có trên đĩa không.
 **Luật:** một con số đứng trong văn xuôi thì phải có cửa đọc nó. Ngưỡng sàn
 canh được chiều teo đi, không canh được chiều phình ra — và tài liệu chỉ tụt
 lại theo chiều phình.
+
+---
+
+### Máy đo và ca đối chứng đều phải được KIỂM, không được suy ra
+
+Ngày 10/09/2026, trong một ngày, **ba lần** cái dùng để đo hỏng trước cái được
+đo — và cả ba lần đều bắt bằng phép chạy lại, không bằng đọc.
+
+**1. Máy đo đếm 1/9 trong khi sự thật là 4/9.** Nó dò `"không chính xác"`, mà
+model bịa lỗi bằng ba dạng khác:
+
+```
+"Không, kết quả chính xác là 47.386."
+"8934 chia 6 bằng 1489, không phải 1.489."
+"Không, kết quả đó sai."            <- "đó" không trỏ vào đâu cả
+```
+
+Chữa: chép tay lại từ chính ba dạng ấy, **kiểm máy đo trên 7 nhãn tay (7/7)**,
+và vẫn in nguyên văn từng lượt. Một con số do máy đo sinh ra mà máy đo chưa
+được chấm thì chưa phải phép đo.
+
+**2. Tám ca đối chứng mù với đúng thứ chúng sinh ra để canh.** Bản vá định
+tuyến sổ phiên có hai chiều hỏng: nới theo `_DAU_HIEU` một mình, và bỏ chặn
+`_TEN_RIENG`. Gieo cả hai — **cả tám ca vẫn xanh**. Vì không ca nào vừa khớp
+luật hẹp vừa mang tên riêng, và không ca nào cần mạng mà lại chứa *"hỏi gì"*.
+
+**Và lần thử thứ hai cũng trượt, vì lý do khác hẳn.** Ca thêm vào —
+*"người ta hỏi gì về giá vàng hôm nay"* — khớp `_DAU_HIEU` đúng như tính,
+nhưng `is_search_request` **tự nó** trả `True` cho câu ấy, nên phán quyết
+không đổi dù luật đang thử đã đổi. Ca đối chứng phải nằm ở chỗ mà **đúng cái
+đang thử là thứ duy nhất giữ nó lại**:
+
+```
+lex=False · loai=tra_cuu · _DAU_HIEU=True · luật hẹp=False
+  -> "câu hỏi kinh điển của triết học là gì"
+```
+
+**3. Một giả thuyết bị chính phép đo lật.** Tôi cho rằng cách hành văn
+*"Trả lời đúng ý này"* là nguyên nhân model bịa lỗi. Bộ C chạy hai nhánh KIA
+dùng **đúng** câu ấy: **0/9**. Đọc lại theo từng đề mới ra mẫu thật — dạng
+**sai khiến** *"tính giúp/hộ"* **6/6**, dạng câu hỏi **1/12**.
+
+**Luật:** ca đối chứng chỉ đối chứng được thứ nó **phân biệt nổi**, và "phân
+biệt nổi" là một mệnh đề phải GIEO ra chứ không suy ra.
+
+Và cửa canh số ca dựng sáng cùng ngày **kêu oan ngay trên chính ca này** — hai lần liên tiếp. Chữ *"ca"* mang hai nghĩa, ca bệnh án và ca đối chứng:
+
+```
+8 ca đối chứng        <- cửa đọc thành lời khai về số ca trong sổ
+cả 8 ca vẫn xanh      <- cũng thế
+```
+
+Chữa lần một bằng cách viết số ra chữ. Lần hai thì chính đoạn ghi chú về lần một lại **trích dẫn** chuỗi ấy, và bị bắt tiếp — nên phần trích phải nằm trong khối ``` , thứ mà cửa cố ý bỏ qua vì đó là bản CHÉP chứ không phải lời khai.
+
+Cửa cố ý rộng thì phải chịu tiếng kêu oan. **Nới một cửa vì nó phiền là cách nó thành mù** — chỗ phải sửa là câu chữ của mình. Cả ba lần trên tôi đều
+suy ra, và cả ba lần đều sai. Cùng ngày `x in y` tái phát **ba lần** (lần 13,
+14, 15) — mọi lần đều là một cửa hỏi một vùng rộng rồi tìm thấy thứ nó muốn.

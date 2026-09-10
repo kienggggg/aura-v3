@@ -826,6 +826,18 @@ DANH_SACH_THE_QUY_TRINH = [
 # `api_chay_pipeline`, còn màn hình có bản sao thứ hai gõ cứng trong
 # `noi_bo.html` (5 ô `step_*`). Hai bản thì chúng trôi khỏi nhau, và bản ít
 # người nhìn hơn sẽ là bản mục — đúng câu đã viết cho `chay_chuoi_phong`.
+def _DICH_MAC_DINH() -> tuple:
+    """Ngôn ngữ đích mà `epsilon` THẬT SỰ xin — đọc từ `core/phong_noi_bo.py`.
+
+    Nhập TRONG hàm chứ không ở đầu tệp: hàng rào `test_v3_ranh_gioi.py` lần
+    theo `import` thật, và một `import` ở đầu tệp kéo `phong_noi_bo` vào tập
+    đóng ngay cả với những đường không dùng tới nó.
+    """
+    from core.phong_noi_bo import DICH_MAC_DINH
+
+    return tuple(DICH_MAC_DINH)
+
+
 MO_TA_PHONG: Dict[str, Dict[str, str]] = {
     "zeta": {"ten": "🔍 Zeta (Scout)", "bieu_tuong": "🔍",
              "ngan": "Tra mạng thật",
@@ -848,9 +860,20 @@ MO_TA_PHONG: Dict[str, Dict[str, str]] = {
     "beta": {"ten": "🧪 Beta (A/B)", "bieu_tuong": "🧪",
              "ngan": "A/B lời nhắc",
              "hanh_dong": "A/B hai biến thể lời nhắc, chấm bằng cửa của AURA"},
+    # DANH SÁCH NGÔN NGỮ SUY RA TỪ MÃ, không gõ tay lần nữa.
+    #
+    # Dòng này từng ghi *"để node/bash chấm bản dịch"* và ở lại nguyên như thế
+    # sau khi phòng đã kiểm được **5** ngôn ngữ (`go` 08/09, `cpp`+`rust`
+    # 09/09). Nhãn ấy hiện ra màn hình cho Sếp, nên nó đúng họ *"giao diện hứa
+    # một việc, mã làm việc khác"* — thứ đã đẻ ra 8 lỗi trong hai ngày 24–25/08.
+    #
+    # Bắt được 10/09 bằng cách chạy phòng qua HTTP thật, không bằng đọc lại.
+    # Nay lấy thẳng từ `DICH_MAC_DINH`: thêm hay bớt một bộ kiểm là nhãn đổi
+    # theo, không cần ai nhớ sửa.
     "epsilon": {"ten": "🔤 Epsilon (Dịch mã)", "bieu_tuong": "🔤",
                 "ngan": "Dịch mã · trình thật chấm",
-                "hanh_dong": "Dịch mã Python rồi để node/bash chấm bản dịch"},
+                "hanh_dong": "Dịch mã Python rồi để trình thật chấm bản dịch: "
+                             + " · ".join(_DICH_MAC_DINH())},
 }
 
 # Chuỗi dùng khi KHÔNG có `preset_id`, hoặc `preset_id` không có trong danh mục.

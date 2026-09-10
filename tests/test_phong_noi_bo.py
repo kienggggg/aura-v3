@@ -1554,3 +1554,35 @@ def test_epsilon_TIM_DUOC_bash_du_khong_co_tren_PATH(monkeypatch):
     assert _p._tim_trinh("bash"), "PATH trượt là chịu thua — chưa tìm chỗ quen"
     assert _p._tim_trinh("khong_co_trinh_nay_dau") is None, (
         "trả bừa một đường dẫn cho một cái tên không có thật")
+
+
+def test_NHAN_epsilon_tren_man_hinh_KHOP_thu_phong_that_su_xin():
+    """Giao diện hứa một việc, mã làm việc khác — 8 lỗi trong hai ngày 24–25/08.
+
+    BẮT ĐƯỢC 10/09 BẰNG CÁCH CHẠY PHÒNG QUA HTTP THẬT, không bằng đọc lại.
+    `MO_TA_PHONG["epsilon"]["hanh_dong"]` ghi *"để node/bash chấm bản dịch"* và
+    ở lại nguyên như thế sau khi phòng đã kiểm được **5** ngôn ngữ (`go` 08/09,
+    `cpp` + `rust` 09/09). Dòng ấy hiện ra màn hình cho Sếp.
+
+    Nay nhãn lấy thẳng từ `DICH_MAC_DINH`. Bài này canh chỗ nối ấy: ai gõ lại
+    một danh sách bằng tay thì nó đỏ.
+    """
+    import core.phong_noi_bo as _p
+    from interface.noi_bo_api import MO_TA_PHONG
+
+    nhan = MO_TA_PHONG["epsilon"]["hanh_dong"]
+    for lang in _p.DICH_MAC_DINH:
+        assert lang in nhan, (
+            f"phòng THẬT SỰ xin `{lang}` mà nhãn trên màn hình không nhắc tới "
+            f"nó: {nhan!r}")
+    # CHIỀU NGƯỢC, và chỉ chấm PHẦN DANH SÁCH sau dấu hai chấm.
+    #
+    # Bản đầu hỏi `lang not in nhan` trên cả câu, và nó ĐI QUA NHỜ MAY: thứ duy
+    # nhất trong `KIEM_DUOC` mà không phải đích là `python`, còn nhãn có chữ
+    # "Python" VIẾT HOA (ngôn ngữ NGUỒN) nên phép so chữ thường trượt. Đổi
+    # `python` thành `Python` trong `KIEM_DUOC` là cửa mù ngay.
+    assert ": " in nhan, f"nhãn mất phần danh sách: {nhan!r}"
+    danh_sach = [x.strip() for x in nhan.split(": ", 1)[1].split("·")]
+    assert danh_sach == sorted(_p.DICH_MAC_DINH), (
+        f"danh sách trên màn hình {danh_sach} khác thứ phòng xin "
+        f"{sorted(_p.DICH_MAC_DINH)}")

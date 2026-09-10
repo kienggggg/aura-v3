@@ -2052,6 +2052,45 @@ Gieo 8 phép, cả 8 đỏ. Lượt đầu **1 cửa mù**: bài canh tài liệ
 cảnh báo vẫn xanh. `x in y` lần thứ chín. Nay đòi cụm ấy nằm **cùng một dòng**
 với `CHƯA CHẶN ĐƯỢC`.
 
+<!-- CHOT:so-ca-benh-an -->
+### Số ca trong sổ bệnh án — con số nằm trong VĂN XUÔI thì không ai kiểm (10/09/2026)
+
+Sổ lên **34 ca**, `CLAUDE.md` có **34 liên kết**, cửa canh xanh. Nhưng grep thì
+**năm** chỗ trong câu chữ vẫn ghi con số cũ:
+
+```
+CLAUDE.md:122     **31 ca, toàn văn ở …
+CLAUDE.md:124     … trong một ngày: 31 bài học đã ghi, …
+CLAUDE.md:182     **Và tài liệu không phải cơ chế.** 31 bài học đã ghi ở đây
+SO_BENH_AN.md:9   **31 ca dưới đây đều là một lần trả giá …
+SO_BENH_AN.md:11  > **Tách ra KHÔNG làm bài học dính hơn.** 31 ca này …
+```
+
+**Vì sao không ai bắt được:** `SO_CA_TOI_THIEU` là ngưỡng **SÀN** (`>=`). Thêm
+ca thì nó vẫn xanh, nên **không ai bị buộc phải cố ý** sửa gì cả. Đúng họ với
+câu *"đúng 17 tệp mã · 4.248 dòng"* đã tụt lại khi danh sách đóng lên 19, và
+với chú thích *"Đang 3"* của `V3_PHONG` khi thật ra đã 7.
+
+**Và cửa đầu tiên viết ra để chữa bệnh này chỉ bắt được 3/5.** Nó tìm hai dấu
+sao dính liền con số; dòng 11 có dấu cách sau `**`, dòng 124 không có sao nào.
+Phép gieo tua lại **từng chỗ một** mới lộ — nếu chỉ gieo một chỗ rồi thấy đỏ
+thì đã ghi "đạt" và bỏ sót hai chỗ.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| `SO_CA_TOI_THIEU` | **34** — nâng cùng lúc với sổ, để thêm ca là phải cố ý |
+| mọi `<số> ca` trong `CLAUDE.md` + `SO_BENH_AN.md` | **= số ca đếm được** |
+| mọi `<số> bài học` trong hai tệp ấy | **= số ca đếm được** |
+| loại trừ | phân số (`8/11 ca chấm sai`), bắt bằng lookbehind |
+| phép gieo | **6 phép, phải đỏ cả 6** — 5 chỗ tụt lại + 1 chiều "thêm ca, chữ đứng yên" |
+
+**Cửa cố ý RỘNG.** Rộng thì có ngày kêu oan một câu tử tế; hẹp thì nó mù, mà
+mù đúng là bệnh đang chữa. Không dùng danh sách tên các chỗ được phép — một
+danh sách tên sẽ tụt lại y hệt con số vừa tụt.
+<!-- /CHOT:so-ca-benh-an -->
+
 <!-- CHOT:nhan-kho-cong-nghe -->
 ### Nhãn "đã đo" không mang ngày thì đọc thành thì hiện tại (10/09/2026)
 

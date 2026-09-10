@@ -6,9 +6,9 @@ Tách khỏi `CLAUDE.md` ngày 06/09/2026, khi tệp ấy lên **83.047 byte** �
 
 `CLAUDE.md` giữ **luật**, mỗi luật một dòng kèm con số tạo ra nó. Chi tiết nằm ở đây. Đọc một ca khi luật tương ứng sắp được áp dụng, hoặc khi muốn biết vì sao nó tồn tại.
 
-**31 ca dưới đây đều là một lần trả giá trên chính máy này** — không chép từ đâu về.
+**34 ca dưới đây đều là một lần trả giá trên chính máy này** — không chép từ đâu về.
 
-> **Tách ra KHÔNG làm bài học dính hơn.** 31 ca này đã được đọc, và riêng ngày
+> **Tách ra KHÔNG làm bài học dính hơn.** 34 ca này đã được đọc, và riêng ngày
 > 06/09 vẫn bị phá: `x in y` bốn lần, dấu chéo qua vỏ shell lần thứ mười một,
 > hằng số fit từ chính mẫu dùng để kiểm — bài học ấy viết buổi sáng, dính bẫy
 > buổi chiều. Thứ bắt được là `tools/gieo.py`.
@@ -1302,3 +1302,102 @@ Câu ở đây trước 10/09 là: *"17/245 từ không khớp được nội su
 | `torch` | ≈ 2–2,5 GB | **124,1 MB** (bản CPU; con số cũ là bản CUDA, mà máy này KHÔNG có GPU rời) |
 
 Sổ nhẹ hơn thực tế ở phía **hại** và nặng hơn ở phía **chi phí** — đúng ca *"đo cái app KHÔNG chạy thì mọi con số đều là số của người khác"*, lần này chính tôi là người chép lại.
+
+---
+
+### Một nhãn `skip` mang lời chẩn đoán thì không ai kiểm lại nó
+
+`test_external_cancellation_is_finalized_and_scrubbed_once` bị tắt ngày
+18/08/2026 với nhãn: *"TREO VÔ HẠN — và đây là **LỖI THẬT**, không phải test
+mong manh… đường huỷ của ChatService cần sửa THẬT."*
+
+Câu ấy đọc rất thuyết phục, và nó giữ một bài test chết **22 ngày** trong khi
+sản phẩm không hỏng gì.
+
+Đo lại 09/09 trong tiến trình con có trần 8 giây, in mốc trước khi huỷ:
+
+```
+(không in được gì)          <- treo TRƯỚC `task.cancel()`
+đổi sang KHONG_CAN_MANG:
+da huy task
+VE DUOC: ChatStatus.CANCELLED
+```
+
+Chỗ treo là `await model.started.wait()`, tức **model chưa từng được gọi**. Câu
+mẫu mặc định *"AURA là gì?"* bị `DeterministicFreshnessPolicy` xếp vào loại CẦN
+TRA MẠNG, nên lượt đi đường có nguồn, gặp `_NullWebSearch` trả 0 nguồn, và
+thoát ra `WEB_UNAVAILABLE` **trước khi** chạm tới model.
+
+Đó là **đúng lỗi đã ghi ở dòng 34–42 của chính tệp ấy**: *"5 test đỏ, một
+nguyên nhân. Sai là ở test — chọn nhầm câu mẫu."* Năm bài kia được chữa bằng
+`KHONG_CAN_MANG`; bài này bị đọc thành lỗi sản phẩm rồi tắt đi.
+
+**Một bài ĐỎ bị nhìn mỗi lần chạy. Một bài `skip` kèm lời giải thích thì không
+ai kiểm lại lời giải thích ấy** — nó trở thành sự thật của kho. Nhãn `skip` phải
+mang *phép đo*, không mang *chẩn đoán*.
+
+---
+
+### Nhãn "đã đo" không mang ngày thì đọc thành thì hiện tại
+
+`D:\KHO_CONG_NGHE.md` có 13 mục mang nhãn `BENCHMARKED` / `SMOKE_TESTED` /
+`INSTALLED` — nghĩa là *"đã chạy thật trên máy này"*. Kiểm hết 10/09/2026:
+
+```
+CÒN  5/13   FFmpeg · Ollama Qwen · OpenClaw · Qwen Audio Agent · faster-whisper
+MẤT  8/13   Docling · MarkItDown · MinerU · Demucs v4 · Hermes Agent
+            Moonshine Voice · RTK · llama.cpp
+```
+
+**"Không thấy" KHÔNG có nghĩa nhãn ấy sai lúc viết** — phần lớn đo trong thư
+mục `.tech` hoặc venv của kho cũ, nay đã xoá. Thứ sai là **cách đọc**.
+
+Đã trả giá 09/09: kho khuyên dùng **Docling/MarkItDown** làm *"đường rẻ nhất,
+đã đo trên máy này"* cho nợ kho tra cứu. `find_spec` cho **false ở cả ba venv**
+— và kể cả có, chúng chuyển PDF→Markdown trong khi corpus **đã là Markdown
+sẵn**. Một câu khuyên dẫn sai đường **hai lần**.
+
+Và nó không phải chuyện ngoài kho: tệp ấy **nằm trong chỉ mục của
+`core/tra_cuu.py`**, nên nhãn sai được AURA đưa lại cho Sếp.
+
+**Luật:** nhãn đo phải mang **NGÀY** và **MÔI TRƯỜNG**. Nhãn trần mặc định hiểu
+là `DISCOVERED` cho tới khi có ai kiểm lại — vì đó đúng là điều nó chứng minh
+được.
+
+Cùng họ với *"đo cái app KHÔNG chạy thì mọi con số đều là số của người khác"*;
+lần này thứ không chạy là **môi trường đã biến mất**.
+
+---
+
+### Phủ 100% mà đặt mốc sai chỗ thì không phải hơn
+
+Nợ "WhisperX" — căn cưỡng bức thay cho nhận dạng-rồi-ghép-mốc. Đo 10/09/2026,
+cùng WAV, cùng lời, chỉ đổi bộ căn:
+
+```
+từ có neo ĐO ĐƯỢC   87/114 = 76,3%  ->  114/114 = 100%
+thời gian           68,6s           ->  13,6s  (nhanh 5 lần)
+```
+
+Hai con số ấy đọc y hệt một thắng lợi. **Dừng ở đó là giao một thứ tệ hơn.**
+
+Không có nhãn tay, nên phải dựng **trọng tài độc lập với CẢ HAI bộ**: ngưỡng
+"có tiếng" suy ra từ chính tệp âm thanh (giữa log của phân vị 10 và 90), rồi
+chấm recall/precision trên khung 10 ms.
+
+```
+                          recall  precision    F1
+bộ hiện tại                95,2%     77,9%   85,7%   <- cao nhất
+căn cưỡng bức — thô        65,4%     85,6%   74,1%
+căn cưỡng bức — kéo dài    97,6%     73,0%   83,5%
+```
+
+CTC phát ra **gai nhọn**: bản thô khai **11,9 giây trong 30 giây là "giữa các
+từ"** — với lời nói liên tục thì đó là sai.
+
+Và một phép đo có lỗi thì không kết luận được gì: bản CTC **tự viết** bỏ blank
+giữa các nhãn cho gọn, ra **5 mốc không tăng dần + 5 mốc vượt biên**. Dùng
+`torchaudio.functional.forced_align` chuẩn thì cả hai về **0**.
+
+**Một chỉ số tăng không phải một cải thiện.** Phải có trọng tài độc lập với cả
+hai bên — độc lập với một bên thôi thì lại là bẫy tautological.

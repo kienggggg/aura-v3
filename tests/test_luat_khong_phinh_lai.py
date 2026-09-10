@@ -15,7 +15,8 @@ nạp. `CLAUDE.md` giữ luật, mỗi luật một dòng **kèm con số tạo 
 
 RỦI RO PHẢI CANH, không chỉ canh kích thước: chính các ca bệnh làm luật DÍNH
 được. Cắt mất con số thì luật đọc ra như lời răn suông — và lời răn suông là
-thứ bị phá bốn lần trong một ngày (29 bài học đã ghi, `x in y` ghi lại 7 lần,
+thứ bị phá bốn lần trong một ngày (đo 06/09: 29 bài học đã ghi, `x in y`
+ghi lại 7 lần,
 chữ "lần thứ ba" xuất hiện 4 lần). Nên có cả cửa đòi **con số**, không chỉ cửa
 đòi **ngắn**.
 """
@@ -38,7 +39,11 @@ SO = PROJECT_ROOT / "SO_BENH_AN.md"
 # Chép TAY. Đo được lúc tách: 20.906 byte. Trần 32.000 cho chỗ viết thêm, nhưng
 # không rộng tới mức nuốt lại được cả sổ bệnh án (70 KB).
 TRAN_BYTE_CLAUDE = 32_000
-SO_CA_TOI_THIEU = 31
+# NÂNG 31 -> 34 ngày 10/09. Đây là ngưỡng SÀN, nên để nguyên 31 thì thêm ca
+# vẫn xanh — mà bốn chỗ trong tài liệu ghi "31 ca" đã tụt lại đúng vì không ai
+# phải cố ý. Nâng sàn buộc người thêm ca phải sửa cả con số, và cửa dưới bắt
+# nốt phần chữ.
+SO_CA_TOI_THIEU = 34
 
 
 def _muc4(chu: str) -> str:
@@ -201,3 +206,60 @@ def test_MOI_NEO_CHOT_deu_DONG_lai_dung_cach():
         f"{sorted(set(mo) - set(dong))}\n  chỉ có neo ĐÓNG: "
         f"{sorted(set(dong) - set(mo))}")
     assert len(mo) == len(set(mo)), f"neo trùng tên: {mo}"
+
+
+def test_SO_CA_ghi_trong_CHU_khop_so_ca_THAT():
+    r"""Con số trong câu chữ phải khớp số ca đếm được.
+
+    NĂM chỗ ghi *"31 ca"* / *"31 bài học"* đã tụt lại sau khi sổ lên 34 — ba
+    trong `CLAUDE.md` (dòng 122, 124, 182), hai trong `SO_BENH_AN.md` (dòng 9,
+    11). `SO_CA_TOI_THIEU` là ngưỡng SÀN nên thêm ca vẫn xanh, tức không ai
+    phải cố ý sửa chữ.
+
+    VÀ CỬA ĐẦU TIÊN CỦA BÀI NÀY BẮT ĐƯỢC 3/5, RỒI TÔI SUÝT GHI LÀ ĐỦ.
+    Nó tìm hai dấu sao dính liền con số. Nhưng dòng 11 viết `.** 34 ca này`
+    (có dấu cách sau `**`) và dòng 124 viết `: 34 bài học` (không sao nào).
+    Phép gieo tua lại TỪNG chỗ một mới lộ ra:
+
+        CLAUDE.md 122      ĐỎ
+        CLAUDE.md 182      ĐỎ
+        SO_BENH_AN 9       ĐỎ
+        SO_BENH_AN 11      VẪN XANH — CỬA MÙ     <- và dòng 124 chưa ai sờ tới
+
+    Nên cửa này cố ý RỘNG: mọi `<số> ca` và `<số> bài học` trong hai tệp đều
+    phải khớp. Rộng thì có ngày kêu oan một câu tử tế — nhưng hẹp thì nó mù,
+    mà mù là đúng cái bệnh đang chữa. Loại trừ duy nhất là phân số (`8/11 ca
+    chấm sai` ở `SO_BENH_AN.md`), bắt bằng lookbehind chứ không bằng danh sách
+    tên — một danh sách tên cũng sẽ tụt lại y hệt con số vừa tụt.
+    """
+    so_that = len(re.findall(r"^### (.+)$", SO.read_text(encoding="utf-8"), re.M))
+    assert so_that >= SO_CA_TOI_THIEU
+    mau = re.compile(r"(?<![\d/])(\d+) (?:ca|bài học)\b")
+    lech = []
+    for tep in (LUAT, SO):
+        for k, dong in enumerate(tep.read_text(encoding="utf-8").splitlines(), 1):
+            for m in mau.finditer(dong):
+                if int(m.group(1)) != so_that:
+                    lech.append(
+                        f"{tep.name}:{k} ghi {m.group(1)} — {dong.strip()[:70]}")
+    assert not lech, (
+        f"đếm được {so_that} ca, nhưng {len(lech)} chỗ trong câu chữ nói khác:"
+        + "".join("\n  " + d for d in lech))
+
+
+def test_NGUONG_SO_CA_khop_khoi_dac_ta():
+    """Ngưỡng phải có chỗ đứng NGOÀI mã, để hai bên cãi nhau được.
+
+    `SO_CA_TOI_THIEU` chép tay ở đầu tệp này; khối `CHOT:so-ca-benh-an` trong
+    `KY_LUAT_THUC_THI.md` ghi độc lập. Sửa một bên mà quên bên kia thì đỏ —
+    đó là mục đích, không phải phiền phức.
+    """
+    khoi = re.search(
+        r"<!-- CHOT:so-ca-benh-an -->(.*?)<!-- /CHOT:so-ca-benh-an -->",
+        (PROJECT_ROOT / "KY_LUAT_THUC_THI.md").read_text(encoding="utf-8"),
+        re.S)
+    assert khoi, "mất khối đặc tả CHOT:so-ca-benh-an"
+    m = re.search(r"`SO_CA_TOI_THIEU`\s*\|\s*\*\*(\d+)\*\*", khoi.group(1))
+    assert m, "khối đặc tả không còn ghi ngưỡng SO_CA_TOI_THIEU"
+    assert int(m.group(1)) == SO_CA_TOI_THIEU, (
+        f"đặc tả ghi {m.group(1)}, mã ghi {SO_CA_TOI_THIEU}")

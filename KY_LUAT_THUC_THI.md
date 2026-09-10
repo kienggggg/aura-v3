@@ -2052,6 +2052,72 @@ Gieo 8 phép, cả 8 đỏ. Lượt đầu **1 cửa mù**: bài canh tài liệ
 cảnh báo vẫn xanh. `x in y` lần thứ chín. Nay đòi cụm ấy nằm **cùng một dòng**
 với `CHƯA CHẶN ĐƯỢC`.
 
+<!-- CHOT:so-phien-khong-di-tra-mang -->
+### Câu hỏi về SỔ PHIÊN bị đẩy đi tra mạng — 5/6 cách hỏi (10/09/2026)
+
+Bắt được bằng cách **chạy app thật**, không bằng đọc mã. Lượt thứ tư của một
+phiên thật: *"câu đầu tiên tôi hỏi là gì"* → HTTP 200, `status=web_unavailable`,
+**50,7 giây**, và AURA đáp *"câu này cần tra nguồn mới"*. Sổ phiên của chính nó
+nằm ngay đó.
+
+**Không phải `is_search_request`.** Nó trả `False` cho cả sáu cách hỏi — luật
+từ vựng đúng. Thứ lật ngược là `DeterministicFreshnessPolicy.requires_web`, qua
+`loai_cau_hoi` xếp câu vào `tra_cuu` bằng luật `_HOI_DINH_NGHIA` (*"là gì"*).
+
+Trục ấy thêm 13/08 để chặn AURA bịa tiểu sử — đúng và phải giữ. Nhưng **câu hỏi
+về sổ phiên không phải sự việc ngoài đời**; nó cùng họ với `dong_ho` và
+`may_tinh`: đáp án ở trong máy, đếm là ra.
+
+**Bản vá 12/08 chỉ chữa đúng câu đã đo.** Nó thêm `_TRO_VE_NGU_CANH` cho
+*"phiên này"*, và cách hỏi ấy nay vẫn đúng — nhưng **mọi cách hỏi bên cạnh vẫn
+rơi**. Đúng ca *"vá xong một trường không nói gì về trường bên cạnh"*.
+
+**ĐO NỀN — hai bộ đề viết CÙNG LÚC trước khi vá:**
+
+```
+bộ A (thiết kế)   1/6    chỉ "câu hỏi thứ 2 tôi hỏi trong phiên này là gì"
+bộ B (thước)      0/6
+đối chứng         8 câu, phán quyết nền ghi lại nguyên trạng
+```
+
+**CẠM BẪY PHẢI TRÁNH, ghi trước khi vá:** `_DAU_HIEU` của `doc_so_phien` có
+`hoi\s*gi`. Miễn trừ theo nó thì *"Nguyễn Tất Thành hỏi gì"* cũng thoát khỏi
+tra cứu — mở lại đúng lỗ 13/08. Nên miễn trừ phải hẹp: **chỉ miễn đúng chỗ máy
+TRẢ LỜI ĐƯỢC**, tức khi `tra_so`/`tra_loi_thang` nhận ra dạng câu.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| bộ A sau vá | **6/6** (nền 1/6) |
+| bộ B sau vá | **5/6** (nền 0/6) |
+| đối chứng | **11/11 GIỮ NGUYÊN** phán quyết nền — không câu nào đổi |
+
+**8 ca đối chứng đầu tiên MÙ với hai chiều nới bừa.** Gieo *"miễn theo `_DAU_HIEU` một mình"* và *"bỏ chặn `_TEN_RIENG`"* thì **cả 8 vẫn xanh** — vì không ca nào vừa khớp luật hẹp vừa mang tên riêng, và không ca nào cần mạng mà lại chứa *"hỏi gì"*. Thêm hai ca thì cả hai phép đỏ — nhưng **chiều thứ hai phải thử tới lần hai**.
+
+Ca đầu tiên viết cho chiều ấy là *"người ta hỏi gì về giá vàng hôm nay"*: khớp
+`_DAU_HIEU` đúng như tính, mà phép gieo **vẫn xanh**. Vì `is_search_request`
+TỰ NÓ trả `True` cho câu ấy (*"giá"*, *"hôm nay"*), nên `requires_web` giữ
+`True` bất kể `loai_cau_hoi` nói gì. Ca đối chứng phải nằm ở chỗ mà **đúng cái
+đang thử là thứ duy nhất giữ nó lại**:
+
+```
+lex=False · loai=tra_cuu · _DAU_HIEU=True · luật hẹp=False
+   -> "câu hỏi kinh điển của triết học là gì"
+```
+
+Hai lần trượt, hai nguyên nhân khác nhau. Một ca đối chứng chỉ đối chứng được
+thứ nó **phân biệt nổi**, và "phân biệt nổi" phải được KIỂM chứ không được suy
+ra — cả hai lần tôi đều suy ra, và cả hai lần đều sai.
+| miễn trừ dùng luật nào | **cùng một** hàm với `doc_so_phien`, không viết bản sao |
+
+**1/6 CỐ Ý KHÔNG VÁ:** *"câu đầu tiên là gì"* — `_DAU_HIEU` không nhận ra nó,
+nên sổ **không trả lời được**. Miễn nó khỏi tra mạng thì câu đó rơi xuống model
+và model đoán: đo 13/08 trên đúng lối ấy được **1/5**. Thà để nó nói *"chưa lấy
+được nguồn"* còn hơn đoán sai bốn lần trên năm. Đây là **chỗ thiếu đã biết**,
+không phải chỗ quên.
+<!-- /CHOT:so-phien-khong-di-tra-mang -->
+
 <!-- CHOT:tran-so-lan -->
 ### `TRAN_SO_LAN = 3` — gõ tay từ 03/09, ĐO ĐƯỢC 10/09/2026
 

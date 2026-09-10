@@ -40,6 +40,8 @@ from __future__ import annotations
 import re
 import unicodedata
 
+from core.doc_so_phien import hoi_ve_so_phien
+
 SANG_TAC = "sang_tac"
 TU_NGHI = "tu_nghi"
 TRA_CUU = "tra_cuu"
@@ -181,6 +183,27 @@ def loai(text: str) -> str:
     #
     # Lời dặn không phải hàng rào. Hàng rào là ĐỪNG ĐỂ CÂU ĐÓ ĐI TRA.
     if _HOI_GIO_MAY.search(moc) and not _TEN_RIENG.search(text):
+        return TU_NGHI
+
+    # SỔ PHIÊN THẮNG TRƯỚC MỌI LUẬT TRA MẠNG — cùng lý lẽ với đồng hồ ngay
+    # trên kia, và cùng một cách hỏng.
+    #
+    # 10/09/2026, chạy app THẬT: "câu đầu tiên tôi hỏi là gì" -> HTTP 200,
+    # status=web_unavailable, 50,7 giây, AURA đáp "câu này cần tra nguồn mới".
+    # Đáp án nằm trong sổ phiên của chính nó.
+    #
+    # Chỗ lật ngược là `_HOI_DINH_NGHIA` bên dưới: câu kết thúc bằng "là gì"
+    # thành TRA_CUU, rồi `requires_web` bật đường fail-closed. Đo 6 cách hỏi
+    # thì 5/6 rơi; cách duy nhất sống là câu có "phiên này" — vá riêng 12/08
+    # cho ĐÚNG câu đã đo, còn mọi cách hỏi bên cạnh thì không.
+    #
+    # `hoi_ve_so_phien` để BÊN `doc_so_phien` chứ không chép luật sang đây: nó
+    # phải là ĐÚNG cửa vào của `tra_so`. Rộng hơn thì miễn cả câu mà sổ không
+    # trả lời được, và câu ấy rơi xuống model đoán — đo 13/08 được 1/5.
+    #
+    # `_TEN_RIENG` giữ y như luật đồng hồ: "câu thứ 2 của Nguyễn Tất Thành là
+    # gì" vẫn phải đi tra.
+    if hoi_ve_so_phien(text) and not _TEN_RIENG.search(text):
         return TU_NGHI
 
     if _HOI_NGUOI.search(moc):

@@ -2,27 +2,25 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "the-app",
+      "name": "aura-chat",
       "runtimeExecutable": "venv/Scripts/python.exe",
       "runtimeArgs": [
-        "-m",
-        "interface.the_app",
+        "aura_chat.py",
         "--port",
-        "8088"
+        "8799"
       ],
-      "port": 8088
+      "port": 8799
     },
     {
-      "name": "the-app-chay-ma",
+      "name": "noi-bo",
       "runtimeExecutable": "venv/Scripts/python.exe",
       "runtimeArgs": [
         "-m",
-        "interface.the_app",
+        "interface.noi_bo_app",
         "--port",
-        "8089",
-        "--allow-exec"
+        "8890"
       ],
-      "port": 8089
+      "port": 8890
     }
   ]
 }

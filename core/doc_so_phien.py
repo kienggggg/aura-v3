@@ -54,6 +54,37 @@ def _cau_hoi_cua_sep(history: Sequence[object]) -> list[str]:
     return ra
 
 
+def hoi_ve_so_phien(text: str) -> bool:
+    """Câu này có phải hỏi về SỔ PHIÊN — thứ máy ĐẾM được — không?
+
+    Sinh ra 10/09/2026 vì `loai_cau_hoi` đẩy câu hỏi về sổ phiên đi tra mạng.
+    Chạy app thật, lượt 4: *"câu đầu tiên tôi hỏi là gì"* → `web_unavailable`
+    sau **50,7 giây**, trong khi đáp án nằm ngay trong sổ. Đo 6 cách hỏi thì
+    **5/6 rơi**; cách duy nhất đúng là câu có chữ *"phiên này"* — đúng câu đã
+    được vá riêng ngày 12/08, và mọi cách hỏi bên cạnh vẫn rơi.
+
+    HẸP ĐÚNG BẰNG CHỖ MÁY TRẢ LỜI ĐƯỢC, và đó là cả thiết kế:
+
+    * `_DAU_HIEU` một mình thì QUÁ RỘNG — nó có `hoi gi`, nên
+      *"Nguyễn Tất Thành hỏi gì"* cũng lọt, và đó là mở lại lỗ bịa tiểu sử
+      13/08.
+    * `_HOI_THU_MAY`/`_HOI_DAU_TIEN` một mình thì miễn cả những câu `tra_so`
+      KHÔNG nhận ra. Miễn khỏi tra mạng mà sổ không trả lời được thì câu ấy
+      rơi xuống model đoán — đo 13/08 lối ấy được **1/5**. Thà nói "chưa lấy
+      được nguồn" còn hơn đoán sai bốn lần trên năm.
+
+    Nên điều kiện là GIAO của cả hai, tức đúng cửa vào của `tra_so`. Dùng
+    chung một hàm chứ không chép luật sang `loai_cau_hoi` — hai bản sao sẽ
+    trôi khỏi nhau, và `chat_service` đã ghi sẵn lời cảnh báo về "một luật
+    biểu thức chính quy thứ hai cạnh tranh".
+    """
+    khong_dau = _bo_dau(text)
+    if not _DAU_HIEU.search(khong_dau):
+        return False
+    return bool(_HOI_THU_MAY.search(khong_dau)
+                or _HOI_DAU_TIEN.search(khong_dau))
+
+
 def tra_so(text: str, history: Sequence[object]) -> str | None:
     """Sếp hỏi về một lượt cũ -> trả câu đó ra sẵn, hoặc `None` nếu không hỏi.
 
@@ -153,4 +184,4 @@ def tra_loi_thang(text: str, history: Sequence[object]) -> str | None:
     return f'Câu hỏi thứ {thu_tu} của Sếp trong phiên này, nguyên văn, là: "{cau}"'
 
 
-__all__ = ["tra_so", "tra_loi_thang"]
+__all__ = ["hoi_ve_so_phien", "tra_so", "tra_loi_thang"]

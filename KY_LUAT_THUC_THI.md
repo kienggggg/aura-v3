@@ -2052,6 +2052,107 @@ Gieo 8 phép, cả 8 đỏ. Lượt đầu **1 cửa mù**: bài canh tài liệ
 cảnh báo vẫn xanh. `x in y` lần thứ chín. Nay đòi cụm ấy nằm **cùng một dòng**
 với `CHƯA CHẶN ĐƯỢC`.
 
+<!-- CHOT:cau-hoi-rieng-khong-ra-mang -->
+### Câu hỏi về dữ liệu RIÊNG của Sếp bị đẩy ra máy chủ tìm kiếm (10/09/2026)
+
+Đo trên app thật, phiên 18 lượt, ba dữ kiện gắn ở lượt 1-3 rồi đẩy ra ngoài
+cửa sổ 24 tin:
+
+```
+"biển số xe tôi là gì"       web_unavailable · 52,7 giây · dữ kiện bị vứt
+"mã đơn hàng của tôi là gì"  đúng, nhưng kèm "[1]"
+"con gái tôi tên gì"         đúng
+                             2/3
+```
+
+**Trả lời được hay không phụ thuộc một phép tra mạng KHÔNG LIÊN QUAN có trúng
+nguồn nào không.** Hai câu may mắn có nguồn thì model dùng được dữ kiện
+`nho_lai` chèn vào; câu thứ ba không có nguồn thì lượt chết ở `web_unavailable`
+và dữ kiện bị vứt.
+
+**Và cái `[1]` là lỗi thứ hai, nặng hơn.** *"Mã đơn hàng của bạn là
+DH-2026-XK7734 [1]"* — mốc nguồn trỏ vào một trang web **không hề chứa** con số
+ấy. Nguồn không đỡ được điều nó đang đỡ; mà cái mốc ấy chính là thứ người đọc
+dùng để tin.
+
+**BA ĐIỀU KIỆN, KHÔNG MỘT — và cả ba đều do phép đo bắt phải có.**
+
+Ý đầu tiên là *"sổ phiên trả lời được thì đừng ra mạng"*. Đo thì hỏng ngay:
+ngưỡng `_TOI_THIEU = 2` của `nho_lai` chỉnh cho việc **lôi lại**, không phải cho
+quyền **phủ quyết**. Gieo một lượt cũ *"tôi đang theo dõi giá vàng SJC"* vào sổ
+thì *"giá vàng SJC hôm nay là gì"* cũng thành "sổ trả lời được".
+
+Ý thứ hai thêm *"câu có nhắc tới Sếp"*. Vẫn hỏng: bẫy
+*"giá vàng SJC tôi đang theo dõi hôm nay là gì"* thoả **cả hai**, mà nó thật sự
+cần giá hôm nay.
+
+Điều kiện thứ ba — **luật từ vựng `is_search_request` phải nói KHÔNG** — là thứ
+duy nhất cứu được dòng ấy. Đo trên 9 câu, ba điều kiện phân biệt đúng **9/9**.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| riêng + sổ trả lời được, KHÔNG ra mạng | **3/3** (nền 0/3) |
+| đối chứng vẫn ra mạng | **7/7 GIỮ NGUYÊN** — không câu nào đổi |
+| số điều kiện | **3**, và bỏ bất kỳ cái nào cũng phải làm một ca đối chứng đỏ |
+| trả lời câu riêng | **0 nguồn**, không có `[1]` |
+
+**Bốn nhóm bẫy trong 7 ca đối chứng, cố ý khác nhau:**
+
+```
+(a) dữ kiện ngoài đời, không nhắc Sếp   giá vàng · thủ đô · lạm phát
+(b) CÓ nhắc Sếp, sổ KHÔNG trả lời được  số căn cước · mã số thuế
+(c) có "tôi" VÀ sổ trả lời được VÀ cần dữ liệu mới   giá vàng SJC tôi
+                                                      đang theo dõi hôm nay
+```
+
+```
+(d) KHÔNG nhắc Sếp, lex im, nhưng trùng 2 từ với lượt cũ    vàng SJC là gì
+```
+
+Nhóm (c) chỉ điều kiện `is_search_request` bắt được; nhóm (d) chỉ điều kiện
+*"có nhắc tới Sếp"* bắt được. Không có chúng thì bản vá này **chặn nhầm** đúng
+loại câu mà `web_search` sinh ra để phục vụ.
+
+**VÀ NHÓM (d) LÀ DO CỬA CANH BẮT, KHÔNG PHẢI DO TÔI NGHĨ RA.** Bài
+`test_MOI_dieu_kien_deu_CAN_THIET` đỏ vì trong sáu ca đầu **không ca nào**
+chứng minh được điều kiện *"nhắc tới Sếp"* là cần thiết — hai điều kiện kia đã
+chặn hết. Ba điều kiện mà chỉ hai cái làm việc thì cái thứ ba là trang trí, và
+trang trí thì sẽ bị ai đó dọn đi.
+
+**ĐO SAU KHI VÁ — chạy lại đúng phép đo đã bắt được lỗi:**
+
+```
+                             nền                    sau
+"biển số xe tôi là gì"       web_unavailable 52,7s  đúng nguyên văn, 37,2s
+"mã đơn hàng của tôi là gì"  đúng, kèm "[1]"        đúng, KHÔNG có [1]
+"con gái tôi tên gì"         đúng                   đúng
+                             2/3                    3/3
+```
+
+Gọi riêng một lượt để đọc số: `status=ok · sources=0 · used_web=False`, và câu
+trả lời tự nói nguồn thật — *"theo ghi chép trong sổ phiên"*.
+
+**Cả ba điều kiện đều làm việc, chứng minh bằng gieo chứ không bằng lý lẽ:**
+
+```
+bỏ is_search_request   -> 1 bài đỏ   (bẫy "giá vàng SJC tôi đang theo dõi…")
+bỏ hoi_ve_minh         -> 1 bài đỏ   (bẫy "vàng SJC là gì")
+bỏ so_phien_co_dap_an  -> 1 bài đỏ   ("số căn cước của tôi là gì")
+nới ngưỡng chồng lấp 2 -> 1  -> 2 bài đỏ
+bỏ hẳn phủ quyết       -> 1 bài đỏ   (tua lại trạng thái cũ)
+                          7/7 đỏ
+```
+
+**`so_phien_co_dap_an` KHÁC `nho_lai` một chỗ, và đó là cố ý:** `nho_lai` chỉ
+soi phần ĐÃ RƠI khỏi cửa sổ, vì việc của nó là lôi lại thứ model không còn thấy.
+Hàm mới soi TOÀN BỘ sổ, vì việc của nó là trả lời *"có cần ra mạng không"* —
+câu ấy được quyết **trước** khi model nhìn thấy gì cả. Dùng chung `_tu` và
+`_TOI_THIEU` chứ không chép luật sang: hai bản sao sẽ trôi khỏi nhau.
+
+<!-- /CHOT:cau-hoi-rieng-khong-ra-mang -->
+
 <!-- CHOT:mo-ho-khi-bo-dau-loai-cau-hoi -->
 ### Bỏ dấu gộp `đô` · `độ` · `đo` thành `do`, và `do` là từ TRỎ NGỮ CẢNH (10/09/2026)
 

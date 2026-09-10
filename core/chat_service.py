@@ -25,6 +25,7 @@ from core.chat_contract import (
     valid_citations,
 )
 from core.kiem_tien import gan_canh_bao
+from core.nho_lai import hoi_ve_minh, so_phien_co_dap_an
 from core.tra_cuu import la_lenh as la_lenh_tra_kho, tra_giup
 from core.loai_cau_hoi import (
     SANG_TAC as LOAI_SANG_TAC,
@@ -458,6 +459,37 @@ class ChatService:
                 raise TypeError("ContentGuard returned invalid history")
 
             policy_requires_web = self._freshness.requires_web(safe_request)
+
+            # CÂU HỎI VỀ DỮ LIỆU RIÊNG CỦA SẾP KHÔNG RA MÁY CHỦ TÌM KIẾM
+            # (10/09/2026). Đo trên app thật, phiên 18 lượt:
+            #
+            #   "biển số xe tôi là gì"  -> web_unavailable, 52,7 giây, dữ kiện
+            #                              `nho_lai` chèn vào bị vứt
+            #   "mã đơn hàng của tôi là gì" -> đúng, NHƯNG kèm "[1]" — mốc
+            #                              nguồn trỏ vào trang web không hề
+            #                              chứa con số ấy
+            #
+            # Trả lời được hay không phụ thuộc một phép tra mạng KHÔNG LIÊN
+            # QUAN có trúng nguồn nào không.
+            #
+            # BA ĐIỀU KIỆN, và cả ba đều do phép đo bắt phải có:
+            #
+            #   1. `is_search_request` nói KHÔNG. Bỏ điều kiện này thì bẫy
+            #      "giá vàng SJC tôi đang theo dõi hôm nay là gì" bị chặn nhầm
+            #      — nó thoả cả hai điều kiện kia mà thật sự cần giá hôm nay.
+            #   2. Câu có nhắc tới Sếp. Bỏ thì "giá vàng SJC hôm nay là gì"
+            #      bị chặn chỉ vì một lượt cũ nhắc tới vàng.
+            #   3. Sổ phiên đủ trùng để trả lời. Bỏ thì "số căn cước của tôi
+            #      là gì" cũng bị giữ lại, trong khi sổ không có gì cả.
+            #
+            # `_TOI_THIEU = 2` của `nho_lai` chỉnh cho việc LÔI LẠI, không phải
+            # cho quyền PHỦ QUYẾT — nên nó không được đứng một mình.
+            if (policy_requires_web
+                    and not is_search_request(safe_request.text)
+                    and hoi_ve_minh(safe_request.text)
+                    and so_phien_co_dap_an(safe_request.text, history)):
+                policy_requires_web = False
+
             sources: tuple[SourceCitation, ...] = ()
             if policy_requires_web:
                 # ĐƯỜNG CÓ NGUỒN ĐƯỢC THÊM GIỜ, và đây là số học.

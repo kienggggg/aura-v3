@@ -76,6 +76,40 @@ def _tu(text: str) -> set[str]:
     return {t for t in _TACH.split(khong_dau) if len(t) > 1 and t not in _TU_RONG}
 
 
+# Ngôi thứ nhất — "của tôi", "xe tôi", "con tôi". `_TU_RONG` có sẵn `toi` và
+# `minh` vì chúng vô dụng khi ĐẾM CHỒNG LẤP; ở đây chúng lại là tín hiệu.
+_NGOI_MINH = frozenset(("toi", "minh"))
+
+
+def hoi_ve_minh(text: str) -> bool:
+    """Câu hỏi có nói về CHÍNH SẾP không."""
+    tach = unicodedata.normalize("NFD", (text or "").lower())
+    khong_dau = "".join(c for c in tach if not unicodedata.combining(c))
+    return bool(_NGOI_MINH & set(_TACH.split(khong_dau.replace("đ", "d"))))
+
+
+def so_phien_co_dap_an(text: str, history: Sequence[object]) -> bool:
+    """Sổ phiên có lượt nào của Sếp đủ trùng để trả lời câu này không.
+
+    KHÁC `nho_lai` ở một chỗ và đó là cố ý: `nho_lai` chỉ soi phần ĐÃ RƠI khỏi
+    cửa sổ, vì việc của nó là lôi lại thứ model không còn nhìn thấy. Hàm này
+    soi TOÀN BỘ sổ, vì việc của nó là trả lời câu *"có cần ra mạng không"* —
+    và câu ấy được quyết TRƯỚC khi model nhìn thấy gì cả.
+
+    Dùng chung `_tu` và `_TOI_THIEU` với `nho_lai` chứ không chép luật sang:
+    hai bản sao sẽ trôi khỏi nhau.
+    """
+    tu_hoi = _tu(text)
+    if len(tu_hoi) < _TOI_THIEU:
+        return False
+    for tin in history:
+        if str(getattr(tin, "role", "") or "") not in ("user", "owner", "sep"):
+            continue
+        if len(tu_hoi & _tu(str(getattr(tin, "content", "") or ""))) >= _TOI_THIEU:
+            return True
+    return False
+
+
 def nho_lai(
     text: str, history: Sequence[object], tam_nhin: int
 ) -> str | None:
@@ -133,4 +167,4 @@ def nho_lai(
     )
 
 
-__all__ = ["nho_lai"]
+__all__ = ["hoi_ve_minh", "nho_lai", "so_phien_co_dap_an"]

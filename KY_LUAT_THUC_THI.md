@@ -2350,7 +2350,7 @@ tên tệp, để Sếp tự chấm.
 | top-3 trên bộ B (giữ riêng) | **≥ 8/10** |
 | top-1 | **KHÔNG đặt ngưỡng** — 8/10 và 4/10, không tin được |
 | số đoạn hiện ra | **đúng 3**, mỗi đoạn kèm tên tệp + tiêu đề |
-| nhúng một câu hỏi — GIỮA của 5 lượt trong MỘT vòng lặp | **< 300 ms** |
+| nhúng một câu hỏi — GIỮA của 5 lượt trong MỘT vòng lặp | **< 1000 ms** |
 | gói Python ngoài | **vẫn đúng 2** |
 | `V3` sau khi thêm `core/tra_cuu.py` | **20/20 — hết chỗ** |
 
@@ -2400,6 +2400,58 @@ nó nhảy 8/10 → 4/10 giữa hai bộ câu hỏi.
 
 **Đây là lần bộ B làm đúng việc của một cái thước giữ riêng:** nó đỏ vì thế
 giới đổi, không vì mã đổi — và nó đỏ *trước khi* ai kịp quen với con số mới.
+
+**10/09 — CHẠY QUA APP THẬT, lần đầu.** `tra kho:` giao 08/09 và tới nay chỉ
+chạy qua `ChatService` trong test. Bật `aura_chat.py` rồi gõ qua đúng đường
+HTTP trình duyệt dùng:
+
+| gõ | HTTP | thời gian | kết quả |
+|---|---|---|---|
+| `tra kho: ngắt mạng cho polyglot làm được chưa` | 200 | **0,75s** | 3 đoạn kèm nguồn · `used_web=False` · 0 nguồn web |
+| `tra kho: máy này có card đồ hoạ rời không` | 200 | **0,54s** | 3 đoạn kèm nguồn |
+| `tra kho:` (rỗng) | 200 | 0,00s | chỉ in cú pháp |
+| `Chào Sếp` — ĐỐI CHỨNG | 200 | **78,49s** | qua model, bình thường |
+
+Lượt tra **0,5–0,75 giây** so với **78 giây** của lượt thường: nhanh hơn 100
+lần vì máy trả lời thẳng, không gọi model. Ca đối chứng cần thiết — không có
+nó thì con số 0,75s không nói được là nhanh so với cái gì.
+
+*(Que đo đầu gửi `session_id` không phải UUID và nhận HTTP 400 cho MỌI câu, kể
+cả "Chào Sếp". Lỗi của phép thử, không phải của `tra kho:`.)*
+
+**MỘT CHỖ THƯỚC ĐANG ĐÁNH GIÁ THẤP, CỐ Ý CHƯA SỬA.** Câu bộ B *"máy có bao
+nhiêu RAM"* đòi dấu hiệu `"11,7 GB"`. App trả về
+`docs/LO_TRINH_HOC_AI_VA_TIENG_ANH.md` ghi *"i5, 12GB RAM, không card rời"* —
+**trả lời đúng câu hỏi** nhưng bị chấm trượt vì khác cách viết. Tức bộ B đang
+báo thấp hơn chất lượng thật.
+
+Không sửa dấu hiệu ở lượt này: đó là sửa thước **ngay sau khi nó vừa cho một
+con số bất lợi**, và đấy đúng là lúc không được sửa. Ghi lại để lần sửa sau là
+một quyết định có cân nhắc chứ không phải phản xạ.
+
+**10/09 — TRẦN ĐỘ TRỄ 300 → 1000 ms, và nói rõ cửa ấy canh gì.**
+
+Trần 300 ms đỏ thật một lượt: giữa **401 ms**, mẫu `[328, 376, 401, 588, 715]`.
+Đi tìm nguyên nhân — **không** phải `qwen3.5:4b` nạp cùng. Đo lại với **cả hai
+model nạp** (bge-m3 1,22 GB + qwen3.5:4b 3,13 GB, RAM 83%):
+
+```
+15 lượt   nhỏ nhất 87,3 · giữa 101,5 · p90 108,6 · lớn nhất 116,6 ms
+```
+
+Lượt đỏ rơi đúng lúc model chat **đang sinh chữ** (lượt chat 78 giây chạy ngay
+trước, xem bảng app thật ở trên). Tranh CPU nhất thời — mà bộ đủ **có** chạy
+cùng `remotion render`, nên chuyện ấy sẽ lặp lại.
+
+Đổi thống kê không cứu được: lượt đỏ có **nhỏ nhất 328 ms**, tức dưới tranh CPU
+thì ngay cả mẫu tốt nhất cũng vượt 300. Phải đổi **con số**, và nói vì sao.
+
+**Cửa này canh HỎNG CẤU TRÚC**, không canh hàng chục mili giây: ai đó nạp lại
+chỉ mục 6,9 MB cho **mỗi** câu hỏi, hay gọi nhầm model chat thay vì model
+nhúng. Những thứ ấy tốn **hàng giây**. Trần 1000 ms vẫn bắt được chúng và thôi
+đỏ vì máy bận.
+
+*(Một trần đỏ vì máy bận dạy người ta bỏ qua màu đỏ — đắt hơn hẳn thứ nó canh.)*
 <!-- /CHOT:tra-cuu -->
 
 <!-- CHOT:path-noi-doi -->

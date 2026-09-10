@@ -41,9 +41,27 @@ DAC_TA_SO_DOAN_HIEN = 3
 #   asyncio.run mỗi lượt   giữa 341,7 ms   <- bản đầu của bài này đo cái này
 #   MỘT vòng lặp (app thật) giữa 103,8 ms
 #
-# Trần 300 ms trên giữa: biên ~3 lần. Không đặt trên LỚN NHẤT vì một lượt lẻ
-# 369 ms đã xuất hiện khi máy bận, và một cửa đỏ vì máy bận là cửa mong manh.
-DAC_TA_NHUNG_MS = 300
+# TRẦN 1000 ms, VÀ NÓI RÕ CỬA NÀY CANH GÌ (đo lại 10/09).
+#
+# Trần 300 ms đỏ thật một lượt: giữa 401 ms, mẫu [328, 376, 401, 588, 715].
+# Đi tìm nguyên nhân thì KHÔNG phải `qwen3.5:4b` nạp cùng — đo lại với CẢ HAI
+# model nạp trong RAM (bge-m3 1,22 GB + qwen3.5:4b 3,13 GB, RAM 83%):
+#
+#     15 lượt   nhỏ nhất 87,3 · giữa 101,5 · p90 108,6 · lớn nhất 116,6 ms
+#
+# Lượt đỏ rơi đúng lúc model chat ĐANG SINH CHỮ (lượt chat 78 giây chạy ngay
+# trước). Tranh CPU nhất thời, không phải trạng thái ổn định — mà bộ đủ CÓ
+# chạy cùng `remotion render`, nên chuyện ấy sẽ lặp lại.
+#
+# Nên nói thẳng cửa này canh gì: nó canh HỎNG CẤU TRÚC — ai đó nạp lại chỉ mục
+# 6,9 MB cho MỖI câu hỏi, hay gọi model chat thay vì model nhúng. Những thứ ấy
+# tốn HÀNG GIÂY, không phải hàng chục mili giây. Đặt trần ở 1000 ms thì vẫn
+# bắt được chúng và thôi đỏ vì máy bận.
+#
+# Không đặt trần trên NHỎ NHẤT: lượt đỏ có nhỏ nhất 328 ms, tức dưới tranh CPU
+# thì ngay cả mẫu tốt nhất cũng vượt 300. Đổi thống kê không cứu được, phải
+# đổi CON SỐ và nói vì sao.
+DAC_TA_NHUNG_MS = 1000
 DAC_TA_GOI_NGOAI = 2
 
 # top-1 CỐ Ý KHÔNG CÓ NGƯỠNG: 7/10 trên bộ A và 4/10 trên bộ B. Đặt ngưỡng cho

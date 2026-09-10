@@ -6,9 +6,9 @@ Tách khỏi `CLAUDE.md` ngày 06/09/2026, khi tệp ấy lên **83.047 byte** �
 
 `CLAUDE.md` giữ **luật**, mỗi luật một dòng kèm con số tạo ra nó. Chi tiết nằm ở đây. Đọc một ca khi luật tương ứng sắp được áp dụng, hoặc khi muốn biết vì sao nó tồn tại.
 
-**36 ca dưới đây đều là một lần trả giá trên chính máy này** — không chép từ đâu về.
+**37 ca dưới đây đều là một lần trả giá trên chính máy này** — không chép từ đâu về.
 
-> **Tách ra KHÔNG làm bài học dính hơn.** 36 ca này đã được đọc, và riêng ngày
+> **Tách ra KHÔNG làm bài học dính hơn.** 37 ca này đã được đọc, và riêng ngày
 > 06/09 vẫn bị phá: `x in y` bốn lần, dấu chéo qua vỏ shell lần thứ mười một,
 > hằng số fit từ chính mẫu dùng để kiểm — bài học ấy viết buổi sáng, dính bẫy
 > buổi chiều. Thứ bắt được là `tools/gieo.py`.
@@ -1494,3 +1494,44 @@ Chữa lần một bằng cách viết số ra chữ. Lần hai thì chính đo�
 Cửa cố ý rộng thì phải chịu tiếng kêu oan. **Nới một cửa vì nó phiền là cách nó thành mù** — chỗ phải sửa là câu chữ của mình. Cả ba lần trên tôi đều
 suy ra, và cả ba lần đều sai. Cùng ngày `x in y` tái phát **ba lần** (lần 13,
 14, 15) — mọi lần đều là một cửa hỏi một vùng rộng rồi tìm thấy thứ nó muốn.
+
+---
+
+### Một điều kiện không có ca đối chứng nào cần tới nó là một điều kiện trang trí
+
+Ngày 10/09/2026, vá đường *"câu hỏi riêng của Sếp không ra máy chủ tìm kiếm"*.
+Bản vá cần **ba** điều kiện, và **cả ba đều do phép đo bắt phải có, không phải
+do tôi nghĩ ra**:
+
+```
+ý 1   "sổ phiên trả lời được thì đừng ra mạng"
+      -> hỏng ngay. `_TOI_THIEU = 2` của `nho_lai` chỉnh cho việc LÔI LẠI,
+         không phải cho quyền PHỦ QUYẾT. Một lượt cũ "tôi đang theo dõi giá
+         vàng SJC" đủ để chặn "giá vàng SJC hôm nay là gì" khỏi nguồn.
+ý 2   thêm "câu có nhắc tới Sếp"
+      -> vẫn hỏng. Bẫy "giá vàng SJC TÔI đang theo dõi HÔM NAY là gì" thoả
+         cả hai, mà nó thật sự cần giá hôm nay.
+ý 3   thêm "luật từ vựng nói KHÔNG"   -> 9/9 đúng.
+```
+
+**Rồi cửa canh bắt được bộ đối chứng của chính tôi thiếu ca.** Tôi viết một bài
+đòi *mỗi điều kiện phải cần thiết*, và nó **đỏ**: trong sáu ca đối chứng, không
+ca nào chứng minh được điều kiện thứ hai là cần — hai điều kiện kia đã chặn
+hết. Phải đi tìm một ca có `lex=False`, không nhắc Sếp, mà vẫn trùng hai từ với
+lượt cũ (*"vàng SJC là gì"*) thì mới đủ ba.
+
+**Ba điều kiện mà chỉ hai cái làm việc thì cái thứ ba là trang trí, và trang
+trí thì sẽ bị ai đó dọn đi** — kèm theo cả cái lỗ nó đang bịt.
+
+**Và cách khai của tôi SAI HÌNH.** Bản đầu gán cho mỗi ca *"điều kiện duy nhất
+cứu nó"*. Sai: một câu bị nhiều điều kiện cùng chặn, nên nhãn ấy không đo được.
+Chiều đo được là chiều ngược — **bỏ một điều kiện thì có ca nào LỌT không**.
+Nhãn hướng về phía nguyên nhân thì không kiểm được; nhãn hướng về phía hậu quả
+thì kiểm được bằng một phép gieo.
+
+Cùng ngày, cùng họ, một chỗ khác: chạy lại phép đo trạng thái bảy phòng thì ra
+**7/7 `CHAY_THAT`** — **lời khai cũ hoá ra vẫn đúng**. Nhưng nó đo lúc
+`2026-09-03`, và **34 commit** đã đụng vào mã của các phòng kể từ đó, còn API
+thì không trả cái ngày ấy ra. **Một nhãn ĐÚNG mà không kiểm được cũng buộc
+người đọc phải TIN, y hệt một nhãn sai.** Thứ phân biệt hai loại nhãn không
+phải nội dung của chúng, mà là có ai kiểm lại được không.

@@ -2722,7 +2722,7 @@ thì đã ghi "đạt" và bỏ sót hai chỗ.
 
 | đơn | ngưỡng |
 |---|---|
-| `SO_CA_TOI_THIEU` | **36** — nâng cùng lúc với sổ, để thêm ca là phải cố ý |
+| `SO_CA_TOI_THIEU` | **37** — nâng cùng lúc với sổ, để thêm ca là phải cố ý |
 | mọi `<số> ca` trong `CLAUDE.md` + `SO_BENH_AN.md` | **= số ca đếm được** |
 | mọi `<số> bài học` trong hai tệp ấy | **= số ca đếm được** |
 | loại trừ | phân số (`8/11 ca chấm sai`), bắt bằng lookbehind |

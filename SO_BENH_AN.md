@@ -6,9 +6,9 @@ Tách khỏi `CLAUDE.md` ngày 06/09/2026, khi tệp ấy lên **83.047 byte** �
 
 `CLAUDE.md` giữ **luật**, mỗi luật một dòng kèm con số tạo ra nó. Chi tiết nằm ở đây. Đọc một ca khi luật tương ứng sắp được áp dụng, hoặc khi muốn biết vì sao nó tồn tại.
 
-**37 ca dưới đây đều là một lần trả giá trên chính máy này** — không chép từ đâu về.
+**38 ca dưới đây đều là một lần trả giá trên chính máy này** — không chép từ đâu về.
 
-> **Tách ra KHÔNG làm bài học dính hơn.** 37 ca này đã được đọc, và riêng ngày
+> **Tách ra KHÔNG làm bài học dính hơn.** 38 ca này đã được đọc, và riêng ngày
 > 06/09 vẫn bị phá: `x in y` bốn lần, dấu chéo qua vỏ shell lần thứ mười một,
 > hằng số fit từ chính mẫu dùng để kiểm — bài học ấy viết buổi sáng, dính bẫy
 > buổi chiều. Thứ bắt được là `tools/gieo.py`.
@@ -1535,3 +1535,54 @@ Cùng ngày, cùng họ, một chỗ khác: chạy lại phép đo trạng thái
 thì không trả cái ngày ấy ra. **Một nhãn ĐÚNG mà không kiểm được cũng buộc
 người đọc phải TIN, y hệt một nhãn sai.** Thứ phân biệt hai loại nhãn không
 phải nội dung của chúng, mà là có ai kiểm lại được không.
+
+---
+
+### Một cái tên gộp ba cơ chế, và thuốc của loại này làm hỏng loại kia
+
+Ngày 11/09/2026 Sếp quyết: *"AURA nên né chặn bot"*. Trước khi dựng, đo 10 trang
+bằng `httpx`, mỗi nấc đổi **đúng một biến**:
+
+```
+httpx mặc định (bot thô)             qua 7/10
+chỉ đổi User-Agent thành Chrome giả  qua 7/10   <- không mua được gì
+bộ header trình duyệt ĐẦY ĐỦ         0/3 trên ba trang đã chặn
+```
+
+Ba nấc, và nấc nào cũng **không nhúc nhích**. Nếu dừng ở đây thì kết luận là
+*"header không đủ, phải có trình duyệt thật"* — đúng hướng Sếp nói, và sai.
+
+**Đọc thân phản hồi mới tách được "chặn" thành BA LOẠI:**
+
+```
+sjc.com.vn      server: cloudflare · cf-mitigated: challenge · "Just a moment…"
+stackoverflow   server: cloudflare · cf-mitigated: challenge · "Just a moment…"
+vi.wikipedia    server: HAProxy · text/plain · 141 byte:
+                "Please set a user-agent and respect our robot policy"
+```
+
+Wikipedia **không chặn bot**. Nó đòi biết bot là ai. Và vì thế UA Chrome **giả**
+bị từ chối, trong khi một UA trung thực —
+`AURA-v3/1.0 (…; github.com/kienggggg/aura-v3)` — cho **403 → 200, 2,3 MB**.
+
+**Thuốc của loại này là thuốc độc của loại kia.** Camoufox giả vân tay Firefox
+để vượt challenge; đem nó áp vào Wikipedia là làm hỏng đúng ca đang chạy được.
+
+```
+7/10  không chặn gì
+1/10  đòi khai báo trung thực  -> một dòng header
+2/10  challenge thật          -> mới cần trình duyệt thật
+```
+
+**8/10 nhu cầu đạt được mà không né gì cả.** Món đắt nhất chỉ cần cho 2/10 —
+và với hai trang ấy còn đường chưa thử (Stack Exchange có API công khai miễn
+phí).
+
+**Luật:** một từ như *"chặn"*, *"lỗi"*, *"chậm"* thường gộp nhiều cơ chế. Đếm
+tỉ lệ hỏng rồi đi mua thuốc là mua theo cái TÊN. Phải đọc **ai trả lời và trả
+lời cái gì** — `server:`, `cf-mitigated:`, thân phản hồi — rồi mới biết mình
+đang chữa mấy bệnh.
+
+Và ba nấc đầu **cùng cho một con số** 7/10 → 7/10 → 0/3. Ba phép đo giống hệt
+nhau không có nghĩa là hết đường; ở đây nó có nghĩa là **cả ba đều hỏi sai câu
+hỏi**.

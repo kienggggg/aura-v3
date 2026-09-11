@@ -43,7 +43,7 @@ TRAN_BYTE_CLAUDE = 32_000
 # vẫn xanh — mà bốn chỗ trong tài liệu ghi "31 ca" đã tụt lại đúng vì không ai
 # phải cố ý. Nâng sàn buộc người thêm ca phải sửa cả con số, và cửa dưới bắt
 # nốt phần chữ.
-SO_CA_TOI_THIEU = 37
+SO_CA_TOI_THIEU = 38
 
 
 def _muc4(chu: str) -> str:

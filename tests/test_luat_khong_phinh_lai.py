@@ -289,3 +289,43 @@ def test_NGUONG_SO_CA_khop_khoi_dac_ta():
     assert m, "khối đặc tả không còn ghi ngưỡng SO_CA_TOI_THIEU"
     assert int(m.group(1)) == SO_CA_TOI_THIEU, (
         f"đặc tả ghi {m.group(1)}, mã ghi {SO_CA_TOI_THIEU}")
+
+
+def test_TAI_LIEU_KHONG_chua_ky_tu_dieu_khien():
+    r"""Backslash qua shell heredoc, LẦN THỨ HAI MƯƠI SÁU — và lần này nó nằm
+    trong chính `CLAUDE.md`, tệp nạp MỌI phiên, không ai thấy suốt bốn ngày.
+
+    Dòng 41 viết đường dẫn venv của bộ căn chữ. Trong tệp nó là:
+
+        F:<BEL>ura-stt<VT>env          (0x07 và 0x0B)
+
+    tức `F:\aura-stt\venv` đã bị một lượt escape nuốt mất hai dấu `\`, biến
+    `\a` thành chuông và `\v` thành tab dọc. Trên màn hình nó hiện ra
+    `F:ura-sttenv` — một đường dẫn KHÔNG TỒN TẠI, và không ai tra lại được.
+
+    Bắt được 11/09/2026 lúc đi NÉN tệp, không phải lúc đọc: phép thay chuỗi báo
+    "0 lần khớp" cho một đoạn nhìn bằng mắt thì giống hệt.
+
+    Đây là cửa cho CẢ LOẠI. `tools/gieo.py` bắt được lỗi trong MÃ; ký tự điều
+    khiển lọt vào TÀI LIỆU thì không cửa nào từng soi.
+    """
+    # KHÔNG DÙNG `splitlines()`. Bản đầu của bài này dùng, và gieo bắt được nó
+    # MÙ: `str.splitlines()` coi `\v` (0x0B) và `\f` (0x0C) là RANH GIỚI DÒNG,
+    # nên nó nuốt đúng những ký tự bài này sinh ra để bắt. Phép gieo chèn `\f`
+    # vào `KY_LUAT_THUC_THI.md` cho ra "VẪN XANH".
+    #
+    # Trớ trêu hơn: chính `\v` trong `F:\aura-stt\venv` là một trong số ấy —
+    # bài chỉ đỏ được nhờ `\a` (0x07) đi kèm. Một nửa ca gốc đã lọt.
+    CHO_PHEP = {"\n", "\t"}
+    xau = []
+    for tep in (LUAT, SO, PROJECT_ROOT / "KY_LUAT_THUC_THI.md"):
+        van = tep.read_text(encoding="utf-8")
+        for i, c in enumerate(van):
+            if (ord(c) < 32 or ord(c) == 0x7F) and c not in CHO_PHEP:
+                xau.append(f"{tep.name}:{van.count(chr(10), 0, i) + 1} "
+                           f"có ký tự {hex(ord(c))}")
+                if len(xau) > 8:
+                    break
+    assert not xau, (
+        "ký tự điều khiển lọt vào tài liệu — gần như chắc chắn là backslash bị "
+        f"nuốt qua shell: {xau[:8]}")

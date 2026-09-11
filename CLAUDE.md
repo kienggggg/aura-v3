@@ -10,17 +10,12 @@ cần tra lại lịch sử hoặc sổ bằng chứng công nghệ thì sang re
 **LỊCH SỬ của `D:\AURA_OS_v2` không được đẩy lên GitHub** — nó có ~20 khoá API
 thật ở commit `88e8c07`.
 
-> Câu trên trước 02/09/2026 viết gọn là *"repo cũ không được đẩy lên GitHub"*,
-> và đọc ra thành "v2 không có trên GitHub". Sai. Sếp nhắc, đo lại thì:
-> `github.com/kienggggg/AURA-OS-V2` **đang công khai từ 13/08** — nhưng là một
-> **ảnh chụp sạch**: 1 commit, 730 tệp, không mang lịch sử, email tác giả đã là
-> `noreply`. Quét toàn bộ lịch sử kho ấy: **0 khoá thật**, 0 tệp `.env` bị theo
-> dõi, 0 chỗ gán `api_key`/`token` giá trị dài; commit `88e8c07` **không có
-> trong đó**.
->
-> Thứ bị cấm là **lịch sử**, không phải **mã**. Viết gộp hai thứ làm một thì
-> lần sau có người đọc luật này rồi tưởng mình vừa làm lộ khoá — hoặc tệ hơn,
-> tưởng đẩy ảnh chụp sạch cũng là vi phạm rồi bỏ mất một việc làm được.
+> **Thứ bị cấm là LỊCH SỬ, không phải MÃ.** Đo 02/09/2026:
+> `github.com/kienggggg/AURA-OS-V2` công khai từ 13/08 nhưng là một **ảnh chụp
+> sạch** — 1 commit, 730 tệp, không mang lịch sử, **0 khoá thật**, và
+> `88e8c07` **không có trong đó**. Gộp hai thứ làm một thì người sau tưởng đẩy
+> ảnh chụp sạch cũng là vi phạm, rồi bỏ mất một việc làm được.
+> Toàn văn: [`docs/LICH_SU_LUAT.md`](docs/LICH_SU_LUAT.md).
 
 ---
 
@@ -36,28 +31,18 @@ venv\Scripts\python.exe -m pytest tests -q
 Đo 03/09/2026, đi từ cửa vào theo `import` thật: **19 tệp · 5.116 dòng ·
 2 gói ngoài** (`aiohttp`, `httpx`).
 
-> **BỘ CĂN CHỮ KHÔNG NẰM TRONG CON SỐ ẤY, VÀ ĐÓ LÀ CỐ Ý** (07/09/2026).
-> `core/can_chu.py` sinh phụ đề karaoke theo từng từ, nhưng nó gọi
-> `faster-whisper` qua **tiến trình riêng, venv riêng ở `F:ura-sttenv`** —
-> đúng khuôn `node --check` / `bash -n` của phòng `epsilon`.
->
-> Đưa nó vào `requirements.txt` thì kéo theo `ctranslate2` · `onnxruntime` ·
-> `av` · `numpy` · `tokenizers` · `huggingface-hub` — đo được **273 MB và 10+
-> gói**, cộng 605 MB model. Tức **2 → 12**, cho một tính năng. Không có bộ căn
-> thì `KHONG_DO_DUOC` và video vẫn dựng xong với phụ đề theo đoạn như cũ —
-> thiếu một cái thước không phải là hỏng.
+> **BỘ CĂN CHỮ CỐ Ý NẰM NGOÀI CON SỐ ẤY** (07/09/2026). `core/can_chu.py` gọi
+> `faster-whisper` qua tiến trình riêng, venv riêng — đúng khuôn `node --check`
+> của phòng `epsilon`. Đưa vào `requirements.txt` thì đo được **+273 MB và 10+
+> gói** cộng 605 MB model, tức **2 → 12 gói** cho một tính năng. Không có bộ
+> căn thì `KHONG_DO_DUOC` và video vẫn dựng xong — thiếu một cái thước không
+> phải là hỏng.
 
-> **App Thẻ đã tách sang kho riêng ngày 02/09/2026** —
-> https://github.com/kienggggg/app-the — mang theo `libcst` (gói ngoài thứ ba
-> cũ) và 8 tệp / 5.509 dòng. Hai bên không dùng chung tệp mã nào.
->
-> Và đây là chỗ đắt: đến 02/09 hàng rào chỉ soi `aura_chat.py`, nên App Thẻ —
-> **dài hơn phần được canh** — lớn lên ngoài tầm mắt suốt từ 19/08. Bắt được
-> bằng cách chạy lại phép đo từ hai cửa vào, không bằng đọc lại.
->
-> Trước 02/09 dòng đầu mục này còn ghi **"đúng 17 tệp mã · 4.248 dòng"** trong
-> khi danh sách đóng đã lên 19. Câu tóm tắt tụt lại sau phép đo, và không ai
-> sửa vì không ai chạy lại.
+> **App Thẻ tách sang kho riêng 02/09/2026** — `github.com/kienggggg/app-the`,
+> mang theo `libcst` và 8 tệp / 5.509 dòng. Chỗ đắt: hàng rào chỉ soi
+> `aura_chat.py`, nên App Thẻ — **dài hơn phần được canh** — lớn lên ngoài tầm
+> mắt suốt từ 19/08. Bắt được bằng cách chạy lại phép đo từ hai cửa vào, không
+> bằng đọc lại.
 
 Con số đó là cả lý do v3 tồn tại. AURA v2 có **339 tệp .py / 47.566 dòng**, với
 **33 cờ bật-tắt tính năng mà 29 cái đang TẮT**. Bệnh không phải "mã dở" — bệnh
@@ -70,15 +55,10 @@ chat dùng đúng **một** hằng số của nó; ở đây nó là `core/paths
 trong chính tệp đó — tức là phải cố ý, phải có người thấy, phải giải thích được.
 Hàng rào lần theo `import` thật, kể cả import giấu trong hàm.
 
-> Mục này trước 03/09/2026 ghi **"hai danh sách đóng, hai trần riêng: `V3_CHAT`
-> (trần 20) và `V3_THE` (trần 10)"**, kèm một đoạn giải thích vì sao không được
-> gộp hai làm một. Đọc thì thuyết phục; đo thì sai: App Thẻ tách sang kho riêng
-> ngày 02/09, `V3_THE` đi theo, và tệp này chỉ còn **một** danh sách. Luật mô tả
-> một cấu trúc không còn tồn tại — cùng bệnh với câu "đúng 17 tệp" từng tụt lại
-> sau phép đo.
->
-> Đoạn về App Thẻ nằm ngoài tầm canh (8 tệp · 5.509 dòng) vẫn đúng **về mặt
-> lịch sử** và là lý do sinh ra hàng rào thứ hai; nay nó thuộc kho `app-the`.
+> Mục này trước 03/09/2026 mô tả **hai** danh sách đóng — `V3_CHAT` trần 20 và
+> `V3_THE` trần 10 — một cấu trúc **không còn tồn tại** sau khi App Thẻ tách
+> kho. Đọc thì thuyết phục, đo thì sai; cùng bệnh với câu *"đúng 17 tệp mã ·
+> 4.248 dòng"* tụt lại khi danh sách đóng đã lên 19.
 
 Máy: Windows 11, i5, 11,7 GB RAM, **không GPU rời**. Model local `qwen3.5:4b`
 qua Ollama, kho model ở `F:\ollama-models` (`OLLAMA_MODELS`).

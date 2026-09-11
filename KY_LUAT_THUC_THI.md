@@ -2655,6 +2655,78 @@ như thể lỗi đã hết; lần này để nó ở ngay cạnh con số.
 lượt đầu chỉ có 5 lần mỗi ô. Một tỉ lệ ~25% cho ra 0/5 với xác suất ~24% — gần
 một lần trong bốn. Ô nhỏ không bác được gì; nó chỉ **im**.
 
+
+---
+
+**NHÁNH THẬP PHÂN — ĐO 11/09/2026, và bản vá hôm qua mới bịt được một nửa.**
+
+10/09 ghi *"số thập phân GIỮ NGUYÊN: chưa đo được nó hỏng"*. Đo hôm nay thì
+thấy nhánh ấy vẫn mang đúng thứ đã kết tội:
+
+```
+_goi_gon(2.5)    = "2,5000"        phẩy thập phân, bốn số 0 thừa
+_goi_gon(1234.5) = "1.234,5000"    CÓ CẢ dấu chấm hàng nghìn
+```
+
+**Đo xen kẽ N=15, đổi đúng một biến:**
+
+```
+"tính hộ 10 chia 4"   -> "2,5000"       bịa lỗi 0/15
+"tính hộ 10 chia 5"   -> "2"            bịa lỗi 0/15   (đối chứng)
+"tính hộ 2469 chia 2" -> "1.234,5000"   bịa lỗi 2/15
+```
+
+**Phẩy thập phân một mình vô hại.** Thủ phạm vẫn là dấu chấm hàng nghìn, y như
+nhánh số nguyên — chỉ là nó còn sót. Câu hỏng nói thẳng:
+
+```
+"Không được, vì 2469 chia 2 không ra số thập phân như bạn đã nêu.
+ Kết quả chính xác là 1234,5."
+```
+
+Model phản đối chính `1.234,5000` của máy, rồi dựng ra *"như bạn đã nêu"*.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| dấu chấm hàng nghìn trong chuỗi dữ kiện | **0** — cả số nguyên lẫn thập phân |
+| phẩy thập phân | **giữ** — đo được là vô hại (0/15) |
+| câu "cả hai dấu", xen kẽ N=15 | **≤ 1/15** (nền 2/15) |
+| hai nhóm kia | **ở lại 0/15** |
+| số sai | **0/45** |
+
+**Nền 2/15 là nền NHỎ.** Với N=15 thì 0/15 sau vá có chặn trên 95% là
+**3/15 = 20%** — phép đo này một mình không chứng minh được gì nhiều. Thứ đỡ
+cho bản vá là phép đo ở nhánh số nguyên (**5/20 so với 0/20**, cùng nguyên
+nhân, cùng thiết kế): đây là bịt nốt chỗ sót của đúng bản vá ấy, không phải
+một giả thuyết mới.
+
+
+**ĐO SAU KHI BỊT NỐT — cùng thiết kế xen kẽ N=15:**
+
+```
+                          dữ kiện máy           nền    sau
+"tính hộ 2469 chia 2"   1.234,5000 -> 1234,5000  2/15   0/15
+"tính hộ 10 chia 4"     2,5000 (không đổi)       0/15   0/15*
+"tính hộ 10 chia 5"     2 (đối chứng)            0/15   0/15
+số sai                                           0/45   0/45
+```
+
+**\* Máy đo đếm 1/15 cho dòng giữa; đọc tay thì đó là DƯƠNG TÍNH GIẢ:**
+
+```
+"Không có mã nguồn trong yêu cầu này.  10 chia 4 bằng 2,5."
+```
+
+Câu ấy không bịa lỗi của ai — nó nói về khối mã (lời dặn định dạng), và đáp số
+đúng. Bộ dò bắt **mọi** câu mở đầu bằng *"Không"*. Đọc bảng bằng tay, đừng đọc
+bằng nhãn — đúng luật đã ghi cho `tools/gieo.py`.
+
+Các con số nền trước đó **không** bị lẫn kiểu này: mỗi lần đều in nguyên văn và
+đọc tay, và mọi ca đếm vào đều là bịa lỗi thật (*"không phải 83.576 như bạn đã
+ghi"*, *"kết quả chính xác là 83576"*).
+
 <!-- /CHOT:khong-bia-loi-cua-sep -->
 
 <!-- CHOT:so-phien-khong-di-tra-mang -->

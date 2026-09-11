@@ -358,14 +358,19 @@ def test_so_nguyen_trong_du_kien_la_CHU_SO_TRAN(cau, so):
         f"dấu chấm hàng nghìn quay lại: {trong_ngoac!r}")
 
 
-def test_SO_THAP_PHAN_giu_nguyen_vi_CHUA_DO():
-    """Ca đối chứng của bản vá: nó chỉ đụng số NGUYÊN.
+def test_SO_THAP_PHAN_giu_PHAY_nhung_BO_dau_cham_hang_nghin():
+    """ĐÃ ĐO 11/09/2026 — và bản vá 10/09 mới bịt được một nửa.
 
-    Số thập phân vẫn ra dấu phẩy kiểu Việt. Chưa đo được nó hỏng, nên chưa
-    đổi — bài này giữ cho ai đổi nó phải đổi CỐ Ý, kèm một phép đo.
+    Hôm ấy bài này tên là *"giữ nguyên vì CHƯA ĐO"*. Đo rồi thì thấy nhánh
+    thập phân vẫn mang đúng thứ đã kết tội: `_goi_gon(1234.5)` ra
+    `"1.234,5000"` — có CẢ dấu chấm hàng nghìn.
+
+    Xen kẽ N=15:  "2,5000" bịa lỗi 0/15  ·  "1.234,5000" bịa lỗi 2/15.
+    Phẩy thập phân vô hại; dấu chấm hàng nghìn thì không.
     """
     from core.may_tinh import _goi_gon
 
-    assert _goi_gon(7.5) == "7,5000"
+    assert _goi_gon(7.5) == "7,5000"          # phẩy thập phân: GIỮ
+    assert _goi_gon(1234.5) == "1234,5000"    # hàng nghìn: BỎ
     assert _goi_gon(47386) == "47386"
     assert _goi_gon(47386.0) == "47386"

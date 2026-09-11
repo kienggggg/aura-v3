@@ -241,7 +241,15 @@ def _goi_gon(so: float) -> str:
         so = int(so)
     if isinstance(so, int):
         return str(so)
-    return f"{so:,.4f}".replace(",", "_").replace(".", ",").replace("_", ".")
+    # KHÔNG dấu chấm hàng nghìn ở đây nữa (11/09/2026). Bản 10/09 bỏ nó khỏi
+    # nhánh SỐ NGUYÊN nhưng để sót nhánh này: `_goi_gon(1234.5)` vẫn ra
+    # `"1.234,5000"`. Đo xen kẽ N=15: "2,5000" bịa lỗi 0/15, "1.234,5000" bịa
+    # 2/15 — phẩy thập phân vô hại, dấu chấm hàng nghìn thì không.
+    #
+    #     "Không được, vì 2469 chia 2 không ra số thập phân như bạn đã nêu."
+    #
+    # Giữ PHẨY thập phân: nó đúng lối Việt và đo được là không gây hiểu lầm.
+    return f"{so:.4f}".replace(".", ",")
 
 
 # Mẫu chạy trên chuỗi ĐÃ BỎ DẤU, nên viết "ngay/thang/nam" — như thế một mẫu

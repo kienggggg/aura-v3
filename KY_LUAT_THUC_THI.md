@@ -4181,4 +4181,46 @@ làm bằng chứng chất lượng là bẫy tautological.
 **Luật quyết định, viết trước:** đạt CẢ BA thì bản gọn vào lời nhắc phòng AURA.
 Hỏng hàng 1 hoặc hàng 2 thì dừng, ghi số, không cần Sếp chấm. Em và Sếp chấm lệch
 nhau thì ghi độ khớp — lần sau em chấm thay Sếp được hay không là ở con số ấy.
+
+**KẾT QUẢ 13/09/2026 — 30 lượt, cả 30 chạy xong. Hai hàng đầu ĐẠT; hàng ba CHỜ SẾP.**
+
+```
+1) lọt cửa phòng viết     L 13/15 · 0 12/15        ngưỡng L ≥ 0 − 2   ĐẠT
+2) em chấm mù, 3 cặp      L thắng 3/3               ngưỡng ≥ 2/3       ĐẠT
+3) Sếp chấm lại mù        —                         ngưỡng ≥ 2/3       CHỜ SẾP
+```
+
+Điểm của em ghi và băm **trước khi mở khoá**: 19:00:21, SHA-256 bắt đầu
+`A7844A922484B69D`; tệp chấm mù `E2AA1D913EFA7D82`. **Nhãn cặp nào là nhánh nào
+KHÔNG ghi ở đây cho tới khi Sếp chấm xong** — ghi ra là Sếp hết mù.
+
+**Giới hạn phải nói cùng lúc:** em chấm theo chính bộ luật em viết, và bản L mang
+đúng những dấu hiệu nó được dặn — có người muốn một điều ngay câu 2, cho thấy cảm
+xúc qua bàn tay, có chữ "bỗng" ở chỗ ngoặt. Nên 3/3 của em đo được **bộ luật có
+được tuân theo và em có thích cái được tuân theo không** — chưa đo được "hay" một
+cách độc lập. Hàng 3 mới là chốt, đúng như luật viết trước.
+
+**Chỉ số phụ — độ TUÂN LỆNH, không phải độ HAY:**
+
+```
+                          nhánh 0     nhánh L
+mở bằng cảnh / định nghĩa  2/15        1/15
+kết đạo lý (máy dò chữ)    4/15        2/15     <- máy dò yếu: đọc tay thấy cả hai
+                                                   bản cặp la bàn đều kết đạo lý
+từ nhấn, trung bình        0,5         0,3
+"bỗng/chợt", trung bình    0,3         1,3      <- dặn "một lần", có bản dùng hơn
+câu dài nhất, trung bình   28 từ       25 từ
+thời gian viết, trung vị   88 s        98 s
+câu gốc -> bộ cắt bỏ       23 -> bỏ 11 25 -> bỏ 12   <- L viết DÀI hơn, bị cắt nhiều hơn
+```
+
+**Tất định: nhánh 0 hạt 1 chạy lại GIỐNG TỪNG CHỮ bản nền, 3/3.** Cùng hạt,
+cùng tuỳ chọn thì Ollama trên máy này cho cùng chữ — nên việc đổi sang chấm hạt 2
+là cần thật, không phải cẩn thận thừa.
+
+**LỖI MỚI, ngoài phạm vi phép thử — CHỮ HÁN lọt vào kịch bản:** 10/30 bản gốc (0:
+6 · L: 4) chứa chữ Hán — *工具箱 · 光亮 · 遇到过 · 哒哒 · 镶嵌 · 人潮 · 淅沥…* —
+và **6/25 bản ĐÃ LỌT CỬA vẫn còn chữ Hán sau khi cắt**: chúng đi thẳng vào giọng
+đọc của video. Không cửa nào của phòng hỏi câu này. Ba bản nền hạt 1: 0/3 — hạt
+1 tình cờ sạch.
 <!-- /CHOT:bo-luat-aura -->

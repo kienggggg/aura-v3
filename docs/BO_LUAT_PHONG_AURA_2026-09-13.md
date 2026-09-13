@@ -18,6 +18,28 @@ này dùng theo ba cách, KHÔNG phải một:
 Mỗi luật ghi: tình huống → nên → tránh → vì sao → ví dụ. Ví dụ do em tự viết,
 không trích tác phẩm của ai. Chỗ nào có số đo trên máy này thì ghi số.
 
+## BẢN ĐỒ, không phải KHUÔN — Sếp nói rõ 13/09
+
+> *"bộ luật tình huống lần này là 1 cái bản đồ để AURA khỏi 'lạc' chứ không phải
+> 1 cái khuôn gò bó ép hình dạng"*
+
+Nên đọc bộ này theo ba câu hỏi của người đi đường, không phải như một bảng hạn
+ngạch:
+
+1. **Mình đang ở đâu?** — Phần I: mỗi khúc của truyện có một VIỆC phải làm.
+2. **Có đang lạc không?** — mỗi phần có *dấu hiệu lạc*. Ba bản nền 13/09 không
+   hỏng vì phạm luật; chúng **lạc**: trôi sang tả cảnh, đánh rơi nhân vật, chi
+   tiết cãi nhau, rồi kết bằng triết lý.
+3. **Lạc thì quay về đâu?** — về điều nhân vật MUỐN, và về vật ở câu mở.
+
+Những con số *"tối đa hai tính từ"*, *"một lần"* dưới đây là **biển báo** để nhận
+ra lúc lạc — và để em chấm. Chúng không phải hạn ngạch phải đạt: truyện đi đúng
+đường mà cần ba tính từ thì cứ ba.
+
+**Dấu hiệu lạc, gom một chỗ:** ba câu liền không có gì đổi · nhân vật chính biến
+mất quá hai câu · xưng hô đổi giữa chừng · chi tiết sau cãi chi tiết trước · câu
+không vẽ được · câu kết giảng đạo lý thay vì cho thấy.
+
 ---
 
 ## Phần 0 — Những gì máy của phòng ĐÃ canh (không nhắc lại cho model)
@@ -167,4 +189,26 @@ CÁCH VIẾT:
 - Cảm xúc cho thấy qua hành động, không gọi tên; cảm thán chỉ trong lời thoại.
 - Đúng một chỗ ngoặt, dùng "nhưng" hoặc "bỗng".
 - Kết bằng một hình ảnh, không nói bài học.
+```
+
+---
+
+## Phần VI — BẢN ĐỒ gọn cho nhánh thử kế tiếp (CHƯA ĐO)
+
+Viết sau khi Sếp nói rõ *"bản đồ, không phải khuôn"*, lúc nhánh sáu dòng ở Phần V
+đang chạy. Phần V là dạng LỆNH (*"tối đa hai tính từ"*, *"đúng một chỗ ngoặt"*) —
+gần khuôn hơn bản đồ. Bản dưới đây không đếm, không hạn ngạch: nó chỉ nói mỗi khúc
+phải làm việc gì, lạc trông ra sao, và lạc thì quay về đâu.
+
+Nhánh này phải được đăng ký riêng, trước khi chạy, và so với cả nhánh 0 lẫn
+nhánh sáu dòng.
+
+```
+BẢN ĐỒ — để khỏi lạc, không phải khuôn:
+- Đầu truyện: ai, ở đâu, muốn điều gì.
+- Giữa truyện: điều gì cản trở; mỗi câu làm tình thế đổi đi một chút.
+- Gần cuối: một điều bất ngờ làm đổi nghĩa những gì đã kể.
+- Cuối truyện: một hình ảnh cho thấy điều đã đổi.
+Dấu hiệu lạc: ba câu liền chỉ tả cảnh; nhân vật biến mất; chi tiết cãi nhau; kết bằng bài học.
+Lạc thì quay về điều nhân vật muốn.
 ```

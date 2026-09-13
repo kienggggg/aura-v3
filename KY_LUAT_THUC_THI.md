@@ -4424,3 +4424,51 @@ nguyên văn dòng *"làm đổi nghĩa những gì đã kể"*; vá thì phải
 golden"* (B). Cửa chữ Hán không bắt loại này; máy dò chữ Anh bằng danh sách từ
 thì bắt nhầm (*no*, *so* là âm tiết tiếng Việt). CHƯA có cửa.
 <!-- /CHOT:ban-do-aura -->
+
+<!-- CHOT:doan-mau-so-do -->
+### Nhánh ĐOẠN MẪU với Số Đỏ — Sếp giao 14/09/2026; đăng ký TRƯỚC khi chạy model
+
+Theo `docs/KE_HOACH_KHO_THAM_CHIEU_2026-09-13.md` (Sếp duyệt 13/09). Tác phẩm Sếp
+để ở ổ D: *Số Đỏ*, Vũ Trọng Phụng (mất 1939 — hết hạn bản quyền). Bản PDF 51 MB là
+ảnh quét, không có lớp chữ (0 từ ở trang 5–12); bản 0,97 MB có chữ: rút ra 60.511
+từ vào `data/tham_chieu/trao_phung/` — `git check-ignore` khớp `data/*`, repo PUBLIC.
+
+**Làm sạch, đo 14/09:** phông PDF cũ để lại 442 chữ `Ð/ð` (Eth Iceland) chỗ `Đ/đ`
+và 861 chỗ chữ N hoa đầu từ bị tách (*"N gày"*, *"N hưng"*). Hai lỗi có quy luật —
+máy sửa. Lỗi không quy luật (*"bN m"*) thì KHÔNG đoán: đoạn nào còn thì loại. Bỏ
+tiêu đề chương, dòng chú thích, dấu `(1)`. Đoạn mở bằng chữ thường (mảnh giữa câu
+do PDF ngắt ở chỗ sang trang) cũng loại. Kết quả: **277 đoạn** 120–250 từ (trung vị
+142), **95 đoạn bị loại**. Máy làm sạch KIỂM 10/10 ca giả; gieo 4 phép — lần đầu
+2/4 cửa mù (ca lỗi mã mở bằng chữ thường nên luật "mảnh giữa câu" chặn trước),
+sửa ca → 4/4 đỏ.
+
+**Thiết kế:** nhánh 0 = lời nhắc 13 câu hiện nay (dùng lại 15 lượt 13/09 — cùng hạt
+cùng chữ, kiểm 9/9 ba lần — kèm 3 lượt chạy lại ở hạt 3); nhánh M = khung *"ĐOẠN
+VĂN MẪU — chỉ để học giọng văn. KHÔNG chép câu chữ, tên nhân vật, tình tiết:"* +
+một đoạn (đi qua `loc_menh_lenh`) + "\n\n" + lời nhắc. Đoạn chọn tất định theo
+(đề, hạt), không theo độ gần đề. Ba đề cũ × hạt 1–5 = 15 lượt M.
+
+**Cửa chép:** chuỗi TỪ LIỀN NHAU chung dài nhất giữa bản vào video và đoạn mẫu nó
+nhận. *Mức tình cờ* = cùng phép đo giữa bản nhánh 0 (cùng đề, cùng hạt — chưa từng
+thấy đoạn ấy) và chính đoạn ấy. Thước chép KIỂM 5/5 ca giả; gieo 2/2 đỏ.
+
+**Em chấm mù trước, Sếp chấm sau:** mỗi đề một cặp ở **hạt 1** — bản nhánh 0 hạt 1
+chưa ai đọc và không có chữ Hán (hạt 2, 4 em đã đọc; hạt 3, 5 nhánh 0 có chữ Hán —
+lộ nhánh). Nhãn không công bố cho tới khi Sếp chấm.
+
+**Báo, không làm ngưỡng:** tên riêng của đoạn mẫu lọt vào bài (so với nhánh 0 làm
+mức tình cờ) · thời gian · lý do trượt.
+
+**ĐẶC TẢ — chép TAY vào cửa canh** (hai hàng đầu chép nguyên từ kế hoạch §6):
+
+| đơn | ngưỡng |
+|---|---|
+| lọt cửa phòng viết, 15 lượt | có mẫu ≥ không mẫu − 2 |
+| chuỗi từ liền nhau chung với đoạn mẫu, dài nhất | ≤ mức tình cờ của nhánh đối chứng, và tuyệt đối ≤ 8 từ |
+| em chấm mù, 3 cặp | có mẫu thắng ≥ 2/3 |
+| Sếp chấm lại mù, 3 cặp | có mẫu thắng ≥ 2/3 |
+
+**Luật quyết định, viết trước:** đạt CẢ BỐN thì kho mẫu vào phòng viết — mặc định
+TẮT, bật theo từng việc khi Sếp chọn giọng. Hỏng hàng 1–3 thì dừng, ghi số. Hàng 4
+chưa có thì CHỜ SẾP.
+<!-- /CHOT:doan-mau-so-do -->

@@ -27,7 +27,9 @@ from core.chat_contract import (
 )
 from core.chat_service import ChatService, ModelReply
 from core.paths import PROJECT_ROOT
-from core.secret_guard import SecretContentGuard, scrub_for_log
+# `_che_chu` = bộ che CŨ nguyên văn. Trước `CHOT:url-dau-vao` bài này so với
+# `scrub_for_log`; nay `scrub_for_log` tha link bài báo nên thước ấy đổi theo.
+from core.secret_guard import SecretContentGuard, _che_chu
 
 # Chép TAY từ `CHOT:url-nguon-slug` — toàn bộ ô, so bằng `==`.
 DAC_TA = {
@@ -124,23 +126,23 @@ def test_NAM_NGUONG_dung_nhu_luc_dang_ky():
 
 @pytest.mark.parametrize("url", TUNG_ROI)
 def test_URL_BAI_BAO_tung_roi_nay_GIU_NGUYEN(url):
-    assert scrub_for_log(url) != url, "ca này không còn bị luật chung che — nó thôi làm chứng"
+    assert _che_chu(url) != url, "ca này không còn bị luật chung che — nó thôi làm chứng"
     assert _url_ra(url) == url
 
 
 @pytest.mark.parametrize("ten", DOI_CHUNG)
 def test_CA_DOI_CHUNG_khoa_trong_URL_VAN_BI_CHE_nhu_cu(ten):
     url = DOI_CHUNG[ten]
-    assert scrub_for_log(url) != url, f"{ten}: bộ che cũ không che — không đối chứng cho gì"
-    assert _url_ra(url) == scrub_for_log(url), f"{ten}: lọt qua bộ che"
+    assert _che_chu(url) != url, f"{ten}: bộ che cũ không che — không đối chứng cho gì"
+    assert _url_ra(url) == _che_chu(url), f"{ten}: lọt qua bộ che"
 
 
 def test_KHONG_BAO_GIO_CHE_MOT_NUA():
     for url in [*TUNG_ROI, *DOI_CHUNG.values(), *URL_LA.values()]:
-        assert _url_ra(url) in (url, scrub_for_log(url)), url
+        assert _url_ra(url) in (url, _che_chu(url)), url
     for ten, url in URL_LA.items():
-        assert scrub_for_log(url) != url, f"{ten}: bộ che cũ không che — không làm chứng"
-        assert _url_ra(url) == scrub_for_log(url), ten
+        assert _che_chu(url) != url, f"{ten}: bộ che cũ không che — không làm chứng"
+        assert _url_ra(url) == _che_chu(url), ten
 
 
 def test_LUOT_GIA_VANG_hien_DU_4_nguon_model_da_thay(monkeypatch):

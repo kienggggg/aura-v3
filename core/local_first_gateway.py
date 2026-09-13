@@ -26,6 +26,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Protocol, Sequence
 
@@ -52,6 +53,25 @@ _WEAK_MARKERS = (
     "xin lỗi, tôi không", "tôi không có thông tin",
 )
 _MIN_USEFUL_CHARS = 24
+
+# AURA KHÔNG MỞ ĐƯỢC TRANG — máy nói ra, không để model đoán (13/09/2026,
+# `CHOT:link-chua-doc`). Link tới model nguyên vẹn thì "tóm tắt bài này: <link>"
+# bị BỊA 2/3 lượt ("tăng 1,8 triệu do đô thị hoá", "1.023 triệu người"), còn
+# lượt thật trên màn hình gọi báo Nhân Dân là "bài đăng Facebook". Trước khi bộ
+# che tha link, model thấy `[REDACTED_LONG_TOKEN]` và thành thật 3/3 — vì một
+# lý do sai: nó tưởng link chứa mã truy cập.
+_CO_LINK = re.compile(r"https?://\S")
+
+
+def _loi_ve_link(text: str) -> str:
+    if not _CO_LINK.search(text or ""):
+        return ""
+    return (
+        "MÁY GHI SẴN — AURA KHÔNG mở được trang web: chỉ thấy CHỮ của đường link "
+        "Sếp gửi, KHÔNG thấy nội dung trang. Không kể, không tóm tắt nội dung "
+        "trang như đã đọc. Nói thẳng là em chưa đọc được trang; tên báo và chữ "
+        "trong đường link chỉ là gợi ý — dùng thì nói rõ là đoán theo đường link."
+    )
 
 # Câu này phải là DÒNG CUỐI CÙNG của lời dặn, mọi đường đi.
 #
@@ -281,6 +301,9 @@ class OllamaGateway:
                 # cạnh câu hỏi — chứ không nhét vào `system_prompt`: nhét vào
                 # đó thì model bỏ qua, hoặc đọc thuộc lòng nó ra mặt Sếp.
                 loi_dan_dang(request.text),
+                # Có khối nguồn thì nguồn là thứ model đọc được; không có thì
+                # link chỉ là chữ — xem `_loi_ve_link`.
+                "" if sources else _loi_ve_link(request.text),
             ) if phan
         ]
         if sources:

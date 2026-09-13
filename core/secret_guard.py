@@ -150,14 +150,50 @@ def is_secret_request(text: str) -> bool:
     return True
 
 
-def scrub_for_log(text: str) -> str:
-    """Che bí mật TRƯỚC khi ghi nhật ký. Không bao giờ lưu bản rõ."""
+def _che_chu(text: str) -> str:
+    """Bộ che CŨ, nguyên văn — mọi luật, không tha link nào."""
     from core.redact import redact
 
     cleaned = text or ""
     for pattern, replacement in _CHAT_REDACT_PATTERNS:
         cleaned = pattern.sub(replacement, cleaned)
     return redact(cleaned)
+
+
+# LINK TRONG CÂU đi đúng luật của URL nguồn (13/09/2026, `CHOT:url-dau-vao`).
+#
+# "tóm tắt bài này: https://nhandan.vn/dan-so-…-post934760.html" qua bộ che cũ
+# thành `https://nhandan.vn/[REDACTED_LONG_TOKEN].html` — model, máy tìm kiếm và
+# sổ phiên chỉ thấy bản ấy. Sửa ở ĐÂY, không ở `check_input`: đây là cửa chung
+# của đầu vào, lịch sử, câu trả lời và trí nhớ; sửa riêng đầu vào thì lượt sau
+# `scrub_history` lại che link trước khi tới model.
+#
+# Link được thay tạm bằng một chuỗi chữ-số trong lúc che, để luật ăn theo ngữ
+# cảnh (`mật khẩu:`, `password=`, `Bearer`, `cookie:`) vẫn nuốt nó như nuốt
+# link — bị nuốt thì link không được trả lại. `Bearer <link>`: bộ che cũ để lọt
+# `https://vi.du/` rồi chỉ che slug; nay che cả link.
+_LINK_TRONG_CAU = re.compile(r"(?<![^\s(\[\"'])https?://[^\s<>\"'`,;]+")
+_GIU_CHO = "AURAGIULINK"
+
+
+def scrub_for_log(text: str) -> str:
+    """Che bí mật TRƯỚC khi ghi nhật ký. Không bao giờ lưu bản rõ."""
+    chu = text or ""
+    if _GIU_CHO in chu:
+        return _che_chu(chu)
+    giu: list[str] = []
+
+    def _tam(m: re.Match[str]) -> str:
+        url = m.group(0).rstrip(".:!?)]}")
+        if _che_chu(url) == url or _che_url_nguon(url) != url:
+            return m.group(0)
+        giu.append(url)
+        return f"{_GIU_CHO}{len(giu) - 1}X{m.group(0)[len(url):]}"
+
+    da_che = _che_chu(_LINK_TRONG_CAU.sub(_tam, chu))
+    for i, url in enumerate(giu):
+        da_che = da_che.replace(f"{_GIU_CHO}{i}X", url, 1)
+    return da_che
 
 
 # URL NGUỒN đi đường che RIÊNG (13/09/2026, `CHOT:url-nguon-slug`).
@@ -184,7 +220,7 @@ def _la_slug(doan: str) -> bool:
 
 
 def _che_luat_cu_the(text: str) -> str:
-    """Như `scrub_for_log` nhưng BỎ hai luật chung `NUMBER` / `LONG_TOKEN`."""
+    """Như `_che_chu` nhưng BỎ hai luật chung `NUMBER` / `LONG_TOKEN`."""
     from core.redact import _REDACT_PATTERNS
 
     cleaned = text
@@ -198,7 +234,7 @@ def _che_luat_cu_the(text: str) -> str:
 
 def _che_url_nguon(url: str) -> str:
     """URL gốc NGUYÊN VẸN, hoặc bản che như cũ — không bao giờ che một nửa."""
-    da_che = scrub_for_log(url)
+    da_che = _che_chu(url)
     if da_che == url:
         return url
     try:
@@ -212,7 +248,7 @@ def _che_url_nguon(url: str) -> str:
     # Mọi thứ NGOÀI slug — tên miền, đoạn khác, `?…`, `#…` — phải sạch như cũ.
     mat_na = urlunsplit(tach._replace(
         path="/".join("s" if i in slug else d for i, d in enumerate(doan))))
-    if scrub_for_log(mat_na) != mat_na:
+    if _che_chu(mat_na) != mat_na:
         return da_che
     return url
 

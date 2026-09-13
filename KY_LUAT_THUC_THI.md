@@ -3958,3 +3958,170 @@ Cả ba là chuyện của ca đối chứng, không đổi ngưỡng nào; đo 
 sửa. Đúng bài *"một điều kiện không có ca nào cần tới nó là điều kiện trang trí"*
 — lần này nó nằm ở phía CA ĐỐI CHỨNG: ca có đó, nhưng bị điều kiện khác chặn trước.
 <!-- /CHOT:url-nguon-slug -->
+
+<!-- CHOT:url-dau-vao -->
+### Link bài báo Sếp dán vào câu — Sếp duyệt 13/09/2026; đăng ký TRƯỚC khi viết mã
+
+**Bệnh, đo 13/09:** *"tóm tắt bài này: https://nhandan.vn/dan-so-trung-binh-…-post934760.html"*
+đi qua `check_input` thành `https://nhandan.vn/[REDACTED_LONG_TOKEN].html` — model,
+máy tìm kiếm và sổ phiên đều chỉ thấy bản ấy. Cùng luật `core/redact.py:54` với
+`CHOT:url-nguon-slug`, ở đầu vào.
+
+**Sửa ở `scrub_for_log`, không riêng `check_input`.** Một cửa chung: câu Sếp gõ,
+lịch sử đưa model (`scrub_history`), câu trả lời, tiêu đề và đoạn trích nguồn,
+trí nhớ dài hạn (`core/user_memory.py`). Chỉ sửa đầu vào thì sổ giữ link mà lượt
+SAU `scrub_history` lại che nó trước khi tới model — vá một nửa của một cặp.
+
+**Cách làm, viết trước:** tìm từng URL `http(s)://` trong câu — đứng đầu câu, sau
+khoảng trắng, hoặc sau `(` `[` `"` `'`; bỏ dấu câu dính ở đuôi. URL nào qua ĐÚNG
+luật của `CHOT:url-nguon-slug` (trả về nguyên vẹn) thì giữ nguyên; phần còn lại
+của câu che như cũ. URL được thay tạm bằng một chuỗi chữ-số ≥ 8 ký tự trong lúc
+che, để luật ăn theo NGỮ CẢNH (`mật khẩu:` · `password=` · `Bearer` · `cookie:`
+· `api_key=`) vẫn nuốt nó như nuốt URL — chuỗi tạm bị nuốt thì URL không được trả
+lại. Câu đã có sẵn chuỗi tạm thì che như cũ, không tha.
+
+**`test_url_nguon_slug.py` phải đổi thước so:** nó lấy `scrub_for_log(url)` làm
+"bản che cũ"; nay `scrub_for_log` tha link bài báo nên thước ấy đổi theo. Bản
+che cũ giữ nguyên dưới tên `_che_chu`, và bài ấy so với `_che_chu`.
+
+**Rủi ro mới, nói trước:** trước đây link bài báo Sếp dán KHÔNG vào sổ phiên và
+KHÔNG tới máy tìm kiếm; nay vào cả hai. Link có khoá kiểu ngẫu nhiên, UUID, chữ
+hoa, `?token=` thì vẫn bị che (17 ca của `CHOT:url-nguon-slug`). CHƯA chặn được:
+mã chia sẻ dạng từ tiếng Anh thường nối gạch ≥ 32 ký tự, như bên nguồn.
+
+**Ca viết trước:**
+- 16 câu dán link — 14 URL bài báo của `CHOT:url-nguon-slug` trong bốn khuôn
+  câu (`tóm tắt bài này: …` · `… nói gì vậy?` · `đọc giúp em bài này (…)` ·
+  `so sánh … với bài hôm qua.`), thêm một câu có hai link, và một câu có dấu
+  phẩy dính ngay sau link (`tóm tắt …, ngắn thôi`).
+- 19 ca đối chứng phải ra Y HỆT bộ che cũ: 17 URL-có-khoá của
+  `CHOT:url-nguon-slug` trong câu `xem giúp em …` · link dính liền sau một chuỗi
+  dài không khoảng trắng · câu có sẵn chuỗi tạm.
+- 5 câu có NGỮ CẢNH bí mật đứng trước một link bài báo (`mật khẩu:` ·
+  `password=` · `Authorization: Bearer` · `cookie:` · `api_key=`): link KHÔNG
+  được ra nguyên vẹn. Không đòi "y hệt": kiểm tiền đề thấy bộ che cũ để lọt
+  `Bearer https://vi.du/` rồi chỉ che slug — luật Bearer gãy ở dấu `:` sau
+  `https`; chuỗi tạm chữ-số thì bị luật ấy nuốt, nên nay che CẢ link. Chặt hơn,
+  không lỏng hơn.
+- 3 câu vừa có link vừa có bí mật: link nguyên vẹn VÀ bí mật vẫn bị che
+  (`mật khẩu: …` · khoá `sk-…` · số điện thoại).
+
+**Hai ca THÊM sau lượt gieo đầu — gieo lộ hai điều kiện không ca nào cần** (mã
+không đổi, chỉ thêm ca):
+
+```
+cho link nuốt cả `,` `;`         VẪN XANH -> thêm câu `tóm tắt …, ngắn thôi`
+bỏ lối tắt "bộ che cũ không     VẪN XANH -> thêm `Authorization: Bearer
+đụng link thì để nguyên"                    https://sjc.com.vn/`: bộ che cũ KHÔNG che;
+                                           bỏ lối tắt thì chuỗi tạm bị luật Bearer
+                                           nuốt — câu đổi, sửa lan ra ngoài phạm vi
+```
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| câu dán link bài báo | 16/16 ra nguyên vẹn |
+| ca đối chứng trong câu | 19/19 y hệt bộ che cũ |
+| link đứng sau ngữ cảnh bí mật | 5/5 không ra nguyên vẹn |
+| câu vừa có link vừa có bí mật | 3/3 link nguyên vẹn, bí mật vẫn che |
+| câu bộ che cũ không đụng | 1/1 ra y hệt |
+| lượt thật qua `ChatService` | model và sổ phiên thấy link nguyên vẹn |
+| `test_secret_guard.py` | xanh hết, không sửa bài nào |
+
+**KẾT QUẢ 13/09/2026 — ĐẠT CẢ BẢY.**
+
+```
+câu dán link bài báo              16/16 ra nguyên vẹn                     ĐẠT
+ca đối chứng trong câu            19/19 y hệt bộ che cũ                   ĐẠT
+link đứng sau ngữ cảnh bí mật      5/5 không ra nguyên vẹn                ĐẠT
+câu vừa có link vừa có bí mật      3/3 link nguyên vẹn, bí mật vẫn che    ĐẠT
+câu bộ che cũ không đụng           1/1 ra y hệt                           ĐẠT
+lượt thật qua ChatService         model + lịch sử lượt SAU + sổ phiên     ĐẠT
+                                  đều thấy link nguyên vẹn
+test_secret_guard.py              xanh hết, không đổi byte nào            ĐẠT
+```
+
+Làm hai bước: đổi tên thân `scrub_for_log` cũ thành `_che_chu` (75 bài xanh,
+hành vi không đổi), rồi mới sửa. Giữa hai bước, cửa canh `tests/test_url_dau_vao.py`
+ĐỎ 19 bài đúng lý do — lượt thật: model thấy
+`https://nhandan.vn/[REDACTED_LONG_TOKEN].html`. Gieo 8 phép: lượt đầu 6/8 (hai cửa
+mù, xem trên), thêm hai ca, lượt sau 8/8 đỏ ĐÚNG ca. Bộ đủ: 1348 passed.
+
+**Lượt thật trên màn hình chat — link tới nơi, nhưng câu trả lời SAI.** Dán
+*"tóm tắt bài này: https://nhandan.vn/dan-so-…"*: sổ phiên giữ link nguyên vẹn
+(trước là `[REDACTED_LONG_TOKEN]`). Nhưng AURA không mở được trang: câu này đi
+đường TỰ NGHĨ — trước và sau khi sửa như nhau (`requires_web` = False cả hai) — và
+model đáp *"đường link bạn cung cấp là một bài đăng trên mạng xã hội (Facebook)"*.
+Nhân Dân là báo. So model thấy link bị che với link nguyên vẹn:
+
+```
+model thấy link BỊ CHE (trước)     nhận không đọc được 3/3 · bịa 0/3
+model thấy link NGUYÊN VẸN (sau)   nhận không đọc được 0/3 · bịa 2/3
+```
+
+Riêng loại câu này, bản sửa làm AURA TỆ HƠN — nên KHÔNG giao một mình: đi cùng
+dữ kiện máy của `CHOT:link-chua-doc` (bịa 4/4 -> 0/4).
+<!-- /CHOT:url-dau-vao -->
+
+<!-- CHOT:link-chua-doc -->
+### Máy nói cho model biết: AURA KHÔNG mở được trang — đăng ký 13/09/2026, TRƯỚC khi viết mã
+
+**Bệnh, đo 13/09 ngay sau `CHOT:url-dau-vao`:** link tới model nguyên vẹn, và
+model BỊA nội dung trang. *"tóm tắt bài này: https://nhandan.vn/dan-so-…"*, cùng
+lời nhắc, 3 lượt mỗi bên, xen kẽ:
+
+```
+model thấy link BỊ CHE (trước)     nhận không đọc được 3/3 · bịa 0/3
+model thấy link NGUYÊN VẸN (sau)   nhận không đọc được 0/3 · bịa 2/3
+  - "tăng 1,8 triệu trong 4 năm, do đô thị hoá" — không chữ nào có trong link
+  - "1.023 triệu người" — đọc "1023-trieu" của link ra sai 10 lần
+  - lượt thứ ba kể "102,3 triệu" (chữ của link) như đã đọc bài
+lượt thật trên màn hình chat       "bài đăng trên mạng xã hội (Facebook)" — bịa
+```
+
+Câu này đi đường TỰ NGHĨ cả trước lẫn sau (`requires_web` = False). Trước đây
+AURA thành thật vì một lý do SAI — nó tưởng link chứa "mã truy cập bị che".
+
+**Cách làm, viết trước:** một dữ kiện MÁY đặt cạnh câu hỏi (§3 `CLAUDE.md`), cùng
+khuôn `MÁY ĐÃ TÍNH SẴN`: câu có `http(s)://` VÀ lượt ấy không có nguồn thì ghi
+*AURA không mở được trang, chỉ thấy chữ của đường link*. Không đổi đường đi, không
+thêm quyền đọc trang. Câu không có link: lời nhắc y hệt từng byte.
+
+**Đo, viết trước:** cùng lời nhắc với phép đo trên, xen kẽ, đổi thứ tự mỗi vòng —
+có ghi chú (G) và bỏ đúng đoạn ghi chú (K, ca đối chứng):
+- 4 vòng *"tóm tắt bài này: <link Nhân Dân>"* — chấm tay theo đúng thước trên.
+- 2 vòng *"trang này của báo nào: <link Nhân Dân>"* — chiều NGƯỢC: ghi chú không
+  được làm AURA từ chối câu trả lời được; trúng = nêu Nhân Dân / nhandan.vn.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| bịa, "tóm tắt" có ghi chú, 4 lượt | 0/4 |
+| nhận chưa đọc được trang, "tóm tắt" có ghi chú | ≥ 3/4 |
+| "báo nào" có ghi chú nêu đúng Nhân Dân | 2/2 |
+| lời nhắc câu không có link | y hệt từng byte |
+
+**KẾT QUẢ 13/09/2026 — 12 lượt, cả 12 chạy xong, chấm TAY. ĐẠT CẢ BỐN.**
+
+```
+"tóm tắt", CÓ ghi chú (G)       nhận chưa đọc được 4/4 · bịa 0/4          ĐẠT · ĐẠT
+"tóm tắt", KHÔNG ghi chú (K)    nhận chưa đọc được 0/4 · bịa 4/4
+  K: 2 lượt kể "1.023 triệu người" như dữ liệu của bài (đọc chữ link sai 10
+     lần); 2 lượt bịa thêm "Tổng cục Thống kê… khoảng 0,8%", "đông dân nhất…"
+  G: 2/4 có nêu 102,3 triệu — CẢ HAI nói rõ "chỉ là suy đoán dựa trên tên link"
+"báo nào", có ghi chú            nêu đúng Nhân Dân 2/2 (K cũng 2/2)          ĐẠT
+lời nhắc câu không có link       y hệt từng byte (cửa canh)                 ĐẠT
+```
+
+**Đọc tay, chiều NGƯỢC — không chặn, nhưng ghi:** câu "báo nào" có ghi chú thì
+dài dòng hơn (K: *"Trang web đó thuộc Báo Nhân Dân."*), và 1/2 lượt bịa thêm
+*"được đăng tải vào ngày 13 tháng 9 năm 2025"* — đặt trong câu "tôi đoán", nhưng
+link không mang ngày nào. Ghi chú chặn được bịa NỘI DUNG trang, không chặn hết
+bịa CHI TIẾT trong một câu đoán.
+
+Cửa canh `tests/test_link_chua_doc.py`: gieo 5/5 đỏ đúng bài (ghi chú cả khi có
+nguồn · nhận chữ "https" trơn là link · bỏ hẳn ghi chú · đổi chữ đầu ghi chú ·
+đặc tả lệch ngưỡng), trả về giống từng byte.
+<!-- /CHOT:link-chua-doc -->

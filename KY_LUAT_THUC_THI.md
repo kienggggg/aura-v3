@@ -4266,3 +4266,41 @@ Giá nói cùng lúc: sinh lại nhiều hơn — mỗi lần 80–100 s. Và re
 (có cả dấu cách toàn khổ U+3000 mắt không thấy); đổi lại rồi so trên cả 1,1 triệu
 điểm mã — 0 chỗ khác.
 <!-- /CHOT:chu-han-kich-ban -->
+
+<!-- CHOT:bo-cat-giu-truyen -->
+### Bộ cắt không được xoá truyện — Sếp duyệt 13/09/2026; đăng ký TRƯỚC khi chạy model
+
+**Bệnh, đo 13/09 trên 30 lượt của `CHOT:bo-luat-aura`:** lời nhắc xin 320 từ,
+model viết **trung vị 460 từ** (296–680), 23 câu, ~20 từ/câu. Cửa sổ nhận
+215–250, nên bộ cắt bỏ **trung vị 48 %** số câu — cách một câu bỏ một câu, và
+BẮT ĐẦU từ câu thứ 2, đúng câu đặt nhân vật. Bản la bàn mất câu nhân vật xuất
+hiện và câu tìm ra lối thoát.
+
+**Hai thay đổi, đo tách được:**
+- **Lời nhắc C:** thay *", dài khoảng 320 từ, chia thành ít nhất 18 câu."* bằng
+  *". Viết đúng 13 câu, mỗi câu trên một dòng riêng, đánh số từ 1 đến 13, mỗi
+  câu khoảng 18 từ."* — phần còn lại giữ nguyên từng chữ. Máy bỏ số thứ tự rồi
+  mới chấm. Vì sao 13: ~20 từ/câu × 13 ≈ 250–260 từ, nên chỉ phải cắt 0–2 câu;
+  model giữ số câu tốt hơn số từ (đo 03/09).
+- **Bộ cắt mới:** bỏ câu từ GIỮA ra hai bên, không bao giờ đụng 2 câu đầu và 2
+  câu cuối.
+
+**Thiết kế đo:** lời nhắc C sinh 3 đề × hạt 1–5 = 15 lượt mới. Bộ cắt mới chạy
+lại trên chính 15 bản gốc nhánh 0 đã có — cùng hạt thì cùng chữ, kiểm 3/3 — nên
+có lưới 2×2 (lời nhắc × bộ cắt). Thêm 3 lượt nhánh 0 hạt 3 chạy lại cùng lúc làm
+ca đối chứng tất định. Mọi ô chấm bằng cùng các cửa, kể cả cửa chữ Hán mới.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| tỉ lệ câu bị cắt, trung vị, lời nhắc C + bộ cắt mới | ≤ 0,15 |
+| lọt cửa một lần sinh, 15 lượt | C + cắt mới ≥ 0 + cắt cũ − 2 |
+| bộ cắt mới bỏ 2 câu đầu hoặc 2 câu cuối | 0 lần |
+
+**Báo, không làm ngưỡng:** độ LIỀN — tỉ lệ cặp câu giữ lại vốn liền nhau trong
+bản gốc (đo độ liền, không đo độ hay) · số lượt viết đúng 13 câu · thời gian.
+
+**Luật quyết định, viết trước:** đạt cả ba thì lời nhắc C và bộ cắt mới vào phòng
+viết. Hỏng một thì không đưa, ghi số. Thể loại `bai_noi` chưa đổi vòng này.
+<!-- /CHOT:bo-cat-giu-truyen -->

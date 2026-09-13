@@ -3612,3 +3612,73 @@ và **0/2** luồng ngắn, trong khi trang đọc tới `done` không lỗi c�
 máy khách độc lập (`httpx`) đọc luồng dài **kết thúc sạch** — 29 sự kiện, không
 `RemoteProtocolError`. Nhãn ấy từ bộ ghi mạng của khung; chưa truy được vì sao.
 <!-- /CHOT:stream-chat -->
+
+<!-- CHOT:tam-luong-ollama -->
+### Khúc model ĐỌC lời nhắc — 8 luồng CPU, đăng ký 13/09/2026 TRƯỚC khi sửa mã
+
+**Vì sao không đổi thứ tự lời nhắc cho Ollama dùng lại phần đầu — đo được là
+VÔ ÍCH với model này.** `qwen3.5:4b` là kiến trúc `qwen35`: 32 khối,
+`full_attention_interval = 4`, tức **24/32 lớp là SSM** giữ trạng thái tóm tắt
+cả chuỗi — không "tua lại" được về giữa chuỗi. Đo thẳng, mỗi lời gọi sinh 1 token:
+
+```
+R1 lần 1                          550 token   12,24 s
+R1 lần 2 — Y HỆT                              0,20 s   <- bộ đệm có
+R2 — cùng lời dặn, khác câu hỏi   549 token   11,85 s  <- đọc lại TỪ ĐẦU
+R3 — lời dặn thêm 1 câu ở cuối    553 token   13,28 s  <- đọc lại TỪ ĐẦU
+```
+
+Nên lời dặn — **558 token ở đường có nguồn, 427 ở đường tự nghĩ, 13–14 s** —
+bị đọc lại ở MỌI lượt, và không cách sắp xếp nào cứu được.
+
+**Đòn bẩy KHÔNG đổi nội dung: số luồng.** Máy là i5-1135G7, 4 nhân / 8 luồng;
+Ollama mặc định dùng số nhân thật. Cùng một lời nhắc giá vàng thật, chặn bộ
+đệm. Đo xen kẽ trước: 8 luồng −14,8 %, nhưng 11/12 lượt phải NẠP LẠI model (đổi
+tuỳ chọn là nạp lại) — nên đo lại ở trạng thái ỔN ĐỊNH, khối A-B-A-B, bỏ lượt
+nạp đầu mỗi khối:
+
+```
+                  4 luồng                      8 luồng                      đọc      viết
+có nguồn 1.360 tk 36,7 · 38,0 · 40,6 · 40,9    34,2 · 34,2 · 34,5 · 34,3    −12,8 %  6,35 -> 6,19 tk/s (−2,5 %)
+tự nghĩ    430 tk 11,8 · 12,9                  11,0 · 10,9                  −11,1 %  6,62 -> 6,34 tk/s (−4,2 %)
+lô 1024 thay 512 (xen kẽ)                                                   +2,5 %   — không giúp, bỏ
+```
+
+Chữ đầu tiên đến sớm hơn trên CẢ HAI đường (khúc đọc nằm trước nó); cả lượt
+thì đường có nguồn nhanh ~4 s, đường tự nghĩ gần như hoà — viết chậm ~0,7 s mỗi
+100 token bù lại. Phòng viết truyện sinh 1.400 token: chậm ~6 s mỗi truyện.
+
+**Bẫy NẠP LẠI, đo:** chat nạp model với 8 luồng thì lời gọi của phòng (không
+nhắc `num_thread`) **nạp lại 8,0 s**, quay về chat **nạp lại thêm 8,0 s**. Hôm nay
+cả bốn nơi gọi `qwen3.5:4b` cùng `num_ctx` 4096 nên **0** lần nạp lại. Áp cho
+một nơi là tạo ra 16 s mất mỗi vòng chuyển — nên áp cho **cả bốn**, hoặc không.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| khúc đọc đường có nguồn, trạng thái ổn định | ≤ −10 % so với 4 luồng |
+| khúc viết | chậm không quá 5 % |
+| nơi gọi `qwen3.5:4b` gửi cùng `num_thread` và `num_ctx` | 4/4 — đo trên lời gọi THẬT, không đọc chữ trong mã |
+| nạp lại khi chuyển chat ↔ phòng | 0 lần |
+
+**Việc KHÔNG làm:** không đổi biến môi trường hay cấu hình của máy chủ Ollama —
+đó là cấu hình máy, cần Sếp; chỉ đổi tuỳ chọn trong yêu cầu của chính AURA.
+Không đổi `num_batch` (đo không giúp). Số luồng lấy từ `os.cpu_count()` — con
+số trên là của máy này; đổi máy thì đo lại.
+
+**NGHIỆM THU 13/09/2026 — bằng ĐÚNG tuỳ chọn mã gửi đi**, bắt từ cả bốn nơi gọi
+(không gõ tay): cả bốn gửi `num_ctx` 4096 · `num_thread` 8.
+
+```
+nạp lại khi chuyển   chat -> phong_noi_bo -> chat -> viet_truyen -> omega -> chat
+                     0/5 lần sau lượt đầu (0,0–0,1 s)                     ĐẠT
+khúc đọc 1.360 tk    37,50 s -> 33,17 s   −11,5 %   ngưỡng ≤ −10 %        ĐẠT
+khúc viết            6,32 -> 6,33 tk/s    +0,1 %    ngưỡng ≥ −5 %         ĐẠT
+```
+
+Khúc viết: lần đo trước chậm 2,5–4,2 %, lần này +0,1 % — chênh lệch nằm trong
+nhiễu của n = 4; ghi cả hai, không chọn lần đẹp hơn. Cửa canh
+`tests/test_tam_luong_ollama.py` bắt lời gọi thật của bốn nơi; gieo **6/6 đỏ** —
+kể cả thêm một nơi gọi thứ năm có `num_predict` mà không vào danh sách đóng.
+<!-- /CHOT:tam-luong-ollama -->

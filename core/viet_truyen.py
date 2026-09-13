@@ -62,6 +62,7 @@ sạch. Đây là trần thật của thiết kế, không vá được bằng t
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 import urllib.error
@@ -147,6 +148,11 @@ HOST = "http://127.0.0.1:11434"
 # `num_predict` của chat là 768 — không đủ cho 320 từ tiếng Việt.
 NUM_PREDICT = 1400
 NUM_CTX = 4096
+# PHẢI khớp `num_ctx`/`num_thread` của chat (13/09/2026, `CHOT:tam-luong-
+# ollama`): lệch một tuỳ chọn là Ollama nạp lại model — đo 8,0 s mỗi chiều.
+# 8 luồng: đọc −12,8 % nhưng viết chậm 2,5–4,2 %, nên phòng này — 1.400
+# token — chậm ~6 s mỗi truyện; đổi lại không lần nạp lại nào khi chuyển phòng.
+NUM_THREAD = os.cpu_count() or 4
 # Chat để 0.3 vì nó trả lời dữ kiện. Văn xuôi cần cao hơn.
 NHIET_DO = 0.8
 TRAN_GIAY = 300
@@ -311,7 +317,8 @@ def _xin_model(loi: str, hat: int) -> Tuple[str, float]:
         data=json.dumps({
             "model": MODEL, "prompt": loi, "stream": False, "think": False,
             "options": {"seed": hat, "temperature": NHIET_DO,
-                        "num_ctx": NUM_CTX, "num_predict": NUM_PREDICT},
+                        "num_ctx": NUM_CTX, "num_thread": NUM_THREAD,
+                        "num_predict": NUM_PREDICT},
         }).encode("utf-8"),
         headers={"Content-Type": "application/json"})
     t0 = time.monotonic()

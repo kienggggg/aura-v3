@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import time
 import urllib.request
@@ -54,6 +55,9 @@ KHUON_LUOT = re.compile(r"^run_\d{8}_\d{6}_[0-9a-f]{6,}$")
 
 MODEL = "qwen3.5:4b"
 OLLAMA = "http://127.0.0.1:11434/api/generate"
+# PHẢI khớp `num_ctx`/`num_thread` của chat (13/09/2026, `CHOT:tam-luong-
+# ollama`): lệch một tuỳ chọn là Ollama nạp lại model — đo 8,0 s mỗi chiều.
+NUM_THREAD = os.cpu_count() or 4
 
 
 @dataclass
@@ -238,7 +242,8 @@ def _hoi(p: str, tran: int = 600) -> str:
     b = json.dumps({"model": MODEL, "prompt": p, "stream": False, "think": False,
                     "keep_alive": "5m",
                     "options": {"seed": 42, "temperature": 0.3,
-                                "num_predict": 700, "num_ctx": 4096}}).encode()
+                                "num_predict": 700, "num_ctx": 4096,
+                                "num_thread": NUM_THREAD}}).encode()
     r = urllib.request.Request(OLLAMA, data=b, method="POST",
                                headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(r, timeout=tran) as x:

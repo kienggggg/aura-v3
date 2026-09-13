@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import Any, Callable, Protocol, Sequence
 
@@ -102,6 +103,15 @@ class OllamaConfig:
     keep_alive: str = "5m"
     # Ngữ cảnh dài ăn RAM y như tham số.  Bắt đầu nhỏ, chỉ tăng khi có việc cần.
     num_ctx: int = 4096
+    # DÙNG CẢ 8 LUỒNG cho khúc model ĐỌC lời nhắc (13/09/2026, `CHOT:tam-luong-
+    # ollama`). i5-1135G7 4 nhân/8 luồng, Ollama mặc định chỉ dùng 4. Trạng thái
+    # ổn định: đọc 1.360 token 39,3 s -> 34,3 s (−12,8 %), viết chậm 2,5–4,2 %.
+    # Lời dặn 427–558 token bị đọc lại MỌI lượt — model `qwen35` có 24/32 lớp
+    # SSM nên Ollama không dùng lại được phần đầu giống nhau của hai lời nhắc.
+    #
+    # PHẢI khớp ba phòng (`viet_truyen`, `omega`, `phong_noi_bo`): lệch một tuỳ
+    # chọn là Ollama nạp lại model — đo 8,0 s mỗi chiều chuyển chat <-> phòng.
+    num_thread: int = field(default_factory=lambda: os.cpu_count() or 4)
     num_predict: int = 768
     temperature: float = 0.3
     timeout_s: float = 120.0
@@ -443,6 +453,7 @@ class OllamaGateway:
             "keep_alive": self._config.keep_alive,
             "options": {
                 "num_ctx": self._config.num_ctx,
+                "num_thread": self._config.num_thread,
                 "num_predict": self._config.num_predict,
                 "temperature": self._config.temperature,
             },

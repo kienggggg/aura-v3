@@ -39,6 +39,7 @@ import ast
 import ctypes
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -151,9 +152,14 @@ def do_toc_do_model() -> Dict[str, Any]:
     try:
         req = urllib.request.Request(
             "http://127.0.0.1:11434/api/generate",
+            # `num_ctx`/`num_thread` PHẢI khớp chat (13/09/2026, `CHOT:tam-luong-
+            # ollama`): lệch là Ollama nạp lại model 8,0 s — và bài đo tốc độ này
+            # sẽ đo một cấu hình khác với cấu hình Sếp đang chat.
             data=json.dumps({"model": "qwen3.5:4b", "prompt": "Đếm từ 1 đến 20.",
                              "stream": False, "think": False,
-                             "options": {"num_predict": 120, "temperature": 0}}
+                             "options": {"num_predict": 120, "temperature": 0,
+                                         "num_ctx": 4096,
+                                         "num_thread": os.cpu_count() or 4}}
                             ).encode("utf-8"),
             headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=TRAN_TOK_GIAY) as r:

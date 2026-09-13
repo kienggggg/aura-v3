@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import re
 from typing import TYPE_CHECKING, Sequence, overload
+from urllib.parse import urlsplit, urlunsplit
 
 from core.chat_contract import (
     ChatRequest,
@@ -159,6 +160,63 @@ def scrub_for_log(text: str) -> str:
     return redact(cleaned)
 
 
+# URL NGUỒN đi đường che RIÊNG (13/09/2026, `CHOT:url-nguon-slug`).
+#
+# `core/redact.py` coi mọi chuỗi `[A-Za-z0-9_-]{32,}` là khoá, nên đường dẫn
+# bài báo tiếng Việt — các từ nối gạch — bị che, URL đổi, `chat_service` bỏ
+# nguồn: 14/36 nguồn đông băng rơi, 2/9 câu thành `web_unavailable` dù model đã
+# trả lời đúng. Lượt thật: model trích [4], danh sách dưới câu trả lời có 3.
+#
+# Tha được vì URL nguồn do máy tìm kiếm trả về: thứ của Sếp chỉ quay về được
+# qua câu tra, mà câu tra đi ra ngoài SAU bộ che. Chỉ tha hai luật CHUNG, chỉ
+# trong đoạn ĐƯỜNG DẪN có hình slug; luật cụ thể vẫn soi cả trong slug. 17 ca
+# đối chứng khoá-trong-URL vẫn bị che. CHƯA chặn được: mã chia sẻ dạng từ tiếng
+# Anh thường nối gạch, dài ≥ 32 ký tự — trông y hệt slug.
+_SLUG_RE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)+(?:\.[a-z0-9]{1,5})?")
+_NHAN_CHUNG = frozenset({"[REDACTED_NUMBER]", "[REDACTED_LONG_TOKEN]"})
+
+
+def _la_slug(doan: str) -> bool:
+    if not _SLUG_RE.fullmatch(doan):
+        return False
+    # ≥ 3 phần toàn chữ cái: một UUID có thể trúng HAI (`…-dead-beef-…`).
+    return sum(phan.isalpha() for phan in doan.split(".", 1)[0].split("-")) >= 3
+
+
+def _che_luat_cu_the(text: str) -> str:
+    """Như `scrub_for_log` nhưng BỎ hai luật chung `NUMBER` / `LONG_TOKEN`."""
+    from core.redact import _REDACT_PATTERNS
+
+    cleaned = text
+    for pattern, replacement in _CHAT_REDACT_PATTERNS:
+        cleaned = pattern.sub(replacement, cleaned)
+    for pattern, replacement in _REDACT_PATTERNS:
+        if replacement not in _NHAN_CHUNG:
+            cleaned = re.sub(pattern, replacement, cleaned)
+    return cleaned
+
+
+def _che_url_nguon(url: str) -> str:
+    """URL gốc NGUYÊN VẸN, hoặc bản che như cũ — không bao giờ che một nửa."""
+    da_che = scrub_for_log(url)
+    if da_che == url:
+        return url
+    try:
+        tach = urlsplit(url)
+    except ValueError:
+        return da_che
+    doan = tach.path.split("/")
+    slug = {i for i, d in enumerate(doan) if _la_slug(d)}
+    if not slug or any(_che_luat_cu_the(doan[i]) != doan[i] for i in slug):
+        return da_che
+    # Mọi thứ NGOÀI slug — tên miền, đoạn khác, `?…`, `#…` — phải sạch như cũ.
+    mat_na = urlunsplit(tach._replace(
+        path="/".join("s" if i in slug else d for i, d in enumerate(doan))))
+    if scrub_for_log(mat_na) != mat_na:
+        return da_che
+    return url
+
+
 class SecretContentGuard:
     """Adapter nhỏ, không I/O, dùng trực tiếp với ``ChatService``.
 
@@ -226,7 +284,7 @@ class SecretContentGuard:
             sources=tuple(
                 SourceCitation(
                     title=scrub_for_log(source.title),
-                    url=scrub_for_log(source.url),
+                    url=_che_url_nguon(source.url),
                     retrieved_at=scrub_for_log(source.retrieved_at),
                     supports=scrub_for_log(source.supports),
                 )

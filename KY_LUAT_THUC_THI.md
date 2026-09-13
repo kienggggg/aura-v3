@@ -3870,5 +3870,91 @@ câu có danh sách khác thứ model thấy  7/9
 ```
 
 Có từ trước thay đổi này. CHƯA sửa: bộ che là lời hứa về bí mật, nới nó ra thì
-phải có ca đối chứng khoá THẬT nằm trong URL — chờ Sếp.
+phải có ca đối chứng khoá THẬT nằm trong URL — chờ Sếp. **Sếp duyệt 13/09;
+sửa ở `CHOT:url-nguon-slug`: nguồn bị bỏ 14/36 -> 0/36.**
 <!-- /CHOT:bo-dong-url -->
+
+<!-- CHOT:url-nguon-slug -->
+### Bộ che tha ĐƯỜNG DẪN BÀI BÁO trong URL nguồn — Sếp duyệt 13/09/2026; đăng ký TRƯỚC khi viết mã
+
+**Bệnh, đo 13/09 (xem `CHOT:bo-dong-url`):** `core/redact.py:54` coi mọi chuỗi
+`[A-Za-z0-9_-]{32,}` là khoá. URL nguồn đi qua đúng luật ấy
+(`secret_guard.py:229`), nên đường dẫn bài báo tiếng Việt — các từ nối gạch —
+bị che, URL đổi, `chat_service` bỏ nguồn: **14/36** nguồn đông băng rơi, **2/9**
+câu xuống `web_unavailable` dù model đã trả lời đúng.
+
+**Vì sao tha được — và chỉ tha đúng chỗ ấy.** URL nguồn do máy tìm kiếm trả về,
+không do Sếp gõ. Thứ duy nhất của Sếp có thể quay về trong URL là chính câu tra
+— mà câu tra đi ra ngoài SAU bộ che (`safe_request`, `chat_service.py:542`), nên
+dãy số dài hay chuỗi dài của Sếp đã thành `[REDACTED_…]` trước khi rời máy.
+
+**Cách làm, viết trước:** một hàm che RIÊNG cho URL nguồn trong `secret_guard.py`;
+`core/redact.py` KHÔNG sửa (nó dùng chung). Hàm trả về một trong HAI thứ, không
+có thứ ba:
+- URL gốc nguyên vẹn — khi mọi chỗ bị che đều nằm trong đoạn đường dẫn là SLUG,
+  và chỉ do hai luật chung `LONG_TOKEN` / `NUMBER`;
+- bản che như cũ — mọi trường hợp khác. Không bao giờ che một nửa.
+
+SLUG = một đoạn giữa hai dấu `/` của phần ĐƯỜNG DẪN (không phải tên miền, không
+phải `?…`, không phải `#…`): toàn chữ thường và số, nối bằng gạch, đuôi tuỳ ý
+(`.html`, `.vov`…), có ít nhất **3** phần CHỈ gồm chữ cái. Luật cụ thể (`sk-`,
+`ghp_`, `AIza`, email, số điện thoại, `token=`…) vẫn soi CẢ trong slug — bắt
+được thì che như cũ.
+
+**CHƯA chặn được, nói trước:** một mã chia sẻ dạng từ tiếng Anh thường nối gạch
+(`correct-horse-battery-staple-…`) dài ≥ 32 ký tự trông y hệt slug — trước đây
+bị che, nay không. Chỗ dựa: nó nằm trong kết quả của một máy tìm kiếm công khai,
+không phải thứ của Sếp.
+
+**17 ca đối chứng — viết trước, kiểm trước: 17/17 ĐANG bị che với mã hiện nay;
+sau khi sửa phải VẪN bị che.** `sk-` trong đường dẫn · `sk-` nằm GIỮA một slug ·
+`ghp_` trong đường dẫn · `AIza` trong `?key=` · `?access_token=` · `?token=` 32
+ký tự · hex 40 ký tự không gạch · UUID · UUID có đúng 2 phần toàn chữ
+(`dead-beef`) · chuỗi ngẫu nhiên nối gạch · email trong đường dẫn · số điện
+thoại giữa slug · slug hợp lệ + hex 40 ký tự ở đoạn bên cạnh · chữ HOA nối gạch
+· `tên:mật-khẩu@` trong tên miền · chuỗi dạng slug nằm trong `?…` · slug có
+đuôi tệp là hex 40 ký tự (`….3f9a…`) — ca 17 THÊM lúc bắt đầu viết mã, trước
+khi chạy: cho đuôi dài tuỳ ý là một lối lọt mà 16 ca đầu không canh. Mỗi điều kiện
+của SLUG phải có ít nhất một ca cần tới nó — gieo bỏ điều kiện thì ca ấy lọt.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| nguồn bị bỏ, 36 nguồn đông băng | 0 |
+| câu còn dưới 2 nguồn, 9 câu | 0 |
+| ca đối chứng khoá trong URL | 17/17 vẫn bị che |
+| URL ra khác cả gốc lẫn bản che cũ | 0 |
+| test cũ của bộ che | xanh hết, không sửa bài nào |
+
+**KẾT QUẢ 13/09/2026 — ĐẠT CẢ NĂM.**
+
+```
+nguồn bị bỏ, 36 nguồn đông băng       14 -> 0                               ĐẠT
+câu còn dưới 2 nguồn, 9 câu            2 -> 0                               ĐẠT
+ca đối chứng khoá trong URL           17/17 vẫn bị che                      ĐẠT
+URL ra khác cả gốc lẫn bản che cũ     0 (14 URL bài báo + 17 ca + 3 URL lạ) ĐẠT
+test cũ của bộ che                    xanh hết; test_secret_guard.py        ĐẠT
+                                      không đổi byte nào
+(không làm ngưỡng) câu có danh sách khác thứ model thấy   7/9 -> 0/9
+```
+
+Cửa canh `tests/test_url_nguon_slug.py` ĐỎ 15 bài trước khi sửa mã (14 URL bài
+báo + lượt giá vàng: `ok` nhưng danh sách thiếu đúng URL bài báo), xanh sau.
+
+**Gieo 11 phép, đọc tay: 11/11 đỏ ĐÚNG ca cần điều kiện ấy — nhưng chỉ sau khi
+sửa ba ca mà chính phép gieo lộ ra:**
+
+```
+ca `?…` bản đầu `/chia-se?ma=…`   đường dẫn KHÔNG có slug -> hàm trả bản che cũ từ
+                                 sớm; bỏ bước soi phần ngoài slug mà ca vẫn xanh.
+                                 Sửa: đặt một slug hợp lệ vào đường dẫn.
+ca `#…` (URL lạ)                 cùng bệnh, sửa cùng lúc.
+ca `%` bản đầu `%C3%B4` chữ HOA  luật "chữ thường" đã chặn nó, nên cho slug nhận
+                                 `%` thì VẪN XANH — cửa mù. Sửa: `%c3%b4`.
+```
+
+Cả ba là chuyện của ca đối chứng, không đổi ngưỡng nào; đo và gieo lại sau khi
+sửa. Đúng bài *"một điều kiện không có ca nào cần tới nó là điều kiện trang trí"*
+— lần này nó nằm ở phía CA ĐỐI CHỨNG: ca có đó, nhưng bị điều kiện khác chặn trước.
+<!-- /CHOT:url-nguon-slug -->

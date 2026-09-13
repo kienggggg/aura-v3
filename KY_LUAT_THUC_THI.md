@@ -4337,3 +4337,46 @@ hàng rào chỉ làm việc khi câu Ở HAI ĐẦU dài mà câu giữa ngắn
 3/3 và 8/8 đỏ đúng bài. `cat_cho_vua` giữ nguyên cho `bai_noi` và máy thử lời
 nhắc của phòng nội bộ — cửa canh ghim cả phạm vi ấy.
 <!-- /CHOT:bo-cat-giu-truyen -->
+
+<!-- CHOT:ban-do-aura -->
+### Nhánh BẢN ĐỒ cho phòng AURA — Sếp giao 14/09/2026; đăng ký TRƯỚC khi chạy model
+
+> *"thử thách nhánh bản đồ đi, để AURA tự do phát huy nhưng đừng để nó đi lạc"*
+
+**Bản đồ đem đo** là Phần VI của `docs/BO_LUAT_PHONG_AURA_2026-09-13.md`, giữ
+nguyên từng chữ — viết 13/09 trước mọi lượt đo, nằm trong commit `29ac982`,
+SHA-256 bắt đầu `05B01CE0381B46F6`. Không chỉnh sau khi thấy kết quả. Nó không
+đếm, không hạn ngạch: mỗi khúc truyện làm việc gì, lạc trông ra sao, lạc thì quay
+về đâu.
+
+**Thiết kế:** ba nhánh, cùng trên lời nhắc 13 câu hiện nay (`CHOT:bo-cat-giu-truyen`)
+— 0 = lời nhắc hiện nay; L = sáu dòng Phần V (SHA `306F2CB11D74270B`) + "\n\n" +
+lời nhắc; B = bản đồ + "\n\n" + lời nhắc. Ba đề cũ × hạt 1–5. Nhánh 0 dùng lại 15
+lượt đã chạy 13/09 — cùng hạt cùng chữ, kiểm 6/6 hai lần — kèm 3 lượt chạy lại
+làm đối chứng tất định. L và B sinh mới, xen kẽ, đổi thứ tự mỗi hạt: 33 lượt.
+Chấm bằng đúng đường của phòng: bỏ số → trần/sàn từ-câu → cắt giữ truyện → hình
+dạng (có chữ Hán) → nêu đề. Kết quả nhánh L ngày 13/09 đo trên lời nhắc CŨ, nên
+không dùng lại.
+
+**Em chấm mù trước, Sếp chấm sau.** Mỗi đề một bộ ba ở **hạt 4** — chưa ai đọc,
+và bản nhánh 0 ở hạt ấy không có chữ Hán để lộ mình. Chấm bản sẽ vào video (sau
+cắt). Máy xáo nhãn X/Y/Z, khoá ghi tệp riêng; em xếp hạng TOÀN THỂ, ghi *muốn đọc
+tiếp* từng bản và *lạc ở đâu*, băm SHA-256 điểm TRƯỚC khi mở khoá. Nhãn không
+công bố cho tới khi Sếp chấm xong.
+
+**Báo, không làm ngưỡng:** tỉ lệ câu có người (câu không có người, không đại từ
+nào — dấu hiệu "chỉ tả cảnh") · chuỗi dài nhất các câu liền không có người · kết
+đạo lý (máy dò chữ, yếu) · thời gian. Nhánh B được DẶN tránh đúng những điều ấy,
+nên chúng đo độ TUÂN, không đo độ HAY.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| lọt cửa một lần sinh, 15 lượt | B ≥ 0 − 2 |
+| em chấm mù, 3 bộ ba | B xếp trên 0 ở ≥ 2/3 đề |
+| Sếp chấm lại mù, 3 bộ ba | B xếp trên 0 ở ≥ 2/3 đề |
+
+**Luật quyết định, viết trước:** đạt CẢ BA thì bản đồ vào lời nhắc truyện. Hỏng
+hàng 1 hoặc 2 thì dừng, ghi số. Hàng 3 chưa có thì CHỜ SẾP — không đưa vào.
+<!-- /CHOT:ban-do-aura -->

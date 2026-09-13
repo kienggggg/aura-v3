@@ -3853,4 +3853,22 @@ tiêu đề + đoạn trích ĐỦ 400 ký tự liền nhau).
 theo `sources` đưa vào lời nhắc; danh sách `<ol>` dưới câu trả lời đếm theo
 `safe_sources`. Bộ che bỏ một nguồn (URL bị đổi) mà vẫn còn ≥ 2 thì lượt vẫn
 `ok` và số lệch nhau. Nay link chỉ còn ở danh sách ấy, nên chỗ lệch này đáng đo.
+
+**Đo ngay sau khi đưa vào, 13/09 — lệch THẬT, và to hơn dự tính.** Lượt chat
+thật đầu tiên: *"giá vàng SJC hôm nay"* trả lời đúng 146 triệu, trích **[4]** —
+danh sách chỉ có **3** nguồn. Nguồn 4 là nguồn DUY NHẤT câu trả lời dùng, và nó
+bị giấu. Thủ phạm: `core/redact.py:54` coi mọi chuỗi `[A-Za-z0-9_-]{32,}` là
+khoá, nên đường dẫn bài báo tiếng Việt (các từ nối gạch, dài) bị che, URL đổi,
+nguồn rơi. Chạy đúng bộ che và đúng luật `< 2` của `chat_service.py` trên 36
+nguồn đông băng:
+
+```
+nguồn bị bỏ                           14/36 (cả 14 do LONG_TOKEN; 3 dính thêm NUMBER)
+câu còn < 2 nguồn -> web_unavailable  2/9   câu trả lời ĐÚNG bị vứt
+                                            (giá vàng SJC còn 1 · dân số 2025 còn 0)
+câu có danh sách khác thứ model thấy  7/9
+```
+
+Có từ trước thay đổi này. CHƯA sửa: bộ che là lời hứa về bí mật, nới nó ra thì
+phải có ca đối chứng khoá THẬT nằm trong URL — chờ Sếp.
 <!-- /CHOT:bo-dong-url -->

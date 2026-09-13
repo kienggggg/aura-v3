@@ -4224,3 +4224,45 @@ và **6/25 bản ĐÃ LỌT CỬA vẫn còn chữ Hán sau khi cắt**: chúng 
 đọc của video. Không cửa nào của phòng hỏi câu này. Ba bản nền hạt 1: 0/3 — hạt
 1 tình cờ sạch.
 <!-- /CHOT:bo-luat-aura -->
+
+<!-- CHOT:chu-han-kich-ban -->
+### Kịch bản phòng AURA không được mang chữ Hán — Sếp duyệt 13/09/2026; đăng ký TRƯỚC khi viết mã
+
+**Đo 13/09 (`CHOT:bo-luat-aura`, 30 lượt):** 10/30 bản gốc chứa chữ Hán —
+*工具箱 · 光亮 · 遇到过 · 哒哒 · 镶嵌 · 人潮 · 淅沥 · 飞扬…* — và **6/25 bản ĐÃ
+LỌT CỬA vẫn còn chữ Hán sau khi cắt**. Chúng đi thẳng vào giọng đọc
+`MSTTS_V110_viVN_An` của video. Model `qwen3.5:4b` lọt từ tiếng Trung khi viết
+tiếng Việt; không cửa nào của phòng hỏi câu này.
+
+**Cách làm, viết trước:** thêm MỘT lý do bác vào `do_kich_ban` — hàm chấm bản ĐÃ
+CẮT. Chữ Hán nằm trong câu bị cắt đi thì bản vào video sạch, không cần sinh lại.
+Bị bác thì `viet_kich_ban` sinh lại như mọi lý do khác (tối đa 3 lần). Không xoá
+chữ Hán ra khỏi câu: nó đứng ở chỗ một từ tiếng Việt, xoá đi là câu gãy.
+
+Dải bị bác: chữ Hán (CJK và phần mở rộng A, chữ tương thích), kana Nhật, chữ Hàn,
+dấu câu CJK và dạng toàn khổ. **Ca đối chứng:** mọi chữ Latin mở rộng
+(U+00C0–U+024F, U+1E00–U+1EFF) và dấu rời (U+0300–U+036F) — tức mọi chữ tiếng
+Việt, dựng sẵn lẫn tổ hợp — phải lọt.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| chữ Hán, kana, chữ Hàn trong bản lọt cửa | 0 |
+| chữ Latin mở rộng và dấu rời (mọi chữ tiếng Việt) | lọt hết |
+
+**KẾT QUẢ 13/09/2026 — ĐẠT CẢ HAI.** Cửa canh `tests/test_chu_han_kich_ban.py`
+ĐỎ 9 bài trước khi viết mã (8 kiểu chữ lạ + lượt sinh lại), xanh sau. Gieo 4/4
+đỏ đúng bài — trong đó phép *"chặn oan chữ Việt"* làm đỏ cả ca đối chứng.
+
+```
+trên 30 lượt thật của CHOT:bo-luat-aura
+lọt cửa một lần sinh     25/30 -> 19/30   (6 bản bị bác vì chữ Hán)
+trượt cả 3 lần thử       0,5 % -> 4,9 %   (ƯỚC, giả định các lần độc lập)
+```
+
+Giá nói cùng lúc: sinh lại nhiều hơn — mỗi lần 80–100 s. Và regex ghi bằng
+`\uXXXX`: bản đầu viết qua heredoc, dấu gạch ngược bị ăn, tệp mang ký tự thật
+(có cả dấu cách toàn khổ U+3000 mắt không thấy); đổi lại rồi so trên cả 1,1 triệu
+điểm mã — 0 chỗ khác.
+<!-- /CHOT:chu-han-kich-ban -->

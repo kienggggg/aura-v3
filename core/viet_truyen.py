@@ -158,6 +158,16 @@ NHIET_DO = 0.8
 TRAN_GIAY = 300
 
 
+# CHỮ GIỌNG TIẾNG VIỆT KHÔNG ĐỌC ĐƯỢC (13/09/2026, `CHOT:chu-han-kich-ban`).
+# `qwen3.5:4b` lọt từ tiếng Trung khi viết tiếng Việt: đo 30 lượt, 10/30 bản
+# gốc có chữ Hán (工具箱 · 光亮 · 哒哒…), và 6/25 bản ĐÃ LỌT CỬA vẫn còn sau khi
+# cắt — đi thẳng vào giọng đọc video. Chữ Hán, kana, chữ Hàn, dấu câu CJK và
+# dạng toàn khổ. Mọi chữ tiếng Việt nằm ở Latin mở rộng + dấu rời, ngoài dải này.
+_CHU_NGOAI = re.compile(
+    r"[\u1100-\u11ff\u3000-\u303f\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff"
+    r"\uac00-\ud7af\uf900-\ufaff\uff00-\uffef]+")
+
+
 def _tach_cau(van_ban: str) -> List[str]:
     return [c.strip() for c in re.split(r"(?<=[.!?])\s+", van_ban.strip()) if c.strip()]
 
@@ -204,6 +214,10 @@ def do_kich_ban(van_ban: str) -> Tuple[str, List[str], Dict[str, Any]]:
                      f"— nhiều hơn thì thẻ phải ôm 2 câu")
     if so["lap_nhieu_nhat"] > LAP_TOI_DA:
         ly_do.append(f"một câu lặp {so['lap_nhieu_nhat']} lần, cho tối đa {LAP_TOI_DA}")
+    # Bác chứ không xoá: chữ lạ đứng ở chỗ một từ tiếng Việt, xoá đi là câu gãy.
+    ngoai = sorted(set(_CHU_NGOAI.findall(van_ban)))
+    if ngoai:
+        ly_do.append(f"có chữ giọng tiếng Việt không đọc được: {' '.join(ngoai)[:60]}")
     return ("DAT" if not ly_do else "KHONG_DAT"), ly_do, so
 
 

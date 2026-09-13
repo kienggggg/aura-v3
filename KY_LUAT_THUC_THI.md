@@ -4379,4 +4379,48 @@ nên chúng đo độ TUÂN, không đo độ HAY.
 
 **Luật quyết định, viết trước:** đạt CẢ BA thì bản đồ vào lời nhắc truyện. Hỏng
 hàng 1 hoặc 2 thì dừng, ghi số. Hàng 3 chưa có thì CHỜ SẾP — không đưa vào.
+
+**KẾT QUẢ 14/09/2026 — 33 lượt, cả 33 chạy xong; SHA máy đo không đổi sau lượt
+cuối. Hai hàng đầu ĐẠT; hàng ba CHỜ SẾP.**
+
+```
+1) lọt cửa một lần sinh   B 10/15 · 0 8/15 · L 7/15    ngưỡng B ≥ 0 − 2      ĐẠT
+2) em chấm mù, 3 bộ ba    B xếp trên 0 ở 2/3 bộ        ngưỡng ≥ 2/3          ĐẠT
+3) Sếp chấm lại mù        —                            ngưỡng ≥ 2/3          CHỜ SẾP
+```
+
+Điểm của em ghi và băm **trước khi mở khoá**: 06:14:48, SHA-256 bắt đầu
+`295107C8F6FB599C`; tệp chấm mù `40E48D26F2DF79DE`. **Nhãn bộ nào là nhánh nào
+KHÔNG ghi ở đây cho tới khi Sếp chấm xong.**
+
+**Báo, không làm ngưỡng:**
+
+```
+                                   nhánh 0      nhánh L      nhánh B
+em chấm: xếp trên nhánh 0          —            3/3 bộ       2/3 bộ
+em chấm: B xếp trên L              —            —            2/3 bộ
+trượt vì QUÁ NGẮN                  5            7            0
+trượt vì quá trần từ/câu           0            0            3
+trượt vì chữ Hán                   2            1            2
+từ/câu, trung vị                   18,4         17,3         18,9
+câu có người, trung vị             0,54         0,67         0,75
+chuỗi câu không người dài nhất tv  3            2            2
+CHÉP LỜI bản đồ/luật vào truyện    0/15         1/15         2/15
+thời gian, trung vị                59 s         60 s         61 s
+tất định: nhánh 0 hạt 5 chạy lại   GIỐNG TỪNG CHỮ 3/3
+```
+
+**Giới hạn, nói cùng lúc:** bản đồ DẶN truyện có người muốn điều gì, có trở ngại,
+có ngoặt, có kết bằng hình ảnh — và em chấm thưởng đúng những thứ ấy. Nên 2/3
+của em đo được *bản đồ có được theo và em có thích cái được theo không*, chưa đo
+được "hay" độc lập. Hàng 3 là chốt.
+
+**Hai thứ xấu của nhánh B, ghi để không bị nuốt:** (1) **chép lời bản đồ vào truyện**
+2/15 — một bản viết *"đã thay đổi hoàn toàn ý nghĩa câu chuyện kể lúc nãy"*, gần
+nguyên văn dòng *"làm đổi nghĩa những gì đã kể"*; vá thì phải là một biến thể mới,
+đo lại. (2) câu dài hơn: 3/15 quá trần 22,7 từ/câu — đổi lại không lượt nào quá ngắn.
+
+**Lỗi mới, ngoài phạm vi — chữ Anh lọt vào:** *"giũ áo wet"* (L), *"ánh sáng
+golden"* (B). Cửa chữ Hán không bắt loại này; máy dò chữ Anh bằng danh sách từ
+thì bắt nhầm (*no*, *so* là âm tiết tiếng Việt). CHƯA có cửa.
 <!-- /CHOT:ban-do-aura -->

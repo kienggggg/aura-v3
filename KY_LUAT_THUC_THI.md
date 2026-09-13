@@ -3756,3 +3756,54 @@ là số đứng vững. Thử lại giả thuyết "lời dặn giống hệt t
 ollama`). Chính lượt làm sạch trong phép thử ấy đọc 50,6 tk/s không có bộ đệm
 nào: tốc độ đọc tự dao động 38–51 tk/s.
 <!-- /CHOT:cat-khoi-nguon -->
+
+<!-- CHOT:bo-dong-url -->
+### Chỉ bỏ dòng URL khỏi khối nguồn — Sếp chọn 13/09/2026; đăng ký TRƯỚC khi chạy model
+
+Sếp chọn phương án (b) của `CHOT:cat-khoi-nguon`: bỏ dòng URL, **giữ nguyên
+đoạn trích 400 ký tự**. Phương án này CHƯA đo riêng — "~−80–110 token" là số
+ƯỚC theo ký tự — và nó vẫn đổi thứ model nhìn thấy. Nên đo trước, đưa vào sau.
+
+**Dòng URL mang một thứ mà tiêu đề không có: TÊN TRANG.** Đọc 36 nguồn đông
+băng TRƯỚC khi viết thước: nguồn [1] của câu tỷ giá có tiêu đề *"Tỷ giá"*, của
+câu lãi suất là *"Lãi suất tiền gửi"* — chỉ URL cho biết đó là trang CỦA
+Vietcombank. Bỏ URL thì model không còn biết nguồn nào là trang chính chủ; Sếp
+xin link thì nó có thể BỊA. Danh sách nguồn dưới câu trả lời vẫn giữ link thật —
+`chat.html` dựng nó từ `sources`, không từ chữ của model.
+
+Lần đo V12 cho thêm một chiều đáng canh: số lượt có đánh số [n] là **V0 17/18,
+V12 14/18**. V12 đổi hai thứ một lúc nên không biết thứ nào gây ra.
+
+**Thiết kế:** cùng 9 câu, cùng nguồn đông băng, cùng thước `thuoc_do_dung.json`
+(SHA `38114C85B933258B`, KHÔNG sửa). Thêm một câu dò *"giá vàng SJC hôm nay,
+cho em link nguồn"*, đọc nguồn đông băng của câu giá vàng. VU = V0 bỏ đúng dòng
+URL, tiêu đề và đoạn trích giữ nguyên từng ký tự. 2 vòng × 10 câu × 2 biến thể
+= 40 lượt, xen kẽ, đổi thứ tự mỗi vòng. Ca đối chứng V0 chạy LẠI cùng lúc —
+không mượn 18 lượt V0 của lần trước.
+
+**"Link bịa"** = chuỗi dạng đường link hoặc tên miền trong câu trả lời mà KHÔNG
+có trong lời nhắc model đã thấy (so không phân biệt hoa thường). Đoán đúng
+`sjc.com.vn` từ tiêu đề "SJC" cũng tính là bịa — Sếp không kiểm được nó. Máy
+chấm được KIỂM trước khi chấm: 15/15 ca giả, gieo 4 phép vào máy chấm và thước
+thì 4/4 đỏ, trả về giống từng byte.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| token khúc đọc VU so với V0, 18 lượt | trung vị ≤ × 0,95 |
+| trúng thước VU, 18 lượt | ≥ số trúng của V0 − 1 |
+| câu nhạy lãi suất 12 tháng | VU trúng ≥ V0 trúng |
+| giá mua vào 143, 4 lượt giá vàng | VU nhắc ≥ V0 nhắc − 1 |
+| lượt có đánh số [n], 18 lượt | VU ≥ V0 − 1 |
+| lượt có [k] ngoài 1..số nguồn, 20 lượt | VU ≤ V0 |
+| link bịa, 20 lượt VU | 0 |
+
+Ngưỡng đọc đặt trên TOKEN, không trên giây: tốc độ đọc tự dao động 38–51 tk/s
+(đo 13/09), tức ±15% — to hơn hiệu ứng cần đo (~7%). Giây vẫn ghi ra, không làm
+ngưỡng. Lần V12, tỉ lệ giây 0,78 và tỉ lệ token 0,76 đi cùng nhau.
+
+**Luật quyết định, viết trước:** đạt CẢ BẢY thì đưa VU vào `_messages`; hỏng một
+thì KHÔNG đưa, ghi con số và báo Sếp. Đọc tay câu lãi suất, câu tỷ giá và câu
+dò; đọc tay được quyền CHẶN nhưng phải ghi lý do, như lần V12.
+<!-- /CHOT:bo-dong-url -->

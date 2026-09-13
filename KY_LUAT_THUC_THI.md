@@ -3682,3 +3682,77 @@ nhiễu của n = 4; ghi cả hai, không chọn lần đẹp hơn. Cửa canh
 `tests/test_tam_luong_ollama.py` bắt lời gọi thật của bốn nơi; gieo **6/6 đỏ** —
 kể cả thêm một nơi gọi thứ năm có `num_predict` mà không vào danh sách đóng.
 <!-- /CHOT:tam-luong-ollama -->
+
+<!-- CHOT:cat-khoi-nguon -->
+### Cắt khối nguồn cho khúc model ĐỌC — đăng ký 13/09/2026, TRƯỚC khi chạy model
+
+Sau 8 luồng, đường có nguồn vẫn đọc ~1.360 token: lời dặn 558 (không đệm được —
+xem `CHOT:tam-luong-ollama`) và khối nguồn ~800. Ước theo số ký tự trên hai câu
+thật: **đoạn trích ~470–500 token (~12 s), URL ~80–110 (~2–3 s), tiêu đề ~45–99**.
+Đòn bẩy này **ĐỔI thứ model nhìn thấy**, nên đo độ đúng trước, quyết sau.
+
+**Biến thể chọn TRƯỚC, không chọn theo kết quả:** V12 = bỏ dòng URL khỏi khối
+nguồn + cắt mỗi đoạn trích 400 -> 250 ký tự (`_MAX_SNIPPET` giữ nguyên cho phần
+hiển thị; chỉ khối đưa model bị cắt). Một biến thể, một lần đo — không thử năm
+kiểu rồi chọn kiểu đẹp trên chính thước này.
+
+**Thiết kế:** 9 câu đi đường có nguồn (`"Python 3.14 có gì mới"` bị bộ phân loại
+xếp TỰ NGHĨ nên loại — ghi lại, không sửa ở đây). Nguồn tra MỘT lần rồi ĐÓNG
+BĂNG, hai biến thể đọc đúng cùng khối. Thước viết SAU khi đọc nguồn, TRƯỚC mọi
+lượt chạy model: `thuoc_do_dung.json`, ghi lúc **12:01:56**, SHA-256 bắt đầu
+**`38114C85B933258B`**. Mỗi câu 2 vòng × 2 biến thể, xen kẽ, đổi thứ tự mỗi vòng.
+
+Thước có ghi dữ kiện nằm TRƯỚC hay SAU mốc 250. Câu nhạy nhất: *"lãi suất tiết
+kiệm Vietcombank 12 tháng"* — dòng `12 Tháng | 5.9%` của nguồn 2 nằm SAU mốc
+cắt; còn `1 năm … 5,90%` của nguồn 3 nằm trước; nguồn 4 ghi *"12 tháng phổ biến
+6,2–7,8 %"* là số của CẢ THỊ TRƯỜNG, không phải Vietcombank.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| khúc đọc V12 so với V0 | trung vị ≤ × 0,85 |
+| trúng thước V12, 18 lượt | ≥ số trúng của V0 − 1 |
+| câu nhạy lãi suất 12 tháng | V12 trúng ≥ V0 trúng |
+
+**Luật quyết định, viết trước:** đạt CẢ BA thì đưa V12 vào `_messages`; hỏng một
+thì KHÔNG đưa, và ghi lại con số. Thước lỏng ở hai câu (thời tiết, closure) —
+chúng chỉ canh lạc đề, không canh độ chính xác.
+
+**KẾT QUẢ 13/09/2026 — 36 lượt, cả 36 chạy xong. Theo thước: ĐẠT CẢ BA.**
+
+```
+1) khúc đọc V12/V0 = 0,78 (1.304 -> 987 token, tỉ lệ token 0,76)   ĐẠT
+2) trúng thước      V0 18/18 · V12 18/18                            ĐẠT
+3) câu nhạy lãi suất V0 2/2  · V12 2/2                              ĐẠT
+```
+
+**ĐỌC TAY lộ ra thước THIẾU MỘT CHIỀU — độ ĐỦ:**
+
+```
+giá mua vào 143 triệu (CHỈ nằm sau mốc 250)   V0 nhắc 2/2 · V12 0/2   <- V12 không thể thấy nó
+lãi suất 12 tháng, trả lời GỌN "5,9%"         V0 1/2      · V12 0/2
+  V12 cả hai lượt: "dao động từ 5,90% đến 6%" — "6%" là trần của MỌI kỳ hạn
+  V0 lượt còn lại: "5,90% đến 6,2%" — "6,2%" là số của CẢ THỊ TRƯỜNG
+```
+
+Thước chỉ hỏi *"có 5.9 không"* — cả bốn lượt trộn lẫn đều qua. Dòng `12 Tháng |
+5.9%` nằm sau mốc cắt, nên V12 phải suy từ *"1 năm … 5,90%"* và *"0,1% đến 6%"*.
+n = 2 thì 1/2 so với 0/2 không bác được gì; nhưng mất giá mua vào là **chắc
+chắn**, không phải nhiễu.
+
+**QUYẾT ĐỊNH: KHÔNG làm theo luật viết trước — và nói thẳng vì sao.** Luật bảo
+"đạt cả ba thì đưa vào"; nhưng thước đã được KIỂM bằng tay và hỏng ở đúng chiều
+phép đo này sinh ra để canh. Đổi ~7 s lấy độ đủ của câu trả lời là quyết định
+của Sếp, không phải của máy đo. **CHỜ SẾP** chọn: (a) V12 như đã đo · (b) chỉ bỏ
+dòng URL, ~−80–110 token, không mất chữ nào của đoạn trích — CHƯA đo riêng ·
+(c) giữ nguyên. Cửa canh `tests/test_cat_khoi_nguon.py` ghim khối nguồn hiện
+nay: đổi định dạng thì phải sửa cửa ấy và khối này cùng lúc.
+
+**Một điều CHƯA giải thích:** 7/36 lượt đọc nhanh bất thường (54–66 tk/s so với
+~39), 6/7 rơi vào V0 — nên nếu có lệch thì lệch VỀ PHÍA V0, và tỉ lệ token 0,76
+là số đứng vững. Thử lại giả thuyết "lời dặn giống hệt thì được dùng lại": ghim
+đồng hồ, bốn câu khác nhau — **không dùng lại** (~41 tk/s, xem `CHOT:tam-luong-
+ollama`). Chính lượt làm sạch trong phép thử ấy đọc 50,6 tk/s không có bộ đệm
+nào: tốc độ đọc tự dao động 38–51 tk/s.
+<!-- /CHOT:cat-khoi-nguon -->

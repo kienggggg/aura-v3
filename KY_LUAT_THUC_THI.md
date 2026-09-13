@@ -4303,4 +4303,37 @@ bản gốc (đo độ liền, không đo độ hay) · số lượt viết đú
 
 **Luật quyết định, viết trước:** đạt cả ba thì lời nhắc C và bộ cắt mới vào phòng
 viết. Hỏng một thì không đưa, ghi số. Thể loại `bai_noi` chưa đổi vòng này.
+
+**KẾT QUẢ 13/09/2026 — 18 lượt, cả 18 chạy xong; SHA máy đo không đổi sau lượt
+cuối. ĐẠT CẢ BA — lời nhắc C và bộ cắt mới vào phòng viết, CHỈ cho truyện.**
+
+```
+ô (lời nhắc + bộ cắt)   lọt cửa   tỉ lệ cắt tv   độ liền tv   đụng 2 đầu/2 cuối
+0 + cắt cũ  (hôm nay)    8/15       0,47          0,09          12
+0 + cắt mới             11/15       0,49          0,91           0
+C + cắt cũ               7/15       0,00          1,00           6
+C + cắt mới              8/15       0,00          1,00           0
+
+1) tỉ lệ cắt tv C + cắt mới   0,00 ≤ 0,15                  ĐẠT
+2) lọt cửa C + cắt mới        8 ≥ 8 − 2                    ĐẠT
+3) bộ cắt mới đụng hai đầu    0 lần                        ĐẠT
+(báo) viết đúng 13 câu        14/15
+(báo) thời gian tv            88 s -> 59 s mỗi lần sinh
+(báo) đối chứng tất định      nhánh 0 hạt 3 chạy lại GIỐNG TỪNG CHỮ 3/3
+```
+
+Lọt cửa KHÔNG tăng — kiểu trượt đổi: C trượt 5/15 vì QUÁ NGẮN (191–214 từ) và
+2/15 vì chữ Hán. Xin "khoảng 18 từ mỗi câu" thì model viết ~15–16. Chỉnh con số
+ấy là một phép đo khác — chưa làm, không chỉnh theo chính 15 lượt này.
+
+Đọc tay hai bản C lọt cửa: bản la bàn liền từ đầu tới cuối (nhân vật ở câu 2,
+bão, đêm, quay về, "tìm thấy lối về"); bản mưa vẫn là tranh tả cảnh — bộ cắt
+không chữa chuyện ấy, đó là việc của bộ luật / bản đồ.
+
+**Hai lần cửa mù, bắt bằng gieo:** máy kiểm máy đo (bỏ hàng rào hai đầu mà vẫn
+xanh; bỏ neo `^` mà vẫn xanh vì không ca nào có *"10.000"*) và cửa canh phần đưa
+vào (bỏ hàng rào vẫn xanh — cắt từ giữa ra tự để lại hai đầu khi câu dài đều;
+hàng rào chỉ làm việc khi câu Ở HAI ĐẦU dài mà câu giữa ngắn). Thêm ca, gieo lại:
+3/3 và 8/8 đỏ đúng bài. `cat_cho_vua` giữ nguyên cho `bai_noi` và máy thử lời
+nhắc của phòng nội bộ — cửa canh ghim cả phạm vi ấy.
 <!-- /CHOT:bo-cat-giu-truyen -->

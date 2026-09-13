@@ -43,6 +43,10 @@ Cùng tỉ lệ, khác hẳn kết quả. Cắt dưới cho câu cuối *"Sự i
 không nặng nề mà đầy chất thơ"* — cắt ngang. Cắt giữa cho *"Mỗi giọt mưa rơi
 xuống đất đều là một lời cầu nguyện"* — kết thật.
 
+13/09/2026 — VỚI TRUYỆN, CÁCH NÀY XOÁ MẤT TRUYỆN. Nay model viết trung vị 460 từ
+nên cắt giữa bỏ 48 % số câu, cách một câu bỏ một câu. Truyện nay xin đúng 13 câu
+và cắt từ giữa ra, không đụng 2 câu đầu, 2 câu cuối (`cat_giu_truyen`).
+
 TRẦN CỨNG TỪ/CÂU — 19,2 cho tới 04/09/2026, nay 22,7
 
 Lượt trượt duy nhất không hỏng vì dài: sau khi cắt nó đúng 237 từ, nhưng chỉ còn
@@ -141,6 +145,8 @@ TRAN_TU_MOI_CAU = SO_TU_MAX / SO_CAU_KHAC_MIN
 SAN_TU_MOI_CAU = SO_TU_MIN / SO_CAU_TOI_DA
 
 # Xin dài dư để còn chỗ mà cắt. 320 cho 4/5 lọt cửa sau khi cắt giữa.
+# Từ 13/09/2026 chỉ còn `bai_noi` dùng: truyện xin đúng 13 câu, vì xin dư rồi
+# cắt thì bộ cắt xoá mất truyện — xem `cat_giu_truyen`.
 SO_TU_XIN = 320
 
 MODEL = "qwen3.5:4b"
@@ -324,6 +330,61 @@ def cat_cho_vua(van_ban: str) -> Tuple[str, int]:
     return " ".join(giu), bo
 
 
+# THỂ LOẠI TRUYỆN: XIN ĐÚNG SỐ CÂU, CẮT TỪ GIỮA RA (13/09/2026,
+# `CHOT:bo-cat-giu-truyen`). Xin 320 từ thì model viết trung vị 460 (296–680),
+# 23 câu, và `cat_cho_vua` bỏ trung vị 48 % số câu — cách một câu bỏ một câu, bắt
+# đầu từ câu 2, đúng câu đặt nhân vật. Bản la bàn mất câu nhân vật xuất hiện và
+# câu tìm ra lối thoát. Xin đúng 13 câu, 15 lượt: tỉ lệ cắt trung vị 0,47 -> 0,00,
+# độ liền 0,09 -> 1,00, lọt cửa 8/15 như cũ, mỗi lần sinh 88 -> 59 s; 14/15 lượt
+# viết đúng 13 câu. Kiểu trượt đổi: 5/15 QUÁ NGẮN (191–214 từ).
+#
+# `cat_cho_vua` giữ nguyên cho `bai_noi` và máy thử lời nhắc của phòng nội bộ —
+# hai chỗ ấy chưa đo với bộ cắt mới.
+SO_CAU_TRUYEN = 13
+TU_MOI_CAU_XIN = 18
+_SO_DAU_DONG = re.compile(r"^\s*(?:\*\*)?\s*\d{1,2}\s*[.):\]-]\s*(?:\*\*)?\s*")
+
+
+def bo_so_thu_tu(tho: str) -> str:
+    """Bỏ số thứ tự đầu dòng; dòng chưa có dấu kết câu thì thêm '.'.
+
+    Chỉ ăn ở ĐẦU dòng: *"giá 10.000 đồng"* phải còn nguyên.
+    """
+    dong = []
+    for d in (tho or "").splitlines():
+        d = _SO_DAU_DONG.sub("", d).strip()
+        if not d:
+            continue
+        if d[-1] not in ".!?…\"”'":
+            d += "."
+        dong.append(d)
+    return " ".join(dong)
+
+
+def cat_giu_truyen(van_ban: str) -> Tuple[str, int]:
+    """Cắt từ GIỮA RA hai bên; không bao giờ đụng 2 câu đầu và 2 câu cuối.
+
+    Lỗ thủng liền một khối ở giữa phần ĐẨY, không rải khắp truyện: câu đặt nhân
+    vật và câu kết còn nguyên. Hết câu được phép bỏ mà vẫn dài thì trả nguyên
+    phần còn lại — cửa chấm sẽ bác, và vòng ngoài sinh lại.
+    """
+    cau = _tach_cau(van_ban)
+    n = len(cau)
+    giua = n // 2
+    thu_tu = sorted(range(2, n - 2), key=lambda i: (abs(i - giua), i < giua))
+    giu = list(range(n))
+    bo = 0
+    for i in thu_tu:
+        con = [cau[j] for j in giu]
+        if len(" ".join(con).split()) <= SO_TU_MAX and len(con) <= SO_CAU_TOI_DA:
+            break
+        giu.remove(i)
+        bo += 1
+    if not bo:
+        return van_ban, 0
+    return " ".join(cau[j] for j in giu), bo
+
+
 def _xin_model(loi: str, hat: int) -> Tuple[str, float]:
     """Gọi model. Ném `RuntimeError` nếu không gọi được — chỗ gọi tự phân loại."""
     req = urllib.request.Request(
@@ -429,12 +490,17 @@ def _loi_truyen(chu_de: str) -> str:
     *"Mở bằng một câu nêu rõ đang nói về cái gì"* và đo 03/09 cho: cửa đề 3/3
     nhưng cửa độ dài rụng còn 3/5 — nó kéo cả bài sang giọng giảng, câu dài ra.
     Ở đây chỉ ràng buộc ĐÚNG CÂU ĐẦU, và nói rõ vẫn là truyện.
+
+    13/09/2026 — XIN ĐÚNG 13 CÂU THAY CHO "khoảng 320 từ, ít nhất 18 câu". Xem
+    `cat_giu_truyen`: xin dư rồi cắt thì bộ cắt xoá mất truyện. Chuỗi này khớp
+    TỪNG BYTE với lời nhắc đã đem đi đo — `test_bo_cat_giu_truyen.py` ghim SHA.
     """
     return (f"Viết một truyện ngắn tiếng Việt hoàn chỉnh về: {chu_de}. "
             f"BẮT BUỘC: câu đầu tiên phải nhắc tới {chu_de} — dùng lại chính "
             f"những chữ đó trong câu mở, rồi mới kể tiếp bình thường. "
-            f"Có mở đầu và kết thúc rõ ràng, dài khoảng {SO_TU_XIN} từ, "
-            f"chia thành ít nhất 18 câu. "
+            f"Có mở đầu và kết thúc rõ ràng. Viết đúng {SO_CAU_TRUYEN} câu, "
+            f"mỗi câu trên một dòng riêng, đánh số từ 1 đến {SO_CAU_TRUYEN}, "
+            f"mỗi câu khoảng {TU_MOI_CAU_XIN} từ. "
             f"Chỉ trả về truyện, không giải thích, không tiêu đề.")
 
 
@@ -506,6 +572,9 @@ def viet_kich_ban(chu_de: str, tran: int = TRAN_SO_LAN, hat_dau: int = 1,
             lan.append({"hat": hat_dau + i, "trang_thai": "KHONG_DO_DUOC", "vi_sao": str(e)})
             continue
 
+        # Truyện xin đánh số từng dòng (`_loi_truyen`) — bỏ số TRƯỚC khi đếm.
+        if the_loai == "truyen":
+            tho = bo_so_thu_tu(tho)
         cau = _tach_cau(tho)
         truoc = _dem(cau)
         # Đo từ/câu TRƯỚC khi cắt: quá trần thì không cách cắt nào cứu được,
@@ -526,7 +595,7 @@ def viet_kich_ban(chu_de: str, tran: int = TRAN_SO_LAN, hat_dau: int = 1,
                         "giay": round(giay, 1)})
             continue
 
-        van, da_bo = cat_cho_vua(tho)
+        van, da_bo = (cat_giu_truyen if the_loai == "truyen" else cat_cho_vua)(tho)
         trang_thai, ly_do, so = do_kich_ban(van)
 
         # Cửa NÊU ĐỀ, chấm SAU khi cắt: `cat_cho_vua` bỏ câu ở GIỮA nên câu mở

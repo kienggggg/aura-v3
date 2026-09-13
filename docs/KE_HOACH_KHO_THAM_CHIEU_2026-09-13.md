@@ -1,7 +1,7 @@
 # Kế hoạch — Kho đoạn văn mẫu cho phòng AURA (13/09/2026)
 
-<!-- KET_CUC:CHUA_DUYET · 13/09/2026 -->
-**Trạng thái: CHỜ DUYỆT. Chưa viết dòng mã nào.**
+<!-- KET_CUC:DANG_LAM · 13/09/2026 -->
+**Trạng thái: ĐANG LÀM — Sếp duyệt 13/09. Mã sản phẩm CHƯA đổi; đang đo nhánh bộ luật (§11).**
 
 Sếp chọn việc này ngày 13/09. `CLAUDE.md` §7: dựng mới một hệ thống thì gửi kế
 hoạch trước. Mọi con số dưới đây **đã chạy trên máy này**; chỗ nào chưa chạy
@@ -169,3 +169,21 @@ Nguồn cho §3:
 [NotebookLM Enterprise — Google Cloud](https://cloud.google.com/agentspace/notebooklm-enterprise/docs/overview) ·
 [Does NotebookLM Have an API? 2026](https://autocontentapi.com/blog/does-notebooklm-have-an-api) ·
 [notebooklm-py](https://github.com/teng-lin/notebooklm-py)
+
+## 11. Sửa 13/09 — Sếp duyệt, và thêm hai việc
+
+Sếp trả lời: *"có duyệt, phòng Alpha để sau, bạn chấm trước đi, vậy làm 1 bộ luật
+phòng AURA…"*.
+
+- **§4 duyệt.** Câu 2 (giọng nào, tác phẩm nào) chưa có — vòng đoạn mẫu chờ tệp
+  của Sếp trong `data/tham_chieu/<giong>/`.
+- **Bộ luật phòng AURA:** `docs/BO_LUAT_PHONG_AURA_2026-09-13.md`. Dùng làm thước
+  chấm của em; bản gọn sáu dòng là một nhánh thử riêng (`CHOT:bo-luat-aura`) —
+  ngày 16/08 luật trong lời nhắc đã thua, nên phải đo.
+- **Vòng 2 đổi:** em chấm mù TRƯỚC — điểm ghi và băm SHA-256 trước khi mở khoá
+  nhãn; Sếp chấm lại mới là chốt. Độ khớp giữa hai người được ghi lại.
+- **Phát hiện khi dựng bản nền, ngoài phạm vi nhưng chặn đường:** bộ cắt giữa của
+  phòng viết bỏ 39–48 % số câu (10/23 · 7/18 · 11/23), cách một câu bỏ một câu, và xoá đúng mạch truyện
+  (xem `CHOT:bo-luat-aura`). Đoạn mẫu hay bộ luật có giúp viết ra truyện thì bộ cắt
+  cũng xoá đi trước khi tới video — nên sửa bộ cắt là việc phải làm trước khi bật
+  bất cứ thứ gì ở kế hoạch này.

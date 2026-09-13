@@ -4125,3 +4125,60 @@ Cửa canh `tests/test_link_chua_doc.py`: gieo 5/5 đỏ đúng bài (ghi chú c
 nguồn · nhận chữ "https" trơn là link · bỏ hẳn ghi chú · đổi chữ đầu ghi chú ·
 đặc tả lệch ngưỡng), trả về giống từng byte.
 <!-- /CHOT:link-chua-doc -->
+
+<!-- CHOT:bo-luat-aura -->
+### Bộ luật phòng AURA, bản gọn trong lời nhắc — đăng ký 13/09/2026, TRƯỚC khi chạy model
+
+Sếp giao bộ luật theo tình huống (`docs/BO_LUAT_PHONG_AURA_2026-09-13.md`) và
+bảo *"bạn chấm trước"*. Ngày 16/08 một bộ luật văn phong trong lời nhắc đã THUA
+bản không luật (Sếp chấm mù). Nên bộ luật đi vào lời nhắc chỉ khi đo ra nó thắng;
+tới lúc ấy mã sản phẩm không đổi — máy đo tự ghép lời nhắc.
+
+**Ba bản nền 13/09 (lời nhắc hiện nay, hạt 1) — cả ba ĐẠT mọi cửa, và cả ba không
+có truyện:** tranh tả cảnh nối nhau, không ai muốn gì, không có chỗ ngoặt; chi tiết
+mâu thuẫn (*"mồ hôi… làm quần áo dính đẫm nước mưa"*); xưng hô đổi giữa câu; kết
+bằng câu đạo lý. Cửa của phòng đo HÌNH DẠNG, không đo TRUYỆN — đúng giới hạn
+chính tệp phòng viết đã ghi.
+
+**Và bộ cắt giữa XOÁ TRUYỆN.** Nó bỏ 10/23 · 7/18 · 11/23 câu, cách một câu bỏ
+một câu. Bản duy nhất có truyện (la bàn) mất đúng câu 4 *"anh trai tôi cầm lấy
+chiếc la bàn…"* (nhân vật xuất hiện), câu 8 (lời dặn của cha) và câu 16 *"trời
+sắp sáng, anh thấy một con sông"* (lối thoát) — bản vào video nói *"anh"* mà chưa
+từng giới thiệu anh là ai. Nên phép thử này chấm bản TRƯỚC KHI CẮT: bộ luật có
+giúp VIẾT ra truyện không. Bộ cắt là việc riêng, phải sửa trước khi bộ luật nào
+tới được video.
+
+**Thiết kế:** hai nhánh — 0 = lời nhắc hiện nay; L = sáu dòng "CÁCH VIẾT" (Phần V
+của bộ luật) + "\n\n" + lời nhắc hiện nay, giữ nguyên từng chữ. Ba đề *người thợ
+sửa khoá đầu ngõ* · *cơn mưa đầu mùa ở thành phố* · *chiếc la bàn gãy kim*; hạt
+1–5; mỗi (đề, hạt) sinh MỘT lần mỗi nhánh, không sinh lại; xen kẽ, đổi thứ tự mỗi
+hạt → 30 lượt. Lọt cửa chấm bằng đúng các cửa của phòng (cắt giữa → hình dạng →
+nêu đề).
+
+**Em chấm mù, TOÀN THỂ trước, luật sau.** Mỗi đề một cặp: **hạt 2**, bản TRƯỚC
+KHI CẮT, dù lọt cửa hay không. KHÔNG phải hạt 1: ba bản hạt 1 của nhánh 0 em đã đọc
+trọn lúc viết bộ luật, và cùng hạt thì Ollama cho cùng chữ — chấm hạt 1 là em nhận
+ra ngay. (Lượt hạt 1 chạy lại được so từng chữ với bản nền: kiểm luôn điều ấy.)
+Máy xáo nhãn X/Y bằng khoá ngẫu nhiên ghi vào tệp riêng; em chấm
+trên tệp đã xáo, ghi điểm và băm SHA-256 TRƯỚC khi mở khoá. Mỗi bản: *muốn đọc
+tiếp — có/không*; mỗi cặp: *bản nào hay hơn*, kèm lý do trích từ bài. Giới hạn
+nói trước: bản L có thể lộ mình vì tuân luật (không mở bằng thời tiết…) — em không
+mù hoàn toàn được. Nên **Sếp chấm lại 3 cặp mù mới là chốt**.
+
+**Chỉ số phụ máy đếm — báo, KHÔNG làm ngưỡng:** mở bằng thời tiết/định nghĩa ·
+kết bằng bài học · từ nhấn · "bỗng/chợt/đột nhiên" · câu dài nhất. Nhánh L được
+DẶN đúng những điều ấy, nên chúng đo độ TUÂN LỆNH, không đo độ HAY — dùng chúng
+làm bằng chứng chất lượng là bẫy tautological.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| lọt cửa phòng viết, 15 lượt mỗi nhánh | L ≥ 0 − 2 |
+| em chấm mù, 3 cặp | L thắng ≥ 2/3 |
+| Sếp chấm lại mù, 3 cặp | L thắng ≥ 2/3 |
+
+**Luật quyết định, viết trước:** đạt CẢ BA thì bản gọn vào lời nhắc phòng AURA.
+Hỏng hàng 1 hoặc hàng 2 thì dừng, ghi số, không cần Sếp chấm. Em và Sếp chấm lệch
+nhau thì ghi độ khớp — lần sau em chấm thay Sếp được hay không là ở con số ấy.
+<!-- /CHOT:bo-luat-aura -->

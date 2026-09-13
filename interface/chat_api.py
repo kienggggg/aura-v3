@@ -7,6 +7,8 @@ policy, secret filtering, timeouts, and transcript writes do not live here.
 """
 from __future__ import annotations
 
+import asyncio
+import json
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -182,13 +184,9 @@ async def api_history(request: web.Request) -> web.Response:
     )
 
 
-async def api_chat(request: web.Request) -> web.Response:
-    """Nhận một câu người dùng gõ, trả lời, và ghi cả lượt vào sổ phiên.
-
-    Tên phòng chỉ nhận từ danh sách đóng — trình duyệt là chỗ người lạ gửi
-    chữ tới, không có lý do tin một chuỗi tuỳ ý rồi đem đi tra bảng.
-    """
-    body = await _body_of(request)
+def _chat_request_from(body: dict[str, object]) -> ChatRequest:
+    """Dựng `ChatRequest` từ thân yêu cầu — MỘT chỗ cho cả hai tuyến chat,
+    để danh sách phòng đóng không bị chép ra hai nơi rồi lệch nhau."""
     raw_session = body.get("session_id", "")
     raw_text = body.get("text", "")
     # Chỉ nhận tên phòng nằm trong DANH SÁCH ĐÓNG. Trình duyệt là chỗ người lạ
@@ -196,7 +194,7 @@ async def api_chat(request: web.Request) -> web.Response:
     raw_phong = body.get("phong", "")
     phong = (raw_phong if raw_phong in ("viet", "dung", "tra", "sua", "nhac")
              else "")
-    chat_request = ChatRequest(
+    return ChatRequest(
         request_id=str(uuid4()),
         session_id=raw_session if isinstance(raw_session, str) else "",
         actor_id=_WEB_ACTOR_ID,
@@ -205,11 +203,99 @@ async def api_chat(request: web.Request) -> web.Response:
         phong=phong,
     )
 
+
+async def api_chat(request: web.Request) -> web.Response:
+    """Nhận một câu người dùng gõ, trả lời, và ghi cả lượt vào sổ phiên."""
+    chat_request = _chat_request_from(await _body_of(request))
     runtime = await _get_runtime(request)
     result = await runtime.service.reply(chat_request)
     if not _service_result_is_valid(chat_request, result):
         result = _invalid_service_result(chat_request)
     return web.json_response(_result_payload(result), status=_http_status(result))
+
+
+# Nhịp gom sự kiện gửi ra trình duyệt. Model viết ~4 token/giây (đo nền
+# 11/09), nên 10 lần/giây là dư; gom lại thì bản nháp chỉ gửi bản MỚI NHẤT.
+_NHIP_GUI_S = 0.1
+
+
+async def api_chat_stream(request: web.Request) -> web.StreamResponse:
+    """Như `/api/chat`, nhưng gửi dần từng dòng NDJSON (11/09/2026).
+
+    Thứ tự: `buoc` (công đoạn) · `nhap` (bản nháp ĐÃ CHE) · đúng MỘT `xong`
+    mang nguyên các trường của `/api/chat`. `xong` luôn là dòng cuối, với MỌI
+    trạng thái — `timeout`, `rejected`, `backend_error` cũng thế.
+
+    Cùng một `ChatService.reply` với `/api/chat`: cùng bộ che, cùng cửa kiểm
+    nguồn, cùng lần ghi sổ. Tuyến này chỉ thêm đường cho người xem nhìn vào.
+    """
+    chat_request = _chat_request_from(await _body_of(request))
+    runtime = await _get_runtime(request)
+    response = web.StreamResponse(
+        headers={
+            "Content-Type": "application/x-ndjson; charset=utf-8",
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+        }
+    )
+    await response.prepare(request)
+
+    hang: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+    viec = asyncio.create_task(
+        runtime.service.reply(chat_request, theo_doi=hang.put_nowait)
+    )
+    con_nguoi_nghe = True
+
+    async def gui(su_kien: dict[str, Any]) -> None:
+        nonlocal con_nguoi_nghe
+        if not con_nguoi_nghe:
+            return
+        try:
+            await response.write(
+                (json.dumps(su_kien, ensure_ascii=False) + "\n").encode("utf-8")
+            )
+        except (ConnectionError, RuntimeError):
+            # Trình duyệt đóng giữa chừng: THÔI GỬI, nhưng lượt vẫn chạy nốt và
+            # vào sổ — y như `/api/chat` khi Sếp đóng tab (aiohttp 3.14 mặc định
+            # không huỷ handler khi mất kết nối).
+            con_nguoi_nghe = False
+
+    async def gui_het() -> None:
+        nhap_moi_nhat: dict[str, Any] | None = None
+        while not hang.empty():
+            su_kien = hang.get_nowait()
+            if su_kien.get("loai") == "nhap":
+                nhap_moi_nhat = su_kien
+                continue
+            if nhap_moi_nhat is not None:
+                await gui(nhap_moi_nhat)
+                nhap_moi_nhat = None
+            await gui(su_kien)
+        if nhap_moi_nhat is not None:
+            await gui(nhap_moi_nhat)
+
+    try:
+        while not viec.done():
+            await asyncio.wait({viec}, timeout=_NHIP_GUI_S)
+            await gui_het()
+        await gui_het()
+    except asyncio.CancelledError:
+        viec.cancel()
+        raise
+
+    if viec.cancelled() or viec.exception() is not None:
+        result = _invalid_service_result(chat_request)
+    else:
+        result = viec.result()
+        if not _service_result_is_valid(chat_request, result):
+            result = _invalid_service_result(chat_request)
+    await gui({"loai": "xong", "http": _http_status(result), **_result_payload(result)})
+    if con_nguoi_nghe:
+        try:
+            await response.write_eof()
+        except (ConnectionError, RuntimeError):
+            pass
+    return response
 
 
 # --------------------------------------------------------------------------- #
@@ -266,6 +352,8 @@ def attach_chat_routes(app: web.Application) -> None:
     app.router.add_get("/chat", chat_page)
     app.router.add_get("/api/chat/history", api_history)
     app.router.add_post("/api/chat", api_chat)
+    # Đi CẶP với `/api/chat`: `chat.html` gọi tuyến này, thiếu nó là trang 404.
+    app.router.add_post("/api/chat/stream", api_chat_stream)
     app.router.add_get("/memory", memory_page)
     for method in ("GET", "POST", "PUT", "DELETE"):
         app.router.add_route(method, "/api/memory", api_memory)

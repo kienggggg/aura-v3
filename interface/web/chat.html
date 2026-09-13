@@ -56,6 +56,11 @@ button{background:var(--me);color:#fff;border:0;border-radius:10px;padding:0 20p
 button:disabled{opacity:.5;cursor:default}
 .empty{color:var(--muted);text-align:center;margin:auto;max-width:420px}
 .think{color:var(--muted);font-style:italic}
+/* Bản nháp lúc model còn đang viết: viền đứt, để không ai nhầm nó với câu đã
+   qua mọi cửa kiểm. */
+.aura .bubble.nhap{border-style:dashed}
+.bubble details{margin-top:6px;white-space:pre-wrap}
+.bubble summary{cursor:pointer}
 /* Thanh chọn phòng.
    Đặt tên theo VIỆC, không theo tên riêng (AURA/Alpha/Beta/Omega): ba tuần
    nữa mở lên thì "Beta" không tự nói nó làm gì, còn "Dựng" thì có. Nhãn phụ
@@ -101,7 +106,12 @@ button:disabled{opacity:.5;cursor:default}
 
 <script>
 const MAX_TEXT_CODEPOINTS = 12000;
-const CLIENT_TIMEOUT_MS = 105000;
+// Trần chờ phải DÀI HƠN trần của máy chủ, không thì màn hình và sổ nói hai
+// chuyện. Trước 11/09/2026 số này là 105000 trong khi đường có nguồn được tới
+// 180 giây (`_HAN_GIO_CO_NGUON`) cộng 2 giây ân hạn ghi sổ: câu xong ở giây
+// 106–180 hiện "quá thời gian" mà vẫn vào sổ như lượt thành công.
+// `tests/test_stream_chat.py` đọc cả hai số từ mã, không chép tay.
+const CLIENT_TIMEOUT_MS = 200000;
 
 function freshUuid(){
   if (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') {
@@ -272,15 +282,63 @@ function bubble(role, text, meta, sources){
 
 // Đồng hồ đếm khi AURA đang nghĩ. Chính vì KHÔNG có thứ này mà Sếp từng tưởng
 // AURA điếc: nó nghĩ 300 giây và màn hình không nói gì cả.
+//
+// 11/09/2026: đồng hồ thôi chưa đủ. Đo nền đường có nguồn: tra mạng 5–17 giây,
+// rồi model ĐỌC khối nguồn thêm 44–57 giây trước chữ đầu tiên. Nên bong bóng
+// nói đang ở công đoạn nào, và hiện bản nháp (đã che) ngay khi có chữ.
 function thinking(){
   const b = bubble('aura', 'AURA đang nghĩ… 0s');
   b.classList.add('think');
   const t0 = Date.now();
-  const timer = setInterval(() => {
-    const s = Math.round((Date.now() - t0) / 1000);
-    b.textContent = `AURA đang nghĩ… ${s}s`;
-  }, 1000);
-  return {node: b, stop: () => clearInterval(timer)};
+  let nhan = 'AURA đang nghĩ…';
+  let nhap = '';
+  const giay = () => Math.round((Date.now() - t0) / 1000);
+  const ve = () => {
+    if (!nhap) {
+      b.classList.add('think');
+      b.classList.remove('nhap');
+      b.textContent = `${nhan} ${giay()}s`;
+      return;
+    }
+    b.classList.remove('think');
+    b.classList.add('nhap');
+    b.replaceChildren(dichMarkdown(nhap));
+    const m = document.createElement('div');
+    m.className = 'meta';
+    m.textContent = `đang viết… ${giay()}s · bản nháp, chưa qua hết cửa kiểm`;
+    b.appendChild(m);
+  };
+  const timer = setInterval(ve, 1000);
+  return {
+    node: b,
+    stop: () => clearInterval(timer),
+    buoc: ev => {
+      if (ev.buoc === 'web_search') nhan = 'AURA đang tra mạng…';
+      if (ev.buoc === 'model_call') {
+        nhan = ev.so_nguon > 0 ? `AURA đang đọc ${ev.so_nguon} nguồn…` : 'AURA đang nghĩ…';
+        // Một lượt gọi model MỚI: bản nháp của lượt trước không còn là của nó.
+        nhap = '';
+      }
+      ve();
+    },
+    nhap: chu => { nhap = typeof chu === 'string' ? chu : ''; ve(); log.scrollTop = log.scrollHeight; },
+    banNhap: () => nhap,
+  };
+}
+
+// Bản nháp đã hiện mà câu cuối KHÔNG nối tiếp nó — quá giờ, mượn thầy, nguồn
+// bị loại. Đừng để nó biến mất lặng lẽ: Sếp đã đọc nó rồi. Nhưng nó không phải
+// câu trả lời và không vào sổ, nên nói thẳng như thế, và để chữ thường.
+function giuBanNhap(b, nhap){
+  const hop = document.createElement('details');
+  hop.className = 'meta';
+  const tieuDe = document.createElement('summary');
+  tieuDe.textContent = 'Bản nháp đã hiện lúc AURA đang viết — KHÔNG vào sổ';
+  const than = document.createElement('div');
+  than.textContent = nhap;
+  hop.appendChild(tieuDe);
+  hop.appendChild(than);
+  b.appendChild(hop);
 }
 
 // Cửa này là AURA nào, chạy mã sửa lần cuối lúc nào.  10/08/2026: một tab mở
@@ -380,7 +438,9 @@ async function ask(){
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);
   try {
-    const res = await fetch('/api/chat', {
+    // Tuyến STREAM (11/09/2026): cùng `ChatService.reply` với `/api/chat`,
+    // gửi dần từng dòng JSON — `buoc` · `nhap` · rồi đúng một `xong`.
+    const res = await fetch('/api/chat/stream', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       // `phong` chỉ gửi khi Sếp CHỌN. Không chọn thì không có trường này,
@@ -390,26 +450,49 @@ async function ask(){
         : {text, session_id: SID}),
       signal: controller.signal,
     });
-    const raw = await res.text();
-    let data;
-    try {
-      data = JSON.parse(raw);
-    } catch (_error) {
-      throw new Error(`Máy chủ trả dữ liệu không hợp lệ (HTTP ${res.status}).`);
+    if (!res.body) throw new Error(`Máy chủ không trả dòng dữ liệu (HTTP ${res.status}).`);
+    const reader = res.body.getReader();
+    const giaiMa = new TextDecoder();
+    let dem = '';
+    let data = null;
+    for (;;) {
+      const {value, done} = await reader.read();
+      if (value) dem += giaiMa.decode(value, {stream: true});
+      let cuoi;
+      while ((cuoi = dem.indexOf('\n')) >= 0) {
+        const raw = dem.slice(0, cuoi);
+        dem = dem.slice(cuoi + 1);
+        if (!raw.trim()) continue;
+        let ev;
+        try {
+          ev = JSON.parse(raw);
+        } catch (_error) {
+          throw new Error(`Máy chủ trả dữ liệu không hợp lệ (HTTP ${res.status}).`);
+        }
+        if (ev.loai === 'buoc') busy.buoc(ev);
+        else if (ev.loai === 'nhap') busy.nhap(ev.chu);
+        else if (ev.loai === 'xong') data = ev;
+      }
+      if (done) break;
     }
+    if (!data) throw new Error('mất kết nối trước khi AURA trả lời xong.');
+    const nhap = busy.banNhap();
     busy.stop(); busy.node.parentElement.remove();
     const visible = typeof data.text === 'string' && data.text.trim()
-      ? data.text : `AURA không có câu trả lời hợp lệ (HTTP ${res.status}).`;
+      ? data.text : `AURA không có câu trả lời hợp lệ (HTTP ${data.http || res.status}).`;
     const seconds = Number.isFinite(data.latency_ms)
       ? `${(data.latency_ms / 1000).toFixed(1)}s · ` : '';
-    bubble('aura', visible, `${seconds}${data.status || `HTTP ${res.status}`}`,
-           data.sources || []);
+    const b = bubble('aura', visible, `${seconds}${data.status || `HTTP ${res.status}`}`,
+                     data.sources || []);
+    if (nhap && !visible.startsWith(nhap)) giuBanNhap(b, nhap);
   } catch (err) {
+    const nhap = busy.banNhap();
     busy.stop(); busy.node.parentElement.remove();
     const message = err && err.name === 'AbortError'
       ? '⚠️ Đã dừng chờ vì AURA quá thời gian trả lời.'
       : '⚠️ Không gọi được AURA: ' + err;
-    bubble('aura', message);
+    const b = bubble('aura', message);
+    if (nhap) giuBanNhap(b, nhap);
   } finally {
     clearTimeout(timeout);
     send.disabled = false;

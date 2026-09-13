@@ -26,7 +26,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Protocol, Sequence
+from typing import Any, Callable, Protocol, Sequence
 
 import httpx
 
@@ -199,6 +199,11 @@ def looks_weak(text: str) -> bool:
 class OllamaGateway:
     """Cổng local, bất đồng bộ và huỷ được — không luồng nền nào sống sót."""
 
+    # Cổng này STREAM ĐƯỢC. `ChatService` chỉ đưa `khi_co_chu` cho cổng nào tự
+    # khai như vậy — cổng cloud và các cổng giả trong test không khai, nên
+    # không phải sửa dòng nào của chúng.
+    stream_duoc = True
+
     def __init__(
         self,
         config: OllamaConfig | None = None,
@@ -318,12 +323,97 @@ class OllamaGateway:
         messages.append({"role": "user", "content": text})
         return messages
 
+    def _url_chat(self) -> str:
+        return f"{self._config.host.rstrip('/')}/api/chat"
+
+    async def _doc_mot_lan(self, payload: dict[str, Any]) -> str:
+        """Đường cũ: chờ trọn câu trả lời rồi mới đọc."""
+        try:
+            response = await self._client.post(self._url_chat(), json=payload)
+        except httpx.TimeoutException as error:
+            raise ModelGatewayTimeout("local model request timed out") from error
+        except (httpx.HTTPError, OSError) as error:
+            raise LocalModelUnreachable("local model unreachable") from error
+
+        if not 200 <= response.status_code < 300:
+            raise ModelGatewayError(f"local model returned HTTP {response.status_code}")
+        try:
+            body = response.json()
+            message = body["message"]
+            return str(message.get("content") or "").strip()
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+            raise ModelGatewayError("local model returned an invalid response") from error
+
+    async def _doc_tung_manh(
+        self, payload: dict[str, Any], khi_co_chu: Callable[[str], None]
+    ) -> str:
+        """Đọc TỪNG MẢNH, đưa bản thô đã gom cho `khi_co_chu` (11/09/2026).
+
+        Đo nền: câu "giải thích đệ quy" có chữ đầu tiên ở giây 17,2 mà xong ở
+        giây 71,5 — 54 giây chữ đã có sẵn trong máy mà màn hình vẫn trắng.
+
+        TRẢ VỀ Y HỆT ĐƯỜNG MỘT LẦN: cùng văn bản, cùng các loại lỗi. Mọi cửa
+        kiểm phía sau đọc văn bản ĐẦY ĐỦ, không đọc mảnh — stream chỉ để nhìn.
+        Bản thô đưa ra ở đây CHƯA qua bộ che; `ChatService` cắt nó bằng
+        `_phan_duoc_hien` rồi che, trước khi bất cứ chữ nào lên màn hình.
+        """
+        manh: list[str] = []
+        xong = False
+        try:
+            async with self._client.stream(
+                "POST", self._url_chat(), json=payload
+            ) as response:
+                if not 200 <= response.status_code < 300:
+                    raise ModelGatewayError(
+                        f"local model returned HTTP {response.status_code}"
+                    )
+                async for dong in response.aiter_lines():
+                    if not dong.strip():
+                        continue
+                    try:
+                        goi = json.loads(dong)
+                        phan = str((goi.get("message") or {}).get("content") or "")
+                        loi = goi.get("error")
+                        het = bool(goi.get("done"))
+                    except (AttributeError, TypeError, ValueError) as error:
+                        raise ModelGatewayError(
+                            "local model returned an invalid response"
+                        ) from error
+                    if loi:
+                        raise ModelGatewayError("local model returned an error")
+                    if phan:
+                        manh.append(phan)
+                        if khi_co_chu is not None:
+                            # Người xem hỏng thì thôi gọi, câu trả lời không
+                            # được hỏng theo — hiển thị không phải cửa chấm.
+                            try:
+                                khi_co_chu("".join(manh))
+                            except Exception:
+                                logger.warning(
+                                    "Bỏ hiển thị bản nháp: khi_co_chu hỏng.",
+                                    exc_info=True,
+                                )
+                                khi_co_chu = None
+                    if het:
+                        xong = True
+                        break
+        except httpx.TimeoutException as error:
+            raise ModelGatewayTimeout("local model request timed out") from error
+        except (httpx.HTTPError, OSError) as error:
+            raise LocalModelUnreachable("local model unreachable") from error
+        # Đứt giữa chừng mà không có dòng `done` thì đó là câu trả lời CỤT —
+        # đường một lần sẽ không bao giờ trả về nửa câu, đường này cũng không.
+        if not xong:
+            raise ModelGatewayError("local model stream ended before it was done")
+        return "".join(manh).strip()
+
     async def generate(
         self,
         request: ChatRequest,
         *,
         history: Sequence[ChatMessage] = (),
         sources: Sequence[SourceCitation] = (),
+        khi_co_chu: Callable[[str], None] | None = None,
     ) -> ModelReply:
         # THỨ MÁY BIẾT CHẮC THÌ ĐỪNG HỎI MODEL.
         #
@@ -348,7 +438,7 @@ class OllamaGateway:
         payload = {
             "model": self._config.model,
             "messages": self._messages(request, history=history, sources=sources),
-            "stream": False,
+            "stream": khi_co_chu is not None,
             "think": self._config.think,
             "keep_alive": self._config.keep_alive,
             "options": {
@@ -357,23 +447,10 @@ class OllamaGateway:
                 "temperature": self._config.temperature,
             },
         }
-        try:
-            response = await self._client.post(
-                f"{self._config.host.rstrip('/')}/api/chat", json=payload
-            )
-        except httpx.TimeoutException as error:
-            raise ModelGatewayTimeout("local model request timed out") from error
-        except (httpx.HTTPError, OSError) as error:
-            raise LocalModelUnreachable("local model unreachable") from error
-
-        if not 200 <= response.status_code < 300:
-            raise ModelGatewayError(f"local model returned HTTP {response.status_code}")
-        try:
-            body = response.json()
-            message = body["message"]
-            text = str(message.get("content") or "").strip()
-        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
-            raise ModelGatewayError("local model returned an invalid response") from error
+        if khi_co_chu is not None:
+            text = await self._doc_tung_manh(payload, khi_co_chu)
+        else:
+            text = await self._doc_mot_lan(payload)
 
         # Model biết suy nghĩ tiêu ngân sách cho phần nghĩ thầm rồi trả rỗng —
         # đúng con số 512 từng làm AURA câm nhiều tháng.  Ở đây rỗng nghĩa là
@@ -431,6 +508,12 @@ class LocalFirstGateway:
         """Tầm nhìn của bậc thang = tầm nhìn của trò, vì trò luôn đi trước."""
         return getattr(self._local, "history_window", 0)
 
+    @property
+    def stream_duoc(self) -> bool:
+        """Stream được khi — và chỉ khi — trò stream được. Thầy không stream:
+        lượt mượn thầy thì bản nháp của trò bị câu của thầy thay hẳn."""
+        return bool(getattr(self._local, "stream_duoc", False))
+
     async def aclose(self) -> None:
         for gateway in (self._local, self._cloud):
             closer = getattr(gateway, "aclose", None)
@@ -450,11 +533,15 @@ class LocalFirstGateway:
         *,
         history: Sequence[ChatMessage] = (),
         sources: Sequence[SourceCitation] = (),
+        khi_co_chu: Callable[[str], None] | None = None,
     ) -> ModelReply:
         self.last_escalation = Escalation()
+        # Chỉ đưa `khi_co_chu` xuống khi có: trò giả trong test nhận đúng
+        # `generate(request, *, history, sources)`, không hơn.
+        stream = {"khi_co_chu": khi_co_chu} if khi_co_chu is not None else {}
         try:
             reply = await self._local.generate(
-                request, history=history, sources=sources
+                request, history=history, sources=sources, **stream
             )
         except ModelGatewayError as error:
             # Trò gục -> mượn thầy.  Nếu thầy cũng vắng thì để lỗi gốc nổi lên,

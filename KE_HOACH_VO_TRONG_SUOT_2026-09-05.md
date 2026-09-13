@@ -2,15 +2,20 @@
 
 *Gửi Sếp duyệt trước khi viết dòng mã nào. Theo `CLAUDE.md` mục 7.*
 
-<!-- KET_CUC:GIAO_MOT_NUA · 10/09/2026 -->
-**Trạng thái: GIAO MỘT NỬA.** Kiểm trên đĩa 10/09/2026:
+<!-- KET_CUC:GIAO_MOT_NUA · 11/09/2026 -->
+**Trạng thái: GIAO MỘT NỬA.** Kiểm trên đĩa 11/09/2026:
 
 ```
-mốc tiến độ    ĐÃ CÓ    interface/noi_bo_api.py: _ghi_tien_do · /api/tien_do/{id}
-                        data/tien_do/<id>.jsonl · noi_bo_app.py có tuyến
-stream token   CHƯA     "stream": False vẫn ở CẢ BỐN chỗ —
-                        local_first_gateway · omega · phong_noi_bo · viet_truyen
+mốc tiến độ          ĐÃ CÓ   interface/noi_bo_api.py: _ghi_tien_do · /api/tien_do/{id}
+                             data/tien_do/<id>.jsonl · noi_bo_app.py có tuyến
+stream KHUNG CHAT    ĐÃ CÓ   11/09 — NGOÀI mục 3b, Sếp gật riêng. local_first_gateway
+                             stream khi có người xem · /api/chat/stream · CHOT:stream-chat
+stream bước `aura`   CHƯA    "stream": False vẫn ở BA chỗ của dây chuyền —
+                             omega · phong_noi_bo · viet_truyen (mục 3b đúng nghĩa)
 ```
+
+Dòng thứ hai **không phải** mục 3b: 3b là bước `aura` của dây chuyền phòng. Khung
+chat là phạm vi Sếp gật ngày 11/09, ngưỡng đăng ký riêng ở `KY_LUAT_THUC_THI.md`.
 
 Mục 2 của chính kế hoạch này viết *"hai cơ chế, không cái nào thay cái nào"*.
 Một nửa đã dựng, nửa kia chưa — và **không có dòng nào trong tệp nói ra điều

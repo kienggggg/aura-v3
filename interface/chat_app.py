@@ -107,6 +107,10 @@ def create_chat_app(
     app.router.add_get("/", chat_api.chat_page)
     app.router.add_get("/api/status", api_status)
     app.router.add_post("/api/chat", chat_api.api_chat)
+    # Mở thêm CÓ CHỦ Ý 11/09/2026 (`CHOT:stream-chat`): cùng `ChatService.reply`
+    # với `/api/chat`, chỉ gửi dần công đoạn và bản nháp đã che. Đo nền: câu
+    # "giải thích đệ quy" có chữ ở giây 17 mà màn hình trắng tới giây 71.
+    app.router.add_post("/api/chat/stream", chat_api.api_chat_stream)
     app.router.add_get("/api/chat/history", chat_api.api_history)
     # Trang "AURA nhớ gì về tôi".  Đã xây từ 09/08 (memory.html + user_memory.py
     # + test riêng) nhưng CHƯA BAO GIỜ được nối vào cửa trước độc lập này —

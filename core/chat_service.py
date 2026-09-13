@@ -6,9 +6,10 @@ this module performs no I/O and starts no background task.
 from __future__ import annotations
 
 import asyncio
+import re
 from dataclasses import dataclass, replace
 from time import monotonic
-from typing import Awaitable, Protocol, Sequence, TypeVar
+from typing import Any, Awaitable, Callable, Protocol, Sequence, TypeVar
 
 from core.chat_contract import (
     CHAT_STAGE_HISTORY,
@@ -220,6 +221,15 @@ class _NullWebSearch:
 # trần nên một cái sổ treo cũng không giữ Sếp lại thêm được bao lâu.
 _AN_HAN_GHI_SO = 2.0
 
+# Nhịp che bản nháp: nhiều nhất 10 lần mỗi giây. Đo 11/09/2026: che lại ở mỗi
+# điểm cắt thì 3.000 ký tự đưa từng ký tự một mất 0,609 s — 788 lần che × 0,62
+# ms, vì từ tiếng Việt ngắn nên cứ ~3,8 ký tự điểm cắt lại dời. Tầng HTTP cũng
+# chỉ gửi 10 lần mỗi giây, nên bản che dày hơn không kịp lên màn hình. Model
+# thật viết ~4 token/giây (~250 ms một mảnh) nên nhịp này không bao giờ chặn ở
+# đường thật; nó chỉ chặn khi mảnh dồn tới, và giữ chi phí có trần bất kể mảnh
+# cắt ra sao. Cửa canh an toàn đặt nhịp 0 để soi MỌI trạng thái trung gian.
+_NHIP_BAN_NHAP_S = 0.1
+
 # Hạn giờ cho lượt PHẢI ĐỌC NGUỒN. Xem chú thích ở chỗ dùng: tra mạng 7,1 giây,
 # phần còn lại là model đọc nguồn rồi viết ở 5,05 tok/s. 90 giây không đủ.
 _HAN_GIO_CO_NGUON = 180.0
@@ -244,6 +254,51 @@ def _bo_co_noi_bo(value: object) -> str:
     if not isinstance(value, str):
         return ""
     return value.replace(_WEB_SENTINEL, "").strip()
+
+
+# BẢN NHÁP LÊN MÀN HÌNH TRƯỚC MỌI CỬA KIỂM — nên nó phải tự an toàn (11/09/2026).
+#
+# Bộ che bí mật chỉ nhận ra một bí mật khi thấy ĐỦ nó: `cookie: …` đòi ≥ 8 ký
+# tự, `password = "a b c"` đòi dấu nháy đóng. Che từng mảnh thì nửa đầu bí mật
+# lên màn hình trước khi bộ che kịp nhận ra. Chạy thử 27 mẫu phủ 21/21 mẫu che,
+# stream từng ký tự một: 0 lọt; gỡ bất kỳ luật nào dưới đây thì có ca lọt.
+#
+# Bất biến canh ở `tests/test_stream_chat.py`: bản nháp nào hiện ra cũng phải
+# là PHẦN ĐẦU của câu cuối đã che. Không phải thì có chữ đã hiện rồi mới bị che.
+_TU_KHOA_BI_MAT = re.compile(
+    r"(?i)password|passwd|pwd|m[aậ]t\s*kh[aẩ]u|api[_ -]?key|access[_ -]?token|"
+    r"refresh[_ -]?token|bot[_ -]?token|token|secret|bearer|authorization|"
+    r"cookie|\botp\b|one[- ]?time|m[aã]\s*x[aá]c\s*nh[aậ]n"
+)
+_DAU_NHAY = "\"'“”‘’`"
+
+
+def _phan_duoc_hien(tho: str) -> str:
+    """Phần của bản nháp THÔ được phép đưa qua bộ che rồi lên màn hình.
+
+    Chỉ CẮT, chưa che. Tách riêng vì che mới là bước đắt (21 mẫu trên toàn bộ
+    phần đã viết): đo 11/09, che lại ở MỖI ký tự thì 3.000 ký tự mất 2,083 s.
+    Phần được hiện chỉ đổi khi điểm cắt dời — ở khoảng trắng — nên người gọi
+    so kết quả hàm này với lần trước và chỉ che khi nó khác.
+    """
+    chu = (tho or "").replace(_WEB_SENTINEL, "").lstrip()
+    # "SEARCH: …" là tín hiệu định tuyến, không phải câu trả lời.
+    if chu[:7].upper() == "SEARCH:":
+        return ""
+    moc = chu.rfind("\n")
+    tron, dang_viet = chu[: moc + 1], chu[moc + 1 :]
+    dong_truoc = next((d for d in reversed(tron.split("\n")) if d.strip()), "")
+    if (
+        _TU_KHOA_BI_MAT.search(dang_viet)          # cookie: ab cdefghijk
+        or _TU_KHOA_BI_MAT.search(dong_truoc)      # cookie:\nabc defghijk
+        or any(c in dang_viet for c in _DAU_NHAY)  # mật khẩu\nwifi\nlà:\n"a b"
+    ):
+        hien = tron
+    else:
+        # Từ đang viết dở thì chưa hiện: một khoá `sk-…` chỉ bị che khi đủ dài.
+        cat = max(dang_viet.rfind(" "), dang_viet.rfind("\t"))
+        hien = tron + (dang_viet[: cat + 1] if cat >= 0 else "")
+    return hien if hien.strip() else ""
 
 _QUEN_DAU_CHUYEN = (
     "😅 Em không trả lời được câu này — và nhiều khả năng là do em QUÊN chứ "
@@ -352,9 +407,13 @@ class ChatService:
         web: WebSearchGateway | None = None,
         freshness_policy: FreshnessPolicy | None = None,
         timeout_s: float = 20.0,
+        nhip_ban_nhap_s: float = _NHIP_BAN_NHAP_S,
     ) -> None:
         if timeout_s <= 0:
             raise ValueError("timeout_s must be positive")
+        if nhip_ban_nhap_s < 0:
+            raise ValueError("nhip_ban_nhap_s must not be negative")
+        self._nhip_ban_nhap_s = float(nhip_ban_nhap_s)
         self._model = model
         self._store = store
         self._guard = guard
@@ -366,9 +425,72 @@ class ChatService:
         )
         self._timeout_s = float(timeout_s)
 
-    async def reply(self, request: ChatRequest) -> ChatResult:
+    async def reply(
+        self,
+        request: ChatRequest,
+        *,
+        theo_doi: Callable[[dict[str, Any]], None] | None = None,
+    ) -> ChatResult:
         started = monotonic()
         deadline = started + self._timeout_s
+
+        # THEO DÕI chỉ để NHÌN (11/09/2026, `CHOT:stream-chat`): công đoạn nào
+        # đang chạy, và bản nháp ĐÃ CHE. Không cửa chấm nào đọc nó, và nó hỏng
+        # thì lượt vẫn chạy y như không có nó. Đo nền: đường có nguồn mất 44–57
+        # giây chỉ để model ĐỌC khối nguồn — stream không rút được khúc ấy, nên
+        # nó phải có tên trên màn hình thay vì im lặng.
+        da_hien = [""]
+        da_cat = [""]
+        lan_che = [0.0]
+
+        def _bao(su_kien: dict[str, Any]) -> None:
+            nonlocal theo_doi
+            if theo_doi is None:
+                return
+            try:
+                theo_doi(su_kien)
+            except Exception:
+                theo_doi = None
+
+        def _khi_co_chu(tho: str) -> None:
+            if theo_doi is None:
+                return
+            hien = _phan_duoc_hien(tho)
+            if hien == da_cat[0]:
+                return      # điểm cắt chưa dời: bản nháp không đổi, khỏi che lại
+            bay_gio = monotonic()
+            if bay_gio - lan_che[0] < self._nhip_ban_nhap_s:
+                return      # chưa hết một nhịp gửi: bản này không kịp lên màn hình
+            lan_che[0] = bay_gio
+            da_cat[0] = hien
+            try:
+                nhap = (
+                    _bo_co_noi_bo(
+                        self._guard.scrub_output(OutwardContent(text=hien)).text
+                    )
+                    if hien
+                    else ""
+                )
+            except Exception:
+                # Bộ che hỏng thì KHÔNG hiện gì. Không bao giờ hiện bản chưa che.
+                return
+            # Chỉ gửi khi bản nháp DÀI THÊM. Luật giữ lại có lúc làm nó ngắn đi
+            # (vừa gặp từ khoá); chữ đã hiện vẫn là phần đầu của câu cuối, nên
+            # để yên thay vì xoá đi rồi hiện lại.
+            if da_hien[0].startswith(nhap):
+                return
+            da_hien[0] = nhap
+            _bao({"loai": "nhap", "chu": nhap})
+
+        def _stream(so_nguon: int) -> dict[str, Any]:
+            """Báo "sắp gọi model", và cho cổng stream khi nó tự khai được."""
+            da_hien[0] = ""
+            da_cat[0] = ""
+            lan_che[0] = 0.0
+            _bao({"loai": "buoc", "buoc": CHAT_STAGE_MODEL, "so_nguon": so_nguon})
+            if theo_doi is None or not getattr(self._model, "stream_duoc", False):
+                return {}
+            return {"khi_co_chu": _khi_co_chu}
 
         # Lượt đang đứng ở bước nào. Gán lại NGAY TRƯỚC mỗi chỗ chờ, để nhánh
         # `except` nào cũng đọc được bước cuối cùng thật sự chạm tới. Không có
@@ -508,6 +630,7 @@ class ChatService:
                 deadline = max(deadline, started + _HAN_GIO_CO_NGUON)
                 da_goi_mang = True
                 stage = CHAT_STAGE_WEB
+                _bao({"loai": "buoc", "buoc": CHAT_STAGE_WEB})
                 sources = await self._search_with_evidence(safe_request, deadline)
                 stage = CHAT_STAGE_MODEL
                 final_reply = await _before_deadline(
@@ -515,13 +638,17 @@ class ChatService:
                         safe_request,
                         history=history,
                         sources=sources,
+                        **_stream(len(sources)),
                     ),
                     deadline,
                 )
             else:
                 stage = CHAT_STAGE_MODEL
                 initial = await _before_deadline(
-                    self._model.generate(safe_request, history=history), deadline
+                    self._model.generate(
+                        safe_request, history=history, **_stream(0)
+                    ),
+                    deadline,
                 )
                 final_reply = initial
                 if initial.requires_web and (
@@ -546,6 +673,7 @@ class ChatService:
                 if initial.requires_web:
                     da_goi_mang = True
                     stage = CHAT_STAGE_WEB
+                    _bao({"loai": "buoc", "buoc": CHAT_STAGE_WEB})
                     sources = await self._search_with_evidence(
                         safe_request,
                         deadline,
@@ -557,6 +685,7 @@ class ChatService:
                             safe_request,
                             history=history,
                             sources=sources,
+                            **_stream(len(sources)),
                         ),
                         deadline,
                     )

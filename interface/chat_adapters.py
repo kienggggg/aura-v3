@@ -241,7 +241,7 @@ class BoundedChatService:
     def active(self) -> int:
         return self._active
 
-    async def reply(self, request: ChatRequest):
+    async def reply(self, request: ChatRequest, *, theo_doi=None):
         from core.chat_contract import ChatResult, ChatStatus
 
         if self._active >= self._limit:
@@ -256,6 +256,10 @@ class BoundedChatService:
             )
         self._active += 1
         try:
+            # `theo_doi` chỉ đi xuống khi có: lõi giả trong test nhận đúng
+            # `reply(request)`. Trần vẫn đếm y hệt — lượt stream cũng là một lượt.
+            if theo_doi is not None:
+                return await self._inner.reply(request, theo_doi=theo_doi)
             return await self._inner.reply(request)
         finally:
             self._active -= 1

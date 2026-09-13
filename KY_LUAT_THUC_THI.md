@@ -3485,3 +3485,130 @@ ra LAN**.
 **Phép đo phải chứng minh cả hai chiều.** Mỗi lớp một ca CHẶN và một ca ĐI QUA
 — một cổng chưa từng cho ai đi qua thì không chứng minh được nó đang chặn đúng
 người, mà chỉ chứng minh nó chặn tất cả.
+
+<!-- CHOT:stream-chat -->
+### Chữ hiện dần ở khung chat — đăng ký 11/09/2026, TRƯỚC khi viết mã
+
+**Phạm vi, nói trước.** `KE_HOACH_VO_TRONG_SUOT_2026-09-05.md` mục 3b duyệt
+stream cho **bước `aura` của dây chuyền phòng** (`_xin_model`) — không phải khung
+chat. Ngày 11/09 Sếp gật *"hiện chữ dần khi AURA đang trả lời"* cho **khung
+chat**. Phạm vi mới, nên ngưỡng mới đăng ký ở đây. Bước `aura` của dây chuyền
+**vẫn CHƯA**.
+
+**Nền — gọi Ollama thẳng bằng ĐÚNG lời nhắc của `OllamaGateway._messages`,
+`stream: True`, 5 câu × 2 vòng xen kẽ. Mốc tính từ lúc gọi model:**
+
+```
+                         tra    chữ đầu  TỪ trọn đầu  DÒNG trọn đầu   xong
+đệ quy        tự nghĩ     —      17,2       17,8          32,0        71,5
+                          —      16,3       16,7          25,3        62,2
+list/tuple    tự nghĩ     —      14,9       15,1          31,8        50,7
+                          —      17,4       17,8          27,7       133,1
+thơ bốn câu   tự nghĩ     —      20,6       21,1          22,9        29,7
+                          —      24,6       25,5          27,2        35,1
+giá vàng SJC  có nguồn  16,6     53,7       54,0          76,0        76,0
+                        10,3     58,9       59,4          82,3        82,3
+closure JS    có nguồn   5,0     44,8       45,1          74,0        74,0
+                         5,9     51,6       51,6          70,5        89,9
+```
+
+**Ba điều phép đo buộc thiết kế phải có:**
+
+1. **Stream chỉ rút được khúc VIẾT.** Khúc model ĐỌC lời nhắc là 15–23 s ở
+   đường tự nghĩ (399–547 token) và **44–57 s** ở đường có nguồn (1.077–1.343
+   token) — stream không chạm tới. Khúc ấy phải có **nhãn công đoạn** (*đang
+   tra mạng · đang đọc N nguồn*), không thì hơn một phút vẫn là màn hình câm.
+2. **Hiện theo DÒNG trọn là mất lợi ích.** Đường có nguồn trả lời một dòng:
+   **3/4 lượt dòng trọn đầu tiên = lúc xong**. Phải hiện theo TỪ.
+3. **Bộ che bí mật cần thấy ĐỦ một bí mật mới che được.** `cookie: …` đòi ≥ 8
+   ký tự; `password = "a b c"` đòi dấu nháy đóng. Che từng mảnh thì nửa đầu bí
+   mật lên màn hình trước khi bộ che nhận ra. Chạy thử trên nháp 27 mẫu, từng ký
+   tự một: **giữ lại cả dòng đang viết** khi dòng ấy — hoặc dòng không trống
+   ngay trước — có từ khoá bí mật, hoặc dòng đang viết có dấu nháy; còn lại
+   **cắt ở khoảng trắng cuối**. Gỡ từng luật một: **5/5 luật đều có ca lọt**.
+
+**Lỗi CÓ SẴN lộ ra trong phép đo nền, không do stream gây ra:** list/tuple vòng
+2 viết 414 token, xong ở **133,1 s** — quá trần 90 s của đường tự nghĩ, tức
+`timeout` trên app thật. Không nới trần ở đây: đó là quyết định của Sếp. Nhưng
+bản nháp dở phải **hiện ra, ghi rõ không vào sổ** — không biến mất lặng lẽ.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| chữ đầu tiên, tính từ lúc gọi model | mỗi câu: trung vị ≤ nền "từ trọn đầu" + 5,0 s — 5/5 câu |
+| tổng thời gian, stream so với không stream | trung vị ≤ × 1,15, đo xen kẽ |
+| chi phí dựng bản nháp, 3.000 ký tự từng ký tự một | ≤ 0,5 s |
+| bản nháp là phần đầu của câu cuối đã che | 100 % — mọi mẫu, từng ký tự một |
+| mẫu che có ca bí mật kích hoạt | 21/21 |
+| luật giữ lại gỡ ra thì có ca lọt | 5/5 |
+| kết quả cuối có / không theo dõi | giống hệt: status · text · sources · used_web · sổ phiên |
+| sự kiện `xong` mỗi lượt | đúng 1, là sự kiện cuối, mọi trạng thái |
+| trần chờ phía trình duyệt | ≥ 182 s — hạn đường có nguồn 180 + ân hạn ghi sổ 2 |
+| hiển thị hỏng / trình duyệt đóng giữa chừng | lượt vẫn xong và vẫn vào sổ |
+
+**Trần chờ 182 s là vá kèm, không phải ngưỡng mới.** Giao diện cũ bỏ chờ ở
+**105 s** (`CLIENT_TIMEOUT_MS`) trong khi máy chủ cho đường có nguồn tới
+**180 s**: một câu xong ở giây 106–180 hiện *"quá thời gian"* trên màn hình mà
+vẫn **vào sổ như lượt thành công**. Màn hình và sổ nói hai chuyện khác nhau.
+
+**Việc KHÔNG làm, nói trước:** không đụng khúc ĐỌC (rút khối nguồn là đổi thứ
+model nhìn thấy — phép đo khác, quyết định khác); không bật `think`; không thêm
+gói; không thêm tệp vào hàng rào `V3` (20/20). Đường `POST /api/chat` giữ
+nguyên cho mọi kênh khác — stream là một tuyến MỚI đi CÙNG `ChatService.reply`.
+
+**ĐO NGHIỆM THU — 13/09/2026, qua đúng `ChatService` của app, Ollama và Exa
+THẬT, 5 câu × 2 vòng × 2 nhánh XEN KẼ, đổi thứ tự nhánh mỗi vòng. Sổ phiên
+đặt trong thư mục nháp, không đụng `data/chat_sessions`.**
+
+```
+chữ đầu tiên (từ lúc gọi model)   trung vị   ngưỡng (nền + 5,0)
+  đệ quy                           21,3 s     22,2 s   ĐẠT — sát ngưỡng
+  list/tuple                       13,2 s     21,5 s   ĐẠT
+  thơ bốn câu                      19,0 s     28,3 s   ĐẠT
+  giá vàng SJC (4 nguồn)           44,6 s     61,7 s   ĐẠT
+  closure JS (4 nguồn)             42,3 s     53,4 s   ĐẠT      -> 5/5 câu
+
+tổng thời gian, stream ÷ thường   tự nghĩ 28,4 / 28,7 = 0,99 · có nguồn 65,5 / 65,5 = 1,00
+trạng thái                        stream 10/10 ok · thường 10/10 ok
+
+màn hình (trung vị, 10 lượt stream)   TRẮNG     CÓ CHỮ
+  tự nghĩ    trước: trắng 28,4 s     17,1 s    14,8 s = 52% thời gian chờ
+  có nguồn   trước: trắng 65,5 s     53,0 s    15,5 s = 25% thời gian chờ
+```
+
+**Giới hạn của chính phép đo này, nói cùng lúc với con số:**
+
+- **n = 2 mỗi câu.** "Đệ quy" đạt nhờ trung vị — lượt vòng 1 là **27,2 s**, vượt
+  ngưỡng. Nó là lượt đầu tiên của cả phép đo và script **không làm nóng model**
+  (phép đo nền thì có); model vừa rời RAM sau hai ngày không dùng.
+- **Nhiễu thứ tự.** "Giá vàng" nhánh thường vòng 1 xong trong **14,1 s** so với
+  60–71 s của ba lượt kia. Mở sổ ra: nó **có** tra mạng (`used_web=True`) và trả
+  **cùng** đáp án 146 triệu — nên không phải hai nhánh hành xử khác nhau. Nó chạy
+  NGAY SAU nhánh stream với cùng câu, cùng nguồn. Nghi bộ nhớ đệm prompt của
+  Ollama — **CHƯA kiểm**. Đổi thứ tự mỗi vòng thì nhiễu cân ở tổng, nhưng độ phân
+  tán lớn tới mức tỉ lệ 0,99 / 1,00 **không phân giải được** chênh lệch dưới vài
+  chục phần trăm. Thứ đỡ cho "stream không làm chậm" là chi phí đo riêng:
+  **0,085 s** cho 3.000 ký tự đưa từng ký tự một.
+- **Đường có nguồn vẫn trắng 3/4 thời gian chờ** — tra mạng và khúc model ĐỌC
+  nguồn. Nhãn công đoạn phủ khúc ấy; rút ngắn nó là việc khác (xem "Việc KHÔNG
+  làm").
+
+**Cửa canh và phép gieo:** `tests/test_stream_chat.py` 61 bài. Gieo **16/16 đỏ**
+— trong đó 5 luật giữ lại, mỗi luật đỏ ĐÚNG ca chỉ nó cứu được: luật 2 ↔
+`cookie: ab…`, luật 3 ↔ `cookie:\nabc…`, luật 4 ↔ `mật khẩu\nwifi\nlà:…`. Trả mã
+về: 5 tệp giống từng byte. Bộ đủ: **1262 passed · 0 failed · 0 skipped**.
+
+**Chạy thật trên trình duyệt (máy chủ nháp, sổ phiên nháp):** nhãn *"đang
+nghĩ… 10s"* → bản nháp viền đứt (`dashed`) *"đang viết… 25s · bản nháp, chưa
+qua hết cửa kiểm"* → câu cuối viền liền (`solid`). Dựng máy chủ với trần 25 s
+để câu list/tuple bị cắt giữa chừng: màn hình hiện *"AURA đã dừng vì quá thời
+gian trả lời. · 25.0s · timeout"* và mục gập *"Bản nháp đã hiện lúc AURA đang
+viết — KHÔNG vào sổ"*; mở sổ ra, bản ghi `timeout` mang đúng câu ấy — **0/2** cụm
+của bản nháp nằm trong đó.
+
+**KHÔNG ĐO ĐƯỢC:** khung trình duyệt ghi `net::ERR_ABORTED` cho **2/2** luồng dài
+và **0/2** luồng ngắn, trong khi trang đọc tới `done` không lỗi cả 4 lần, và một
+máy khách độc lập (`httpx`) đọc luồng dài **kết thúc sạch** — 29 sự kiện, không
+`RemoteProtocolError`. Nhãn ấy từ bộ ghi mạng của khung; chưa truy được vì sao.
+<!-- /CHOT:stream-chat -->

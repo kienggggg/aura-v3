@@ -31,11 +31,15 @@ def test_chat_only_route_set_is_exact():
     về tôi" đã xây xong từ 09/08 mà cửa trước không nối route nên trả 404; test
     này chính là thứ bắt tôi phải dừng lại và sửa danh sách thay vì lẳng lặng
     thêm đường.  Nó làm đúng việc của nó, nên tôi mở chứ không gỡ.
+
+    11/09/2026: mở thêm `/api/chat/stream`, CÓ CHỦ Ý (`CHOT:stream-chat`) —
+    cùng `ChatService.reply` với `/api/chat`, chỉ gửi dần công đoạn và bản
+    nháp đã che. Bài này lại bắt tôi dừng lại ghi lý do, đúng việc của nó.
     """
     app = chat_app.create_chat_app(runtime=FakeRuntime())
     paths = {resource.canonical for resource in app.router.resources()}
     assert paths == {
-        "/", "/api/status", "/api/chat", "/api/chat/history",
+        "/", "/api/status", "/api/chat", "/api/chat/stream", "/api/chat/history",
         "/memory", "/api/memory",
     }
     assert "/dashboard" not in paths, "cửa trước v3 không được mọc lại dashboard cũ"
@@ -114,6 +118,7 @@ def test_moi_trang_da_xay_deu_co_route_that():
         ("GET", "/"),
         ("GET", "/api/status"),
         ("POST", "/api/chat"),
+        ("POST", "/api/chat/stream"),
         ("GET", "/api/chat/history"),
         ("GET", "/memory"),
         ("GET", "/api/memory"),

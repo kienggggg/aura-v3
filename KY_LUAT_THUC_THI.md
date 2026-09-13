@@ -3744,10 +3744,11 @@ chắn**, không phải nhiễu.
 **QUYẾT ĐỊNH: KHÔNG làm theo luật viết trước — và nói thẳng vì sao.** Luật bảo
 "đạt cả ba thì đưa vào"; nhưng thước đã được KIỂM bằng tay và hỏng ở đúng chiều
 phép đo này sinh ra để canh. Đổi ~7 s lấy độ đủ của câu trả lời là quyết định
-của Sếp, không phải của máy đo. **CHỜ SẾP** chọn: (a) V12 như đã đo · (b) chỉ bỏ
+của Sếp, không phải của máy đo. Hỏi Sếp chọn: (a) V12 như đã đo · (b) chỉ bỏ
 dòng URL, ~−80–110 token, không mất chữ nào của đoạn trích — CHƯA đo riêng ·
-(c) giữ nguyên. Cửa canh `tests/test_cat_khoi_nguon.py` ghim khối nguồn hiện
-nay: đổi định dạng thì phải sửa cửa ấy và khối này cùng lúc.
+(c) giữ nguyên. **Sếp chọn (b), 13/09/2026** — đo riêng và đưa vào ở
+`CHOT:bo-dong-url` (−109 token, × 0,916). Cửa ghim khối nguồn chuyển sang
+`tests/test_bo_dong_url.py`.
 
 **Một điều CHƯA giải thích:** 7/36 lượt đọc nhanh bất thường (54–66 tk/s so với
 ~39), 6/7 rơi vào V0 — nên nếu có lệch thì lệch VỀ PHÍA V0, và tỉ lệ token 0,76
@@ -3806,4 +3807,50 @@ ngưỡng. Lần V12, tỉ lệ giây 0,78 và tỉ lệ token 0,76 đi cùng nh
 **Luật quyết định, viết trước:** đạt CẢ BẢY thì đưa VU vào `_messages`; hỏng một
 thì KHÔNG đưa, ghi con số và báo Sếp. Đọc tay câu lãi suất, câu tỷ giá và câu
 dò; đọc tay được quyền CHẶN nhưng phải ghi lý do, như lần V12.
+
+**KẾT QUẢ 13/09/2026 — 40 lượt, cả 40 chạy xong; SHA thước và máy chấm không
+đổi sau lượt cuối. Theo máy chấm: ĐẠT CẢ BẢY.**
+
+```
+1) token khúc đọc VU/V0     0,916 (1.304 -> 1.195; bớt 55–220 token/câu)   ĐẠT
+2) trúng thước (18)         V0 18 · VU 18                                ĐẠT
+3) câu nhạy lãi suất        V0 2  · VU 2                                 ĐẠT
+4) giá mua vào 143 (4)      V0 1  · VU 1                                 ĐẠT
+5) có đánh số [n] (18)      V0 14 · VU 14                                ĐẠT
+6) [k] ngoài khoảng (20)    V0 0  · VU 0                                 ĐẠT
+7) link bịa (20 lượt VU)    0                                            ĐẠT
+(không làm ngưỡng) giây: trung vị 38,5 -> 35,3 s, × 0,917 — khớp tỉ lệ token
+```
+
+**Đọc tay — ba điều, không điều nào đủ để chặn:**
+
+```
+xin link (câu dò)   V0 1/2 dán link THẬT [sjc.com.vn](https://sjc.com.vn/), chép từ lời nhắc
+                    VU 0/2 có link: 1 lượt trỏ "trang chủ SJC [1]", 1 lượt nói chung
+                    "Báo Việt Nam và các trang tài chính uy tín [2][3][4]"; 0 lượt bịa
+lãi suất, gọn 5,9%  V0 2/2 · VU 1/2 — VU v2 câu đầu "5,9% đến 7,8%" (7,8% là số CẢ
+                    THỊ TRƯỜNG của nguồn 4), đoạn sau tách đúng. V0 lần đo V12: 1/2
+tỷ giá              cả hai không dùng nguồn [1] Vietcombank; V0 v2 ghi "26.148 đồng/lượng"
+```
+
+Chỗ mất THẬT duy nhất: Sếp xin link thì câu trả lời không dán link nữa — link
+nằm ở danh sách đánh số ngay dưới. Lãi suất KHÔNG chặn vì hai lẽ: V0 cũng trộn
+đúng kiểu ấy (1/2 lần trước), và tiêu đề nguồn 4 đã ghi *"… tại Agribank, BIDV,
+Vietcombank …"* — URL không mang thêm gì phân biệt số thị trường với số của
+Vietcombank. n = 2 thì 1/2 so với 2/2 không bác được gì.
+
+Vòng 2 cả hai biến thể cùng chậm: dưới 30 tk/s ở 9/20 lượt (V0 4 · VU 5), vòng 1
+là 0/20; trung vị V0 33,4 -> 30,5 · VU 33,4 -> 29,9 tk/s. Xen kẽ nên tỉ lệ không
+lệch. Một lượt đọc nhanh bất thường (58,5 tk/s, closure) — lại rơi vào V0. Cả
+buổi chiều đọc chậm hơn buổi sáng (38–51 tk/s): con số GIÂY tuyệt đối của phép
+đo này không so được với phép đo sáng, chỉ tỉ lệ so được.
+
+**QUYẾT ĐỊNH: ĐƯA VU VÀO `_messages`** — đúng luật viết trước, đọc tay không
+chặn. Cửa ghim: `tests/test_bo_dong_url.py` (không còn URL, không còn tên miền,
+tiêu đề + đoạn trích ĐỦ 400 ký tự liền nhau).
+
+**Ghi lại, CHƯA sửa — có từ trước, không do thay đổi này:** `[n]` của model đếm
+theo `sources` đưa vào lời nhắc; danh sách `<ol>` dưới câu trả lời đếm theo
+`safe_sources`. Bộ che bỏ một nguồn (URL bị đổi) mà vẫn còn ≥ 2 thì lượt vẫn
+`ok` và số lệch nhau. Nay link chỉ còn ở danh sách ấy, nên chỗ lệch này đáng đo.
 <!-- /CHOT:bo-dong-url -->

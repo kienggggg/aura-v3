@@ -4658,6 +4658,43 @@ viết tới hàng chờ.
 - Chất lượng truyện chưa đạt: Sếp mới đọc 2 truyện và cả hai chưa đăng được. Chế độ
   `nháp` là chỗ giữ lại cho điều ấy.
 - Chưa có lịch tự chạy hàng chờ. Vòng này chỉ đo xem đường nối có chạy không.
+
+**KẾT QUẢ 14/09/2026 — ĐẠT cả năm hàng. Vòng 2 xong.**
+
+```
+kịch bản thật thành chương nháp, đọc lại khớp, 5 truyện   5/5 (tên chương khớp · nội dung khớp SHA
+                                                            sau gộp khoảng trắng · vẫn "Bản thảo")  ĐẠT
+chương đăng trùng khi chạy hàng chờ lần hai               0 — hàng chờ còn 0 việc, sổ đăng 5 → 5 dòng ĐẠT
+lần đăng công khai ngoài ý muốn                           0 — mục lục: 5 "Bản thảo", 0 "Đã đăng"   ĐẠT
+thời gian mỗi chương (< 90 s)                             15,3 · 18,5 · 19,2 · 18,9 · 19,2 s        ĐẠT
+truyện đã đăng của Sếp, so trước và sau                   giống hệt: cây trợ năng, và danh sách 12
+                                                            và 18 chương                            ĐẠT
+```
+
+**Nguồn:** sáu đề mới, gửi qua đúng `/api/dispatch` của app nội bộ, model thật.
+- 5 đề cho bản ĐẠT, mỗi đề 53–123 giây.
+- Đề *"người gác chắn tàu"* trượt cả 3 lần sinh (147 giây), nên dùng đề dự phòng *"cây
+  bàng trước cổng trường"*. Lượt trượt là của phòng viết, không phải của đường đăng.
+
+**Tuyển tập** *"Truyện ngắn AURA"* (mã 416096994), với lời giới thiệu nói rõ truyện do AI
+viết. Truyện đầu tiên vào chính chương 1 rỗng mà Wattpad tạo sẵn, nên không còn chương
+rỗng nào.
+
+**Máy đo vỡ một lần, nói thẳng.** Lần chụp "sau" gặp lỗi `ERR_NAME_NOT_RESOLVED` — DNS
+chập chờn một lúc — và máy đo vỡ trước khi in kết quả lần hai.
+- Sổ đăng chép đủ 5 lượt của lần một.
+- Hàng 2 và hàng 5 được ĐO LẠI sau đó, bằng một lần chạy hàng chờ nữa (0 việc) và một lần
+  chụp "sau" mới, so với bản "trước" chụp lúc 19:43:46.
+
+**Lỗi của em trên đường, đã sửa, có cửa canh:**
+- Hai lần máy báo "không tạo được" trong khi truyện đã có. Lần đầu em chẩn đoán "Wattpad
+  chuyển trang chậm" — SAI. Nguyên nhân là `time.sleep` trong API đồng bộ của Playwright
+  không bơm sự kiện, nên `trang.url` đứng yên. Nay chờ bằng `wait_for_url`.
+- Điều kiện gộp bản trùng trong hàng chờ là điều kiện trang trí: gieo lỗi vẫn xanh. Nay
+  giữ bản cũ nhất, và có bài hỏi đúng điều ấy.
+
+**Còn hở:** chưa có lịch tự chạy hàng chờ. Mỗi kịch bản ĐẠT của app nằm chờ đó cho tới
+khi có người chạy `dang_hang_cho wattpad`.
 <!-- /CHOT:dang-vong-2 -->
 
 <!-- CHOT:bo-cat-giu-truyen -->

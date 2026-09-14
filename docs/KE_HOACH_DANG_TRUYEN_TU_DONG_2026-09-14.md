@@ -10,7 +10,12 @@ nào.
     truyện đã đăng của Sếp không bị đụng tới.
   - Sáng Tác Việt **KHÔNG ĐO ĐƯỢC**: tài khoản cần tham gia STV hơn 1000 phút mới được
     tạo truyện.
-- Vòng 1 (tải browser-use) chờ Sếp duyệt riêng. Vòng 2 là nối vào phòng viết.
+- **Vòng 2 xong ngày 14/09** (`CHOT:dang-vong-2`), dạng tuyển tập Sếp chọn:
+  - 5/5 kịch bản thật của phòng viết thành chương nháp trong *"Truyện ngắn AURA"*.
+  - 0 chương trùng, 0 lần đăng công khai, mỗi chương ≤ 19,2 s, truyện đã đăng của Sếp giống
+    hệt trước và sau.
+  - Còn hở: chưa có lịch tự chạy hàng chờ.
+- Vòng 1 (tải browser-use) chờ Sếp duyệt riêng.
 
 Sếp giao ngày 14/09: *việc gì tự động được thì tự động hoàn toàn*, dù mỗi nền tảng
 có một quy trình đăng khác nhau. Cùng ngày Sếp cấp quyền đăng và nới cho AURA giữ

@@ -5,8 +5,12 @@
 nào.
 - Chế độ đầu lấy đúng đề xuất: `nháp`.
 - Dạng đăng chưa chọn; tới vòng 2 mới cần.
-- Vòng 0 **chờ Sếp**: trang Sáng Tác Việt đang dùng, tài khoản trên hai nền tảng, và
-  một lần Sếp tự đăng nhập vào hồ sơ trình duyệt (§4).
+- **Vòng 0 xong ngày 14/09** (`CHOT:dang-vong-0`):
+  - Wattpad **ĐẠT** cả bốn hàng: 10/10 lần, tối đa 18,8 s, 0 lần đăng công khai, hai
+    truyện đã đăng của Sếp không bị đụng tới.
+  - Sáng Tác Việt **KHÔNG ĐO ĐƯỢC**: tài khoản cần tham gia STV hơn 1000 phút mới được
+    tạo truyện.
+- Vòng 1 (tải browser-use) chờ Sếp duyệt riêng. Vòng 2 là nối vào phòng viết.
 
 Sếp giao ngày 14/09: *việc gì tự động được thì tự động hoàn toàn*, dù mỗi nền tảng
 có một quy trình đăng khác nhau. Cùng ngày Sếp cấp quyền đăng và nới cho AURA giữ

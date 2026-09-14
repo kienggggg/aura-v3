@@ -4572,6 +4572,44 @@ cả hai nền tảng; trang Sáng Tác Việt là `sangtacviet.com`.
 
 **Hàng "đăng công khai ngoài ý muốn" là hàng an toàn.** Sau mỗi lần, máy đọc trạng thái
 bản nháp ngay trên trang. Thấy đã công khai thì dừng hẳn và báo Sếp; không tự gỡ.
+
+**KẾT QUẢ 14/09/2026 — Wattpad ĐẠT cả bốn hàng. Sáng Tác Việt KHÔNG ĐO ĐƯỢC: nền tảng
+chưa cho tài khoản tạo truyện.**
+
+```
+                                         Wattpad                    Sáng Tác Việt
+ghi nháp, đọc lại khớp, 10 lần (≥ 9)     10/10          ĐẠT         KHÔNG ĐO ĐƯỢC
+thời gian mỗi lần ghi (< 60 s)           tối đa 18,8 s · tb 17,5 s   —
+đăng công khai ngoài ý muốn (0)          0              ĐẠT         0 (không tạo được gì)
+gặp hộp kiểm người-hay-máy               0 / 10                     —
+```
+
+**Wattpad:**
+- Truyện thử "AURA bản thử" (mã 416096235) có một chương nháp.
+- Mỗi lần ghi là một tiến trình mới: mở đúng URL của truyện thử, hỏi "có đúng truyện thử
+  không" TRƯỚC khi chạm vào ô viết, điền một đoạn có dấu thời gian, bấm "Lưu", tải lại
+  trang, rồi đọc lại ô viết và chữ "Bản thảo".
+- Đăng nhập bằng Chrome thật do Sếp tự làm, vì Google từ chối Chromium đang bị Playwright
+  điều khiển. Playwright (`channel="chrome"`) chỉ dùng lại phiên đăng nhập của Wattpad.
+
+**Sáng Tác Việt:** trang bật thông báo *"Tài khoản của bạn chưa đủ điều kiện để tạo
+truyện. Hãy tham gia STV hơn 1000 phút rồi thử lại."* Máy đọc lại: không có truyện nào
+được tạo. Em không treo trình duyệt để cày cho đủ phút — làm vậy là lách luật chống lạm
+dụng. Theo luật viết trước: **chưa tự động được**, chờ Sếp dùng STV đủ thời gian.
+
+**Kiểm thêm, không nằm trong ngưỡng:** hai truyện Sếp đã đăng không bị đụng tới.
+- Cây trợ năng của trang "Truyện của Tôi" trước và sau giống hệt: 2.986 ký tự.
+- Danh sách chương của hai truyện (12 và 18 chương) trong dữ liệu trang giống hệt TỪNG BYTE.
+
+**Hai lỗi của em trên đường đo, đã sửa và có cửa canh:**
+- Máy báo `KHONG_TAO` trong khi truyện đã có: chờ chuyển trang 33 giây là thiếu. Mã
+  truyện phải ghi bằng tay. Nay chờ 90 giây, đọc lại tiêu đề, không chắc thì báo `KHONG_RO`.
+- Chế độ `xem` chờ `networkidle` thì hết giờ trên Wattpad, vì trang gọi mạng liên tục.
+
+**Theo luật quyết định:**
+- Wattpad sang vòng 1 (lớp thích nghi) và vòng 2 (nối vào phòng viết). Vòng 1 phải tải
+  browser-use, nên cần Sếp duyệt riêng.
+- Truyện thử vẫn nằm ở dạng bản thảo. Em không xoá nó; Sếp xoá bằng tay khi không cần nữa.
 <!-- /CHOT:dang-vong-0 -->
 
 <!-- CHOT:bo-cat-giu-truyen -->

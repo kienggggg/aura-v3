@@ -4433,6 +4433,73 @@ không đổi.
 biết: ngày 08/09, khi không bị buộc, model mở bài bằng thời tiết.
 <!-- /CHOT:neu-de-hai-cau -->
 
+<!-- CHOT:mo-truyen-gioi-thieu -->
+### Câu mở phải GIỚI THIỆU, không chỉ nhắc tên đề — sổ lỗi L-01, Sếp giao 14/09/2026; đăng ký TRƯỚC khi chạy lượt model nào
+
+**Vì sao đổi hướng so với `CHOT:neu-de-hai-cau`:**
+- Phép trước giả định lỗi nằm ở việc lặp nguyên văn đề, và hỏng cả hai ngưỡng.
+- Rồi Sếp chấm bản Y cùng cặp. Bản Y CŨNG mở bằng nguyên văn đề (*"Người thợ sửa
+  khoá đầu ngõ là người đàn ông…"*), và Sếp khen câu ấy "khá tốt".
+- Bản X bị chê mở *"…ngồi trên chiếc xe ba bánh cũ kỹ"*, rồi nói ngay ông muốn gì.
+- Vậy lỗi là **câu mở không giới thiệu nhân vật là ai**, không phải chuyện lặp đề.
+
+**Thiết kế:** ba nhánh; mỗi nhánh thay đúng một mệnh đề của lời nhắc hiện nay.
+- **0**: lời nhắc hiện nay (*"câu đầu tiên phải nhắc tới {đề} — dùng lại chính
+  những chữ đó trong câu mở,"*); cửa nêu đề đọc câu 1.
+- **G**: đổi *"nhắc tới {đề}"* thành *"giới thiệu {đề} là ai hoặc là gì"*, phần
+  còn lại giữ nguyên. Cửa nêu đề giữ nguyên, đọc câu 1.
+- **D**: thay cả mệnh đề bằng *"câu đầu tiên giới thiệu nhân vật chính, câu thứ
+  hai mới nhắc tới {đề} — dùng lại chính những chữ đó,"*. Cửa nêu đề đọc câu 1
+  HOẶC câu 2.
+
+Ba đề của `CHOT:neu-de-hai-cau` (*chiếc xe đạp cũ của bố* · *nỗi nhớ nhà của người
+đi xa* · *người bán vé số lúc nửa đêm*), hạt 1–5, mỗi lượt sinh một lần.
+- **Nhánh 0 dùng lại** 15 lượt đã chạy: cùng hạt thì cùng chữ.
+- **Kèm 3 lượt chạy lại làm đối chứng tất định** (hạt 1, mỗi đề một lượt), phải
+  khớp TỪNG BYTE. Lệch một lượt thì việc dùng lại là KHÔNG ĐO ĐƯỢC, và phải chạy
+  lại cả 15 lượt.
+- G và D sinh mới, xen kẽ, đổi thứ tự mỗi hạt: 33 lượt.
+
+Chấm bằng đúng đường của phòng: bỏ số → trần/sàn từ-câu → cắt giữ truyện → hình
+dạng (có chữ Hán) → nêu đề → chữ lạ.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| lọt cửa một lần sinh, nhánh G, 15 lượt | G ≥ 0 − 2 |
+| lọt cửa một lần sinh, nhánh D, 15 lượt | D ≥ 0 − 2 |
+| Sếp chấm mù ba câu đầu, 3 bộ ba | nhánh được đổi xếp trên 0 ở ≥ 2/3 đề |
+
+**Luật quyết định, viết trước:**
+- Nhánh hỏng hàng lọt cửa thì bị loại. Bộ ba vẫn giữ nó để Sếp đọc, nhưng nó không
+  được đổi dù Sếp xếp cao đến đâu.
+- Cả G lẫn D đều hỏng hàng lọt cửa thì dừng, không cần Sếp chấm.
+- Nhánh còn lại được đổi nếu Sếp xếp nó trên nhánh 0 ở ≥ 2/3 đề.
+- Nếu cả hai cùng đạt, lấy nhánh Sếp xếp cao hơn ở nhiều đề hơn. Vẫn hoà thì lấy
+  nhánh lọt cửa nhiều hơn. Vẫn hoà nữa thì lấy G, vì G thay đổi ít hơn.
+
+**Bộ ba mù:**
+- Mỗi đề một bộ, lấy ở hạt nhỏ nhất mà cả ba nhánh cùng lọt cửa. Không có hạt như
+  thế thì lấy hạt nhỏ nhất có nhiều nhánh lọt nhất, và ghi rõ.
+- Mỗi bản chỉ lấy ba câu đầu của bản sẽ vào video (sau khi cắt).
+- Máy xáo nhãn X/Y/Z bằng khoá ngẫu nhiên, khoá ghi tệp riêng.
+- Sếp xếp hạng xem đoạn mở nào **dẫn vào truyện** tốt nhất, và ghi chỗ nào tả sai.
+  Mỗi chỗ tả sai sẽ thành một mục mới trong sổ lỗi.
+
+**Em KHÔNG chấm trước lần này.** Dạng câu mở của G (*"… là …"*) và của D (không mở
+bằng đề) nhìn là nhận ra, nên em không chấm mù được.
+
+**Báo, không làm ngưỡng:** câu 1 mở bằng nguyên văn đề · câu 1 có dạng *"{đề} là"*
+· trượt vì quá ngắn · lọt chữ Anh/Hán · thời gian.
+
+**Giới hạn, nói trước:**
+- Đặc tả này công khai. Sếp đọc nó thì cũng đoán được dạng câu mở của từng nhánh,
+  nên hàng 3 đo *"Sếp thích dạng mở nào"* nhiều hơn là mù hoàn toàn.
+- Ba câu đầu không nói gì về phần thân truyện. Các lỗi L-04, L-05, L-08 nằm ở phần
+  thân, thuộc phép thử sổ lỗi (kế hoạch §8).
+<!-- /CHOT:mo-truyen-gioi-thieu -->
+
 <!-- CHOT:bo-cat-giu-truyen -->
 ### Bộ cắt không được xoá truyện — Sếp duyệt 13/09/2026; đăng ký TRƯỚC khi chạy model
 

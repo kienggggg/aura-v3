@@ -34,12 +34,12 @@ và tránh được lỗi mình đã làm (Sếp, 14/09/2026).
 - ngày: 14/09/2026
 - ai thấy: Sếp, chấm mù bộ luật, cặp 1, bản X
 - loại: A
-- lỗi: mở bằng nguyên văn đề, không dẫn dắt
+- lỗi: câu mở không giới thiệu nhân vật là ai, nhảy thẳng vào việc — không dẫn dắt
 - ví dụ: "Người thợ sửa khoá đầu ngõ ngồi trên chiếc xe ba bánh cũ kỹ."
 - câu dặn: —
 - số lần gặp: 1
 - trạng thái: chờ đo
-- ghi chú: lời nhắc ép "dùng lại chính những chữ đó trong câu mở"; 53/60 bản gần nhất mở câu 1 bằng đúng nguyên văn đề. Đo 14/09 (CHOT:neu-de-hai-cau): nới cửa sang câu 1–2 KHÔNG chữa được — vẫn mở bằng nguyên văn đề 14/15, lọt cửa 4/15 so với 9/15. Nguyên nhân còn lại (lời dặn "dùng lại chính những chữ đó", hoặc thói quen của model) CHƯA đo.
+- ghi chú: lời nhắc chỉ đòi câu 1 "nhắc tới" đề và "dùng lại chính những chữ đó"; 53/60 bản gần nhất mở câu 1 bằng đúng nguyên văn đề. Đo 14/09 (CHOT:neu-de-hai-cau): nới cửa sang câu 1–2 KHÔNG chữa được — vẫn mở bằng nguyên văn đề 14/15. SỬA TÊN LỖI 14/09 chiều: bản Y cùng cặp CŨNG mở bằng nguyên văn đề ("Người thợ sửa khoá đầu ngõ là người đàn ông…") mà Sếp khen câu ấy — nên lỗi không nằm ở việc lặp đề, mà ở việc không giới thiệu. Đo ở CHOT:mo-truyen-gioi-thieu.
 
 ### L-02
 - ngày: 14/09/2026
@@ -69,9 +69,9 @@ và tránh được lỗi mình đã làm (Sếp, 14/09/2026).
 - lỗi: chuyển ý đột ngột, không nối với câu trước
 - ví dụ: "Khách hàng là chú thanh niên vừa ngã xuống đất và đau nhói ở vai trái."
 - câu dặn: Mỗi câu phải nối với câu trước: nhắc lại người, vật hoặc việc vừa kể.
-- số lần gặp: 1
+- số lần gặp: 3
 - trạng thái: chờ đo
-- ghi chú: có thể lên loại B nếu thước máy khớp mắt Sếp (kế hoạch §7).
+- ghi chú: có thể lên loại B nếu thước máy khớp mắt Sếp (kế hoạch §7). Gặp lại hai lần ở bản Y cùng cặp (14/09 chiều): câu tả thói quen làm việc buổi sáng nhảy sang "Cái chìa khóa lớn nặng trĩu…"; "Không ai biết rõ tuổi tác thực sự của anh…" rồi "Chỉ những người rất thân thiết mới hiểu…" — Sếp: hai câu không liên quan gì nhau.
 
 ### L-05
 - ngày: 14/09/2026
@@ -83,3 +83,36 @@ và tránh được lỗi mình đã làm (Sếp, 14/09/2026).
 - số lần gặp: 1
 - trạng thái: chờ đo
 - ghi chú: hai câu trước mới là "vừa ngã xuống đất"; cú ngã thành "tai nạn" mà không có câu nào nối hai việc.
+
+### L-06
+- ngày: 14/09/2026
+- ai thấy: Sếp, chấm mù bộ luật, cặp 1, bản Y
+- loại: C
+- lỗi: tả một thói quen mà không nói mức độ — luôn, thường, thỉnh thoảng, hay chỉ khi nào
+- ví dụ: "Người thợ sửa khoá đầu ngõ là người đàn ông đeo kính râm mà mọi gia đình trong hẻm đều quen thuộc."
+- câu dặn: Tả thói quen của nhân vật thì nói rõ mức độ: luôn, thường, thỉnh thoảng, hay chỉ khi nào.
+- số lần gặp: 1
+- trạng thái: chờ đo
+- ghi chú: Sếp khen câu này "khá tốt" — nó giới thiệu được người thợ là ai — chỉ thiếu mức độ của chuyện đeo kính.
+
+### L-07
+- ngày: 14/09/2026
+- ai thấy: Sếp, chấm mù bộ luật, cặp 1, bản Y
+- loại: B
+- lỗi: chữ Hán lẫn vào câu tiếng Việt
+- ví dụ: "Cái chìa khóa lớn nặng trĩu trong tay anh được mài rất光亮, phát ra ánh kim khi bị chạm vào mặt trời."
+- câu dặn: —
+- số lần gặp: 2
+- trạng thái: đã thành cửa
+- ghi chú: cùng bản còn "遇到过" ở câu 17. Bản này sinh 13/09 TRƯỚC khi có cửa chữ Hán (CHOT:chu-han-kich-ban, commit 7b2945b); từ đó cửa bác mọi bản mang chữ Hán — lỗi đã được máy nhớ, không tốn token nào.
+
+### L-08
+- ngày: 14/09/2026
+- ai thấy: Sếp, chấm mù bộ luật, cặp 1, bản Y
+- loại: C
+- lỗi: tả thái quá, phóng đại việc nhân vật làm
+- ví dụ: "Những năm qua, anh đã cứu trợ biết bao ngôi nhà khỏi những kẻ trộm lén lút."
+- câu dặn: Tả vừa đủ và đúng mức, không phóng đại việc nhân vật làm.
+- số lần gặp: 1
+- trạng thái: chờ đo
+- ghi chú: Sếp chỉ cả đoạn từ câu này tới "…một lần sửa chữa đơn giản" (câu 5–9 của bản Y).

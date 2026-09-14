@@ -4336,6 +4336,19 @@ vào (bỏ hàng rào vẫn xanh — cắt từ giữa ra tự để lại hai �
 hàng rào chỉ làm việc khi câu Ở HAI ĐẦU dài mà câu giữa ngắn). Thêm ca, gieo lại:
 3/3 và 8/8 đỏ đúng bài. `cat_cho_vua` giữ nguyên cho `bai_noi` và máy thử lời
 nhắc của phòng nội bộ — cửa canh ghim cả phạm vi ấy.
+
+**SỬA 14/09/2026 — bộ bỏ số của lần đưa vào 13/09 để lọt số vào video.** Chấm mù
+nhánh đoạn mẫu thì gặp *"1 Chiếc la bàn…"*, *"2 Ông nội…"* trong bản vào video —
+của NHÁNH 0, tức lời nhắc đang chạy thật. Model đôi khi đánh số kiểu "số + dấu cách",
+không dấu chấm: 26 dòng trên 60 bản gốc 13-câu; `bo_so_thu_tu` chỉ nhận "1." / "1)",
+nên **2/60 bản còn số**, trong đó 1 bản của nhánh đang chạy LỌT CỬA.
+
+Sửa: nhận thêm dạng "số + dấu cách" — nhưng chỉ khi số ĐÚNG số thứ tự kế tiếp, để
+*"3 người đàn ông bước vào"* còn nguyên; và `(?!\d)` để *"10.000 người…"* ở đầu dòng
+không thành *"000 người…"*. Đo lại trên 60 bản: còn số 2 -> 0; chỉ đúng 2 bản ra khác
+bộ cũ, cả 2 là bản đánh số kiểu ấy; nhánh đang chạy vẫn lọt 8/15. Gieo 3/3 đỏ đúng
+bài. Lần đếm đầu của em ra **3**/60 — bản thứ ba là *"xe buýt số 42"*, con số trong
+câu, bắt nhầm; đếm lại bằng thước chỉ nhận chữ hoa sau số, và đọc tận mắt bản ấy.
 <!-- /CHOT:bo-cat-giu-truyen -->
 
 <!-- CHOT:ban-do-aura -->
@@ -4471,4 +4484,32 @@ mức tình cờ) · thời gian · lý do trượt.
 **Luật quyết định, viết trước:** đạt CẢ BỐN thì kho mẫu vào phòng viết — mặc định
 TẮT, bật theo từng việc khi Sếp chọn giọng. Hỏng hàng 1–3 thì dừng, ghi số. Hàng 4
 chưa có thì CHỜ SẾP.
+
+**KẾT QUẢ 14/09/2026 — 18 lượt, cả 18 chạy xong; SHA máy đo không đổi. HỎNG HÀNG 3
+— DỪNG, kho mẫu KHÔNG vào phòng viết.**
+
+```
+1) lọt cửa                 M 8/15 · 0 8/15                    ≥ 0 − 2       ĐẠT
+2) chép                    M dài nhất 2 từ · tình cờ 2 · vi phạm 0            ĐẠT
+3) em chấm mù, 3 cặp        M thắng 1/3                        ≥ 2/3         KHÔNG ĐẠT
+4) Sếp chấm lại            — không cần: luật viết trước dừng ở hàng 3
+(báo) tên riêng của đoạn mẫu lọt vào bài   M 0/15 · tình cờ 1/15
+(báo) thời gian tv                        59 s · 59 s
+(báo) tất định: nhánh 0 hạt 3 chạy lại    GIỐNG TỪNG CHỮ 3/3 (tổng 12/12, bốn lần)
+```
+
+Điểm của em ghi và băm trước khi mở khoá: 06:47:41, SHA `270F289AEC82F245`. Nhánh
+đã dừng nên nhãn công bố: cặp 1 X = M (em chọn Y = 0) · cặp 2 X = M (em chọn X,
+độ chắc thấp) · cặp 3 Y = M (em chọn X = 0).
+
+**Đọc ra điều gì:** một đoạn Số Đỏ ~142 từ đặt trước lời nhắc **gần như không để lại
+dấu gì** — không chép (2 từ, bằng mức tình cờ), không mượn tên (0/15), lọt cửa y như
+cũ, và em không nhận ra giọng trào phúng trong bản nào. Một đoạn mẫu không chuyển
+được giọng văn cho model 4B trên máy này. Thử tiếp (2 đoạn, hay dặn rõ "giọng trào
+phúng") là một biến thể mới — phải đăng ký và đo riêng, không chỉnh theo 18 lượt này.
+
+**Lỗi của CHÍNH phòng viết, lộ ra khi chấm — ngoài phạm vi nhánh này:** bản nhánh 0
+còn nguyên số thứ tự trong chữ vào video (*"1 Chiếc…"*, *"2 Ông nội…"*). Model đôi khi
+đánh số kiểu "số + dấu cách" — 26 dòng trên 60 bản gốc — mà `bo_so_thu_tu` chỉ nhận
+"số + dấu chấm/ngoặc". Sửa ở `CHOT:bo-cat-giu-truyen`.
 <!-- /CHOT:doan-mau-so-do -->

@@ -342,7 +342,12 @@ def cat_cho_vua(van_ban: str) -> Tuple[str, int]:
 # hai chỗ ấy chưa đo với bộ cắt mới.
 SO_CAU_TRUYEN = 13
 TU_MOI_CAU_XIN = 18
-_SO_DAU_DONG = re.compile(r"^\s*(?:\*\*)?\s*\d{1,2}\s*[.):\]-]\s*(?:\*\*)?\s*")
+# Hai dạng đánh số: "1." / "1)" / "**1.**" — và "1 " (số + dấu cách, không dấu).
+# Dạng thứ hai lọt bản đầu (13/09): 26 dòng trên 60 bản gốc, 2/60 bản còn số sau
+# khi bỏ, một bản LỌT CỬA với *"1 Chiếc la bàn…"* — giọng đọc đọc thành "một".
+# Dạng không dấu chỉ bỏ khi số ĐÚNG số thứ tự kế tiếp, để *"3 người đàn ông…"* còn
+# nguyên. `(?!\d)`: *"10.000 người…"* ở đầu dòng không thành *"000 người…"*.
+_SO_DAU_DONG = re.compile(r"^\s*(?:\*\*)?\s*(\d{1,2})(\s*[.):\]-](?!\d)\s*|\s+)(?:\*\*)?\s*")
 
 
 def bo_so_thu_tu(tho: str) -> str:
@@ -351,8 +356,13 @@ def bo_so_thu_tu(tho: str) -> str:
     Chỉ ăn ở ĐẦU dòng: *"giá 10.000 đồng"* phải còn nguyên.
     """
     dong = []
+    ke_tiep = 1
     for d in (tho or "").splitlines():
-        d = _SO_DAU_DONG.sub("", d).strip()
+        m = _SO_DAU_DONG.match(d)
+        if m and (m.group(2).strip() or int(m.group(1)) == ke_tiep):
+            ke_tiep = int(m.group(1)) + 1
+            d = d[m.end():]
+        d = d.strip()
         if not d:
             continue
         if d[-1] not in ".!?…\"”'":

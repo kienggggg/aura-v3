@@ -63,6 +63,11 @@ def test_BAI_NOI_chua_doi_vong_nay():
     # Dấu chấm hàng nghìn GIỮA câu: chỉ ăn ở đầu dòng.
     ("1. Giá 10.000 đồng.", "Giá 10.000 đồng."),
     ("Không đánh số.\nDòng hai.", "Không đánh số. Dòng hai."),
+    # 14/09: dạng "số + dấu cách" lọt bản đầu — 2/60 bản còn số, một bản lọt cửa.
+    ("1 Chiếc la bàn nằm yên.\n2 Ông nội tôi đi săn.", "Chiếc la bàn nằm yên. Ông nội tôi đi săn."),
+    # ...nhưng chỉ khi đúng số thứ tự kế tiếp: câu thật mở bằng con số phải còn.
+    ("3 người đàn ông bước vào.", "3 người đàn ông bước vào."),
+    ("10.000 người đến xem.", "10.000 người đến xem."),
 ])
 def test_BO_SO_THU_TU(vao, ra):
     assert vt.bo_so_thu_tu(vao) == ra

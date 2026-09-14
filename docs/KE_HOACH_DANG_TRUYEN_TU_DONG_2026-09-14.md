@@ -1,7 +1,12 @@
 # Kế hoạch — AURA tự đăng truyện lên Wattpad và Sáng Tác Việt (14/09/2026)
 
-<!-- KET_CUC:CHUA_DUYET · 14/09/2026 -->
-**Trạng thái: CHỜ DUYỆT. Chưa viết dòng mã nào, chưa tải gói nào.**
+<!-- KET_CUC:DANG_LAM · 14/09/2026 -->
+**Trạng thái: ĐANG LÀM. Sếp duyệt ngày 14/09.** Chưa viết dòng mã nào, chưa tải gói
+nào.
+- Chế độ đầu lấy đúng đề xuất: `nháp`.
+- Dạng đăng chưa chọn; tới vòng 2 mới cần.
+- Vòng 0 **chờ Sếp**: trang Sáng Tác Việt đang dùng, tài khoản trên hai nền tảng, và
+  một lần Sếp tự đăng nhập vào hồ sơ trình duyệt (§4).
 
 Sếp giao ngày 14/09: *việc gì tự động được thì tự động hoàn toàn*, dù mỗi nền tảng
 có một quy trình đăng khác nhau. Cùng ngày Sếp cấp quyền đăng và nới cho AURA giữ

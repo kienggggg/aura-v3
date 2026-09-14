@@ -4697,6 +4697,43 @@ chập chờn một lúc — và máy đo vỡ trước khi in kết quả lần
 khi có người chạy `dang_hang_cho wattpad`.
 <!-- /CHOT:dang-vong-2 -->
 
+<!-- CHOT:dang-lich -->
+### Lịch tự chạy hàng chờ đăng — Sếp giao 14/09/2026; đăng ký TRƯỚC khi viết mã
+
+Vòng 2 (`CHOT:dang-vong-2`) còn hở đúng một chỗ: kịch bản ĐẠT nằm chờ cho tới khi có
+người chạy lệnh. Lịch vá chỗ ấy.
+
+**Thiết kế:**
+- Dùng Task Scheduler của Windows. Tác vụ tên *"AURA dang hang cho"*, chạy **10 phút một
+  lần**, chỉ khi Sếp đang đăng nhập máy (Chrome cần màn hình).
+- Lệnh chạy là `pythonw.exe` của venv v2 — không bật cửa sổ dòng lệnh mỗi 10 phút —
+  với `tools/dang_truyen_worker.py lich_chay wattpad`.
+
+**Mỗi lượt chạy:**
+1. **Giữ khoá.** Hai lượt chồng nhau cùng lấy một kịch bản là hai chương trùng. Khoá
+   nằm trong hàng chờ, nên lệnh chạy tay cũng được giữ; khoá cũ quá 1 giờ coi là của lượt
+   đã chết.
+2. Chạy hàng chờ. Hàng chờ rỗng thì không mở trình duyệt.
+3. Ghi **một dòng** vào sổ lịch `F:\aura-dang\lich_chay.jsonl`, kể cả lượt không có việc —
+   không có dòng ấy thì không biết lịch có chạy thật hay không.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| kịch bản mới qua /api/dispatch thành chương nháp, không ai chạy lệnh | ≤ 15 phút |
+| lượt không có việc vẫn ghi sổ lịch | 1 dòng mỗi lượt |
+| lượt chạy khi đang có lượt khác giữ khoá | bỏ qua, 0 chương trùng |
+| lần đăng công khai ngoài ý muốn | 0 |
+
+**Cách đo:**
+- Hàng 2: gọi `schtasks /run` với hàng chờ rỗng, rồi đọc sổ lịch.
+- Hàng 3: tự đặt khoá, gọi `lich_chay`, rồi đọc sổ lịch và sổ đăng.
+- Hàng 1: sinh MỘT truyện mới qua `/api/dispatch` rồi không chạy lệnh nào; đo từ giờ
+  trong `meta.json` tới giờ ghi sổ đăng.
+- Hàng 4: đọc mục lục tuyển tập.
+<!-- /CHOT:dang-lich -->
+
 <!-- CHOT:bo-cat-giu-truyen -->
 ### Bộ cắt không được xoá truyện — Sếp duyệt 13/09/2026; đăng ký TRƯỚC khi chạy model
 

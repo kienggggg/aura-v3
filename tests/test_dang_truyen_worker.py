@@ -55,7 +55,8 @@ def _ham(ten: str) -> ast.FunctionDef:
 @pytest.mark.parametrize("ham", ["mo", "mo_chrome", "xem", "_mo_trinh_duyet", "_co_cloudflare",
                                  "tao_thu", "_doc_truyen_thu", "_ghi_truyen_thu", "_dung_truyen_thu",
                                  "_dung_truyen", "dang_hang_cho", "_hang_cho", "_doc_so_dang",
-                                 "_ghi_so_dang", "_chuan_hoa", "_sha"])
+                                 "_ghi_so_dang", "_chuan_hoa", "_sha", "_giu_khoa", "_tha_khoa",
+                                 "lich_chay", "_in", "main"])
 def test_VONG_0_KHONG_BAM_GI(ham):
     """Bước 1 là Sếp tự đăng nhập, bước 2 chỉ đọc. Có một lời gọi thao tác là đã vượt vòng 0."""
     goi = {n.func.attr for n in ast.walk(_ham(ham))

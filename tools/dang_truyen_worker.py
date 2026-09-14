@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -148,6 +149,10 @@ TEP_TRUYEN_THU = GOC_HO_SO / "truyen_thu.json"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_AURA = PROJECT_ROOT / "data" / "aura"
 SO_DANG = PROJECT_ROOT / "data" / "dang" / "so_dang.jsonl"
+# Lịch tự chạy (`CHOT:dang-lich`): khoá chống hai lượt chồng nhau, sổ lịch mỗi lượt một dòng.
+TEP_KHOA = GOC_HO_SO / "dang_hang_cho.lock"
+SO_LICH = GOC_HO_SO / "lich_chay.jsonl"
+KHOA_CU_GIAY = 3600         # một lượt 5 chương đo được ~1,5 phút; khoá già hơn 1 giờ là của lượt đã chết
 
 
 def _doc_truyen_thu() -> dict:
@@ -365,14 +370,70 @@ def _luu_chuong(trang, tuyen_tap: dict, muc: dict) -> dict:
     return kq
 
 
+def _giu_khoa() -> bool:
+    """Giữ khoá hàng chờ. Hai lượt chồng nhau cùng đọc hàng chờ TRƯỚC khi lượt nào kịp ghi
+    sổ, nên cùng lấy một kịch bản — hai chương trùng. Khoá cũ quá `KHOA_CU_GIAY` thì coi là
+    của lượt đã chết: xoá rồi thử lại MỘT lần."""
+    TEP_KHOA.parent.mkdir(parents=True, exist_ok=True)
+    for _ in range(2):
+        try:
+            fd = os.open(TEP_KHOA, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            try:
+                cu = time.time() - TEP_KHOA.stat().st_mtime > KHOA_CU_GIAY
+            except OSError:
+                cu = False
+            if not cu:
+                return False
+            TEP_KHOA.unlink(missing_ok=True)
+            continue
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(f"{os.getpid()} {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        return True
+    return False
+
+
+def _tha_khoa() -> None:
+    TEP_KHOA.unlink(missing_ok=True)
+
+
 def dang_hang_cho(nen_tang: str, toi_da: str = "5") -> dict:
     """Vòng 2: đưa tối đa `toi_da` kịch bản trong hàng chờ thành chương nháp, ghi sổ MỖI
-    lượt — kể cả lượt hỏng. Gặp hộp kiểm hay sai truyện thì dừng cả lượt chạy."""
+    lượt — kể cả lượt hỏng. Gặp hộp kiểm hay sai truyện thì dừng cả lượt chạy. Giữ khoá suốt
+    lượt, kể cả khi gọi bằng tay, nên lệnh tay và lịch không chạy chồng nhau."""
     if nen_tang != "wattpad":
         raise ValueError("vòng 2 mới dựng cho wattpad")
     tuyen_tap = _doc_truyen_thu().get("wattpad_tuyen_tap") or {}
     if not tuyen_tap.get("id"):
         raise ValueError("chưa có truyện tuyển tập — chạy: tao_thu wattpad tuyen_tap")
+    if not _giu_khoa():
+        return {"che_do": "dang_hang_cho", "nen_tang": nen_tang, "so_viec": 0, "ket": [],
+                "trang_thai": "BO_QUA_DANG_CO_LUOT_KHAC"}
+    try:
+        return _dang_hang_cho_trong_khoa(nen_tang, toi_da, tuyen_tap)
+    finally:
+        _tha_khoa()
+
+
+def lich_chay(nen_tang: str) -> dict:
+    """Một lượt của lịch (Task Scheduler, 10 phút một lần). Ghi MỘT dòng vào sổ lịch — kể
+    cả lượt không có việc và lượt lỗi: không có dòng ấy thì không biết lịch có chạy thật."""
+    t0 = time.monotonic()
+    dong: dict = {"luc": time.strftime("%Y-%m-%d %H:%M:%S"), "nen_tang": nen_tang}
+    try:
+        kq = dang_hang_cho(nen_tang)
+        dong.update({"trang_thai": kq.get("trang_thai", "XONG"), "so_viec": kq["so_viec"],
+                     "ket": [k.get("trang_thai") for k in kq["ket"]]})
+    except Exception as e:  # noqa: BLE001 — lượt lỗi cũng phải có dòng trong sổ lịch
+        dong.update({"trang_thai": "LOI", "so_viec": 0, "loi": str(e)[:300]})
+    dong["giay"] = round(time.monotonic() - t0, 1)
+    SO_LICH.parent.mkdir(parents=True, exist_ok=True)
+    with SO_LICH.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(dong, ensure_ascii=False) + "\n")
+    return dong
+
+
+def _dang_hang_cho_trong_khoa(nen_tang: str, toi_da: str, tuyen_tap: dict) -> dict:
     viec = _hang_cho(nen_tang)[: int(toi_da)]
     dau_trong = tuyen_tap.get("chuong_dau_trong")
     if viec and dau_trong and not viec[0].get("url_do_dang"):
@@ -523,22 +584,28 @@ def xem(nen_tang: str, ten_trang: str = "soan") -> dict:
     return kq
 
 
+def _in(kq: dict) -> None:
+    # Task Scheduler chạy `pythonw.exe`: không có console, `sys.stdout` là None. Sổ lịch mới
+    # là chỗ ghi kết quả — in ra chỉ để người chạy tay xem.
+    if sys.stdout is not None:
+        print(json.dumps(kq, ensure_ascii=False))
+
+
 def main(argv: list[str]) -> int:
     # In JSON tiếng Việt qua đường ống: Windows mặc định cp1252 và chết ở "ẽ" (đã trả
-    # giá ở bộ căn chữ) — ghim UTF-8.
-    sys.stdout.reconfigure(encoding="utf-8")
+    # giá ở bộ căn chữ) — ghim UTF-8. Dưới `pythonw` thì không có gì để ghim.
+    if sys.stdout is not None:
+        sys.stdout.reconfigure(encoding="utf-8")
     che_do = {"mo": mo, "mo_chrome": mo_chrome, "tao_thu": tao_thu, "xem": xem,
-              "ghi_nhap": ghi_nhap, "dang_hang_cho": dang_hang_cho}
+              "ghi_nhap": ghi_nhap, "dang_hang_cho": dang_hang_cho, "lich_chay": lich_chay}
     bon_doi_so = {"xem", "ghi_nhap", "tao_thu", "dang_hang_cho"}
     if (len(argv) not in (3, 4) or argv[1] not in che_do
             or (argv[1] not in bon_doi_so and len(argv) == 4)
             or (argv[1] == "ghi_nhap" and len(argv) != 4)):
-        print(json.dumps({"loi": "cách gọi: dang_truyen_worker.py mo|mo_chrome|tao_thu <nền tảng>"
-                                 " | xem <nền tảng> [trang] | ghi_nhap <nền tảng> <lần>"},
-                         ensure_ascii=False))
+        _in({"loi": "cách gọi: dang_truyen_worker.py mo|mo_chrome|tao_thu|lich_chay <nền tảng>"
+                    " | xem <nền tảng> [trang] | ghi_nhap <nền tảng> <lần>"})
         return 2
-    kq = che_do[argv[1]](*argv[2:])
-    print(json.dumps(kq, ensure_ascii=False))
+    _in(che_do[argv[1]](*argv[2:]))
     return 0
 
 

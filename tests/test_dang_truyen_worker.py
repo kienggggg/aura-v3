@@ -53,7 +53,9 @@ def _ham(ten: str) -> ast.FunctionDef:
 
 
 @pytest.mark.parametrize("ham", ["mo", "mo_chrome", "xem", "_mo_trinh_duyet", "_co_cloudflare",
-                                 "tao_thu", "_doc_truyen_thu", "_ghi_truyen_thu", "_dung_truyen_thu"])
+                                 "tao_thu", "_doc_truyen_thu", "_ghi_truyen_thu", "_dung_truyen_thu",
+                                 "_dung_truyen", "dang_hang_cho", "_hang_cho", "_doc_so_dang",
+                                 "_ghi_so_dang", "_chuan_hoa", "_sha"])
 def test_VONG_0_KHONG_BAM_GI(ham):
     """Bước 1 là Sếp tự đăng nhập, bước 2 chỉ đọc. Có một lời gọi thao tác là đã vượt vòng 0."""
     goi = {n.func.attr for n in ast.walk(_ham(ham))
@@ -66,7 +68,7 @@ DAC_TA_O_TAO_THU = {"Tên truyện", "Tác giả/Bút danh", "Thể loại", "Gi
 DAC_TA_O_TAO_THU_WATTPAD = {"Tiêu đề *", "Mô tả * Mô tả"}
 # Mỗi hàm tạo truyện: ĐÚNG những nút này, không hơn.
 DAC_TA_NUT = {"_tao_stv": ["Tạo truyện"], "_tao_wattpad": ["Hư cấu", "Lưu & Tiếp tục"],
-              "ghi_nhap": ["Lưu"]}
+              "ghi_nhap": ["Lưu"], "_luu_chuong": ["+ Chương Mới", "Lưu"]}
 
 
 @pytest.mark.parametrize("ham,nut", sorted(DAC_TA_NUT.items()))
@@ -97,6 +99,32 @@ def test_GHI_NHAP_hoi_DUNG_TRUYEN_truoc_khi_cham_o_viet():
     assert len(dien) == 1, f"ghi_nhap điền {len(dien)} chỗ"
     assert '"Viết truyện của bạn"' in ast.get_source_segment(nguon, dien[0])
     assert hoi and min(hoi) < dien[0].lineno, "ô viết bị chạm trước khi hỏi đúng truyện thử"
+
+
+def test_LUU_CHUONG_chi_dien_ten_va_noi_dung_SAU_cau_hoi_dung_truyen():
+    """Tuyển tập nằm cùng tài khoản với hai truyện đã đăng của Sếp — cùng khuôn với ghi_nhap."""
+    than = _ham("_luu_chuong")
+    nguon = _nguon()
+    hoi = [n.lineno for n in ast.walk(than) if isinstance(n, ast.Call)
+           and isinstance(n.func, ast.Name) and n.func.id == "_dung_truyen"]
+    dien = sorted((n for n in ast.walk(than) if isinstance(n, ast.Call)
+                   and isinstance(n.func, ast.Attribute) and n.func.attr == "fill"),
+                  key=lambda n: n.lineno)
+    doan = [ast.get_source_segment(nguon, n) for n in dien]
+    assert len(dien) == 2, doan
+    assert '"#story-title"' in doan[0] and '"Viết truyện của bạn"' in doan[1], doan
+    # Phải hỏi lại TRONG trình soạn — giữa cú bấm mở chương và lần điền đầu. Chỉ hỏi ở
+    # trang mục lục thì đường "ghi tiếp chương dở" (bỏ qua trang ấy) gõ mà không hỏi.
+    mo = next(n.lineno for n in ast.walk(than) if isinstance(n, ast.Call)
+              and isinstance(n.func, ast.Attribute) and n.func.attr == "click"
+              and '"+ Chương Mới"' in ast.get_source_segment(nguon, n))
+    assert any(mo < h < dien[0].lineno for h in hoi), "không hỏi lại đúng truyện trong trình soạn"
+
+
+def test_TUYEN_TAP_noi_ro_do_AI_viet():
+    """Lời giới thiệu nói thẳng tác giả là AI — chọn từ 14/09, không đợi nền tảng bắt."""
+    assert set(w.TUYEN_TAP_WATTPAD) == DAC_TA_O_TAO_THU_WATTPAD
+    assert "trí tuệ nhân tạo" in w.TUYEN_TAP_WATTPAD["Mô tả * Mô tả"]
 
 
 def test_KHONG_CO_nhan_KHONG_TAO():

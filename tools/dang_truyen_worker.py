@@ -19,6 +19,7 @@ Trình duyệt thật, không giả vân tay, không giải CAPTCHA.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import subprocess
@@ -135,9 +136,18 @@ def _dong_hop_thoai(h, ghi: list) -> None:
 # "Hư cấu" của mục "Loại hình văn bản".
 TRUYEN_THU_WATTPAD = {"Tiêu đề *": "AURA bản thử",
                       "Mô tả * Mô tả": "Bản thử của máy đăng tự động AURA. Không phát hành."}
+# Truyện tuyển tập của vòng 2 (`CHOT:dang-vong-2`) — Sếp chọn "dạng tuyển tập" 14/09. Lời
+# giới thiệu nói thẳng truyện do AI viết; Sếp đổi tên hay lời giới thiệu được trên Wattpad.
+TUYEN_TAP_WATTPAD = {"Tiêu đề *": "Truyện ngắn AURA",
+                     "Mô tả * Mô tả": "Tuyển tập truyện ngắn do AURA — một trí tuệ nhân tạo — "
+                                      "viết. Mỗi chương là một truyện riêng."}
 # Mã truyện thử vừa tạo — để KHÔNG tạo lại, và để kịch bản ghi chỉ mở ĐÚNG truyện ấy,
 # không bao giờ mở hai truyện đã đăng của Sếp.
 TEP_TRUYEN_THU = GOC_HO_SO / "truyen_thu.json"
+# Hàng chờ và sổ đăng: kịch bản ĐẠT do app ghi (`kich_ban.md` + `meta.json`), sổ ghi mỗi lượt.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_AURA = PROJECT_ROOT / "data" / "aura"
+SO_DANG = PROJECT_ROOT / "data" / "dang" / "so_dang.jsonl"
 
 
 def _doc_truyen_thu() -> dict:
@@ -181,10 +191,12 @@ def _tao_stv(trang, kq: dict) -> None:
     kq["trang_thai"] = "DA_TAO" if trang.get_by_text(ten, exact=True).count() else "KHONG_THAY"
 
 
-def _tao_wattpad(trang, kq: dict) -> None:
+def _tao_wattpad(trang, kq: dict, khoa: str = "wattpad") -> None:
     """Wattpad: điền hai ô, bấm "Hư cấu" rồi "Lưu & Tiếp tục". Truyện chưa có chương nào
-    được đăng thì không ai đọc được. Tạo xong thì ghi mã truyện vào `TEP_TRUYEN_THU`."""
-    if "wattpad" in _doc_truyen_thu():
+    được đăng thì không ai đọc được. Tạo xong thì ghi mã truyện vào `TEP_TRUYEN_THU` dưới
+    `khoa`: "wattpad" là truyện thử, "wattpad_tuyen_tap" là truyện tuyển tập."""
+    o = TRUYEN_THU_WATTPAD if khoa == "wattpad" else TUYEN_TAP_WATTPAD
+    if khoa in _doc_truyen_thu():
         kq["trang_thai"] = "DA_CO"
         return
     trang.goto(NEN_TANG["wattpad"]["truyen_moi"])
@@ -193,7 +205,7 @@ def _tao_wattpad(trang, kq: dict) -> None:
     if _co_cloudflare(trang):
         kq["trang_thai"] = "KHONG_DO_DUOC"
         return
-    for nhan, gia_tri in TRUYEN_THU_WATTPAD.items():
+    for nhan, gia_tri in o.items():
         trang.get_by_role("textbox", name=nhan, exact=True).fill(gia_tri)
     trang.get_by_role("button", name="Hư cấu", exact=True).click()
     time.sleep(1)
@@ -210,22 +222,168 @@ def _tao_wattpad(trang, kq: dict) -> None:
     # Không chắc thì KHONG_RO — KHÔNG BAO GIỜ nói "không tạo" khi chưa đọc lại. Và vẫn ghi
     # dấu vào tệp, để lần chạy sau thấy "DA_CO" mà không tạo thêm truyện thứ hai.
     if not m:
-        _ghi_truyen_thu("wattpad", {"id": None, "url": None, "trang_thai": "KHONG_RO", "moc": moc})
+        _ghi_truyen_thu(khoa, {"id": None, "url": None, "trang_thai": "KHONG_RO", "moc": moc})
         kq["trang_thai"] = "KHONG_RO"
         return
-    _ghi_truyen_thu("wattpad", {"id": m.group(1), "url": trang.url,
-                                "tieu_de": TRUYEN_THU_WATTPAD["Tiêu đề *"], "moc": moc})
+    _ghi_truyen_thu(khoa, {"id": m.group(1), "url": trang.url, "tieu_de": o["Tiêu đề *"], "moc": moc})
     # Tin trang ĐỌC LẠI: mở lại chính trang ấy, tiêu đề truyện phải hiện đúng.
     trang.goto(trang.url)
     trang.wait_for_load_state("load", timeout=30000)
     time.sleep(3)
-    kq["trang_thai"] = "DA_TAO" if _dung_truyen_thu(trang) else "KHONG_RO"
+    kq["trang_thai"] = "DA_TAO" if _dung_truyen(trang, o["Tiêu đề *"]) else "KHONG_RO"
+
+
+def _dung_truyen(trang, tieu_de: str) -> bool:
+    """Trang đang mở có đúng truyện mang tiêu đề này không — đọc tiêu đề hiện trên trang.
+    Mọi lần ghi phải qua câu hỏi này TRƯỚC khi chạm vào ô viết (cửa canh kiểm thứ tự)."""
+    return trang.get_by_text(tieu_de, exact=True).count() > 0
 
 
 def _dung_truyen_thu(trang) -> bool:
-    """Trang soạn đang mở có đúng truyện thử không — đọc tiêu đề truyện hiện trên trang.
-    Mọi lần ghi phải qua câu hỏi này TRƯỚC khi chạm vào ô viết (cửa canh kiểm thứ tự)."""
-    return trang.get_by_text(TRUYEN_THU_WATTPAD["Tiêu đề *"], exact=True).count() > 0
+    return _dung_truyen(trang, TRUYEN_THU_WATTPAD["Tiêu đề *"])
+
+
+def _chuan_hoa(s: str) -> str:
+    """Gộp mọi khoảng trắng liền nhau thành một dấu cách — ô soạn được đổi xuống dòng,
+    không được đổi chữ (`CHOT:dang-vong-2`, "đọc lại khớp")."""
+    return " ".join((s or "").split())
+
+
+def _sha(s: str) -> str:
+    return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+
+def _doc_so_dang() -> list:
+    try:
+        return [json.loads(x) for x in SO_DANG.read_text(encoding="utf-8").splitlines() if x.strip()]
+    except OSError:
+        return []
+
+
+def _ghi_so_dang(muc: dict) -> None:
+    SO_DANG.parent.mkdir(parents=True, exist_ok=True)
+    with SO_DANG.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(muc, ensure_ascii=False) + "\n")
+
+
+def _hang_cho(nen_tang: str) -> list:
+    """Kịch bản ĐẠT chưa đăng, cũ nhất trước. Nguồn là thứ app ghi: `kich_ban.md` + `meta.json`.
+
+    Bỏ: thư mục không có `meta.json` (kịch bản cũ, trước vòng 2 — không tự đăng bù); tệp
+    kịch bản bị sửa sau khi ghi (SHA không còn khớp meta); SHA đã ĐẠT trong sổ. Một lần
+    hỏng trước đó đã mở chương thì trả `url_do_dang`, để lần sau GHI TIẾP vào chương ấy
+    thay vì mở chương mới — không để lại chương rỗng.
+    """
+    so = [m for m in _doc_so_dang() if m.get("nen_tang") == nen_tang]
+    da_xong = {m.get("sha256") for m in so if m.get("trang_thai") == "DAT"}
+    do_dang = {m.get("sha256"): m["url_chuong"] for m in so
+               if m.get("trang_thai") != "DAT" and m.get("url_chuong")}
+    ra: dict = {}
+    for tep_meta in sorted(DATA_AURA.glob("*/meta.json")):
+        try:
+            meta = json.loads(tep_meta.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        kb = tep_meta.parent / "kich_ban.md"
+        if not kb.is_file() or hashlib.sha256(kb.read_bytes()).hexdigest() != meta.get("sha256"):
+            continue
+        # Cùng nội dung ở hai thư mục: giữ bản CŨ NHẤT theo giờ app ghi. Gieo 14/09: bản đầu
+        # viết `in ra` — dict đằng nào cũng gộp trùng, nên điều kiện ấy chỉ quyết định giữ
+        # bản nào, và không bài nào hỏi điều ấy (cửa mù).
+        cu = ra.get(meta["sha256"])
+        if meta["sha256"] in da_xong or (cu and cu["luc"] <= meta.get("luc", "")):
+            continue
+        ra[meta["sha256"]] = {"thu_muc": str(tep_meta.parent), "sha256": meta["sha256"],
+                              "chu_de": meta.get("chu_de") or tep_meta.parent.name,
+                              "van_ban": kb.read_text(encoding="utf-8").strip(),
+                              "luc": meta.get("luc", ""), "url_do_dang": do_dang.get(meta["sha256"])}
+    return sorted(ra.values(), key=lambda m: m["luc"])
+
+
+def _luu_chuong(trang, tuyen_tap: dict, muc: dict) -> dict:
+    """MỘT kịch bản thành MỘT chương nháp trong truyện tuyển tập, rồi ĐỌC LẠI.
+
+    Mở trang của truyện tuyển tập, hỏi "đúng truyện chưa", bấm "+ Chương Mới", hỏi lại
+    trong trình soạn, điền tên chương (đề) và nội dung, bấm "Lưu", tải lại, đọc lại tên,
+    nội dung và chữ "Bản thảo". Lần hỏng trước đã mở chương thì ghi tiếp vào chương ấy.
+    """
+    t0 = time.monotonic()
+    tieu_de = TUYEN_TAP_WATTPAD["Tiêu đề *"]
+    kq = {"nen_tang": "wattpad", "sha256": muc["sha256"], "chu_de": muc["chu_de"],
+          "thu_muc": muc["thu_muc"]}
+    if muc.get("url_do_dang"):
+        trang.goto(muc["url_do_dang"])
+    else:
+        trang.goto(f"https://www.wattpad.com/myworks/{tuyen_tap['id']}")
+        trang.wait_for_load_state("load", timeout=30000)
+        time.sleep(3)
+        if _co_cloudflare(trang) or not _dung_truyen(trang, tieu_de):
+            kq["trang_thai"] = "KHONG_DO_DUOC" if _co_cloudflare(trang) else "SAI_TRUYEN"
+            return kq
+        trang.get_by_role("button", name="+ Chương Mới", exact=True).click()
+        for _ in range(60):
+            if re.search(r"/write/\d+", trang.url):
+                break
+            time.sleep(1)
+    trang.wait_for_load_state("load", timeout=30000)
+    time.sleep(3)
+    if not re.search(rf"/myworks/{tuyen_tap['id']}/write/\d+", trang.url):
+        kq["trang_thai"] = "KHONG_RO"
+        return kq
+    kq["url_chuong"] = trang.url
+    if _co_cloudflare(trang) or not _dung_truyen(trang, tieu_de):
+        kq["trang_thai"] = "KHONG_DO_DUOC" if _co_cloudflare(trang) else "SAI_TRUYEN"
+        return kq
+    trang.locator("#story-title").fill(muc["chu_de"])
+    trang.get_by_role("textbox", name="Viết truyện của bạn", exact=True).fill(muc["van_ban"])
+    trang.get_by_role("button", name="Lưu", exact=True).click()
+    time.sleep(5)
+    trang.reload()
+    trang.wait_for_load_state("load", timeout=30000)
+    time.sleep(3)
+    doc = trang.get_by_role("textbox", name="Viết truyện của bạn", exact=True).inner_text()
+    ten = trang.locator("#story-title").inner_text()
+    kq.update({"khop": _sha(_chuan_hoa(doc)) == _sha(_chuan_hoa(muc["van_ban"])),
+               "ten_khop": _chuan_hoa(ten) == _chuan_hoa(muc["chu_de"]),
+               "con_la_nhap": trang.get_by_text("Bản thảo", exact=False).count() > 0,
+               "dung_truyen_sau": _dung_truyen(trang, tieu_de)})
+    kq["trang_thai"] = ("DAT" if kq["khop"] and kq["ten_khop"] and kq["con_la_nhap"]
+                        and kq["dung_truyen_sau"] else "KHONG_DAT")
+    kq["giay"] = round(time.monotonic() - t0, 1)
+    return kq
+
+
+def dang_hang_cho(nen_tang: str, toi_da: str = "5") -> dict:
+    """Vòng 2: đưa tối đa `toi_da` kịch bản trong hàng chờ thành chương nháp, ghi sổ MỖI
+    lượt — kể cả lượt hỏng. Gặp hộp kiểm hay sai truyện thì dừng cả lượt chạy."""
+    if nen_tang != "wattpad":
+        raise ValueError("vòng 2 mới dựng cho wattpad")
+    tuyen_tap = _doc_truyen_thu().get("wattpad_tuyen_tap") or {}
+    if not tuyen_tap.get("id"):
+        raise ValueError("chưa có truyện tuyển tập — chạy: tao_thu wattpad tuyen_tap")
+    viec = _hang_cho(nen_tang)[: int(toi_da)]
+    ket: list = []
+    if viec:
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as p:
+            ctx = _mo_trinh_duyet(p, nen_tang)
+            trang = ctx.pages[0] if ctx.pages else ctx.new_page()
+            for muc in viec:
+                try:
+                    kq = _luu_chuong(trang, tuyen_tap, muc)
+                except Exception as e:  # noqa: BLE001 — lượt hỏng cũng phải vào sổ
+                    kq = {"nen_tang": nen_tang, "sha256": muc["sha256"], "chu_de": muc["chu_de"],
+                          "thu_muc": muc["thu_muc"], "trang_thai": "LOI", "loi": str(e)[:300]}
+                    if re.search(rf"/myworks/{tuyen_tap['id']}/write/\d+", trang.url):
+                        kq["url_chuong"] = trang.url
+                kq["luc"] = time.strftime("%Y-%m-%d %H:%M:%S")
+                _ghi_so_dang(kq)
+                ket.append(kq)
+                if kq["trang_thai"] != "DAT":
+                    break
+            ctx.close()
+    return {"che_do": "dang_hang_cho", "nen_tang": nen_tang, "so_viec": len(viec), "ket": ket}
 
 
 def ghi_nhap(nen_tang: str, lan: str) -> dict:
@@ -278,12 +436,15 @@ def ghi_nhap(nen_tang: str, lan: str) -> dict:
     return kq
 
 
-def tao_thu(nen_tang: str) -> dict:
-    """Tạo truyện thử của vòng 0 nếu CHƯA có, rồi chụp lại trang. Không tự bấm gì ở đây —
-    phần bấm nằm ở `_tao_stv` / `_tao_wattpad`, mỗi hàm một danh sách nút được phép."""
-    buoc = {"sangtacviet": _tao_stv, "wattpad": _tao_wattpad}
-    if nen_tang not in buoc:
-        raise ValueError(f"không có phần tạo truyện cho {nen_tang!r}")
+def tao_thu(nen_tang: str, loai: str = "thu") -> dict:
+    """Tạo truyện thử (vòng 0) hoặc truyện tuyển tập (vòng 2, `loai="tuyen_tap"`, chỉ
+    Wattpad) nếu CHƯA có, rồi chụp lại trang. Không tự bấm gì ở đây — phần bấm nằm ở
+    `_tao_stv` / `_tao_wattpad`, mỗi hàm một danh sách nút được phép."""
+    buoc = {("sangtacviet", "thu"): _tao_stv,
+            ("wattpad", "thu"): lambda t, k: _tao_wattpad(t, k, "wattpad"),
+            ("wattpad", "tuyen_tap"): lambda t, k: _tao_wattpad(t, k, "wattpad_tuyen_tap")}
+    if (nen_tang, loai) not in buoc:
+        raise ValueError(f"không có phần tạo {loai!r} cho {nen_tang!r}")
     from playwright.sync_api import sync_playwright
 
     ra = GOC_HO_SO / "xem"
@@ -296,7 +457,7 @@ def tao_thu(nen_tang: str) -> dict:
         trang = ctx.pages[0] if ctx.pages else ctx.new_page()
         # alert thì bấm OK để trang chạy tiếp; confirm thì TỪ CHỐI — không đồng ý gì hộ Sếp.
         trang.on("dialog", lambda h: _dong_hop_thoai(h, hop_thoai))
-        buoc[nen_tang](trang, kq)
+        buoc[(nen_tang, loai)](trang, kq)
         anh = ra / f"{nen_tang}-tao_thu-{moc}.png"
         trang.screenshot(path=str(anh), full_page=True)
         (ra / f"{nen_tang}-tao_thu-{moc}.txt").write_text(
@@ -347,8 +508,9 @@ def main(argv: list[str]) -> int:
     # In JSON tiếng Việt qua đường ống: Windows mặc định cp1252 và chết ở "ẽ" (đã trả
     # giá ở bộ căn chữ) — ghim UTF-8.
     sys.stdout.reconfigure(encoding="utf-8")
-    che_do = {"mo": mo, "mo_chrome": mo_chrome, "tao_thu": tao_thu, "xem": xem, "ghi_nhap": ghi_nhap}
-    bon_doi_so = {"xem", "ghi_nhap"}
+    che_do = {"mo": mo, "mo_chrome": mo_chrome, "tao_thu": tao_thu, "xem": xem,
+              "ghi_nhap": ghi_nhap, "dang_hang_cho": dang_hang_cho}
+    bon_doi_so = {"xem", "ghi_nhap", "tao_thu", "dang_hang_cho"}
     if (len(argv) not in (3, 4) or argv[1] not in che_do
             or (argv[1] not in bon_doi_so and len(argv) == 4)
             or (argv[1] == "ghi_nhap" and len(argv) != 4)):

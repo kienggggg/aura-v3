@@ -109,6 +109,25 @@ def _duong_trong_kho(duong: Path) -> str:
         return duong.as_posix()
 
 
+def _ghi_kich_ban(thu_muc: Path, van_ban: str, chu_de: str, the_loai: str) -> Dict[str, Any]:
+    """Ghi kịch bản ĐẠT của phòng viết, kèm `meta.json` cho hàng chờ đăng (`CHOT:dang-vong-2`).
+
+    MỘT hàm cho HAI đường (`/api/dispatch` và `/api/pipeline/run`): sửa một đường mà quên
+    đường kia là đúng bài "vá một nửa của một cặp" (06/09). `meta.json` mang đề — tên chương
+    khi đăng — và SHA-256 của chính tệp kịch bản, để sổ đăng không đăng trùng. Trả mục hiện
+    vật của `kich_ban.md` như trước; `meta.json` không vào danh sách hiện vật.
+    """
+    thu_muc.mkdir(parents=True, exist_ok=True)
+    tep = thu_muc / "kich_ban.md"
+    tep.write_text(van_ban + "\n", encoding="utf-8")
+    sha = hashlib.sha256(tep.read_bytes()).hexdigest()
+    (thu_muc / "meta.json").write_text(json.dumps(
+        {"chu_de": chu_de, "the_loai": the_loai, "sha256": sha,
+         "luc": datetime.now().astimezone().isoformat()}, ensure_ascii=False), encoding="utf-8")
+    return {"name": tep.name, "path": _duong_trong_kho(tep), "size_bytes": tep.stat().st_size,
+            "sha256": sha, "type": "MARKDOWN", "kind": "kich_ban_cho_alpha"}
+
+
 def _duong_de_hien(duong: Path) -> str:
     """Đường dẫn gọn để hiển thị. Không có tệp -> `CHUA_DO`; ngoài repo -> tuyệt đối."""
     if not duong.is_file():
@@ -588,24 +607,15 @@ async def api_dieu_phoi_phong(request: web.Request) -> web.Response:
         # khác, kẻo chẹn máy chủ.
         #
         # Kịch bản này chính là đầu vào `van_ban` của phòng Alpha.
-        from core.viet_truyen import viet_kich_ban
+        from core.viet_truyen import THE_LOAI_MAC_DINH, viet_kich_ban
 
         _kq = await asyncio.to_thread(viet_kich_ban, yeu_cau)
         _phong_tra_ve = "PASS" if _kq["trang_thai"] == "DAT" else _kq["trang_thai"]
         _so = _kq["so"]
 
         if _kq["trang_thai"] == "DAT":
-            _thu_muc = DATA_DIR / "aura" / task_id
-            _thu_muc.mkdir(parents=True, exist_ok=True)
-            _tep = _thu_muc / "kich_ban.md"
-            _tep.write_text(_kq["van_ban"] + "\n", encoding="utf-8")
-            artifacts.append({
-                "name": _tep.name,
-                "path": _duong_trong_kho(_tep),
-                "size_bytes": _tep.stat().st_size,
-                "sha256": hashlib.sha256(_tep.read_bytes()).hexdigest(),
-                "type": "MARKDOWN", "kind": "kich_ban_cho_alpha",
-            })
+            artifacts.append(_ghi_kich_ban(DATA_DIR / "aura" / task_id, _kq["van_ban"],
+                                           yeu_cau, THE_LOAI_MAC_DINH))
             ket_qua = (
                 "⚡ **[AURA Writer]** Đã viết xong kịch bản cho Alpha.\n\n"
                 f"- **Độ dài**: {_so.get('so_tu')} từ "
@@ -1211,15 +1221,7 @@ async def chay_chuoi_phong(ke_hoach: List[tuple], chu_de: str,
             kich_ban = _kq.get("van_ban", "")
             hv: List[Dict[str, Any]] = []
             if kich_ban:
-                d = DATA_DIR / "aura" / task_id
-                d.mkdir(parents=True, exist_ok=True)
-                tep = d / "kich_ban.md"
-                tep.write_text(kich_ban + "\n", encoding="utf-8")
-                hv = [{"name": tep.name,
-                       "path": _duong_trong_kho(tep),
-                       "size_bytes": tep.stat().st_size,
-                       "sha256": hashlib.sha256(tep.read_bytes()).hexdigest(),
-                       "type": "MARKDOWN", "kind": "kich_ban_cho_alpha"}]
+                hv = [_ghi_kich_ban(DATA_DIR / "aura" / task_id, kich_ban, chu_de, the_loai)]
             _so = _kq["so"]
             # `lan` RỖNG khi cửa nêu đề fail-closed trước vòng lặp (04/09/2026).
             # `_kq['lan'][-1]` ở đó là IndexError — cả chuỗi đổ 500 thay vì trả

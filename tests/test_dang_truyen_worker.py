@@ -43,14 +43,73 @@ def test_NEN_TANG_LA_thi_NO_khong_doan():
         w.ho_so("wattpad.com")
 
 
-@pytest.mark.parametrize("ham", ["mo", "xem", "_mo_trinh_duyet"])
+def _nguon() -> str:
+    return (PROJECT_ROOT / "tools" / "dang_truyen_worker.py").read_text(encoding="utf-8")
+
+
+def _ham(ten: str) -> ast.FunctionDef:
+    return next(n for n in ast.walk(ast.parse(_nguon()))
+                if isinstance(n, ast.FunctionDef) and n.name == ten)
+
+
+@pytest.mark.parametrize("ham", ["mo", "mo_chrome", "xem", "_mo_trinh_duyet", "_co_cloudflare"])
 def test_VONG_0_KHONG_BAM_GI(ham):
     """Bước 1 là Sếp tự đăng nhập, bước 2 chỉ đọc. Có một lời gọi thao tác là đã vượt vòng 0."""
-    cay = ast.parse((PROJECT_ROOT / "tools" / "dang_truyen_worker.py").read_text(encoding="utf-8"))
-    than = next(n for n in ast.walk(cay) if isinstance(n, ast.FunctionDef) and n.name == ham)
-    goi = {n.func.attr for n in ast.walk(than)
+    goi = {n.func.attr for n in ast.walk(_ham(ham))
            if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
     assert not (goi & LENH_THAO_TAC), f"{ham} gọi {sorted(goi & LENH_THAO_TAC)}"
+
+
+# Chép TAY từ biểu mẫu "Tạo truyện" của STV đọc ngày 14/09 — bốn ô, radio để mặc định.
+DAC_TA_O_TAO_THU = {"Tên truyện", "Tác giả/Bút danh", "Thể loại", "Giới thiệu"}
+
+
+def test_TAO_THU_chi_bam_dung_nut_Tao_truyen_va_chi_dien_bon_o():
+    than = _ham("tao_thu")
+    nguon = _nguon()
+    bam = [n for n in ast.walk(than) if isinstance(n, ast.Call)
+           and isinstance(n.func, ast.Attribute) and n.func.attr == "click"]
+    assert len(bam) == 1, f"tao_thu bấm {len(bam)} chỗ, chỉ được một"
+    assert '"Tạo truyện"' in ast.get_source_segment(nguon, bam[0]), ast.get_source_segment(nguon, bam[0])
+    khac = {n.func.attr for n in ast.walk(than) if isinstance(n, ast.Call)
+            and isinstance(n.func, ast.Attribute)} & (LENH_THAO_TAC - {"click", "fill"})
+    assert not khac, f"tao_thu gọi {sorted(khac)}"
+    assert set(w.TRUYEN_THU) == DAC_TA_O_TAO_THU
+
+
+def test_KHONG_DONG_TOI_NUT_PHAT_HANH():
+    """Trên STV "Tạo truyện" và nút phát hành là HAI nút (đọc mã trang 14/09). Vòng 0
+    không được có một chữ nào dẫn tới nút thứ hai — kể cả tên hàm JS của nó.
+
+    Dò trong MÃ (chuỗi và tên của cây AST), bỏ chú thích và docstring. Bản đầu dò cả tệp
+    và đỏ vì chú thích "không bao giờ xuất bản" — `x in y` lần nữa: chữ nằm trong lời kể,
+    không nằm trong lệnh.
+    """
+    cay = ast.parse(_nguon())
+    doc = {id(n.body[0].value) for n in ast.walk(cay)
+           if isinstance(n, (ast.Module, ast.FunctionDef, ast.ClassDef)) and n.body
+           and isinstance(n.body[0], ast.Expr) and isinstance(n.body[0].value, ast.Constant)}
+    ma = [n.value for n in ast.walk(cay)
+          if isinstance(n, ast.Constant) and isinstance(n.value, str) and id(n) not in doc]
+    ma += [n.id for n in ast.walk(cay) if isinstance(n, ast.Name)]
+    ma += [n.attr for n in ast.walk(cay) if isinstance(n, ast.Attribute)]
+    chu = " ".join(ma).lower()
+    assert "tạo truyện" in chu, "máy dò không thấy cả chữ nó phải thấy — dò sai chỗ"
+    for cam in ("xuất bản", "xuat ban", "exportbook", "extractbook", "isexport"):
+        assert cam not in chu, f"mã của công cụ có {cam!r}"
+
+
+def test_MO_CHROME_la_Chrome_thuong_khong_co_co_dieu_khien():
+    """Google chỉ cho đăng nhập trên trình duyệt KHÔNG bị điều khiển. Lén thêm cổng gỡ lỗi
+    thì vừa hỏng đúng việc ấy, vừa thành trình duyệt bị điều khiển đội lốt Chrome thường."""
+    assert w.CHROME == Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe")
+    assert set(w.TRINH_DUYET) == set(w.NEN_TANG)
+    popen = [n for n in ast.walk(_ham("mo_chrome")) if isinstance(n, ast.Call)
+             and isinstance(n.func, ast.Attribute) and n.func.attr == "Popen"]
+    assert len(popen) == 1
+    co = [s.value for s in ast.walk(popen[0].args[0])
+          if isinstance(s, ast.Constant) and isinstance(s.value, str) and s.value.startswith("--")]
+    assert set(co) <= {"--user-data-dir=", "--no-first-run"}, co
 
 
 def test_TRINH_DUYET_THAT_khong_an_khong_gia():

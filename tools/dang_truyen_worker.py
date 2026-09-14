@@ -34,7 +34,9 @@ TRINH_DUYET = {"wattpad": "chrome", "sangtacviet": "chromium"}
 CHROME = Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe")
 NEN_TANG = {
     "wattpad": {"dang_nhap": "https://www.wattpad.com/login",
-                "soan": "https://www.wattpad.com/myworks"},
+                "soan": "https://www.wattpad.com/myworks",
+                # "+ Truyện Mới" là <a href="/write/story/new"> (đọc HTML 14/09).
+                "truyen_moi": "https://www.wattpad.com/write/story/new"},
     "sangtacviet": {"dang_nhap": "https://sangtacviet.com/",
                     "soan": "https://sangtacviet.com/writer.php",
                     # Nút "Thêm Truyện" chỉ là onclick location.href tới trang này (đọc
@@ -189,7 +191,10 @@ def xem(nen_tang: str, ten_trang: str = "soan") -> dict:
         ctx = _mo_trinh_duyet(p, nen_tang)
         trang = ctx.pages[0] if ctx.pages else ctx.new_page()
         trang.goto(NEN_TANG[nen_tang][ten_trang])
-        trang.wait_for_load_state("networkidle", timeout=30000)
+        # KHÔNG chờ "networkidle": Wattpad gọi mạng liên tục (quảng cáo, đo lường) nên
+        # không bao giờ yên — đo 14/09 hết giờ 30 s, còn STV thì yên được. Chờ "load" + 3 s.
+        trang.wait_for_load_state("load", timeout=30000)
+        time.sleep(3)
         cay = trang.locator("body").aria_snapshot()
         anh = ra / f"{nen_tang}-{moc}.png"
         chu = ra / f"{nen_tang}-{moc}.txt"

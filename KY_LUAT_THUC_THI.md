@@ -4342,6 +4342,55 @@ k/gh/ngh · c/g/ng · bỏ hẳn cửa trong `viet_kich_ban` · bỏ danh sách 
 theo đề · nối cửa với đề rỗng · miễn theo chuỗi con), trả mã về giống từng byte.
 <!-- /CHOT:chu-anh-kich-ban -->
 
+<!-- CHOT:neu-de-hai-cau -->
+### Cửa nêu đề nới sang câu 1–2 — kế hoạch sổ lỗi §5, Sếp duyệt 14/09/2026; đăng ký TRƯỚC khi chạy lượt model nào
+
+**Vì sao:** Sếp chấm mù một truyện và chỉ ra câu mở "tự nhiên" bằng nguyên văn đề,
+không dẫn dắt (sổ lỗi, mục L-01). Đếm trên 60 bản gần nhất, gộp mọi nhánh:
+**53/60 câu 1 BẮT ĐẦU bằng nguyên văn đề**, 56/60 có nguyên văn đề trong câu 1.
+Nguyên nhân là lời nhắc: *"BẮT BUỘC: câu đầu tiên phải nhắc tới {đề} — dùng lại
+chính những chữ đó trong câu mở"*. Câu ấy được thêm ngày 08/09, vì trước đó cửa nêu
+đề bác 10/11 lượt, toàn ở đề trừu tượng.
+
+**Thiết kế:** hai nhánh, khác đúng MỘT thay đổi. Lời nhắc và cửa đổi cùng nhau, vì
+cửa chính là lý do lời nhắc có câu ấy.
+- **0**: lời nhắc hiện nay; cửa nêu đề đọc câu 1.
+- **N**: thay đúng mệnh đề *"câu đầu tiên phải nhắc tới {đề} — dùng lại chính những
+  chữ đó trong câu mở,"* bằng *"một trong hai câu đầu phải nhắc tới {đề} — dùng lại
+  chính những chữ đó,"*. Cửa nêu đề đọc câu 1 HOẶC câu 2. Bộ cắt giữ nguyên hai câu
+  đầu, nên đề nằm ở câu 2 thì cắt xong vẫn còn.
+
+**Ba đề MỚI, chưa từng dùng**, trộn đề cụ thể với đề trừu tượng (ca hỏng 08/09 là đề
+trừu tượng): *chiếc xe đạp cũ của bố* · *nỗi nhớ nhà của người đi xa* · *người bán
+vé số lúc nửa đêm*. Hạt 1–5, mỗi lượt sinh một lần, hai nhánh xen kẽ, đổi thứ tự
+mỗi hạt: 30 lượt. Chấm bằng đúng đường của phòng: bỏ số → trần/sàn từ-câu → cắt
+giữ truyện → hình dạng (có chữ Hán) → nêu đề (câu 1 cho nhánh 0, câu 1–2 cho nhánh
+N) → chữ lạ.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| lọt cửa một lần sinh, 15 lượt mỗi nhánh | N ≥ 0 − 2 |
+| câu 1 bắt đầu bằng nguyên văn đề, 15 lượt mỗi nhánh | N ≤ một nửa của nhánh 0 |
+| Sếp chấm mù ba câu đầu, 3 cặp | N hơn ở ≥ 2/3 |
+
+**Luật quyết định, viết trước:**
+- Đạt hàng 1 và 2 thì gửi Sếp 3 cặp mù: mỗi đề một cặp, gồm ba câu đầu của bản lọt
+  cửa, lấy ở hạt nhỏ nhất mà cả hai nhánh cùng lọt. Máy xáo nhãn X/Y, khoá ghi
+  tệp riêng.
+- Đạt cả ba hàng thì đổi lời nhắc và cửa.
+- Hỏng hàng 1 hoặc hàng 2 thì dừng, ghi số, không đổi gì.
+
+**Báo, không làm ngưỡng:** câu 1 CÓ nguyên văn đề ở đâu đó · lý do trượt của từng
+lượt · thời gian.
+
+**Giới hạn, nói trước:** câu mở không lặp nguyên văn đề chưa chắc đã là câu mở hay
+hơn. Model có thể mở bằng thời tiết (dạng *"Buổi sáng đẹp…"* đo được ngày 08/09)
+thay cho một câu dẫn tốt. Vì vậy hàng Sếp chấm mới là chốt; hai hàng máy chỉ cho biết
+thay đổi này CÓ THỂ dùng được hay không.
+<!-- /CHOT:neu-de-hai-cau -->
+
 <!-- CHOT:bo-cat-giu-truyen -->
 ### Bộ cắt không được xoá truyện — Sếp duyệt 13/09/2026; đăng ký TRƯỚC khi chạy model
 

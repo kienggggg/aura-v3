@@ -1,7 +1,10 @@
 # Kế hoạch — Sổ lỗi phòng AURA (14/09/2026)
 
-<!-- KET_CUC:CHUA_DUYET · 14/09/2026 -->
-**Trạng thái: CHỜ DUYỆT. Chưa viết dòng mã nào.**
+<!-- KET_CUC:DANG_LAM · 14/09/2026 -->
+**Trạng thái: ĐANG LÀM. Sếp duyệt 14/09.** Mặc định em lấy cho các câu §10 Sếp
+chưa trả lời: sổ để ở gốc repo, em chọn 3 đề mới, nhánh §5 đo riêng. Mã sản
+phẩm CHƯA đổi, lời nhắc chưa có câu dặn nào. Phép thử §8 chờ Sếp chấm xong hai
+tệp (§9).
 
 Sếp giao ngày 14/09, với một nguyên tắc: *model không giỏi lên nhờ được huấn luyện
 cho thông minh hơn, mà nhờ nhớ và tránh được lỗi mình đã làm*. `CLAUDE.md` §7
@@ -113,7 +116,9 @@ của người khác.
 - ví dụ thật, dài tối đa một câu;
 - câu dặn;
 - số lần gặp;
-- trạng thái: *đang dặn* · *đã thành cửa* · *đã sửa máy* · *bỏ*.
+- trạng thái: *chờ đo* · *đang dặn* · *đã thành cửa* · *đã sửa máy* · *bỏ*.
+  (*chờ đo* thêm lúc dựng sổ ngày 14/09: cả năm mục đầu chưa qua phép đo nào, nên
+  chưa mục nào được gọi là *đang dặn*.)
 
 **Chỉ mục loại C đang ở trạng thái *đang dặn* mới vào lời nhắc.** Hai loại kia
 tốn 0 token.

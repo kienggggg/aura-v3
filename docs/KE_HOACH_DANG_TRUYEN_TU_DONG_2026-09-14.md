@@ -14,7 +14,10 @@ nào.
   - 5/5 kịch bản thật của phòng viết thành chương nháp trong *"Truyện ngắn AURA"*.
   - 0 chương trùng, 0 lần đăng công khai, mỗi chương ≤ 19,2 s, truyện đã đăng của Sếp giống
     hệt trước và sau.
-  - Còn hở: chưa có lịch tự chạy hàng chờ.
+- **Lịch tự chạy xong ngày 14/09** (`CHOT:dang-lich`):
+  - Tác vụ Windows *"AURA dang hang cho"* chạy 10 phút một lần.
+  - Một kịch bản mới của app thành chương nháp sau 10,2 phút mà không ai chạy lệnh nào.
+  - Có khoá chống chạy chồng, và sổ lịch ghi mỗi lượt một dòng.
 - Vòng 1 (tải browser-use) chờ Sếp duyệt riêng.
 
 Sếp giao ngày 14/09: *việc gì tự động được thì tự động hoàn toàn*, dù mỗi nền tảng

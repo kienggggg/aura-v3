@@ -4732,6 +4732,34 @@ người chạy lệnh. Lịch vá chỗ ấy.
 - Hàng 1: sinh MỘT truyện mới qua `/api/dispatch` rồi không chạy lệnh nào; đo từ giờ
   trong `meta.json` tới giờ ghi sổ đăng.
 - Hàng 4: đọc mục lục tuyển tập.
+
+**KẾT QUẢ 14/09/2026 — ĐẠT cả bốn hàng. Tác vụ "AURA dang hang cho" đang chạy thật.**
+
+```
+kịch bản mới thành chương nháp, không ai chạy lệnh   10,2 phút    ĐẠT
+  app ghi lúc 20:08:49 · lượt lịch 20:08:38 chạy trước 11 giây, 0 việc · lượt lịch
+  20:18:36 tự lấy, lưu nháp mất 25 giây, đọc lại khớp, vẫn là "Bản thảo"
+lượt không có việc vẫn ghi sổ lịch                   1 dòng       ĐẠT
+  (kích bằng Task Scheduler qua pythonw, hàng chờ rỗng: "XONG, so_viec 0", khoá được thả)
+lượt chạy khi có khoá                                bỏ qua       ĐẠT
+  (khoá đặt tay còn nguyên, sổ đăng vẫn 5 dòng)
+lần đăng công khai ngoài ý muốn                      0            ĐẠT
+  (mục lục tuyển tập: 6 "Bản thảo", 0 "Đã đăng")
+```
+
+**Tác vụ:** chạy dưới tài khoản của Sếp, kiểu đăng nhập Interactive, lặp mỗi PT10M.
+- `MultipleInstances = IgnoreNew`: Windows không mở lượt mới khi lượt cũ còn chạy — thêm
+  một lớp ngoài khoá của mình.
+- `ExecutionTimeLimit` 30 phút.
+- Sổ lịch cho thấy lịch nổ đúng 10 phút một lần (20:08:38 → 20:18:36).
+
+**Độ trễ xấu nhất** là khoảng một chu kỳ cộng thời gian lưu: ~10 phút + ~25 giây mỗi
+chương. Mỗi lượt tối đa 5 chương.
+
+**Còn hở, nói trước:**
+- Lịch chỉ chạy khi Sếp đang đăng nhập máy.
+- Có việc thì một cửa sổ Chrome hiện lên trong lúc lưu — trình duyệt thật, không chạy ẩn.
+- Sáng Tác Việt chưa có trong lịch: tài khoản chưa đủ 1000 phút tham gia.
 <!-- /CHOT:dang-lich -->
 
 <!-- CHOT:bo-cat-giu-truyen -->

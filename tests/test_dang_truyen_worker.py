@@ -119,12 +119,29 @@ def test_LUU_CHUONG_chi_dien_ten_va_noi_dung_SAU_cau_hoi_dung_truyen():
               and isinstance(n.func, ast.Attribute) and n.func.attr == "click"
               and '"+ Chương Mới"' in ast.get_source_segment(nguon, n))
     assert any(mo < h < dien[0].lineno for h in hoi), "không hỏi lại đúng truyện trong trình soạn"
+    # Và đọc ô viết TRƯỚC khi điền: có chữ không phải kịch bản này thì dừng, không ghi đè.
+    doc = [n.lineno for n in ast.walk(than) if isinstance(n, ast.Call)
+           and isinstance(n.func, ast.Attribute) and n.func.attr == "inner_text"]
+    assert any(mo < d < dien[0].lineno for d in doc), "không đọc ô viết trước khi điền — có thể ghi đè"
+    assert '"CHUONG_CO_CHU"' in ast.get_source_segment(nguon, than)
 
 
 def test_TUYEN_TAP_noi_ro_do_AI_viet():
     """Lời giới thiệu nói thẳng tác giả là AI — chọn từ 14/09, không đợi nền tảng bắt."""
     assert set(w.TUYEN_TAP_WATTPAD) == DAC_TA_O_TAO_THU_WATTPAD
     assert "trí tuệ nhân tạo" in w.TUYEN_TAP_WATTPAD["Mô tả * Mô tả"]
+
+
+def test_KHONG_vong_nao_vua_ngu_vua_doc_url():
+    """Đo 14/09, hai lần: vòng `for … time.sleep(1) … trang.url` không bao giờ thấy URL đổi —
+    `time.sleep` trong API đồng bộ của Playwright không bơm sự kiện. Máy báo "không tạo
+    được" hai lần trong khi truyện đã có. Chờ bằng `wait_for_url` / `wait_for_timeout`."""
+    cay = ast.parse(_nguon())
+    for vong in (n for n in ast.walk(cay) if isinstance(n, (ast.For, ast.While))):
+        ngu = any(isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                  and n.func.attr == "sleep" for n in ast.walk(vong))
+        doc_url = any(isinstance(n, ast.Attribute) and n.attr == "url" for n in ast.walk(vong))
+        assert not (ngu and doc_url), f"dòng {vong.lineno}: vòng vừa time.sleep vừa đọc .url"
 
 
 def test_KHONG_CO_nhan_KHONG_TAO():

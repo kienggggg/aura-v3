@@ -210,13 +210,16 @@ def _tao_wattpad(trang, kq: dict, khoa: str = "wattpad") -> None:
     trang.get_by_role("button", name="Hư cấu", exact=True).click()
     time.sleep(1)
     trang.get_by_role("button", name="Lưu & Tiếp tục", exact=True).click()
-    # Đo 14/09: chờ 33 s là THIẾU — Wattpad chuyển trang muộn hơn, máy báo "KHONG_TAO"
-    # trong khi truyện đã có (URL cuối /myworks/416096235/write/…). Chờ tới 90 s.
-    for _ in range(90):
-        if re.search(r"/myworks/\d+", trang.url):
-            break
-        time.sleep(1)
-    time.sleep(3)
+    # HAI lần 14/09 máy báo "không tạo được" trong khi truyện đã có (416096235, rồi
+    # 416096994). Lần đầu em chẩn đoán "Wattpad chuyển trang chậm, 33 s là thiếu" — SAI:
+    # chờ 90 s cũng thế. `time.sleep` trong API đồng bộ của Playwright KHÔNG bơm sự kiện,
+    # nên `trang.url` đứng yên suốt vòng chờ, chỉ đổi ở lệnh Playwright kế tiếp. Chờ bằng
+    # chính Playwright (`wait_for_url`) thì sự kiện chạy.
+    try:
+        trang.wait_for_url(re.compile(r"/myworks/\d+"), timeout=90000)
+    except Exception:  # noqa: BLE001 — hết giờ thì để nhánh KHONG_RO bên dưới lo
+        pass
+    trang.wait_for_timeout(3000)
     m = re.search(r"/myworks/(\d+)", trang.url)
     moc = time.strftime("%Y-%m-%d %H:%M:%S")
     # Không chắc thì KHONG_RO — KHÔNG BAO GIỜ nói "không tạo" khi chưa đọc lại. Và vẫn ghi
@@ -225,7 +228,10 @@ def _tao_wattpad(trang, kq: dict, khoa: str = "wattpad") -> None:
         _ghi_truyen_thu(khoa, {"id": None, "url": None, "trang_thai": "KHONG_RO", "moc": moc})
         kq["trang_thai"] = "KHONG_RO"
         return
-    _ghi_truyen_thu(khoa, {"id": m.group(1), "url": trang.url, "tieu_de": o["Tiêu đề *"], "moc": moc})
+    # Wattpad tạo sẵn chương 1 RỖNG cùng truyện, và đây chính là URL của nó. Truyện tuyển
+    # tập ghi lại để truyện đầu tiên trong hàng chờ vào đúng chương ấy — không để chương rỗng.
+    _ghi_truyen_thu(khoa, {"id": m.group(1), "url": trang.url, "tieu_de": o["Tiêu đề *"], "moc": moc,
+                           "chuong_dau_trong": trang.url if khoa == "wattpad_tuyen_tap" else None})
     # Tin trang ĐỌC LẠI: mở lại chính trang ấy, tiêu đề truyện phải hiện đúng.
     trang.goto(trang.url)
     trang.wait_for_load_state("load", timeout=30000)
@@ -321,10 +327,10 @@ def _luu_chuong(trang, tuyen_tap: dict, muc: dict) -> dict:
             kq["trang_thai"] = "KHONG_DO_DUOC" if _co_cloudflare(trang) else "SAI_TRUYEN"
             return kq
         trang.get_by_role("button", name="+ Chương Mới", exact=True).click()
-        for _ in range(60):
-            if re.search(r"/write/\d+", trang.url):
-                break
-            time.sleep(1)
+        try:  # chờ bằng Playwright — `time.sleep` không cho `trang.url` đổi (xem _tao_wattpad)
+            trang.wait_for_url(re.compile(r"/write/\d+"), timeout=60000)
+        except Exception:  # noqa: BLE001 — hết giờ thì nhánh KHONG_RO bên dưới lo
+            pass
     trang.wait_for_load_state("load", timeout=30000)
     time.sleep(3)
     if not re.search(rf"/myworks/{tuyen_tap['id']}/write/\d+", trang.url):
@@ -333,6 +339,12 @@ def _luu_chuong(trang, tuyen_tap: dict, muc: dict) -> dict:
     kq["url_chuong"] = trang.url
     if _co_cloudflare(trang) or not _dung_truyen(trang, tieu_de):
         kq["trang_thai"] = "KHONG_DO_DUOC" if _co_cloudflare(trang) else "SAI_TRUYEN"
+        return kq
+    # Chương đang mở có chữ mà không phải kịch bản này thì DỪNG — không bao giờ ghi đè chữ
+    # có sẵn (chương dở của lần trước thì chữ ấy chính là kịch bản, được ghi tiếp).
+    hien = _chuan_hoa(trang.get_by_role("textbox", name="Viết truyện của bạn", exact=True).inner_text())
+    if hien and hien != _chuan_hoa(muc["van_ban"]):
+        kq["trang_thai"] = "CHUONG_CO_CHU"
         return kq
     trang.locator("#story-title").fill(muc["chu_de"])
     trang.get_by_role("textbox", name="Viết truyện của bạn", exact=True).fill(muc["van_ban"])
@@ -362,6 +374,9 @@ def dang_hang_cho(nen_tang: str, toi_da: str = "5") -> dict:
     if not tuyen_tap.get("id"):
         raise ValueError("chưa có truyện tuyển tập — chạy: tao_thu wattpad tuyen_tap")
     viec = _hang_cho(nen_tang)[: int(toi_da)]
+    dau_trong = tuyen_tap.get("chuong_dau_trong")
+    if viec and dau_trong and not viec[0].get("url_do_dang"):
+        viec[0]["url_do_dang"] = dau_trong
     ket: list = []
     if viec:
         from playwright.sync_api import sync_playwright
@@ -380,6 +395,10 @@ def dang_hang_cho(nen_tang: str, toi_da: str = "5") -> dict:
                 kq["luc"] = time.strftime("%Y-%m-%d %H:%M:%S")
                 _ghi_so_dang(kq)
                 ket.append(kq)
+                if kq["trang_thai"] == "DAT" and dau_trong and kq.get("url_chuong") == dau_trong:
+                    tuyen_tap = {**tuyen_tap, "chuong_dau_trong": None}
+                    _ghi_truyen_thu("wattpad_tuyen_tap", tuyen_tap)
+                    dau_trong = None
                 if kq["trang_thai"] != "DAT":
                     break
             ctx.close()

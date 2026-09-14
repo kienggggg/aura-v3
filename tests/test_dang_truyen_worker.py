@@ -52,7 +52,8 @@ def _ham(ten: str) -> ast.FunctionDef:
                 if isinstance(n, ast.FunctionDef) and n.name == ten)
 
 
-@pytest.mark.parametrize("ham", ["mo", "mo_chrome", "xem", "_mo_trinh_duyet", "_co_cloudflare"])
+@pytest.mark.parametrize("ham", ["mo", "mo_chrome", "xem", "_mo_trinh_duyet", "_co_cloudflare",
+                                 "tao_thu", "_doc_truyen_thu", "_ghi_truyen_thu", "_dung_truyen_thu"])
 def test_VONG_0_KHONG_BAM_GI(ham):
     """Bước 1 là Sếp tự đăng nhập, bước 2 chỉ đọc. Có một lời gọi thao tác là đã vượt vòng 0."""
     goi = {n.func.attr for n in ast.walk(_ham(ham))
@@ -60,21 +61,65 @@ def test_VONG_0_KHONG_BAM_GI(ham):
     assert not (goi & LENH_THAO_TAC), f"{ham} gọi {sorted(goi & LENH_THAO_TAC)}"
 
 
-# Chép TAY từ biểu mẫu "Tạo truyện" của STV đọc ngày 14/09 — bốn ô, radio để mặc định.
-DAC_TA_O_TAO_THU = {"Tên truyện", "Tác giả/Bút danh", "Thể loại", "Giới thiệu"}
+# Chép TAY từ hai biểu mẫu tạo truyện đọc ngày 14/09.
+DAC_TA_O_TAO_THU = {"Tên truyện", "Tác giả/Bút danh", "Thể loại", "Giới thiệu"}      # STV
+DAC_TA_O_TAO_THU_WATTPAD = {"Tiêu đề *", "Mô tả * Mô tả"}
+# Mỗi hàm tạo truyện: ĐÚNG những nút này, không hơn.
+DAC_TA_NUT = {"_tao_stv": ["Tạo truyện"], "_tao_wattpad": ["Hư cấu", "Lưu & Tiếp tục"],
+              "ghi_nhap": ["Lưu"]}
 
 
-def test_TAO_THU_chi_bam_dung_nut_Tao_truyen_va_chi_dien_bon_o():
-    than = _ham("tao_thu")
+@pytest.mark.parametrize("ham,nut", sorted(DAC_TA_NUT.items()))
+def test_TAO_THU_chi_bam_dung_nut_duoc_phep(ham, nut):
+    than = _ham(ham)
     nguon = _nguon()
-    bam = [n for n in ast.walk(than) if isinstance(n, ast.Call)
+    bam = [ast.get_source_segment(nguon, n) for n in ast.walk(than) if isinstance(n, ast.Call)
            and isinstance(n.func, ast.Attribute) and n.func.attr == "click"]
-    assert len(bam) == 1, f"tao_thu bấm {len(bam)} chỗ, chỉ được một"
-    assert '"Tạo truyện"' in ast.get_source_segment(nguon, bam[0]), ast.get_source_segment(nguon, bam[0])
+    assert len(bam) == len(nut), f"{ham} bấm {len(bam)} chỗ, được {len(nut)}: {bam}"
+    for chu in nut:
+        assert sum(f'"{chu}"' in b for b in bam) == 1, f"{ham}: nút {chu!r} phải bấm đúng một lần — {bam}"
     khac = {n.func.attr for n in ast.walk(than) if isinstance(n, ast.Call)
             and isinstance(n.func, ast.Attribute)} & (LENH_THAO_TAC - {"click", "fill"})
-    assert not khac, f"tao_thu gọi {sorted(khac)}"
+    assert not khac, f"{ham} gọi {sorted(khac)}"
     assert set(w.TRUYEN_THU) == DAC_TA_O_TAO_THU
+    assert set(w.TRUYEN_THU_WATTPAD) == DAC_TA_O_TAO_THU_WATTPAD
+
+
+def test_GHI_NHAP_hoi_DUNG_TRUYEN_truoc_khi_cham_o_viet():
+    """Tài khoản có hai truyện ĐÃ ĐĂNG của Sếp. Gõ nhầm vào đó là sửa truyện thật trước mặt
+    người đọc — nên ô viết chỉ được chạm SAU câu hỏi "đây có phải truyện thử không"."""
+    than = _ham("ghi_nhap")
+    nguon = _nguon()
+    hoi = [n.lineno for n in ast.walk(than) if isinstance(n, ast.Call)
+           and isinstance(n.func, ast.Name) and n.func.id == "_dung_truyen_thu"]
+    dien = [n for n in ast.walk(than) if isinstance(n, ast.Call)
+            and isinstance(n.func, ast.Attribute) and n.func.attr == "fill"]
+    assert len(dien) == 1, f"ghi_nhap điền {len(dien)} chỗ"
+    assert '"Viết truyện của bạn"' in ast.get_source_segment(nguon, dien[0])
+    assert hoi and min(hoi) < dien[0].lineno, "ô viết bị chạm trước khi hỏi đúng truyện thử"
+
+
+def test_KHONG_CO_nhan_KHONG_TAO():
+    """Đo 14/09: máy báo "KHONG_TAO" trong khi truyện đã có — chờ chuyển trang 33 s là
+    thiếu, và nhãn ấy khẳng định một điều chưa đọc lại. Không chắc thì là KHONG_RO."""
+    chuoi = {n.value for n in ast.walk(ast.parse(_nguon()))
+             if isinstance(n, ast.Constant) and isinstance(n.value, str)}
+    assert "KHONG_TAO" not in chuoi
+    assert "KHONG_RO" in chuoi
+
+
+def test_KHONG_BO_TIM_NUT_nao_mang_chu_Dang_hay_Xuat_ban():
+    """Nút phát hành của Wattpad là "Đăng". Chữ ấy trong NỘI DUNG truyện thử là dữ liệu;
+    trong đối số của một bộ tìm nút thì là một cú bấm sắp xảy ra."""
+    nguon = _nguon()
+    tim = [n for n in ast.walk(ast.parse(nguon)) if isinstance(n, ast.Call)
+           and isinstance(n.func, ast.Attribute)
+           and n.func.attr in ("get_by_role", "get_by_text", "get_by_label", "locator", "get_by_title")]
+    assert tim, "không thấy bộ tìm nút nào — cửa này dò sai chỗ"
+    for n in tim:
+        doan = ast.get_source_segment(nguon, n).lower()
+        for cam in ("đăng", "xuất bản", "publish"):
+            assert cam not in doan, f"bộ tìm nút mang {cam!r}: {doan}"
 
 
 def test_KHONG_DONG_TOI_NUT_PHAT_HANH():
@@ -95,7 +140,7 @@ def test_KHONG_DONG_TOI_NUT_PHAT_HANH():
     ma += [n.attr for n in ast.walk(cay) if isinstance(n, ast.Attribute)]
     chu = " ".join(ma).lower()
     assert "tạo truyện" in chu, "máy dò không thấy cả chữ nó phải thấy — dò sai chỗ"
-    for cam in ("xuất bản", "xuat ban", "exportbook", "extractbook", "isexport"):
+    for cam in ("xuất bản", "xuat ban", "exportbook", "extractbook", "isexport", "publish"):
         assert cam not in chu, f"mã của công cụ có {cam!r}"
 
 

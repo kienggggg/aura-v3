@@ -39,7 +39,7 @@ và tránh được lỗi mình đã làm (Sếp, 14/09/2026).
 - câu dặn: —
 - số lần gặp: 1
 - trạng thái: chờ đo
-- ghi chú: lời nhắc chỉ đòi câu 1 "nhắc tới" đề và "dùng lại chính những chữ đó"; 53/60 bản gần nhất mở câu 1 bằng đúng nguyên văn đề. Đo 14/09 (CHOT:neu-de-hai-cau): nới cửa sang câu 1–2 KHÔNG chữa được — vẫn mở bằng nguyên văn đề 14/15. SỬA TÊN LỖI 14/09 chiều: bản Y cùng cặp CŨNG mở bằng nguyên văn đề ("Người thợ sửa khoá đầu ngõ là người đàn ông…") mà Sếp khen câu ấy — nên lỗi không nằm ở việc lặp đề, mà ở việc không giới thiệu. Đo ở CHOT:mo-truyen-gioi-thieu.
+- ghi chú: lời nhắc chỉ đòi câu 1 "nhắc tới" đề và "dùng lại chính những chữ đó"; 53/60 bản gần nhất mở câu 1 bằng đúng nguyên văn đề. Đo 14/09 (CHOT:neu-de-hai-cau): nới cửa sang câu 1–2 KHÔNG chữa được — vẫn mở bằng nguyên văn đề 14/15. SỬA TÊN LỖI 14/09 chiều: bản Y cùng cặp CŨNG mở bằng nguyên văn đề ("Người thợ sửa khoá đầu ngõ là người đàn ông…") mà Sếp khen câu ấy — nên lỗi không nằm ở việc lặp đề, mà ở việc không giới thiệu. Đo 14/09 (CHOT:mo-truyen-gioi-thieu): nhánh G ("giới thiệu {đề} là ai hoặc là gì") qua hàng máy, lọt cửa 8/15 so với 9/15; 11/15 câu mở có dạng giới thiệu. Nhánh D bị loại, lọt 4/15. CHỜ Sếp chấm 3 bộ ba.
 
 ### L-02
 - ngày: 14/09/2026

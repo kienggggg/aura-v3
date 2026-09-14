@@ -4498,6 +4498,37 @@ bằng đề) nhìn là nhận ra, nên em không chấm mù được.
   nên hàng 3 đo *"Sếp thích dạng mở nào"* nhiều hơn là mù hoàn toàn.
 - Ba câu đầu không nói gì về phần thân truyện. Các lỗi L-04, L-05, L-08 nằm ở phần
   thân, thuộc phép thử sổ lỗi (kế hoạch §8).
+
+**KẾT QUẢ 14/09/2026 — 33 lượt mới cộng 15 lượt nhánh 0 dùng lại. Đối chứng tất định
+khớp 3/3 TỪNG BYTE. Hàng máy: G ĐẠT, D KHÔNG ĐẠT nên bị loại. Hàng 3: CHỜ SẾP.**
+
+```
+                                    nhánh 0   nhánh G   nhánh D
+1) lọt cửa một lần sinh, G ≥ 7      9/15      8/15      —         ĐẠT
+2) lọt cửa một lần sinh, D ≥ 7      9/15      —         4/15      KHÔNG ĐẠT → D bị loại
+3) Sếp chấm mù, 3 bộ ba             CHỜ SẾP — data/cham_mu/cham_mu_mo_truyen.md
+báo: câu 1 có dạng "{đề} là …"      1         11        0
+báo: câu 1 mở bằng nguyên văn đề    15        12        0
+báo: trượt vì quá ngắn              4         0         6
+báo: câu dài quá trần               0         4         2
+báo: lọt chữ Anh/Hán                3         3         4
+báo: thời gian trung bình           52,4 s    60,4 s    56,4 s
+```
+
+**Đọc ra:**
+- **G làm đúng điều được dặn.** 11/15 câu mở có dạng giới thiệu, nhánh 0 chỉ có
+  1/15. G không có bản nào quá ngắn (nhánh 0 có 4), nhưng lại có 4 bản câu dài quá
+  trần, và mỗi lần sinh chậm hơn 8 giây (+15%).
+- **D làm đúng hình thức** (0/15 mở bằng đề) nhưng lọt cửa kém: 6 bản quá ngắn, 4
+  bản lọt chữ lạ.
+- Máy chỉ cho biết G CÓ THỂ dùng được. G có hay hơn hay không là việc Sếp chấm.
+
+**Bộ ba mù:**
+- Bộ 1 lấy ở hạt 2, bộ 2 ở hạt 5: cả ba nhánh cùng lọt cửa.
+- Bộ 3 lấy ở hạt 4: chỉ 2/3 nhánh lọt, vì không có hạt nào cả ba cùng lọt. Chọn
+  đúng như luật viết trước.
+- Bản của D vẫn nằm trong bộ ba để Sếp đọc, nhưng D không được đổi.
+- Nhãn nằm trong tệp khoá riêng, KHÔNG ghi ở đây cho tới khi Sếp chấm xong.
 <!-- /CHOT:mo-truyen-gioi-thieu -->
 
 <!-- CHOT:bo-cat-giu-truyen -->

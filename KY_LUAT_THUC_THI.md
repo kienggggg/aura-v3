@@ -4267,6 +4267,81 @@ Giá nói cùng lúc: sinh lại nhiều hơn — mỗi lần 80–100 s. Và re
 điểm mã — 0 chỗ khác.
 <!-- /CHOT:chu-han-kich-ban -->
 
+<!-- CHOT:chu-anh-kich-ban -->
+### Kịch bản phòng AURA không được mang chữ Anh — Sếp giao 14/09/2026; đăng ký TRƯỚC khi chấm bộ giữ riêng
+
+**Đo 14/09:** chữ Anh lọt vào bản vào video — *"giũ áo wet"*, *"ánh sáng golden"*,
+*"bàn tay calloused"*. Cửa chữ Hán không bắt loại này. Lọc bằng danh sách từ Anh
+thì bắt nhầm: *no, so, can, ban, tin* là âm tiết tiếng Việt không dấu.
+
+**Cách làm:** kiểm theo CẤU TẠO ÂM TIẾT tiếng Việt — âm đầu + vần (bỏ dấu thanh)
+thuộc bảng vần tiếng Việt, cộng luật chính tả: tắc âm cuối `c/ch/p/t` chỉ mang dấu
+SẮC hoặc NẶNG (*hot* lạ, *hót* Việt); `k/gh/ngh` chỉ đứng trước `i/e/ê/y`; `gi` nuốt
+chữ `i` của vần (*gìn, giếng*); `qu` mang sẵn âm `u` (*quỳnh, quyết*). Từ có chữ số
+bỏ qua. Không thể là một âm tiết tiếng Việt thì BÁC — như cửa chữ Hán, `viet_kich_ban`
+sinh lại. CHƯA chặn được: chữ Anh trùng hình âm tiết Việt (*the, so, man*) — giọng
+đọc tiếng Việt đọc chúng như tiếng Việt.
+
+**Chỉnh trên bộ A, chấm một lần trên bộ B.** Bộ A: 277 đoạn Số Đỏ (42.823 từ) + 33
+bản CŨ của phòng (15.736 từ). Trên bộ A: **0 từ tiếng Việt thật bị bắt nhầm** — mọi
+chỗ bị bắt đều là tiếng Pháp và tên nước ngoài của Số Đỏ (*Victor, Maupassant,
+guerre*), chữ Anh/Mã Lai model lọt (*alone, metal, seolah*), hai từ dính liền
+(*cũnghiêng*), tên không Việt (*Anu*), lỗi in của sách (*ngưòi*), chữ rác lỗi mã.
+Bộ B (GIỮ RIÊNG): 60 bản 13-câu mới nhất (nhánh 0, L, B, M — mỗi nhánh 15).
+
+**Danh sách mượn viết từ hiểu biết chung, TRƯỚC khi chấm bộ B** — từ vay viết bằng
+chữ Latin, đọc được bằng giọng Việt: *taxi, video, radio, tivi, oxy, pizza, sofa,
+piano, karaoke, robot, camera, album, vitamin, golf, tennis*. Nói thẳng: em đã đọc
+bộ B khi chấm mù nên biết *taxi* có mặt trong đó. *bus* KHÔNG vào — chữ Việt là
+*buýt*.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| từ tiếng Việt thật bị bắt nhầm, bộ B | 0 |
+| chữ Anh đã biết trong bộ B (wet, golden, calloused) | 3/3 bị bắt |
+
+**KẾT QUẢ 14/09/2026 — bộ B (60 bản, 13.464 từ) chấm MỘT lần: hàng 2 ĐẠT, hàng 1
+KHÔNG ĐẠT — lệch 1. SẾP QUYẾT ĐƯA VÀO 14/09, biết hàng 1 không đạt** — quyết sau khi đã thấy số, nên ghi rõ đây là quyết của người duyệt, không phải ngưỡng được nới.
+
+```
+chữ Anh đã biết (wet, golden, calloused)   3/3 bị bắt                               ĐẠT
+từ Việt thật bị bắt nhầm, bộ B              1 — "Mưa axit": từ vay có trong từ điển,  KHÔNG ĐẠT
+                                           hai âm tiết viết liền
+bị bắt đúng (đọc tận câu):  wet ×2 · calloused · golden · компas (chữ Nga lẫn Latin)
+  · bus ×3 (đã quyết TRƯỚC là không cho) · "ngóc nghách" (sai chính tả của "ngách")
+  · "đen sầm uke" (chữ rác) · 12 chữ dính liền chữ Hán (cửa chữ Hán cũng bắt)
+```
+
+**"axit" KHÔNG thêm vào danh sách mượn** — thêm lúc này là chỉnh theo chính bộ dùng
+để chấm. Loại bắt nhầm này có tên: *từ vay viết liền và chữ viết tắt*. Thử tay:
+*axit, cacbon, nitơ, virus, email, internet, socola, gara, km, kg, TV, USD* đều bị
+bắt; viết có gạch nối (*vắc-xin, ô-tô, sô-cô-la*) thì lọt. Bộ B gặp đúng 1 lần trong
+13.464 từ; truyện về khoa học, công nghệ thì CHƯA đo.
+
+**Đếm thêm, KHÔNG thay hàng 1:** trên 33 bản lẽ ra đã vào video (qua mọi cửa cũ),
+cửa này bác thêm **5**, cả 5 bắt đúng (*bus nghách · uke · компas · wet · golden*);
+bản mang "axit" vốn đã bị cửa khác bác. Trên bộ B, lần bắt nhầm duy nhất không tốn
+lượt sinh lại nào — nhưng đó là một bản, không phải một tỉ lệ.
+
+**SỬA SAU KHI CHẤM — cửa mâu thuẫn với cửa nêu đề.** Bản chấm ở trên đặt cửa trong
+`do_kich_ban`, mà hàm ấy không nhận đề — đúng bệnh 04/09. Cửa nêu đề ĐÒI chữ của đề
+ở câu mở, cửa này CẤM chính chữ ấy: đề *"Facebook"* không có bản nào qua được cả
+hai. Model giả làm đúng lời nhắc bị bác **3/3 lần** với *"Facebook"*, *"chiếc iPhone
+cũ"*, *"mưa axit"* — nên với bản ấy, giá của một lần bắt nhầm KHÔNG phải một lần sinh
+lại mà là mất trắng cả đề. Vá: dời sang `kiem_chu_la(chu_de, van_ban)`, gọi trong
+`viet_kich_ban` cạnh `kiem_neu_de`, miễn cho chữ của ĐỀ theo từ, không theo chuỗi con
+(đề *"chiếc iPhone cũ"* không miễn cho *"Phone"*). Ba đề trên: bác 3/3 → đạt lần 1.
+Bộ B có 3 đề, không đề nào mang chữ lạ: **17/60 bản bị bác ở cả hai bản, 0 bản
+khác** — số chấm ở trên đứng nguyên. Còn hở: đề KHÔNG mang từ vay mà truyện CẦN nó
+(đề *"mưa độc"*, truyện viết *"axit"*) thì có thể mất cả 3 lần — CHƯA đo. Phòng
+`beta` gọi thẳng `do_kich_ban` nên không qua cửa này; nó so biến thể lời nhắc, không
+dựng video. Gieo **10/10** đỏ đúng bài (tắc âm cuối · gi nuốt i · qu mang u ·
+k/gh/ngh · c/g/ng · bỏ hẳn cửa trong `viet_kich_ban` · bỏ danh sách mượn · bỏ miễn
+theo đề · nối cửa với đề rỗng · miễn theo chuỗi con), trả mã về giống từng byte.
+<!-- /CHOT:chu-anh-kich-ban -->
+
 <!-- CHOT:bo-cat-giu-truyen -->
 ### Bộ cắt không được xoá truyện — Sếp duyệt 13/09/2026; đăng ký TRƯỚC khi chạy model
 
@@ -4512,4 +4587,12 @@ phúng") là một biến thể mới — phải đăng ký và đo riêng, khô
 còn nguyên số thứ tự trong chữ vào video (*"1 Chiếc…"*, *"2 Ông nội…"*). Model đôi khi
 đánh số kiểu "số + dấu cách" — 26 dòng trên 60 bản gốc — mà `bo_so_thu_tu` chỉ nhận
 "số + dấu chấm/ngoặc". Sửa ở `CHOT:bo-cat-giu-truyen`.
+
+**PHÁT HIỆN SAU, 14/09 — bộ làm sạch để lọt chữ rác lỗi mã.** Cửa chữ Anh
+(`CHOT:chu-anh-kich-ban`) chạy trên kho Số Đỏ bắt ra dạng `BN`, `BNm`, `CNm`, `cNm`,
+`ngNn`… mà bộ dò của bộ làm sạch không bắt — nó chỉ tìm "chữ thường + N + ranh giới"
+và "N + dấu cách". **59/277 đoạn** trong kho còn rác; **8/15 lượt M** nhận đoạn có
+rác. Ba cặp em chấm mù đều ở hạt 1, đoạn sạch — nên kết luận DỪNG vẫn đứng; nhưng
+số đo máy của nhánh M (chép, tên riêng, lọt cửa) đo trên đầu vào bị nhiễm. Chạy lại
+nhánh này thì phải làm sạch lại trước.
 <!-- /CHOT:doan-mau-so-do -->

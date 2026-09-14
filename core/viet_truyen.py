@@ -69,9 +69,10 @@ import json
 import os
 import re
 import time
+import unicodedata
 import urllib.error
 import urllib.request
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Iterable, List, Tuple
 
 # Ngưỡng chép tay từ `KY_LUAT_THUC_THI.md` Chương II mục 1b — đăng ký ở đó
 # TRƯỚC khi có tệp này.
@@ -172,6 +173,89 @@ TRAN_GIAY = 300
 _CHU_NGOAI = re.compile(
     r"[\u1100-\u11ff\u3000-\u303f\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff"
     r"\uac00-\ud7af\uf900-\ufaff\uff00-\uffef]+")
+
+
+# CHỮ KHÔNG PHẢI ÂM TIẾT TIẾNG VIỆT (14/09/2026, `CHOT:chu-anh-kich-ban`). Chữ Anh
+# lọt vào bản vào video — "giũ áo wet", "ánh sáng golden", "bàn tay calloused" —
+# mà cửa chữ Hán không bắt. Lọc bằng danh sách từ Anh thì bắt nhầm: no, so, can,
+# ban, tin là âm tiết Việt không dấu. Nên kiểm CẤU TẠO: âm đầu + vần (bỏ dấu thanh)
+# thuộc bảng vần, cộng luật chính tả. Chỉnh trên 277 đoạn Số Đỏ + 33 bản cũ: 0 từ
+# Việt thật bị bắt nhầm. CHƯA chặn được chữ Anh trùng hình âm tiết Việt (the, so).
+_AM_DAU = ("ngh", "ng", "nh", "ch", "gh", "gi", "kh", "ph", "qu", "th", "tr",
+           "b", "c", "d", "đ", "g", "h", "k", "l", "m", "n", "p", "r", "s", "t", "v", "x", "")
+_VAN = frozenset("""
+a ac ach ai am an ang anh ao ap at au ay
+ăc ăm ăn ăng ăp ăt
+âc âm ân âng âp ât âu ây
+e ec em en eng eo ep et
+ê êch êm ên ênh êp êt êu
+i ia ich iêc iêm iên iêng iêp iêt iêu im in inh ip it iu
+o oa oac oach oai oam oan oang oanh oao oap oat oay oăc oăm oăn oăng oăt oc oe oen oeo oet oi om on ong ooc oong op ot
+ô ôc ôi ôm ôn ông ôp ôt
+ơ ơi ơm ơn ơp ơt
+u ua uân uâng uât uây uc uê uêch uênh ui um un ung uôc uôi uôm uôn uông uôt up ut uy uya uych uyên uyêt uynh uyt uyu uơ
+ư ưa ưc ưi ưm ưn ưng ươc ươi ươm ươn ương ươp ươt ươu ưt ưu
+y yêm yên yêt yêu
+""".split())
+_DAU_THANH = {"\u0301": "sac", "\u0300": "huyen", "\u0309": "hoi", "\u0303": "nga", "\u0323": "nang"}
+# Từ vay viết bằng chữ Latin, đọc được bằng giọng Việt — viết TRƯỚC khi chấm bộ giữ
+# riêng. "bus" không vào: chữ Việt là "buýt".
+TU_MUON = frozenset("taxi video radio tivi oxy pizza sofa piano karaoke robot camera "
+                    "album vitamin golf tennis".split())
+_CHU_CAI = re.compile(r"[^\W\d_]+")
+
+
+def _la_am_tiet_viet(tu: str) -> bool:
+    thanh, con = "ngang", []
+    for ch in unicodedata.normalize("NFD", tu.lower()):
+        if ch in _DAU_THANH:
+            thanh = _DAU_THANH[ch]
+        else:
+            con.append(ch)
+    goc = unicodedata.normalize("NFC", "".join(con))
+    for dau in _AM_DAU:
+        if not goc.startswith(dau):
+            continue
+        van = goc[len(dau):]
+        # "gi" nuốt chữ i của vần (gì, gìn, giếng); "qu" mang sẵn âm u (quỳnh, quyết).
+        for v in [van] + (["i" + van] if dau == "gi" else []) + (["u" + van] if dau == "qu" else []):
+            if v not in _VAN:
+                continue
+            if v.endswith(("c", "ch", "p", "t")) and thanh not in ("sac", "nang"):
+                continue
+            if dau in ("k", "gh", "ngh") and v[:1] not in "ieêy":
+                continue
+            if dau in ("c", "g", "ng") and v[:1] in "ieê":
+                continue
+            return True
+    return False
+
+
+def chu_khong_phai_tieng_viet(van_ban: str, mien: Iterable[str] = ()) -> List[str]:
+    """Các từ không thể là âm tiết tiếng Việt. Bỏ từ có chữ số, `TU_MUON` và `mien`."""
+    bo = TU_MUON | {m.lower() for m in mien}
+    ra = []
+    for tho in (van_ban or "").split():
+        if re.search(r"\d", tho):
+            continue
+        ra += [t for t in _CHU_CAI.findall(tho)
+               if t.lower() not in bo and not _la_am_tiet_viet(t)]
+    return ra
+
+
+def kiem_chu_la(chu_de: str, van_ban: str) -> List[str]:
+    """Lý do bác nếu kịch bản có chữ không thể là âm tiết tiếng Việt; rỗng là đạt.
+
+    MIỄN CHO CHỮ CỦA ĐỀ, nên cửa này đứng cạnh `kiem_neu_de` chứ không trong
+    `do_kich_ban` — bản đầu 14/09 đặt nó ở đó và mắc lại đúng bệnh 04/09: chữ ký
+    `do_kich_ban(van_ban)` không nhận đề. Cửa nêu đề ĐÒI chữ của đề ở câu mở, cửa
+    này CẤM chính chữ ấy; model làm đúng lời nhắc vẫn bị bác 3/3 lần với đề
+    "Facebook", "chiếc iPhone cũ", "mưa axit". Chữ của đề là chữ Sếp gõ, không phải
+    chữ model tự chèn. Miễn theo TỪ, không theo chuỗi con: đề "chiếc iPhone cũ"
+    không miễn cho "Phone".
+    """
+    la = sorted(set(chu_khong_phai_tieng_viet(van_ban, mien=_CHU_CAI.findall(chu_de or ""))))
+    return [f"có chữ không phải âm tiết tiếng Việt: {' '.join(la)[:60]}"] if la else []
 
 
 def _tach_cau(van_ban: str) -> List[str]:
@@ -613,9 +697,11 @@ def viet_kich_ban(chu_de: str, tran: int = TRAN_SO_LAN, hat_dau: int = 1,
         # chấm sau mới là chấm đúng thứ sẽ đi vào video.
         tt_de, ly_do_de, so_de = kiem_neu_de(chu_de, van)
         so = {**so, **so_de}
-        if tt_de != "DAT":
+        # Cửa chữ lạ cũng cần ĐỀ, nên đứng ở đây — xem `kiem_chu_la`.
+        ly_do_la = kiem_chu_la(chu_de, van)
+        if tt_de != "DAT" or ly_do_la:
             trang_thai = "KHONG_DAT" if trang_thai == "DAT" else trang_thai
-            ly_do = list(ly_do) + ly_do_de
+            ly_do = list(ly_do) + ly_do_de + ly_do_la
 
         lan.append({"hat": hat_dau + i, "trang_thai": trang_thai, "so": so,
                     "vi_sao": ly_do, "giay": round(giay, 1), "cau_da_bo": da_bo})

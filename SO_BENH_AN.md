@@ -719,6 +719,15 @@ bác thành sự cố 500. Chỗ thứ hai `"; ".join(...)` trên danh sách r�
 nổ**, chỉ trả một câu báo lỗi không có lý do nào trong đó — hỏng lặng hơn, nên
 nguy hơn. Vá một chỗ rồi tưởng xong là bệnh cũ; phải `grep` hết mọi chỗ đọc.
 
+**Mắc lại 14/09/2026, bởi chính người ghi mục này.** Cửa chữ Anh
+(`CHOT:chu-anh-kich-ban`) cần biết đề — chữ của đề phải được miễn — mà tôi đặt nó
+vào đúng `do_kich_ban(van_ban)`. Gieo **7/7 đỏ**, bộ giữ riêng chấm xong, không thứ
+nào thấy: ba đề của bộ ấy không mang chữ lạ nào. Đọc `viet_kich_ban` mới thấy hai
+cửa đòi hai điều ngược nhau — cửa nêu đề đòi chữ của đề ở câu mở, cửa mới cấm chính
+chữ ấy — nên đề *"Facebook"* bị bác **3/3** lần dù model làm đúng lời nhắc. Câu hỏi
+rẻ ở trên phải hỏi lại cho **mỗi cửa mới đặt vào một hàm cũ**, không chỉ lúc dựng
+hàm.
+
 ### Một hằng số có thể là hệ quả, và cái lỗ nằm GIỮA hai cửa
 
 Ngày 04/09/2026, đi tìm xem trần **19,2 từ/câu** của `core/viet_truyen.py` đo

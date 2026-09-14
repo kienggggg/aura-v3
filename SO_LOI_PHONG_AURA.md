@@ -39,7 +39,7 @@ và tránh được lỗi mình đã làm (Sếp, 14/09/2026).
 - câu dặn: —
 - số lần gặp: 1
 - trạng thái: chờ đo
-- ghi chú: lời nhắc ép "dùng lại chính những chữ đó trong câu mở"; 53/60 bản gần nhất mở câu 1 bằng đúng nguyên văn đề. Nhánh sửa đo ở CHOT:neu-de-hai-cau.
+- ghi chú: lời nhắc ép "dùng lại chính những chữ đó trong câu mở"; 53/60 bản gần nhất mở câu 1 bằng đúng nguyên văn đề. Đo 14/09 (CHOT:neu-de-hai-cau): nới cửa sang câu 1–2 KHÔNG chữa được — vẫn mở bằng nguyên văn đề 14/15, lọt cửa 4/15 so với 9/15. Nguyên nhân còn lại (lời dặn "dùng lại chính những chữ đó", hoặc thói quen của model) CHƯA đo.
 
 ### L-02
 - ngày: 14/09/2026

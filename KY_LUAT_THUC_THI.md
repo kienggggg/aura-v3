@@ -4340,6 +4340,20 @@ khác** — số chấm ở trên đứng nguyên. Còn hở: đề KHÔNG mang 
 dựng video. Gieo **10/10** đỏ đúng bài (tắc âm cuối · gi nuốt i · qu mang u ·
 k/gh/ngh · c/g/ng · bỏ hẳn cửa trong `viet_kich_ban` · bỏ danh sách mượn · bỏ miễn
 theo đề · nối cửa với đề rỗng · miễn theo chuỗi con), trả mã về giống từng byte.
+
+**THEO DÕI SAU KHI ĐƯA VÀO — 14/09 chiều, 30 truyện của phép đo `CHOT:neu-de-hai-cau`
+(ba đề mới), đọc tận câu từng chữ bị bắt:**
+
+```
+bắt đúng   Dad ×2 · white · wrinkles · hazy · streetlight · metallic · chữ Ả Rập
+           · 2 chữ dính liền chữ Hán — 9 chữ, 6 truyện
+bắt nhầm   "cái vali cũ kỹ" · "ánh đèn neon" — cùng loại từ vay viết liền với "axit"
+giá        1/30 truyện bị bác CHỈ vì bắt nhầm (vali) — một lần sinh lại
+```
+
+Loại bắt nhầm đã có tên nay có ba từ gặp thật: *axit, vali, neon*. Vẫn KHÔNG thêm
+vào danh sách mượn từng từ một: thêm theo từng lần gặp là đuổi theo mẫu. Muốn chữa
+loại này thì phải đo trên một bộ giữ riêng MỚI.
 <!-- /CHOT:chu-anh-kich-ban -->
 
 <!-- CHOT:neu-de-hai-cau -->
@@ -4389,6 +4403,34 @@ lượt · thời gian.
 hơn. Model có thể mở bằng thời tiết (dạng *"Buổi sáng đẹp…"* đo được ngày 08/09)
 thay cho một câu dẫn tốt. Vì vậy hàng Sếp chấm mới là chốt; hai hàng máy chỉ cho biết
 thay đổi này CÓ THỂ dùng được hay không.
+
+**KẾT QUẢ 14/09/2026 — cả 30 lượt chạy xong, 0 lượt lỗi gọi model. Hỏng CẢ HAI
+hàng máy → DỪNG. Không đổi gì, và theo luật viết trước thì không cần Sếp chấm.**
+
+```
+                                     nhánh 0   nhánh N   ngưỡng
+1) lọt cửa một lần sinh              9/15      4/15      N ≥ 0 − 2, tức ≥ 7        KHÔNG ĐẠT
+2) câu 1 mở bằng nguyên văn đề       15/15     14/15     N ≤ một nửa của 0, ≤ 7    KHÔNG ĐẠT
+3) Sếp chấm mù                       —         —         không chạy: dừng ở hàng 1–2
+báo: câu 1 CÓ nguyên văn đề          15/15     15/15
+báo: trượt vì quá ngắn (< 215 từ)    4         9
+báo: truyện lọt chữ Anh/Hán thật     1         5
+báo: thời gian trung bình            52,4 s    51,5 s
+```
+
+**Đọc ra:** được phép nhắc đề ở câu 2 mà model VẪN mở câu 1 bằng nguyên văn đề
+14/15 lần. Vậy việc cửa chỉ đọc câu 1 không phải nguyên nhân của L-01. Nguyên nhân
+nằm ở chỗ khác: hoặc ở lời dặn "dùng lại chính những chữ đó", hoặc ở thói quen lặp
+lại đề ngay câu đầu của model. Trên ba đề mới, nhánh 0 mở bằng nguyên văn đề 15/15
+(trên 60 bản cũ là 53/60).
+
+Nhánh N lọt cửa kém hơn, chủ yếu vì quá ngắn (9 so với 4) và vì lọt chữ Anh/Hán (5
+so với 1). Với n = 15, chưa đủ để nói lời nhắc mới gây ra hai điều ấy, nhưng đủ để
+không đổi.
+
+**Giả thuyết kế tiếp — CHƯA ĐO, cần Sếp duyệt:** bỏ câu "dùng lại chính những chữ
+đó", hoặc dặn thẳng "câu 1 giới thiệu nhân vật, câu 2 mới nhắc tới đề". Nguy cơ đã
+biết: ngày 08/09, khi không bị buộc, model mở bài bằng thời tiết.
 <!-- /CHOT:neu-de-hai-cau -->
 
 <!-- CHOT:bo-cat-giu-truyen -->

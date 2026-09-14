@@ -103,6 +103,10 @@ vẫn giữ việc bắt lạc đề, nhưng điều ấy **CHƯA ĐO**.
 - tỉ lệ lọt cửa nêu đề — không được tụt quá 2/15;
 - tỉ lệ câu 1 mở bằng nguyên văn đề — phải giảm.
 
+**Kết quả 14/09: DỪNG, hỏng cả hai số.** Nhánh N lọt cửa 4/15 so với 9/15 của nhánh
+0, và vẫn mở câu 1 bằng nguyên văn đề 14/15 lần. Cửa chỉ đọc câu 1 không phải
+nguyên nhân. Chi tiết ở `CHOT:neu-de-hai-cau` trong đặc tả.
+
 ## 6. Sổ để ở đâu, viết thế nào
 
 **Chỗ để, đề xuất:** tệp `SO_LOI_PHONG_AURA.md` ở gốc repo, nằm cạnh

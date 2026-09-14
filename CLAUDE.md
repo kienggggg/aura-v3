@@ -78,9 +78,13 @@ lại để Sếp tự làm.
 chính nó lên kênh của Sếp. Việc gì tự động được thì tự động hoàn toàn. Trước ngày ấy
 luật viết: *"Không tự đăng bài… Quyền `external_submit` chưa được cấp."* Quyền này
 đi kèm bốn điều:
-- Đăng qua đường chính thức của nền tảng, bằng quyền Sếp tự cấp trên trang đồng ý
-  (OAuth). AURA không giữ mật khẩu hay phiên đăng nhập trình duyệt của Sếp; token
-  để trong tệp mà git bỏ qua.
+- Nền tảng có đường chính thức (API, OAuth) thì đăng qua đường ấy, bằng quyền Sếp
+  tự cấp. Nền tảng không có đường chính thức (Wattpad, Sáng Tác Việt…) thì dùng
+  trình duyệt thật với MỘT hồ sơ riêng chỉ để đăng. **Sếp nới ngày 14/09:** AURA
+  được giữ phiên đăng nhập của hồ sơ ấy, để ngoài git. Sếp tự gõ mật khẩu; AURA
+  không bao giờ giữ mật khẩu.
+- Không né chặn bot: không giả vân tay trình duyệt, không giải CAPTCHA. Gặp chặn
+  hoặc bị đòi xác minh thì dừng lại, gom cho Sếp.
 - Chỉ đăng bản đã qua mọi cửa. Mỗi lượt đăng ghi vào sổ: nền tảng, đường link,
   giờ đăng, SHA-256 của tệp.
 - Mỗi nền tảng có một đường đăng riêng, và mỗi đường dựng theo §7: gửi kế hoạch trước.

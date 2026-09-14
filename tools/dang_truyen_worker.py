@@ -353,7 +353,12 @@ def _luu_chuong(trang, tuyen_tap: dict, muc: dict) -> dict:
         return kq
     trang.locator("#story-title").fill(muc["chu_de"])
     trang.get_by_role("textbox", name="Viết truyện của bạn", exact=True).fill(muc["van_ban"])
-    trang.get_by_role("button", name="Lưu", exact=True).click()
+    luu = _bam_luu(trang)
+    kq["duong_luu"] = luu["duong"]
+    if not luu["bam"]:
+        kq.update({"trang_thai": "KHONG_TIM_THAY_NUT", "vi_sao": luu.get("vi_sao"),
+                   "giay": round(time.monotonic() - t0, 1)})
+        return kq
     time.sleep(5)
     trang.reload()
     trang.wait_for_load_state("load", timeout=30000)
@@ -429,6 +434,19 @@ def _bam_theo_chu(trang, chu: str) -> dict:
         return {"bam": False, "vi_sao": f"phần tử tại ({x:.0f},{y:.0f}) mang {tai_cho!r}, không phải {chu!r}"}
     trang.mouse.click(x, y)
     return {"bam": True, "x": round(x, 1), "y": round(y, 1), "tai_cho": tai_cho}
+
+
+def _bam_luu(trang) -> dict:
+    """Bấm "Lưu". Đường chính: vai trò + tên trợ năng. Gãy thì đường thứ hai là nhánh A
+    (`CHOT:dang-vong-1`: 10/10 dưới giao diện giả lập, 0 bấm nhầm). CHỈ nút "Lưu" — nút
+    duy nhất đã đo; nút khác gãy thì vẫn dừng như cũ. Kết quả ghi `duong` vào sổ: thấy
+    "thich_nghi" là biết Wattpad vừa đổi giao diện."""
+    # Nhãn viết lại NGAY trong lời bấm, không gán vào biến: cửa canh đọc AST xem mỗi cú bấm
+    # mang nhãn gì — `nut.click()` thì không đọc ra được (bản đầu đỏ đúng chỗ này, 15/09).
+    if trang.get_by_role("button", name="Lưu", exact=True).count() == 1:
+        trang.get_by_role("button", name="Lưu", exact=True).click()
+        return {"bam": True, "duong": "chinh"}
+    return {**_bam_theo_chu(trang, "Lưu"), "duong": "thich_nghi"}
 
 
 def _giu_khoa() -> bool:
@@ -559,16 +577,20 @@ def ghi_nhap(nen_tang: str, lan: str) -> dict:
             kq["trang_thai"] = "SAI_TRUYEN"
         else:
             trang.get_by_role("textbox", name="Viết truyện của bạn", exact=True).fill(doan)
-            trang.get_by_role("button", name="Lưu", exact=True).click()
-            time.sleep(5)
-            trang.reload()
-            trang.wait_for_load_state("load", timeout=30000)
-            time.sleep(3)
-            doc = trang.get_by_role("textbox", name="Viết truyện của bạn", exact=True).inner_text().strip()
-            con_nhap = trang.get_by_text("Bản thảo", exact=False).count() > 0
-            kq.update({"doc_lai": doc, "khop": doc == doan, "con_la_nhap": con_nhap,
-                       "dung_truyen_sau": _dung_truyen_thu(trang)})
-            kq["trang_thai"] = "DAT" if (doc == doan and con_nhap) else "KHONG_DAT"
+            luu = _bam_luu(trang)
+            kq["duong_luu"] = luu["duong"]
+            if not luu["bam"]:
+                kq.update({"trang_thai": "KHONG_TIM_THAY_NUT", "vi_sao": luu.get("vi_sao")})
+            else:
+                time.sleep(5)
+                trang.reload()
+                trang.wait_for_load_state("load", timeout=30000)
+                time.sleep(3)
+                doc = trang.get_by_role("textbox", name="Viết truyện của bạn", exact=True).inner_text().strip()
+                con_nhap = trang.get_by_text("Bản thảo", exact=False).count() > 0
+                kq.update({"doc_lai": doc, "khop": doc == doan, "con_la_nhap": con_nhap,
+                           "dung_truyen_sau": _dung_truyen_thu(trang)})
+                kq["trang_thai"] = "DAT" if (doc == doan and con_nhap) else "KHONG_DAT"
         kq["giay"] = round(time.monotonic() - t0, 1)
         anh = ra / f"{nen_tang}-ghi_nhap-{lan}-{time.strftime('%H%M%S')}.png"
         trang.screenshot(path=str(anh), full_page=True)

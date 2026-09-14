@@ -18,7 +18,10 @@ nào.
   - Tác vụ Windows *"AURA dang hang cho"* chạy 10 phút một lần.
   - Một kịch bản mới của app thành chương nháp sau 10,2 phút mà không ai chạy lệnh nào.
   - Có khoá chống chạy chồng, và sổ lịch ghi mỗi lượt một dòng.
-- Vòng 1 (tải browser-use) chờ Sếp duyệt riêng.
+- **Vòng 1, ngày 15/09** (`CHOT:dang-vong-1`):
+  - Nhánh A (OCR, không tải gì) ĐẠT: 10/10 dưới giao diện giả lập, 0 cú bấm nhầm. Đã nối
+    vào kịch bản làm đường thứ hai, chỉ cho nút "Lưu".
+  - Nhánh B (browser-use) chờ Sếp duyệt tải.
 
 Sếp giao ngày 14/09: *việc gì tự động được thì tự động hoàn toàn*, dù mỗi nền tảng
 có một quy trình đăng khác nhau. Cùng ngày Sếp cấp quyền đăng và nới cho AURA giữ

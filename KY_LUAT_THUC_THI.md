@@ -4807,6 +4807,38 @@ nó không gãy thì lần ấy KHÔNG ĐO ĐƯỢC.
   "Lưu lại") thì A gãy, và đó là chỗ nhánh B được thử.
 - Nhánh B với model 4B trên CPU: lời nhắc của browser-use dài, đọc ~37 token/giây. Em ƯỚC
   (CHƯA ĐO) mỗi lần mất vài phút và dễ trượt.
+
+**KẾT QUẢ 15/09/2026 — Nhánh A ĐẠT, được nối vào kịch bản cho nút "Lưu". Nhánh B CHƯA ĐO:
+chờ Sếp duyệt tải browser-use.**
+
+```
+                                                  nhánh A (OCR)          nhánh B (browser-use)
+bộ tìm của kịch bản gãy dưới giao diện giả lập   10/10       ĐẠT        —
+lưu nháp được và đọc lại khớp, 10 lần             10/10       ĐẠT        CHƯA ĐO
+cú bấm vào nút khác nút định bấm                  0           ĐẠT        —
+lần đăng công khai ngoài ý muốn                   0           ĐẠT        —
+thời gian mỗi lần                                 63,7 s lần đầu (nạp model OCR), sau đó 27–33 s
+```
+
+- Nửa số lần nút nằm chỗ cũ: OCR tìm ra ở (1082, 38). Nửa còn lại nút bị CSS dời ra giữa
+  trang: OCR tìm ra ở (531, 342).
+- Cả 10 lần, phần tử tại toạ độ mang đúng chữ "Lưu" trước khi bấm.
+- Không lần nào OCR lẫn "Lưu" với dòng trạng thái "… Đã lưu".
+
+**Nối vào kịch bản, theo luật viết trước:**
+- `_bam_luu`: bấm bằng vai trò + tên trợ năng trước; gãy thì dùng nhánh A. CHỈ cho nút
+  "Lưu", nút duy nhất đã đo. Cửa canh cấm dùng lớp thích nghi cho nút khác.
+- `ghi_nhap` và `_luu_chuong` đều lưu qua `_bam_luu`. Cả hai đường cùng gãy thì trạng thái
+  là `KHONG_TIM_THAY_NUT` và máy dừng.
+- Sổ ghi `duong_luu`: thấy `thich_nghi` là biết Wattpad vừa đổi giao diện.
+- Chạy thật sau khi nối: `ghi_nhap` ĐẠT, đi đường `chinh`, 23 giây.
+
+**Giới hạn:**
+- Giả lập chỉ đổi thuộc tính trợ năng và vị trí; chữ trên nút giữ nguyên — đúng loại đổi mà
+  nhánh A được dựng để đỡ.
+- Wattpad đổi CHỮ trên nút thì nhánh A gãy, và đó là chỗ nhánh B phải được đo.
+- Giả lập là sửa giao diện ngay trong trình duyệt của máy. Một lần Wattpad đổi thật có thể
+  khác, CHƯA gặp.
 <!-- /CHOT:dang-vong-1 -->
 
 <!-- CHOT:bo-cat-giu-truyen -->

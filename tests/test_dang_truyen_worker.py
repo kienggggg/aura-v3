@@ -69,7 +69,7 @@ DAC_TA_O_TAO_THU = {"Tên truyện", "Tác giả/Bút danh", "Thể loại", "Gi
 DAC_TA_O_TAO_THU_WATTPAD = {"Tiêu đề *", "Mô tả * Mô tả"}
 # Mỗi hàm tạo truyện: ĐÚNG những nút này, không hơn.
 DAC_TA_NUT = {"_tao_stv": ["Tạo truyện"], "_tao_wattpad": ["Hư cấu", "Lưu & Tiếp tục"],
-              "ghi_nhap": ["Lưu"], "_luu_chuong": ["+ Chương Mới", "Lưu"]}
+              "ghi_nhap": [], "_luu_chuong": ["+ Chương Mới"], "_bam_luu": ["Lưu"]}
 
 
 @pytest.mark.parametrize("ham,nut", sorted(DAC_TA_NUT.items()))
@@ -125,6 +125,28 @@ def test_LUU_CHUONG_chi_dien_ten_va_noi_dung_SAU_cau_hoi_dung_truyen():
            and isinstance(n.func, ast.Attribute) and n.func.attr == "inner_text"]
     assert any(mo < d < dien[0].lineno for d in doc), "không đọc ô viết trước khi điền — có thể ghi đè"
     assert '"CHUONG_CO_CHU"' in ast.get_source_segment(nguon, than)
+
+
+@pytest.mark.parametrize("ham", ["ghi_nhap", "_luu_chuong"])
+def test_LUU_di_qua_BAM_LUU_mot_lan_SAU_khi_dien(ham):
+    """Nút "Lưu" chỉ bấm qua `_bam_luu` — nơi duy nhất có đường thứ hai đã đo
+    (`CHOT:dang-vong-1`). Bấm thẳng ở chỗ khác là một đường không có lớp thích nghi."""
+    than = _ham(ham)
+    luu = [n.lineno for n in ast.walk(than) if isinstance(n, ast.Call)
+           and isinstance(n.func, ast.Name) and n.func.id == "_bam_luu"]
+    dien = [n.lineno for n in ast.walk(than) if isinstance(n, ast.Call)
+            and isinstance(n.func, ast.Attribute) and n.func.attr == "fill"]
+    assert len(luu) == 1 and dien and max(dien) < luu[0], (luu, dien)
+    assert '"KHONG_TIM_THAY_NUT"' in ast.get_source_segment(_nguon(), than)
+
+
+def test_BAM_LUU_co_DUONG_THU_HAI_va_chi_cho_nut_Luu():
+    goi = [ast.get_source_segment(_nguon(), n) for n in ast.walk(_ham("_bam_luu"))
+           if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "_bam_theo_chu"]
+    assert goi == ['_bam_theo_chu(trang, "Lưu")'], goi
+    ngoai = [n.lineno for n in ast.walk(ast.parse(_nguon())) if isinstance(n, ast.Call)
+             and isinstance(n.func, ast.Name) and n.func.id == "_bam_theo_chu"]
+    assert len(ngoai) == 1, f"_bam_theo_chu được gọi {len(ngoai)} chỗ — nút chưa đo không được dùng nó"
 
 
 def test_TUYEN_TAP_noi_ro_do_AI_viet():

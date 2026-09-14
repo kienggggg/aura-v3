@@ -4612,6 +4612,54 @@ dụng. Theo luật viết trước: **chưa tự động được**, chờ Sế
 - Truyện thử vẫn nằm ở dạng bản thảo. Em không xoá nó; Sếp xoá bằng tay khi không cần nữa.
 <!-- /CHOT:dang-vong-0 -->
 
+<!-- CHOT:dang-vong-2 -->
+### Đăng tự động, vòng 2: kịch bản của phòng viết thành CHƯƠNG NHÁP trong một truyện tuyển tập trên Wattpad — Sếp giao 14/09/2026 ("làm vòng 2 dạng tuyển tập"); đăng ký TRƯỚC khi viết mã
+
+Vòng 0 (`CHOT:dang-vong-0`) cho Wattpad ĐẠT cả bốn hàng. Sáng Tác Việt chưa làm được: tài
+khoản chưa đủ 1000 phút tham gia. Chế độ vẫn là `nháp`: AURA lưu, Sếp tự bấm đăng.
+
+**Luồng:**
+1. Phòng viết ghi `kich_ban.md` như hiện nay, ở cả `/api/dispatch` lẫn `/api/pipeline/run`,
+   và chỉ ghi khi bản ĐẠT mọi cửa. Nay ghi thêm `meta.json` bên cạnh: đề, thể loại, giờ,
+   SHA-256 của kịch bản. Đề dùng làm tên chương.
+2. Công cụ đăng chạy ở tiến trình riêng (`tools/dang_truyen_worker.py dang_hang_cho
+   wattpad`). Nó quét các kịch bản chưa có trong **sổ đăng** `data/dang/so_dang.jsonl`, cũ
+   nhất trước.
+3. Mỗi kịch bản thành MỘT chương nháp mới trong truyện tuyển tập. Truyện tuyển tập tạo
+   một lần, với lời giới thiệu nói rõ truyện do AURA viết; Sếp đổi tên được. Chương mới
+   được đặt tên, điền nội dung, bấm "Lưu", tải lại trang, đọc lại, rồi mới ghi sổ.
+4. Mọi lần ghi chỉ mở truyện tuyển tập đã ghi mã. Mọi lần gõ đi sau câu hỏi "đúng truyện
+   chưa". Hai truyện đã đăng của Sếp không được đụng tới.
+
+**Đọc lại khớp** nghĩa là SHA-256 của nội dung đọc lại từ ô viết bằng SHA-256 của kịch
+bản, **sau khi gộp mọi khoảng trắng liền nhau thành một dấu cách**. Ô soạn có thể đổi
+xuống dòng; nó không được đổi chữ.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| kịch bản thật của phòng viết thành chương nháp, đọc lại khớp, 5 truyện | 5/5 |
+| chương đăng trùng khi chạy hàng chờ lần hai | 0 |
+| lần đăng công khai ngoài ý muốn | 0 |
+| thời gian mỗi chương | < 90 s |
+| truyện đã đăng của Sếp, so trước và sau | giống hệt |
+
+**Năm truyện thật:** năm đề mới, sinh qua ĐÚNG đường `/api/dispatch` của app nội bộ, bằng
+model thật. Không lấy bản đã sinh sẵn ở các phép đo khác: phải đo cả đoạn nối từ phòng
+viết tới hàng chờ.
+
+**Luật quyết định:**
+- Đạt cả năm hàng thì vòng 2 xong. Đường ấy chạy được, và mọi kịch bản ĐẠT của phòng
+  viết từ đó sẽ thành chương nháp chờ Sếp đăng.
+- Hỏng hàng nào thì ghi số, sửa, rồi đo lại. Không nới ngưỡng.
+
+**Giới hạn, nói trước:**
+- Chất lượng truyện chưa đạt: Sếp mới đọc 2 truyện và cả hai chưa đăng được. Chế độ
+  `nháp` là chỗ giữ lại cho điều ấy.
+- Chưa có lịch tự chạy hàng chờ. Vòng này chỉ đo xem đường nối có chạy không.
+<!-- /CHOT:dang-vong-2 -->
+
 <!-- CHOT:bo-cat-giu-truyen -->
 ### Bộ cắt không được xoá truyện — Sếp duyệt 13/09/2026; đăng ký TRƯỚC khi chạy model
 

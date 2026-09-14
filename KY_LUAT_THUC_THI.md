@@ -4531,6 +4531,49 @@ báo: thời gian trung bình           52,4 s    60,4 s    56,4 s
 - Nhãn nằm trong tệp khoá riêng, KHÔNG ghi ở đây cho tới khi Sếp chấm xong.
 <!-- /CHOT:mo-truyen-gioi-thieu -->
 
+<!-- CHOT:dang-vong-0 -->
+### Đăng tự động, vòng 0: ghi vào MỘT bản nháp cố định trên Wattpad và Sáng Tác Việt — Sếp duyệt kế hoạch 14/09/2026; đăng ký TRƯỚC khi viết kịch bản ghi
+
+Kế hoạch: `docs/KE_HOACH_DANG_TRUYEN_TU_DONG_2026-09-14.md`. Sếp có sẵn tài khoản trên
+cả hai nền tảng; trang Sáng Tác Việt là `sangtacviet.com`.
+
+**Thiết kế:**
+- Công cụ `tools/dang_truyen_worker.py` chạy bằng Python của venv v2, vì venv ấy đã có
+  Playwright 1.60 và Chromium. Vòng này không tải gì.
+- Mỗi nền tảng một hồ sơ trình duyệt riêng, đặt dưới `F:\aura-dang\`, ngoài repo.
+- **Bước 1 — Sếp làm:** mở hồ sơ, tự đăng nhập, rồi đóng cửa sổ. Em không gõ mật khẩu.
+- **Bước 2 — chỉ đọc:** máy mở trang soạn truyện bằng hồ sơ ấy, ghi lại cây trợ năng
+  và ảnh chụp, để viết kịch bản theo chữ hiển thị và vai trò.
+- **Bước 3 — đo:** mỗi lần, kịch bản mở bản nháp cố định "AURA — bản thử" (tạo một lần,
+  không bao giờ đăng), ghi một đoạn thử có dấu thời gian, lưu nháp. Rồi **tải lại trang
+  và đọc lại** để xác nhận chữ đã được lưu. Tin trang đọc lại, không tin cú bấm.
+
+**Ba trạng thái:**
+- đạt: đọc lại khớp;
+- không đạt: kịch bản gãy, hoặc đọc lại lệch;
+- **KHÔNG ĐO ĐƯỢC:** gặp CAPTCHA, bị chặn, hoặc bị đòi xác minh. Gặp thì dừng, chụp
+  màn hình, báo Sếp; không giải, không né.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| ghi nháp và đọc lại khớp, Wattpad, 10 lần | ≥ 9/10 |
+| ghi nháp và đọc lại khớp, Sáng Tác Việt, 10 lần | ≥ 9/10 |
+| thời gian mỗi lần ghi | < 60 s |
+| lần đăng công khai ngoài ý muốn | 0 |
+
+**Luật quyết định, viết trước:**
+- Nền tảng nào đạt cả bốn hàng thì sang vòng 1 (lớp thích nghi) và vòng 2 (nối vào
+  phòng viết).
+- Nền tảng nào có quá 1/10 lần KHÔNG ĐO ĐƯỢC thì ghi là **chưa tự động được** và báo
+  Sếp. Không tìm cách né.
+- Hỏng thì ghi số, sửa kịch bản, rồi đo lại. Không nới ngưỡng.
+
+**Hàng "đăng công khai ngoài ý muốn" là hàng an toàn.** Sau mỗi lần, máy đọc trạng thái
+bản nháp ngay trên trang. Thấy đã công khai thì dừng hẳn và báo Sếp; không tự gỡ.
+<!-- /CHOT:dang-vong-0 -->
+
 <!-- CHOT:bo-cat-giu-truyen -->
 ### Bộ cắt không được xoá truyện — Sếp duyệt 13/09/2026; đăng ký TRƯỚC khi chạy model
 

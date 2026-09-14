@@ -370,6 +370,67 @@ def _luu_chuong(trang, tuyen_tap: dict, muc: dict) -> dict:
     return kq
 
 
+def _bo_dau(s: str) -> str:
+    """Chữ thường, bỏ dấu, gộp khoảng trắng — chỉ để OCR ĐỀ XUẤT chỗ. Chỗ bấm được hay không
+    do chữ THẬT trên trang quyết định, so đúng từng ký tự (`_bam_theo_chu`)."""
+    import unicodedata
+
+    s = unicodedata.normalize("NFD", _chuan_hoa(s).casefold().replace("đ", "d"))
+    return "".join(c for c in s if not unicodedata.combining(c))
+
+
+def _chon_o_chu(doc: list, chu: str) -> list:
+    """Các ô OCR có chữ đúng bằng `chu` (bỏ dấu, không phân biệt hoa thường). `doc` là
+    [(bbox, chữ, độ tin)] như easyocr trả."""
+    return [(b, t) for b, t, *_ in doc if _bo_dau(t) == _bo_dau(chu)]
+
+
+def _tam(bbox, dpr: float) -> tuple:
+    """Tâm ô chữ, đổi từ điểm ảnh của ảnh chụp sang toạ độ CSS của trang."""
+    xs, ys = [p[0] for p in bbox], [p[1] for p in bbox]
+    return (min(xs) + max(xs)) / 2 / dpr, (min(ys) + max(ys)) / 2 / dpr
+
+
+_DOC_CHU = None
+
+
+def _doc_chu(anh_png: bytes) -> list:
+    """easyocr trên ảnh chụp — model `craft_mlt_25k` + `latin_g2` đã có trên máy, không tải gì."""
+    global _DOC_CHU
+    import easyocr
+    import numpy as np
+    from PIL import Image
+    import io as _io
+
+    if _DOC_CHU is None:
+        _DOC_CHU = easyocr.Reader(["vi"], gpu=False, verbose=False)
+    return _DOC_CHU.readtext(np.array(Image.open(_io.BytesIO(anh_png)).convert("RGB")))
+
+
+def _bam_theo_chu(trang, chu: str) -> dict:
+    """Lớp thích nghi, nhánh A (`CHOT:dang-vong-1`): tìm nút theo CHỮ trên ảnh chụp rồi bấm.
+
+    Chỉ bấm khi đủ ba điều:
+    1. OCR thấy ĐÚNG MỘT ô chữ bằng `chu` — không thấy, hay thấy từ hai ô, thì dừng;
+    2. hỏi trang (chỉ đọc) phần tử tại toạ độ ấy mang chữ gì — phải ĐÚNG BẰNG `chu`;
+    3. chữ ấy không chứa "đăng" — nút phát hành của Wattpad là "Đăng tải".
+    Nhãn chứa "đăng" thì nổ ngay, trước cả khi chụp.
+    """
+    if "đăng" in chu.lower():
+        raise ValueError("lớp thích nghi không bao giờ bấm nút mang chữ Đăng")
+    trung = _chon_o_chu(_doc_chu(trang.screenshot()), chu)
+    if len(trung) != 1:
+        return {"bam": False, "vi_sao": f"OCR thấy {len(trung)} ô chữ {chu!r}, cần đúng 1"}
+    x, y = _tam(trung[0][0], trang.evaluate("window.devicePixelRatio") or 1)
+    tai_cho = trang.evaluate(
+        "([x, y]) => { const e = document.elementFromPoint(x, y); if (!e) return null;"
+        " const n = e.closest('button, a, [role=button]') || e; return n.innerText; }", [x, y])
+    if _chuan_hoa(tai_cho or "") != chu or "đăng" in (tai_cho or "").lower():
+        return {"bam": False, "vi_sao": f"phần tử tại ({x:.0f},{y:.0f}) mang {tai_cho!r}, không phải {chu!r}"}
+    trang.mouse.click(x, y)
+    return {"bam": True, "x": round(x, 1), "y": round(y, 1), "tai_cho": tai_cho}
+
+
 def _giu_khoa() -> bool:
     """Giữ khoá hàng chờ. Hai lượt chồng nhau cùng đọc hàng chờ TRƯỚC khi lượt nào kịp ghi
     sổ, nên cùng lấy một kịch bản — hai chương trùng. Khoá cũ quá `KHOA_CU_GIAY` thì coi là

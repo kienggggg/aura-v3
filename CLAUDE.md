@@ -65,15 +65,27 @@ qua Ollama, kho model ở `F:\ollama-models` (`OLLAMA_MODELS`).
 
 ---
 
-## 2. Ba điều cấm
+## 2. Ba điều cấm — và quyền đăng Sếp cấp ngày 14/09/2026
 
-**AURA không được tự gửi ra ngoài.** Không tự đăng bài, không tự nộp biểu mẫu,
-không tự mua. Quyền `external_submit` chưa được cấp. Việc nào phải bấm nút thật
-thì gom lại để Sếp tự làm.
+**AURA không tự mua, không tự nộp biểu mẫu.** Việc nào phải bấm nút thật thì gom
+lại để Sếp tự làm.
 
 **Không viết mã tự nhân bản, không thay Sếp gửi email.**
 
 **Không dán khoá thật vào tệp được git theo dõi.** Khoá đi vào `.env`.
+
+**Quyền đăng (Sếp cấp ngày 14/09/2026).** AURA được TỰ ĐĂNG truyện và video của
+chính nó lên kênh của Sếp. Việc gì tự động được thì tự động hoàn toàn. Trước ngày ấy
+luật viết: *"Không tự đăng bài… Quyền `external_submit` chưa được cấp."* Quyền này
+đi kèm bốn điều:
+- Đăng qua đường chính thức của nền tảng, bằng quyền Sếp tự cấp trên trang đồng ý
+  (OAuth). AURA không giữ mật khẩu hay phiên đăng nhập trình duyệt của Sếp; token
+  để trong tệp mà git bỏ qua.
+- Chỉ đăng bản đã qua mọi cửa. Mỗi lượt đăng ghi vào sổ: nền tảng, đường link,
+  giờ đăng, SHA-256 của tệp.
+- Mỗi nền tảng có một đường đăng riêng, và mỗi đường dựng theo §7: gửi kế hoạch trước.
+- Chỗ nào nền tảng buộc người thật làm (duyệt ứng dụng, xác minh tài khoản) thì
+  gom lại để Sếp làm.
 
 ---
 

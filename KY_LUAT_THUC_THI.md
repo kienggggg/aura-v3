@@ -4762,6 +4762,53 @@ chương. Mỗi lượt tối đa 5 chương.
 - Sáng Tác Việt chưa có trong lịch: tài khoản chưa đủ 1000 phút tham gia.
 <!-- /CHOT:dang-lich -->
 
+<!-- CHOT:dang-vong-1 -->
+### Đăng tự động, vòng 1: lớp tự thích nghi khi giao diện Wattpad đổi — Sếp giao 15/09/2026 ("1 đi"); đăng ký TRƯỚC khi viết mã
+
+**Việc cần làm:** kịch bản vòng 0/2 tìm nút theo vai trò và tên trợ năng. Khi Wattpad đổi
+giao diện, bộ tìm ấy gãy và máy dừng (FAIL-CLOSED). Lớp thích nghi cho máy thử thêm
+**một** đường khác trước khi dừng.
+
+**Nhánh A — OCR, không tải gì.** Máy đã có easyocr 1.7.2, torch 2.12 bản CPU, và model
+`craft_mlt_25k` + `latin_g2`, tất cả trong venv v2.
+1. Chụp màn hình, đọc chữ, tìm ô chữ ĐÚNG BẰNG nhãn nút (ví dụ "Lưu").
+2. Không tìm thấy, hoặc thấy từ hai ô trở lên, thì dừng. Không đoán.
+3. Có một ô thì hỏi trang, chỉ đọc: phần tử tại toạ độ ấy mang chữ gì? Phải đúng bằng nhãn,
+   và không chứa "Đăng", thì mới bấm.
+
+**Nhánh B — browser-use + `qwen3.5:4b`.** Cần tải gói, và chờ Sếp duyệt:
+- browser-use 0.13.10, nguồn PyPI;
+- 36 gói phụ thuộc trực tiếp, tổng khoảng 31,5 MB tải về, CHƯA tính gói bắc cầu;
+- cài vào venv riêng `F:\aura-dang\venv`, tắt đo lường (`posthog`).
+
+**Giả lập giao diện đổi — chỉ ở trình duyệt của máy, trên truyện thử "AURA bản thử":** trước
+bước lưu, máy xoá vai trò và đổi nhãn trợ năng của nút "Lưu". Chữ hiện trên màn hình vẫn là
+"Lưu". Nửa số lần, máy còn dời nút sang chỗ khác bằng CSS. Bộ tìm của kịch bản PHẢI gãy; nếu
+nó không gãy thì lần ấy KHÔNG ĐO ĐƯỢC.
+
+**ĐẶC TẢ — chép TAY vào cửa canh:**
+
+| đơn | ngưỡng |
+|---|---|
+| bộ tìm của kịch bản gãy dưới giao diện giả lập, 10 lần | 10/10 |
+| nhánh A lưu nháp được và đọc lại khớp, 10 lần | ≥ 9/10 |
+| nhánh B lưu nháp được và đọc lại khớp, 10 lần | ≥ 7/10 |
+| cú bấm vào nút khác nút định bấm | 0 |
+| lần đăng công khai ngoài ý muốn | 0 |
+
+**Luật quyết định:**
+- Nhánh nào đạt hàng của nó, cùng ba hàng an toàn và hàng giả lập, thì được nối vào kịch bản
+  làm đường thứ hai, chỉ chạy khi bộ tìm chính gãy.
+- Cả hai nhánh cùng đạt thì dùng A trước, vì nhẹ và không cần model.
+- Hàng "bấm nhầm" hỏng dù một lần thì nhánh ấy BỊ LOẠI, không cần xét hàng khác.
+
+**Giới hạn, nói trước:**
+- Nhánh A chỉ cứu được khi chữ trên nút còn nguyên. Wattpad đổi chữ trên nút ("Lưu" →
+  "Lưu lại") thì A gãy, và đó là chỗ nhánh B được thử.
+- Nhánh B với model 4B trên CPU: lời nhắc của browser-use dài, đọc ~37 token/giây. Em ƯỚC
+  (CHƯA ĐO) mỗi lần mất vài phút và dễ trượt.
+<!-- /CHOT:dang-vong-1 -->
+
 <!-- CHOT:bo-cat-giu-truyen -->
 ### Bộ cắt không được xoá truyện — Sếp duyệt 13/09/2026; đăng ký TRƯỚC khi chạy model
 

@@ -47,6 +47,11 @@ import pytest
 from core.paths import PROJECT_ROOT
 
 
+def _can_tat(*_a, **_k):
+    return {"trang_thai": "KHONG_DO_DUOC", "ass": None,
+            "vi_sao": "tắt trong bộ test của phòng Alpha — xem _tat_bo_can_chu"}
+
+
 @pytest.fixture(autouse=True)
 def _tat_bo_can_chu(monkeypatch):
     """Tệp này chạy `dung_video` 12 lượt; mỗi lượt gọi bộ căn tốn ~30 giây.
@@ -65,9 +70,35 @@ def _tat_bo_can_chu(monkeypatch):
     """
     import core.phong_alpha as pa
 
-    monkeypatch.setattr(pa, "can_tung_tu", lambda *a, **k: {
-        "trang_thai": "KHONG_DO_DUOC", "ass": None,
-        "vi_sao": "tắt trong bộ test của phòng Alpha — xem _tat_bo_can_chu"})
+    monkeypatch.setattr(pa, "can_tung_tu", _can_tat)
+
+
+@pytest.fixture(scope="module")
+def ban_sach(tmp_path_factory):
+    """MỘT lượt `dung_video` sạch — văn bản mặc định, không bơm gì — cho mọi bài
+    chỉ ĐỌC kết quả của nó. Trả `(kết quả, thư mục ra)`.
+
+    Đo 14/09/2026: tệp này ăn ~470/782 giây của bộ đủ, và năm bài dựng lại ĐÚNG
+    lượt này — tám cửa, chuyển động, đối chứng của ba bài "NGHE phán quyết" —
+    mỗi lượt ~33 giây. Lượt có BƠM thì vẫn dựng riêng: gộp các lượt bơm làm một
+    thì một cửa ghi lý do mà không hạ `dat` sẽ được cửa khác che.
+
+    Tự tắt bộ căn: fixture tầm module dựng TRƯỚC `_tat_bo_can_chu`.
+    """
+    import core.phong_alpha as pa
+
+    thu_muc = tmp_path_factory.mktemp("ban_sach") / "ra"
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(pa, "can_tung_tu", _can_tat)
+        kq = pa.dung_video(thu_muc)
+    if kq["trang_thai"] == "KHONG_CHAY_DUOC":
+        pytest.skip(f"không đo được: {kq['vi_sao']}")
+    # Quên tắt ở đây thì lượt chung chạy bộ căn THẬT: vẫn PASS, chỉ chậm hơn ~30
+    # giây và đo nhầm cấu hình mà cả tệp này hứa đo.
+    assert kq["kiem"]["so"]["can_chu"] == "KHONG_DO_DUOC", kq["kiem"]["so"]
+    return kq, thu_muc
+
+
 from core.phong_alpha import (CAO, DAI_MAX, DAI_MIN, RONG, SO_DOI_CANH_TOI_THIEU,
                               SO_THE_TOI_THIEU, TRAN_TINH_GIAY, _tim_phong,
                               kiem_video, sinh_the_hinh)
@@ -448,7 +479,7 @@ def test_video_dung_yen_SUOT_khong_duoc_lot(tmp_path):
 
 @pytest.mark.slow
 @can_ffmpeg
-def test_chuyen_dong_phai_CO_THAT_khong_phai_nho_the_ngan(tmp_path):
+def test_chuyen_dong_phai_CO_THAT_khong_phai_nho_the_ngan(ban_sach):
     """Cửa 5 giây một mình KHÔNG bắt được việc thiếu chuyển động.
 
     Gieo thử bắt được: bỏ hẳn `zoompan` (thẻ đứng im hoàn toàn) mà cửa vẫn
@@ -458,11 +489,7 @@ def test_chuyen_dong_phai_CO_THAT_khong_phai_nho_the_ngan(tmp_path):
     Nên đòi thêm một tính chất mạnh hơn: giữa hai lần cắt KHÔNG được có đoạn
     đứng yên nào cả. Đo được trên dây chuyền thật: **0,0 s**.
     """
-    from core.phong_alpha import dung_video
-
-    kq = dung_video(tmp_path / "ra")
-    if kq["trang_thai"] == "KHONG_CHAY_DUOC":
-        pytest.skip(f"không đo được: {kq['vi_sao']}")
+    kq, _ = ban_sach
     assert kq["kiem"]["so"]["dung_yen_lau_nhat"] == 0.0, (
         f"còn {kq['kiem']['so']['dung_yen_lau_nhat']}s đứng yên — thẻ đang tĩnh, "
         "chỉ là chưa đủ dài để cửa 5 giây bắt được"
@@ -546,13 +573,9 @@ def test_nhac_nen_la_am_SINH_RA_va_du_nho(tmp_path):
 
 @pytest.mark.slow
 @can_ffmpeg
-def test_day_chuyen_qua_CA_TAM_cua(tmp_path):
+def test_day_chuyen_qua_CA_TAM_cua(ban_sach):
     """Tám cửa: bốn định dạng · hai chất lượng · phụ đề · độ ồn."""
-    from core.phong_alpha import dung_video
-
-    kq = dung_video(tmp_path / "ra")
-    if kq["trang_thai"] == "KHONG_CHAY_DUOC":
-        pytest.skip(f"không đo được: {kq['vi_sao']}")
+    kq, thu_muc = ban_sach
     assert kq["trang_thai"] == "PASS", kq["vi_sao"]
 
     so = kq["kiem"]["so"]
@@ -595,7 +618,7 @@ def test_day_chuyen_qua_CA_TAM_cua(tmp_path):
         f = Path(a["path"])
         d = f if f.is_absolute() and f.is_file() else (PROJECT_ROOT / a["path"])
         if not d.is_file():
-            d = tmp_path / "ra" / a["name"]
+            d = thu_muc / a["name"]
         assert d.is_file(), a
         assert hashlib.sha256(d.read_bytes()).hexdigest() == a["sha256"], a["name"]
 
@@ -815,7 +838,7 @@ def test_cham_nung_biet_BAC_khi_so_xau():
     assert kiem_nung({}), "thiếu số đo phải BÁC"
 
 
-def test_day_chuyen_NGHE_phan_quyet_cua_cham_nung(tmp_path):
+def test_day_chuyen_NGHE_phan_quyet_cua_cham_nung(tmp_path, ban_sach):
     """Bơm một phán quyết BÁC vào `kiem_nung` rồi chạy cả dây chuyền.
 
     Gieo 03/09/2026 bắt được chỗ mù: đổi `if ly_do_nung:` thành `if False:`
@@ -852,10 +875,8 @@ def test_day_chuyen_NGHE_phan_quyet_cua_cham_nung(tmp_path):
     # Cả hai lượt dùng VĂN BẢN MẶC ĐỊNH, không dùng câu ngắn cho nhanh: đo
     # 03/09/2026 thì câu bốn mệnh đề cho bản trộn −29,9 LUFS (trần là −18…−12),
     # nên đối chứng đỏ vì độ ồn chứ không vì chuyện đang xét. Rẻ hơn 2 phút,
-    # nhưng đo sai biến.
-    sach = pa.dung_video(tmp_path / "khong_bom")
-    if sach["trang_thai"] == "KHONG_CHAY_DUOC":
-        pytest.skip(f"đối chứng không đo được: {sach['vi_sao']}")
+    # nhưng đo sai biến. Lượt sạch dựng một lần cho cả tệp — xem `ban_sach`.
+    sach, _ = ban_sach
     assert sach["trang_thai"] == "PASS", (
         f"đối chứng phải PASS mới chứng minh được bài trên: {sach['vi_sao']}"
     )
@@ -939,7 +960,7 @@ def test_cham_quang_cam_tach_ba_trang_thai():
     )
 
 
-def test_day_chuyen_NGHE_phan_quyet_cua_hai_cua_noi_dung(tmp_path):
+def test_day_chuyen_NGHE_phan_quyet_cua_hai_cua_noi_dung(tmp_path, ban_sach):
     """Bơm phán quyết BÁC vào từng cửa nội dung rồi chạy CẢ dây chuyền.
 
     Không có bài này thì hai bài chấm ở trên vẫn xanh dù `dung_video` ngừng nghe
@@ -968,10 +989,8 @@ def test_day_chuyen_NGHE_phan_quyet_cua_hai_cua_noi_dung(tmp_path):
             f"lý do bác của {ten_ham} không lọt ra ngoài: {kq['vi_sao']!r}"
         )
 
-    # Ca đối chứng: không bơm gì thì cùng đường ấy phải PASS.
-    sach = pa.dung_video(tmp_path / "khong_bom")
-    if sach["trang_thai"] == "KHONG_CHAY_DUOC":
-        pytest.skip(f"đối chứng không đo được: {sach['vi_sao']}")
+    # Ca đối chứng: không bơm gì thì cùng đường ấy phải PASS — xem `ban_sach`.
+    sach, _ = ban_sach
     assert sach["trang_thai"] == "PASS", (
         f"đối chứng phải PASS mới chứng minh được bài trên: {sach['vi_sao']}"
     )
@@ -1129,7 +1148,7 @@ def test_kiem_phu_kin_biet_noi_KHONG():
 
 @can_ffmpeg
 @pytest.mark.slow
-def test_day_chuyen_NGHE_phan_quyet_cua_cua_phu_kin(tmp_path):
+def test_day_chuyen_NGHE_phan_quyet_cua_cua_phu_kin(tmp_path, ban_sach):
     """Chấm được một hàm không chứng minh kết quả của nó đi tới đâu.
 
     Gieo `if ly_do_nung:` -> `if False:` hôm 03/09 mà cả 30 bài vẫn xanh, vì mọi
@@ -1157,10 +1176,8 @@ def test_day_chuyen_NGHE_phan_quyet_cua_cua_phu_kin(tmp_path):
     # Ca đối chứng: cùng đường ấy, không bơm gì thì phải PASS. Dùng ĐÚNG văn bản
     # mặc định chứ không dùng câu ngắn cho nhanh — đo 03/09 thì câu bốn mệnh đề
     # cho bản trộn −29,9 LUFS, nên đối chứng đỏ vì độ ồn chứ không vì chuyện
-    # đang xét.
-    sach = pa.dung_video(tmp_path / "khong_bom")
-    if sach["trang_thai"] == "KHONG_CHAY_DUOC":
-        pytest.skip(f"đối chứng không đo được: {sach['vi_sao']}")
+    # đang xét. Lượt sạch dùng chung — xem `ban_sach`.
+    sach, _ = ban_sach
     assert sach["trang_thai"] == "PASS", (
         f"đối chứng phải PASS mới chứng minh được bài trên: {sach['vi_sao']}"
     )

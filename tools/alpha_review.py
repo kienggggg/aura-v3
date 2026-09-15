@@ -258,16 +258,26 @@ def _goi_model(loi_nhac: str, seed: int, nhiet: float = 0.3) -> dict:
 
 
 NHIET = (0.3, 0.6, 0.9)  # lượt thử lại phải KHÁC lượt trước: lần 4, ý 03 ra đúng một câu 9 từ ở cả 3 lượt
-# Trần GIÂY ĐỌC mỗi câu, đo bằng chính giọng OneCore — không đếm từ. Dựng lần đầu 15/09: 12 câu, 265 từ
-# ra 79,1 s giọng, video 80,8 s, trượt cửa 55–65 s. Tốc độ mỗi câu 2,4–4,8 từ/s: câu nhiều tên tiếng Anh
-# và con số đọc chậm gấp đôi, nên số từ không đoán được số giây. 12 câu × 5,0 s + 11 khe ≈ 62 s.
-TRAN_GIAY_CAU = 5.0
+# ĐỘ DÀI VIDEO DỰ BÁO TỪ GIÂY ĐỌC ĐO ĐƯỢC — không đếm từ. Dựng lần đầu 15/09: 12 câu, 265 từ ra 79,1 s
+# giọng, video 80,8 s, trượt cửa 55–65 s; tốc độ mỗi câu 2,4–4,8 từ/s (tên tiếng Anh, con số đọc chậm gấp
+# đôi) nên số từ không đoán được số giây. Thử trần 5,0 s MỖI CÂU thì 6/8 câu viết lại trượt: câu có ngày
+# ("ngày 3 tháng 9 năm 2026") đọc đã 7,7–8,2 s, mà luật mốc thời gian lại BẮT câu phải có ngày — hai luật
+# đá nhau. Ràng buộc thật là TỔNG, nên đo tổng: chọn ý cho vừa khung rồi mới dựng.
+BO_Y = ("xep_hang", "tranh_chap")  # 12 -> 10 ý: dài nhất sau câu kết (8,36 s · 8,62 s); 10 thẻ = 9 lần đổi cảnh
 
 
-def qua_tran_giay(giay: float | None) -> list[str]:
-    if giay is None:
-        return ["không đo được giây đọc (OneCore hỏng)"]
-    return [f"câu đọc dài {giay:.2f} s, trần {TRAN_GIAY_CAU:.1f} s"] if giay > TRAN_GIAY_CAU else []
+def du_bao_dai(giay: list[float]) -> float:
+    """Độ dài video dự báo: tổng giây đọc + khe do `khe_can_chen` đặt (cùng công thức với lúc dựng)."""
+    from core import phong_alpha as pa
+    return round(sum(giay) + pa.khe_can_chen(sum(giay), len(giay)) * (len(giay) - 1), 2)
+
+
+def kiem_tong_giay(giay: list[float | None]) -> list[str]:
+    from core import phong_alpha as pa
+    if any(g is None for g in giay):
+        return ["có câu không đo được giây đọc (OneCore hỏng) — không dựng"]
+    d = du_bao_dai(giay)
+    return [] if pa.DAI_MIN <= d <= pa.DAI_MAX else [f"dự báo video {d:.1f} s, cần {pa.DAI_MIN:.0f}–{pa.DAI_MAX:.0f} s"]
 
 
 def do_giay_doc(cau: str, thu_muc: Path) -> float | None:
@@ -324,9 +334,8 @@ def viet_mot_y(ma: str, nhan_truoc: str, da_co: list, nguon: str, dan_them: str 
         try:
             d = _goi_model(loi_nhac, seed=15 + k, nhiet=nhiet)
             loi = kiem_cau(d.get("cau", ""), d.get("trich", ""), d.get("chu_lon", ""), nguon, tuple(da_co))
-            if not loi:  # chỉ đọc thử câu đã qua cửa chữ: OneCore mất vài giây mỗi lượt
+            if not loi:  # đo để ghi sổ; cửa độ dài là cửa TỔNG ở `dung`, không phải từng câu
                 giay_doc = do_giay_doc(d["cau"], THU_MUC / "do_giong" / f"{ma}_{k}")
-                loi = qua_tran_giay(giay_doc)
         except Exception as e:  # noqa: BLE001 — model trả rác cũng là một lượt hỏng, không phải sập
             d, loi = {}, [f"{type(e).__name__}: {str(e)[:120]}"]
         lan.append({**d, "loi": loi, "nhiet": nhiet, "giay_doc": giay_doc, "giay": round(time.monotonic() - t1, 1)})
@@ -423,6 +432,41 @@ def lam_the(kb: dict, thu_muc: Path) -> list[Path]:
     return anh
 
 
+ASS_DAU = """[Script Info]
+ScriptType: v4.00+
+PlayResX: 720
+PlayResY: 1280
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Sub,Segoe UI,46,&H00FFFFFF,&H00FFFFFF,&H00000000,&H78000000,-1,0,0,0,100,100,0,0,3,10,0,2,56,56,84,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"""
+
+
+def ass_tinh_tu_srt(srt: Path, ra: Path) -> Path:
+    """Phụ đề TĨNH cỡ 46 px ở dải đáy, dựng từ `.srt`, cho lúc bộ căn karaoke không đạt.
+
+    Kiểu lui mặc định của `render` là `.srt` ép `FontSize=20` — libass phóng theo khung mặc định nên ra
+    khoảng 89 px, mỗi câu 5 dòng, ĐÈ lên chữ của thẻ review (dựng 15/09: nhìn 8 khung là thấy). Thẻ truyện
+    thì trống nên không sao; nên sửa ở đây, không đổi kiểu mặc định của video truyện.
+    """
+    def t(x: str) -> str:
+        h, m, r = x.split(":")
+        s, ms = r.split(",")
+        return f"{int(h)}:{m}:{s}.{int(ms) // 10:02d}"
+
+    khoi = re.findall(r"(\d\d:\d\d:\d\d,\d\d\d) --> (\d\d:\d\d:\d\d,\d\d\d)\s*\n(.*?)(?:\n\s*\n|\Z)",
+                      srt.read_text(encoding="utf-8"), re.S)
+    dong = [f"Dialogue: 0,{t(a)},{t(b)},Sub,,0,0,0,,{chu.strip().replace(chr(10), ' ')}" for a, b, chu in khoi]
+    ra.write_text(ASS_DAU + "\n".join(dong) + "\n", encoding="utf-8")
+    return ra
+
+
 def dung() -> dict:
     """Ghép video từ kịch bản ĐẠT. Dùng lại đúng các hàm của phòng Alpha — chỉ thẻ là mới."""
     from core import phong_alpha as pa
@@ -432,7 +476,12 @@ def dung() -> dict:
     t0 = time.monotonic()
     ra = THU_MUC / "video"
     ra.mkdir(parents=True, exist_ok=True)
+    kb = {**kb, "y": [y for y in kb["y"] if y["ma"] not in BO_Y]}
     cau = [y["cau"] for y in kb["y"]]
+    giay = [do_giay_doc(c, THU_MUC / "do_giong" / f"dung_{y['ma']}") for c, y in zip(cau, kb["y"])]
+    loi_dai = kiem_tong_giay(giay)
+    if loi_dai:
+        return {"trang_thai": "KHONG_CHAY", "vi_sao": loi_dai, "giay_doc": giay}
     cards = lam_the(kb, ra / "the")
     t_the = round(time.monotonic() - t0, 1)
     wav, moc, ly_do = pa.doc_giong_theo_doan(cau, ra)
@@ -441,7 +490,7 @@ def dung() -> dict:
     dai = pa._giay(wav)
     srt = pa.lam_phu_de(cau, dai / len(cards), ra / "phu_de.srt", moc=moc)
     kq_can = pa.can_tung_tu(wav, cau, moc, ra / "phu_de_tung_tu.ass")
-    ass = kq_can.get("ass")
+    ass = kq_can.get("ass") or ass_tinh_tu_srt(srt, ra / "phu_de_tinh.ass")
     nhac, _ = pa.lam_nhac_nen(dai, ra / "nhac_nen.wav")
     mp4 = ra / "video.mp4"
     ok, loi = pa.render(cards, wav, mp4, srt=srt, nhac=nhac, moc=moc, nung=ass)

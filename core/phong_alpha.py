@@ -696,6 +696,28 @@ def _lufs(tep: Path) -> float | None:
     return float(m.group(1))
 
 
+def dai_moi_the(moc: List[tuple] | None, dai: float, so_the: int) -> List[float]:
+    """Mỗi thẻ đứng từ lúc CÂU CỦA NÓ BẮT ĐẦU tới lúc câu SAU bắt đầu — tức gồm cả khe im lặng đi sau.
+
+    HÀM THUẦN, cố ý: để trong `render` thì không cửa canh nào đưa được bộ mốc có khe vào.
+
+    SỬA 15/09/2026. Bản 06/09 lấy `kt - bd` — chỉ phần CÓ TIẾNG — rồi đặt các thẻ nối liền nhau. Mốc
+    phụ đề thì mang cả khe (`doc_giong_theo_doan`: `cong += d + khe`). Nên mỗi thẻ đổi sớm hơn chữ đúng
+    một khe, cộng dồn, và thẻ cuối ôm hết phần dư. Đo trên video dựng thật:
+      - review Skibidi (khe 0,15 s): thẻ đổi sớm 0,15 · 0,30 · 0,43 · 0,56 · 0,70 … 1,33 s, tăng đúng 1 khe
+        mỗi câu;
+      - truyện (`STUDIO_FIXTURE.md`): 13 lần cắt cách nhau 3,3–3,5 s, rồi thẻ cuối đứng 14,2 s trên video
+        60,0 s — hình chạy trước lời cả chục giây ở cuối.
+    `kiem_video` không đo độ khớp thẻ–lời nên không cửa nào bắt. Con số "lệch 0,036 s" ghi ngày 06/09 là
+    một phép đo tay, không có cửa canh giữ lại, và không đúng với mã này.
+    """
+    if moc is not None and len(moc) == so_the and so_the > 0:
+        bd = [m[0] for m in moc]
+        # Thẻ cuối kéo tới hết giọng, không được để video cụt trước tiếng.
+        return [max(0.1, bd[i + 1] - bd[i]) for i in range(so_the - 1)] + [max(0.1, dai - bd[-1])]
+    return [dai / so_the] * so_the
+
+
 def render(cards: List[Path], wav: Path, ra: Path,
            srt: Path | None = None, nhac: Path | None = None,
            moc: List[tuple] | None = None,
@@ -731,15 +753,7 @@ def render(cards: List[Path], wav: Path, ra: Path,
     #
     # Đúng bài "vá xong một trường không nói gì về trường bên cạnh", mắc lại
     # ngay trong lượt vá trường thứ nhất.
-    if moc is not None and len(moc) == len(cards):
-        dai_the = [max(0.1, kt - bd) for bd, kt in moc]
-        # Thẻ cuối kéo tới hết giọng: khe im lặng cuối cùng thuộc về nó, không
-        # được để video cụt trước tiếng.
-        du = dai - sum(dai_the)
-        if du > 0:
-            dai_the[-1] += du
-    else:
-        dai_the = [dai / len(cards)] * len(cards)
+    dai_the = dai_moi_the(moc, dai, len(cards))
     # BƯỚC PHÓNG TÍNH RIÊNG TỪNG THẺ. Dùng một bước chung theo độ dài TRUNG
     # BÌNH thì thẻ dài hơn trung bình phóng hết cỡ sớm rồi ĐỨNG IM nốt phần
     # còn lại — `kiem_video` bắt đúng: *"1 đoạn đứng yên > 5s (lâu nhất 5,3s)"*.

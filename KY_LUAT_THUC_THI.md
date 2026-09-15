@@ -5221,6 +5221,7 @@ lên versionCode 3.
 |---|---|
 | chip chạy đúng firmware mới, đọc dòng READY | 1/1 |
 | Vivo chạy đúng APK mới, đọc versionCode | 1/1 |
+| 18 câu đưa vào app qua cổng thử adb, không qua bộ nghe giọng: lệnh tới ESP32 đúng như muốn | 18/18 |
 | 18 câu nói vào app Vivo: lệnh tới ESP32 đúng như muốn | 18/18 |
 | 12 câu chat AURA v2 cộng nút dừng chay_xe: lệnh tới ESP32 đúng như muốn | 13/13 |
 | nút DỪNG trên app khi xe đang chạy | 3/3 |
@@ -5229,6 +5230,10 @@ lên versionCode 3.
 | vật cản 10–15 cm, giữ nút tiến và bật tự tuần tra: 0 dòng MOTION:FORWARD | 6/6 |
 
 **Cách chấm, ghi trước:**
+- **Cổng thử adb** (thêm 15/09 lúc 11:01, trước khi đo gì): app có sẵn cửa
+  `am start --es aura_test_prompt "<câu>"`. Nó đưa câu vào đúng hàm `askAura`, cùng đường với câu
+  nói, nhưng bỏ qua bộ nghe giọng. Hàng này đo bộ đọc lệnh trên máy thật; hàng câu nói đo thêm bộ
+  nghe giọng. Hai hàng lệch nhau thì phần lệch là của bộ nghe giọng.
 - **18 câu nói:** là 18 câu đã đo trên hàm Java. Câu nào bộ nghe giọng của Android chép sai thì
   KHÔNG ĐO ĐƯỢC, không tính đạt hay trượt, và Sếp nói lại, tối đa 3 lần. Sau 3 lần vẫn còn câu
   KHÔNG ĐO ĐƯỢC thì cả hàng là KHÔNG ĐO ĐƯỢC, không phải đạt.

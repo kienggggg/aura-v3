@@ -13,6 +13,8 @@ from core.paths import PROJECT_ROOT
 DAC_TA = {
     "chip chạy đúng firmware mới, đọc dòng READY": "1/1",
     "Vivo chạy đúng APK mới, đọc versionCode": "1/1",
+    # Thêm 15/09 11:01, trước khi đo gì: cổng thử adb, tách bộ đọc lệnh khỏi bộ nghe giọng.
+    "18 câu đưa vào app qua cổng thử adb, không qua bộ nghe giọng: lệnh tới ESP32 đúng như muốn": "18/18",
     "18 câu nói vào app Vivo: lệnh tới ESP32 đúng như muốn": "18/18",
     "12 câu chat AURA v2 cộng nút dừng chay_xe: lệnh tới ESP32 đúng như muốn": "13/13",
     "nút DỪNG trên app khi xe đang chạy": "3/3",

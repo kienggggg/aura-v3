@@ -5197,3 +5197,49 @@ rác. Ba cặp em chấm mù đều ở hạt 1, đoạn sạch — nên kết l
 số đo máy của nhánh M (chép, tên riêng, lọt cửa) đo trên đầu vào bị nhiễm. Chạy lại
 nhánh này thì phải làm sạch lại trước.
 <!-- /CHOT:doan-mau-so-do -->
+
+<!-- CHOT:robot-nghiem-thu -->
+### Robot, hướng A: nghiệm thu lại trên xe thật với bản vá — Sếp chọn 15/09/2026; đăng ký TRƯỚC khi đo
+
+**Việc cần làm:** đưa bản vá bộ đọc lệnh (repo v2, commit `e172eb7`) lên xe thật và điện thoại
+thật, rồi đo lại các cơ chế an toàn ghi ở mục 4–5 của `robot\README.md`. Trước ngày này, bản vá
+mới chỉ đo trên mã: hàm đọc lệnh của v2 và hàm Java của app dịch bằng javac. Chip đang chạy
+firmware nào thì chưa ai biết, vì firmware không in số phiên bản.
+
+**Đo khi Sếp có mặt.** Bánh kê khỏi mặt bàn, ESP32 cắm USB vào laptop, Vivo cắm USB. Luật nạp
+của README giữ nguyên: chỉ nạp khi có đúng một cổng COM mang chip CH340C, và Sếp xác nhận bánh
+không chạm sàn. Em không nạp firmware khi không ai nhìn xe.
+
+**Người quan sát độc lập: cổng Serial 115200 của ESP32.** Firmware in ra Serial mọi dòng `ACK:`,
+mọi dòng `STOP:`, và một dòng telemetry mỗi 500 ms, kể cả khi đã mất BLE. Laptop ghi từng dòng kèm
+giờ. Không tin màn hình app, cũng không tin lời AURA tự báo.
+
+**Chuẩn bị (không tính điểm):** firmware in số phiên bản trong dòng `AURA_ROVER:READY`; APK tăng
+lên versionCode 3.
+
+| đơn | ngưỡng |
+|---|---|
+| chip chạy đúng firmware mới, đọc dòng READY | 1/1 |
+| Vivo chạy đúng APK mới, đọc versionCode | 1/1 |
+| 18 câu nói vào app Vivo: lệnh tới ESP32 đúng như muốn | 18/18 |
+| 12 câu chat AURA v2 cộng nút dừng chay_xe: lệnh tới ESP32 đúng như muốn | 13/13 |
+| nút DỪNG trên app khi xe đang chạy | 3/3 |
+| thả tay khỏi nút giữ | 3/3 |
+| tắt app Vivo giữa lúc tự tuần tra: Serial ra MOTION:STOPPED trong 2,5 s | 3/3 |
+| vật cản 10–15 cm, giữ nút tiến và bật tự tuần tra: 0 dòng MOTION:FORWARD | 6/6 |
+
+**Cách chấm, ghi trước:**
+- **18 câu nói:** là 18 câu đã đo trên hàm Java. Câu nào bộ nghe giọng của Android chép sai thì
+  KHÔNG ĐO ĐƯỢC, không tính đạt hay trượt, và Sếp nói lại, tối đa 3 lần. Sau 3 lần vẫn còn câu
+  KHÔNG ĐO ĐƯỢC thì cả hàng là KHÔNG ĐO ĐƯỢC, không phải đạt.
+- **"Lệnh tới ESP32":** với câu phải chạy, là dòng `ACK:` trên Serial. Với câu không được chạy, là
+  không có dòng `ACK:` nào ngoài `ACK:STOP` trong 3 s.
+- **Chat v2** chạy từ laptop qua `bleak` bằng đúng đường của orchestrator: `is_rover_command` rồi
+  mới đến `handle_rover_command`. App Vivo phải ngắt BLE trước, vì firmware chỉ nhận một kết nối.
+- **2,5 s** tính từ lúc laptop gửi lệnh tắt app (`adb shell am force-stop`) tới dòng telemetry đầu
+  tiên ghi MOTION:STOPPED. Con số gộp ba khoản: firmware dừng sau 1,1 s mất nhịp sống; nhịp của app
+  là 0,32 s; telemetry cách nhau 0,5 s. Độ trễ của `adb` đo riêng và ghi kèm, **chưa đo**.
+
+**Giới hạn, nói trước:** bánh treo nên không đo được quãng đường, độ lệch hay tốc độ. Bộ nghe giọng
+là của Android, không phải của AURA.
+<!-- /CHOT:robot-nghiem-thu -->

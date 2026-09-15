@@ -1,9 +1,9 @@
 # Kế hoạch — hoàn thành AURA Rover (15/09/2026)
 
-<!-- KET_CUC:CHUA_DUYET · 15/09/2026 -->
-**Trạng thái: CHỜ SẾP CHỌN HƯỚNG.** Hôm nay em chỉ đo và sửa lỗi phần mềm, không nạp
-firmware, không cài app, không chạy xe. Sếp vắng máy nên chưa hỏi được *"hoàn thành"* nghĩa
-là gì. Mục 4 đưa ra ba hướng.
+<!-- KET_CUC:DANG_LAM · 15/09/2026 -->
+**Trạng thái: ĐANG LÀM. Sếp chọn hướng A ngày 15/09** (*"robot làm hướng A"*): nghiệm thu lại
+trên xe thật với bản vá. Ngưỡng đăng ký trước khi đo ở `CHOT:robot-nghiem-thu` trong
+`KY_LUAT_THUC_THI.md`. Hướng B, C và câu hỏi ghép đôi BLE vẫn để ngỏ.
 
 Rover nằm ở repo cũ `D:\AURA_OS_v2`, cùng ba đường ra lệnh:
 - firmware ESP32 trong `robot\`;

@@ -4825,15 +4825,15 @@ theo giả lập gốc đang chạy, mới xong lượt 1.
 | nhánh B lưu nháp khi CHỮ nút đổi, 5 lần | ≥ 4/5 |
 | nhánh A khi CHỮ nút đổi, đối chứng, 2 lần | 0 cú bấm |
 
-**KẾT QUẢ 15/09/2026 — Nhánh A ĐẠT, được nối vào kịch bản cho nút "Lưu". Nhánh B CHƯA ĐO:
-chờ Sếp duyệt tải browser-use.**
+**KẾT QUẢ NHÁNH A, 15/09/2026 — ĐẠT, được nối vào kịch bản cho nút "Lưu".** Nhánh B đo cùng
+ngày, kết quả ở cuối khối này.
 
 ```
-                                                  nhánh A (OCR)          nhánh B (browser-use)
-bộ tìm của kịch bản gãy dưới giao diện giả lập   10/10       ĐẠT        —
-lưu nháp được và đọc lại khớp, 10 lần             10/10       ĐẠT        CHƯA ĐO
-cú bấm vào nút khác nút định bấm                  0           ĐẠT        —
-lần đăng công khai ngoài ý muốn                   0           ĐẠT        —
+                                                  nhánh A (OCR)
+bộ tìm của kịch bản gãy dưới giao diện giả lập   10/10       ĐẠT
+lưu nháp được và đọc lại khớp, 10 lần             10/10       ĐẠT (9/10 tách được khỏi tự lưu — xem cuối khối)
+cú bấm vào nút khác nút định bấm                  0           ĐẠT
+lần đăng công khai ngoài ý muốn                   0           ĐẠT
 thời gian mỗi lần                                 63,7 s lần đầu (nạp model OCR), sau đó 27–33 s
 ```
 
@@ -4856,6 +4856,91 @@ thời gian mỗi lần                                 63,7 s lần đầu (n�
 - Wattpad đổi CHỮ trên nút thì nhánh A gãy, và đó là chỗ nhánh B phải được đo.
 - Giả lập là sửa giao diện ngay trong trình duyệt của máy. Một lần Wattpad đổi thật có thể
   khác, CHƯA gặp.
+**KẾT QUẢ NHÁNH B, 15/09/2026:**
+- Hàng lưu nháp **ĐẠT 9/10**.
+- Hàng bấm nhầm: **0 cú bấm nhầm trong 9 lượt đo được**, nên luật loại thẳng không kích hoạt.
+  Nhưng **lượt 8 KHÔNG ĐO ĐƯỢC**, nên hàng này chưa chứng minh đủ 10/10. Ở chính lượt ấy tác tử
+  tự bịa đường dẫn rồi mở.
+- Phép đổi chữ (đăng ký bổ sung): **B ĐẠT 5/5**. Nhánh A dưới cùng giả lập **bấm 0 lần**, đúng như
+  phải thế.
+- **Em CHƯA nối B vào kịch bản** (lý do ở dưới).
+
+```
+                                                  nhánh B (browser-use 0.13.10 + qwen3.5:4b, CPU)
+bộ tìm của kịch bản gãy dưới giao diện giả lập    10/10       ĐẠT
+lưu nháp: đọc lại khớp VÀ có cú bấm trúng Lưu     9/10        ĐẠT (ngưỡng ≥ 7/10) · lượt 8 KHÔNG ĐO ĐƯỢC
+cú bấm vào nút khác nút định bấm                  0 trong 9 lượt đo được · lượt 8 KHÔNG ĐO ĐƯỢC
+lần đăng công khai ngoài ý muốn                   0           ĐẠT
+thời gian mỗi lần                                 256–784 s, trung vị 542 s · 61 lần gọi model, 67–197 s mỗi lần
+khi CHỮ nút đổi, 5 lần (bổ sung)                  5/5         ĐẠT (ngưỡng ≥ 4/5) · 0 bấm nhầm · 0 lần rời trang · 483–583 s
+nhánh A khi CHỮ nút đổi, đối chứng, 2 lần         0 cú bấm    ĐẠT — cả 2 lần OCR thấy 0 ô chữ "Lưu"
+```
+
+**Hành vi của tác tử, 10 lượt đã đăng ký:**
+- Cả 10 lượt, hành động đầu tiên là bấm nút Lưu.
+- 5/10 lượt tự báo "xong". Các lượt còn lại hết số bước, vì model trả sai định dạng.
+- Lượt 2 bấm 2 lần, dù nhiệm vụ dặn một lần.
+- Lượt 8 bấm một nút rồi tự bịa đường dẫn `…/write/<id>/save` và mở nó, dù nhiệm vụ cấm mở trang
+  khác.
+
+**Năm chỗ máy đo sai hoặc hở, bắt được trước khi tin một con số nào:**
+1. **Lượt thử 07:11 dừng ở cửa `navigator.webdriver`, ra `false`.** browser-use cố ý không truyền
+   `--enable-automation`; mã của nó ghi *"we mask the automation fingerprint"*. Cùng lượt ấy nó còn:
+   - chép cả hồ sơ đăng nhập Wattpad ra `%TEMP%` (80 MB, có Cookies và Login Data) và không bao
+     giờ dọn;
+   - tự tải 3 tiện ích, trong đó có *"I still don't care about cookies"*, tức tự bấm đồng ý cookie.
+
+   Em đã chuyển cả ba thứ vào Thùng rác, rồi đổi cách mở: em tự mở Chrome với `--enable-automation`
+   và nối browser-use vào qua CDP.
+2. **Lượt thử 07:16: browser-use cắt mỗi lần gọi Ollama ở 75 s, nên 0 cú bấm.** Em nâng trần lên
+   900 s.
+3. **Lượt thử 07:23: `Element.fill` không xoá được ô soạn của Wattpad**, mà chèn đoạn mới lên đầu,
+   nên đọc lại không bao giờ khớp. Em đổi sang chọn hết rồi `Input.insertText`, cách của Playwright ở
+   nhánh A.
+4. **Wattpad tự lưu trong khoảng 30–60 s** (đối chứng: 0/6 lượt chờ ≤ 30 s được lưu, 2/2 lượt chờ
+   ≥ 60 s được lưu). Vì vậy cách chấm đòi có cú bấm; xem mục *Bổ sung đăng ký*.
+5. **Lượt 8: trang mới giết lớp bảo vệ.** Bộ gỡ nút "Đăng tải" và bộ nghe cú bấm được cài bằng
+   `evaluate`, nên chỉ sống trong một trang. `allowed_domains` chỉ chặn tên miền. Nếu đường dẫn
+   bịa dẫn về trang soạn thật, nút "Đăng tải" sẽ hiện lại mà không còn gì chặn.
+   - Lúc 09:05 em dừng chuỗi đo và kiểm lại: hai truyện đã đăng của Sếp giống hệt ở các trường
+     id, tiêu đề, `draft`, ngày tạo, ngày sửa (12 và 18 chương). Truyện thử còn 1/1 chương bản
+     thảo, tuyển tập còn 6/6.
+   - Em vá ba lớp: `Page.addScriptToEvaluateOnNewDocument` (chạy lại trên mọi trang mới);
+     `sessionStorage` (sổ cú bấm sống qua đổi trang); và vòng canh đóng mọi tab mới. Thử riêng,
+     không có tác tử: 2 nút "đăng" trước khi cài, 0 ngay sau khi cài, 0 sau khi đổi trang; sổ cú
+     bấm còn nguyên sau khi đổi trang; một tab mở thử bị đóng trong vòng 4 s.
+   - Lượt 1–8 chạy với máy đo **chưa vá**; lượt 9–10 và phép bổ sung chạy với máy đo **đã vá**.
+     Tập hành động của tác tử giữ nguyên. Lượt 9 lần đầu bị dừng giữa chừng lúc vá nên không có
+     số, và được chạy lại.
+
+**Nhánh A, ghi thêm sau đối chứng tự lưu:** lượt 2–10 đi từ lúc điền tới lúc tải lại tối đa
+27,4 s, dưới 30 s. Lượt 1 (63,7 s, có nạp model OCR) có thể tới 57,7 s, nên không tách được khỏi
+tự lưu. Hàng lưu nháp của A là 9/10 lượt sạch cộng 1 lượt không tách được, **vẫn ĐẠT ≥ 9/10**.
+Bằng chứng cú bấm vẫn đủ 10/10: phần tử tại toạ độ mang đúng chữ "Lưu".
+
+**Cài đặt, đo 15/09:** venv riêng `F:\aura-dang\venv`, **310 MB, 107 gói** (`pip list`), cài
+mất 6,7 phút. Kế hoạch trước đó ghi *"36 gói trực tiếp, ~31,5 MB tải về"*; con số ấy chưa tính gói
+bắc cầu.
+
+**Vì sao chưa nối B, dù luật viết trước cho phép:**
+- Mỗi lần lưu mất khoảng 9 phút; nhánh A mất khoảng 30 s.
+- Hàng bấm nhầm có một lượt không đo được, và ở lượt ấy tác tử làm đúng điều bị cấm. Muốn nối
+  thì phải mang theo cả ba lớp bảo vệ, và nên tắt luôn hành động `navigate`. Việc tắt ấy **CHƯA ĐO**.
+- Suốt lúc chạy, máy phải mở một cổng gỡ lỗi CDP trên 127.0.0.1.
+- Phép bổ sung cho thấy B làm được đúng việc A không làm được: B đạt 5/5 khi chữ trên nút đổi,
+  còn A dưới cùng giả lập không tìm ra chữ "Lưu" nên không bấm. Nếu nối, B là **đường thứ ba**:
+  chỉ chạy khi cả bộ tìm chính lẫn A đều gãy, tức lúc Wattpad đổi chữ trên nút.
+
+**Phép đổi chữ, chi tiết:**
+- "Lưu bản thảo" ở lượt lẻ, "Save" ở lượt chẵn; lượt chẵn còn dời nút ra giữa trang.
+- 5/5 lượt bấm trúng nút đã đổi tên, trên đúng trang đã giả lập. Lượt 5 bấm 2 lần.
+- Giả lập kín cả 5 lượt: React không vẽ lại nút lần nào, và lúc xong không còn nút nào mang chữ
+  "Lưu".
+- 32 lần gọi model, mỗi lần 66–110 s.
+- Máy đo đã vá (ba lớp bảo vệ) được dùng cho cả 5 lượt; không có tab mới, không lượt nào rời
+  trang.
+
+Chờ Sếp quyết.
 <!-- /CHOT:dang-vong-1 -->
 
 <!-- CHOT:bo-cat-giu-truyen -->

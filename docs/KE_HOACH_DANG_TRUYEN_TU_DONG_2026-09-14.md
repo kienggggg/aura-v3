@@ -21,7 +21,11 @@ nào.
 - **Vòng 1, ngày 15/09** (`CHOT:dang-vong-1`):
   - Nhánh A (OCR, không tải gì) ĐẠT: 10/10 dưới giao diện giả lập, 0 cú bấm nhầm. Đã nối
     vào kịch bản làm đường thứ hai, chỉ cho nút "Lưu".
-  - Nhánh B (browser-use) chờ Sếp duyệt tải.
+  - Nhánh B (browser-use 0.13.10 + `qwen3.5:4b`): 9/10 lượt ĐẠT, lượt 8 KHÔNG ĐO ĐƯỢC (tác tử
+    tự bịa một đường dẫn rồi mở). Khi CHỮ nút đổi, B đạt 5/5, còn A không bấm được lần nào.
+    Mỗi lần lưu khoảng 9 phút. **Chưa nối**, chờ Sếp quyết.
+  - Đo ra thêm hai điều: Wattpad tự lưu bản nháp sau 30–60 s; và cài đặt mặc định của browser-use
+    chép hồ sơ đăng nhập ra `%TEMP%`, tự tải tiện ích, che `navigator.webdriver`.
 
 Sếp giao ngày 14/09: *việc gì tự động được thì tự động hoàn toàn*, dù mỗi nền tảng
 có một quy trình đăng khác nhau. Cùng ngày Sếp cấp quyền đăng và nới cho AURA giữ

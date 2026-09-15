@@ -1290,6 +1290,22 @@ Ca đối chứng phẳng 0 ở cả bốn mốc. **Không có nó thì cột b�
 
 Đây là họ hàng gần của bài Remotion nháy 0,76 giây mà `kiem_video` vẫn cho ĐẠT, nhưng khác một chỗ đáng ghi: lần ấy cửa **không nhìn** thứ cần nhìn; lần này cửa **có nhìn**, thấy đúng chỗ, và vẫn kết luận sai vì trong khung còn một thứ khác đang chuyển động.
 
+**Tái phát 15/09/2026 — Wattpad tự lưu.** Cửa của lớp tự thích nghi (`CHOT:dang-vong-1`) chấm
+"tác tử bấm được nút Lưu" bằng cách tải lại trang rồi xem đoạn vừa điền có còn không. Một lượt
+thử của browser-use **không có cú bấm nào**, vậy mà đoạn chữ của nó vẫn nằm trên máy chủ. Đo ca
+đối chứng, điền chữ rồi không bấm gì:
+
+```
+chờ    2 s   12 s   30 s   60 s   300 s
+lưu    0/2   0/2    0/2    1/1    1/1
+```
+
+Trong khoảng 30–60 s, **Wattpad tự lưu**. Tác tử 4B trên CPU mất trên 90 s mới hành động, nên
+nếu chỉ chấm "đọc lại khớp" thì một tác tử **không làm gì** cũng đạt. Cách chấm được sửa trước
+khi đo: phải có thêm một cú bấm trúng nút Lưu, ghi bằng bộ nghe `click` gắn trên chính trang.
+Phép đo cũ của nhánh A vẫn đứng: 9/10 lượt đi từ lúc điền tới lúc tải lại ≤ 27,4 s. Riêng lượt
+đầu mất tới 57,7 s vì phải nạp model OCR, nên không tách được khỏi tự lưu.
+
 **Ba chỗ khác bắt được trên cùng đường:**
 
 *Không đưa `faster-whisper` vào `requirements.txt`.* Nó kéo theo `ctranslate2` · `onnxruntime` · `av` · `numpy` · `tokenizers` · `huggingface-hub` — đo được **273 MB và 10+ gói**, cộng 605 MB model. `CLAUDE.md` mục 1 lấy con số **2 gói ngoài** làm lý do v3 tồn tại; đẩy lên 12 để thêm một tính năng là tự tay dựng lại v2. Nối bằng **tiến trình riêng, venv riêng, tìm bằng đường dẫn tuyệt đối** — đúng khuôn `node --check` / `bash -n` của phòng `epsilon`.

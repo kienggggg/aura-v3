@@ -5282,8 +5282,12 @@ tiếng Việt có nói đúng như đoạn trích hay không thì em đọc l�
 **Giới hạn, nói trước:** giọng là OneCore An, giọng máy. Vòng 0 chưa đổi giọng vì phải tải về và
 đo trước. Số liệu lượt xem trên Wikipedia đóng băng theo ngày nguồn ghi (ví dụ *"tới tháng 11/2023"*),
 nên video đọc kèm mốc ấy, không nói như số hôm nay.
-**KẾT QUẢ 15/09/2026:**
-- 5/6 hàng ĐẠT; hàng Sếp xem còn CHỜ SẾP.
+**KẾT QUẢ 15/09/2026 — KHÔNG ĐẠT. 5/6 hàng máy và em đọc ĐẠT; hàng Sếp xem KHÔNG ĐẠT.**
+- Sếp xem được **25 giây trên 63,48 giây**, tức khoảng 39%, rồi dừng. Nguyên văn: *"tôi xem được 25
+  giây và không muốn xem tiếp, giọng rề rà, chậm chạp, phát âm tiếng anh không chuẩn"*.
+- Cả ba lý do đều nằm ở **giọng đọc** (OneCore An), không ở kịch bản hay hình. Đúng giới hạn đã ghi
+  trước khi đo: *"giọng là OneCore An, giọng máy. Vòng 0 chưa đổi giọng"*. Việc đổi giọng là vòng 1
+  của kế hoạch, và phải tải model.
 - Video `data/alpha_review/skibidi_toilet/video/video.mp4`: 63,48 s, 10 thẻ, SHA-256 bắt đầu bằng
   `ca816110`, qua mọi cửa của `kiem_video`.
 
@@ -5293,7 +5297,7 @@ con số trên video có trong nguồn ghim                    10/10    ĐẠT (
 câu tiếng Việt nói đúng như đoạn trích, em đọc lại        10/10    ĐẠT — sau 5 lượt viết và các đợt viết lại
 khung hình, âm thanh hay nhạc lấy từ phim                 0        ĐẠT — đầu vào: 10 thẻ máy vẽ, giọng OneCore, nhạc máy sinh
 dựng xong một video                                       74,9 s   ĐẠT (phần dựng; viết kịch bản tính riêng, xem dưới)
-Sếp xem xong: muốn xem hết                                CHỜ SẾP
+Sếp xem xong: muốn xem hết                                KHÔNG    KHÔNG ĐẠT — dừng ở giây 25/63,5: giọng rề rà, đọc tiếng Anh sai
 ```
 
 **Kịch bản không đạt ngay, và cái giá tính bằng lượt:**

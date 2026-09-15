@@ -178,9 +178,11 @@ def kiem_cau(cau: str, trich: str, chu_lon: str, nguon: str, cau_da_co: tuple = 
     loi = []
     t = _chuan(trich).strip(" .\"'")
     nguon_c = _chuan(nguon)
+    # Ngoặc kép là dấu câu, không phải chữ: model chép `were "in talks" with` thành `were in talks with` ở
+    # cả 3 lượt viết lại ý 12 và bị bác oan. Bỏ ngoặc kép ở CẢ HAI bên rồi mới dò — mọi chữ vẫn phải khớp.
     if len(t.split()) < 8:
         loi.append(f"đoạn trích {len(t.split())} từ, cần ≥ 8")
-    elif t not in nguon_c:
+    elif t.replace('"', "") not in nguon_c.replace('"', ""):
         loi.append("đoạn trích KHÔNG có nguyên văn trong nguồn ghim")
     # Một câu thôi. Lần 1: câu 07 và 12 trích HAI câu rồi viết theo nửa này, bỏ vế giới hạn ở nửa kia.
     # Chấm sau chữ thường/số/ngoặc mới là hết câu: lần 3 đọc "A. V. Club" thành ba câu.
@@ -223,6 +225,15 @@ def kiem_cau(cau: str, trich: str, chu_lon: str, nguon: str, cau_da_co: tuple = 
         if ten and not any(w.lower() in cau.lower() for w in ten):
             loi.append(f"đoạn trích là nhận định của {m.group(1)!r} nhưng câu không nêu tên")
     mien = set(re.findall(r"[A-Za-z]+", trich)) | set(TEN_RIENG)
+    # Không in hoa cả chữ trong lời kể. Lần viết lại 15/09: câu dặn của em in hoa "CÔNG BỐ" để nhấn, và
+    # model chép nguyên chữ ấy vào câu — phụ đề sẽ hiện chữ in hoa giữa câu. Tên viết tắt trong nguồn thì được.
+    hoa = [w for w in re.findall(r"\w+", cau) if len(w) >= 2 and w.isupper() and not w.isdigit() and w not in mien]
+    if hoa:
+        loi.append(f"chữ in hoa cả chữ: {' '.join(hoa)}")
+    # Lời kể không mở bằng động từ ra lệnh. Lần viết lại thứ hai: câu dặn "Kể rằng tin …" bị chép thành
+    # câu kể "Kể rằng tin …" — lời dặn lọt vào video.
+    if re.match(r"(?:kể|nói|viết|hãy|nêu|ghi)\b", cau.strip().lower()):
+        loi.append("câu mở bằng động từ ra lệnh — lời dặn lọt vào lời kể")
     chu_anh = chu_khong_phai_tieng_viet(cau + " " + chu_lon, mien=mien)
     if chu_anh:
         loi.append(f"chữ không phải tiếng Việt: {' '.join(sorted(set(chu_anh)))[:60]}")
@@ -259,7 +270,7 @@ def cau_nguon(doan: str, khoa: str) -> str:
     return doan
 
 
-def _loi_nhac(y: str, nhan_truoc: str, nguon_y: str) -> str:
+def _loi_nhac(y: str, nhan_truoc: str, nguon_y: str, dan_them: str = "") -> str:
     return (
         "Bạn viết MỘT câu tiếng Việt, 14–24 từ, cho video phân tích về loạt phim hoạt hình Skibidi Toilet.\n"
         f"Ý của câu này: {y}.\n"
@@ -271,20 +282,21 @@ def _loi_nhac(y: str, nhan_truoc: str, nguon_y: str) -> str:
         "Nếu đoạn trích có mốc thời gian (năm, tháng) thì câu của bạn phải nói mốc ấy.\n"
         "Nếu đoạn trích là nhận định của ai thì câu phải nêu tên ấy, gọi đúng như nguồn gọi.\n"
         f"LỖI ĐÃ MẮC, KHÔNG LẶP LẠI:\n{LOI_DA_MAC}\n"
-        f"NGUỒN:\n{nguon_y}\n\n"
+        + (f"RIÊNG CÂU NÀY: {dan_them}\n" if dan_them else "")
+        + f"NGUỒN:\n{nguon_y}\n\n"
         "Trả về JSON:\n"
         "- \"cau\": câu tiếng Việt;\n"
         "- \"trich\": câu ĐẦU của NGUỒN, CHÉP NGUYÊN VĂN, hoặc một vế của nó dài 8–40 từ tiếng Anh;\n"
         "- \"chu_lon\": cụm tiếng Việt ngắn tối đa 5 từ để in to trên thẻ, ví dụ con số chính.")
 
 
-def viet_mot_y(ma: str, nhan_truoc: str, da_co: list, nguon: str) -> dict:
+def viet_mot_y(ma: str, nhan_truoc: str, da_co: list, nguon: str, dan_them: str = "") -> dict:
     y, khoa, nhan = next((y, k, n) for m, y, k, n in DAN_Y if m == ma)
     doan = [d for d in nguon.splitlines() if khoa.lower() in d.lower()]
     if not doan:
         raise RuntimeError(f"ý {ma}: không thấy dòng nguồn chứa {khoa!r}")
     nguon_y = cau_nguon(doan[0], khoa)
-    loi_nhac = _loi_nhac(y, nhan_truoc, nguon_y)
+    loi_nhac = _loi_nhac(y, nhan_truoc, nguon_y, dan_them)
     lan = []
     for k, nhiet in enumerate(NHIET):
         t1 = time.monotonic()
@@ -330,7 +342,9 @@ def viet_lai(ly_do: dict[str, str]) -> dict:
             continue
         khac = [x["cau"] for j, x in enumerate(kb["y"]) if j != i and x.get("dat") and x["ma"] not in ly_do]
         nhan_truoc = next((x["nhan"] for x in reversed(kb["y"][:i]) if x.get("dat")), "")
-        moi = viet_mot_y(cu["ma"], nhan_truoc, khac, nguon)
+        # Lý do của người đọc đi vào lời nhắc NGUYÊN VĂN — nên phải viết XUÔI (điều phải đúng), không
+        # chép câu sai: luật của SO_LOI_PHONG_AURA.md, và lần 2 đã vấp đúng chỗ này.
+        moi = viet_mot_y(cu["ma"], nhan_truoc, khac, nguon, dan_them=ly_do[cu["ma"]])
         moi["nguoi_bac"] = cu.get("nguoi_bac", []) + [{"cau": cu.get("cau"), "ly_do": ly_do[cu["ma"]]}]
         kb["y"][i] = moi
     kb["trang_thai"] = "DAT" if all(x["dat"] for x in kb["y"]) else "KHONG_DAT"

@@ -178,6 +178,45 @@ def test_cau_nguon_chi_lay_cau_chua_tu_khoa_va_cau_ke():
     assert ar.cau_nguon(doan, "wrote about it") == "The A. V. Club wrote about it. Kim Kardashian's daughter gave her a necklace."
 
 
+def test_chu_in_hoa_ca_chu_bi_bac_ten_viet_tat_thi_duoc():
+    """Lần viết lại 15/09: model chép chữ "CÔNG BỐ" in hoa từ câu dặn của em vào câu kể."""
+    nguon = NGUON + ("On 24 July 2024, it was announced that filmmakers Adam Goodman and Michael Bay were in talks "
+                     "with Gerasimov for a movie and television series adaptation of Skibidi Toilet.\n")
+    trich = ("On 24 July 2024, it was announced that filmmakers Adam Goodman and Michael Bay were in talks with "
+             "Gerasimov for a movie and television series adaptation of Skibidi Toilet.")
+    sai = ar.kiem_cau("Ngày 24 tháng 7 năm 2024 là ngày CÔNG BỐ tin Adam Goodman và Michael Bay đang đàm phán với "
+                      "Gerasimov.", trich, "24 tháng 7 năm 2024", nguon)
+    assert any("in hoa" in x for x in sai)
+    dung = ar.kiem_cau("Ngày 24 tháng 7 năm 2024, tin Adam Goodman và Michael Bay đang đàm phán với Gerasimov để "
+                       "chuyển thể loạt phim được công bố.", trich, "24 tháng 7 năm 2024", nguon)
+    assert dung == []
+
+
+def test_loi_dan_lot_vao_loi_ke_bi_bac():
+    """Lần viết lại thứ hai: câu dặn "Kể rằng tin …" bị model chép thành câu kể "Kể rằng tin …"."""
+    nguon = NGUON + ("On 24 July 2024, it was announced that filmmakers Adam Goodman and Michael Bay were in talks "
+                     "with Gerasimov for a movie and television series adaptation of Skibidi Toilet.\n")
+    trich = ("On 24 July 2024, it was announced that filmmakers Adam Goodman and Michael Bay were in talks with "
+             "Gerasimov for a movie and television series adaptation of Skibidi Toilet.")
+    loi = ar.kiem_cau("Kể rằng tin Adam Goodman và Michael Bay đang đàm phán với Gerasimov để chuyển thể loạt phim "
+                      "được công bố vào ngày 24 tháng 7 năm 2024.", trich, "24 tháng 7 năm 2024", nguon)
+    assert any("động từ ra lệnh" in x for x in loi)
+
+
+def test_bo_ngoac_kep_van_la_nguyen_van_bo_chu_thi_khong():
+    """Viết lại ý 12: nguồn `were "in talks" with`, model chép `were in talks with` — 3 lượt bị bác oan.
+    Bỏ ngoặc kép thì vẫn là nguyên văn; bỏ một CHỮ thì không."""
+    nguon = NGUON + ('On 24 July 2024, it was announced that filmmakers Adam Goodman and Michael Bay were "in talks" '
+                     "with Gerasimov for a movie adaptation.\n")
+    cau = "Ngày 24 tháng 7 năm 2024, tin Adam Goodman và Michael Bay đang đàm phán với Gerasimov được công bố."
+    khong_ngoac = ("On 24 July 2024, it was announced that filmmakers Adam Goodman and Michael Bay were in talks with "
+                   "Gerasimov for a movie adaptation.")
+    assert ar.kiem_cau(cau, khong_ngoac, "24 tháng 7 năm 2024", nguon) == []
+    bo_chu = ("On 24 July 2024, it was announced that filmmakers Adam Goodman and Michael Bay were talks with "
+              "Gerasimov for a movie adaptation.")
+    assert any("KHÔNG có nguyên văn" in x for x in ar.kiem_cau(cau, bo_chu, "24 tháng 7 năm 2024", nguon))
+
+
 def test_lam_sach_bo_chu_thich_va_giu_hop_thong_tin():
     h = ('<table class="infobox"><tr><th class="infobox-label">No. of episodes</th><td>81</td></tr></table>'
          '<p>The first episode was released on 7 February 2023, with an 11-second runtime.<sup class="reference">'

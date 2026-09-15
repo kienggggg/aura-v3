@@ -217,6 +217,14 @@ def test_bo_ngoac_kep_van_la_nguyen_van_bo_chu_thi_khong():
     assert any("KHÔNG có nguyên văn" in x for x in ar.kiem_cau(cau, bo_chu, "24 tháng 7 năm 2024", nguon))
 
 
+def test_tran_giay_doc():
+    """Dựng lần đầu: 265 từ ra 79,1 s giọng, video 80,8 s. Trần đo bằng GIÂY ĐỌC, không bằng số từ."""
+    assert ar.qua_tran_giay(4.99) == []
+    assert ar.qua_tran_giay(5.0) == []
+    assert any("trần 5.0" in x for x in ar.qua_tran_giay(9.48))   # câu 12 lần dựng đầu
+    assert ar.qua_tran_giay(None) != []                           # không đo được thì không được coi là đạt
+
+
 def test_lam_sach_bo_chu_thich_va_giu_hop_thong_tin():
     h = ('<table class="infobox"><tr><th class="infobox-label">No. of episodes</th><td>81</td></tr></table>'
          '<p>The first episode was released on 7 February 2023, with an 11-second runtime.<sup class="reference">'

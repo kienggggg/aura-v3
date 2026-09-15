@@ -258,6 +258,26 @@ def _goi_model(loi_nhac: str, seed: int, nhiet: float = 0.3) -> dict:
 
 
 NHIET = (0.3, 0.6, 0.9)  # lượt thử lại phải KHÁC lượt trước: lần 4, ý 03 ra đúng một câu 9 từ ở cả 3 lượt
+# Trần GIÂY ĐỌC mỗi câu, đo bằng chính giọng OneCore — không đếm từ. Dựng lần đầu 15/09: 12 câu, 265 từ
+# ra 79,1 s giọng, video 80,8 s, trượt cửa 55–65 s. Tốc độ mỗi câu 2,4–4,8 từ/s: câu nhiều tên tiếng Anh
+# và con số đọc chậm gấp đôi, nên số từ không đoán được số giây. 12 câu × 5,0 s + 11 khe ≈ 62 s.
+TRAN_GIAY_CAU = 5.0
+
+
+def qua_tran_giay(giay: float | None) -> list[str]:
+    if giay is None:
+        return ["không đo được giây đọc (OneCore hỏng)"]
+    return [f"câu đọc dài {giay:.2f} s, trần {TRAN_GIAY_CAU:.1f} s"] if giay > TRAN_GIAY_CAU else []
+
+
+def do_giay_doc(cau: str, thu_muc: Path) -> float | None:
+    """Đọc thử bằng CHÍNH giọng sẽ dựng, cắt lặng hai đầu như `doc_giong_theo_doan`, trả số giây."""
+    from core import phong_alpha as pa
+    thu_muc.mkdir(parents=True, exist_ok=True)
+    wav, _ = pa.doc_giong(cau, thu_muc)
+    if wav is None or not pa._cat_lang(wav, thu_muc / "cat.wav"):
+        return None
+    return round(pa._giay(thu_muc / "cat.wav"), 2)
 
 
 def cau_nguon(doan: str, khoa: str) -> str:
@@ -300,12 +320,16 @@ def viet_mot_y(ma: str, nhan_truoc: str, da_co: list, nguon: str, dan_them: str 
     lan = []
     for k, nhiet in enumerate(NHIET):
         t1 = time.monotonic()
+        giay_doc = None
         try:
             d = _goi_model(loi_nhac, seed=15 + k, nhiet=nhiet)
             loi = kiem_cau(d.get("cau", ""), d.get("trich", ""), d.get("chu_lon", ""), nguon, tuple(da_co))
+            if not loi:  # chỉ đọc thử câu đã qua cửa chữ: OneCore mất vài giây mỗi lượt
+                giay_doc = do_giay_doc(d["cau"], THU_MUC / "do_giong" / f"{ma}_{k}")
+                loi = qua_tran_giay(giay_doc)
         except Exception as e:  # noqa: BLE001 — model trả rác cũng là một lượt hỏng, không phải sập
             d, loi = {}, [f"{type(e).__name__}: {str(e)[:120]}"]
-        lan.append({**d, "loi": loi, "nhiet": nhiet, "giay": round(time.monotonic() - t1, 1)})
+        lan.append({**d, "loi": loi, "nhiet": nhiet, "giay_doc": giay_doc, "giay": round(time.monotonic() - t1, 1)})
         if not loi:
             break
     dat = not lan[-1]["loi"]

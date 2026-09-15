@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from tools import alpha_review as ar
 
+# Câu mẫu trích từ Wikipedia tiếng Anh, bài "Skibidi Toilet", bản sửa 1374917295 (14/09/2026),
+# giấy phép CC BY-SA 4.0 — https://en.wikipedia.org/w/index.php?oldid=1374917295
 NGUON = ("The first episode of Skibidi Toilet was released on 7 February 2023 (UTC), with an 11-second "
          "runtime. By November 2023, YouTube videos associated with Skibidi Toilet had accumulated "
          "over 65 billion views.\n")

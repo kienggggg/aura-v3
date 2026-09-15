@@ -16,6 +16,9 @@ DAC_TA = {
     "nhánh B lưu nháp được và đọc lại khớp, 10 lần": "≥ 7/10",
     "cú bấm vào nút khác nút định bấm": "0",
     "lần đăng công khai ngoài ý muốn": "0",
+    # Bổ sung đăng ký 15/09 08:00, TRƯỚC khi đo: đổi CHỮ nút, chỗ nhánh A gãy.
+    "nhánh B lưu nháp khi CHỮ nút đổi, 5 lần": "≥ 4/5",
+    "nhánh A khi CHỮ nút đổi, đối chứng, 2 lần": "0 cú bấm",
 }
 
 

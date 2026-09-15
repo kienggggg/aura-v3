@@ -4808,6 +4808,23 @@ nó không gãy thì lần ấy KHÔNG ĐO ĐƯỢC.
 - Nhánh B với model 4B trên CPU: lời nhắc của browser-use dài, đọc ~37 token/giây. Em ƯỚC
   (CHƯA ĐO) mỗi lần mất vài phút và dễ trượt.
 
+**BỔ SUNG ĐĂNG KÝ — 15/09/2026, 08:00.** Viết TRƯỚC khi đo phép bổ sung. Lúc ấy 10 lượt nhánh B
+theo giả lập gốc đang chạy, mới xong lượt 1.
+- **Cách chấm nhánh B.** Một lượt chỉ ĐẠT khi đọc lại khớp **và** bộ nghe `click` gắn trên
+  trang ghi được ít nhất một cú bấm trúng nút Lưu. Lý do: ca đối chứng đo được Wattpad **tự lưu**
+  trong khoảng 30–60 s dù không có cú bấm nào, trong khi tác tử B mất trên 90 s mới hành động.
+  Nếu chỉ chấm "đọc lại khớp" thì một tác tử không làm gì cũng đạt. Luật này đã nằm trong máy đo
+  lúc 07:45, trước lượt 1 (07:49).
+- **Giả lập đổi CHỮ nút.** Giả lập gốc giữ chữ "Lưu", đúng loại đổi mà nhánh A đỡ được, nên B
+  đạt ở đó không nói B thêm được gì. Phép bổ sung đo đúng chỗ B có lý do tồn tại: vẫn xoá vai
+  trò và nhãn trợ năng như giả lập gốc, **và** đổi chữ nút ("Lưu bản thảo" ở lượt lẻ, "Save" ở
+  lượt chẵn). Nhánh A chạy dưới cùng giả lập làm ca đối chứng: nó phải KHÔNG bấm gì.
+
+| đơn | ngưỡng |
+|---|---|
+| nhánh B lưu nháp khi CHỮ nút đổi, 5 lần | ≥ 4/5 |
+| nhánh A khi CHỮ nút đổi, đối chứng, 2 lần | 0 cú bấm |
+
 **KẾT QUẢ 15/09/2026 — Nhánh A ĐẠT, được nối vào kịch bản cho nút "Lưu". Nhánh B CHƯA ĐO:
 chờ Sếp duyệt tải browser-use.**
 

@@ -135,8 +135,25 @@ def _so(s: str) -> set[str]:
     return {re.sub(r"[.,]", "", x) for x in re.findall(r"\d+(?:[.,]\d+)*", s or "")}
 
 
+# Động từ tường thuật: đoạn trích có "<Tên> argued/noted/…" là LỜI NHẬN ĐỊNH của Tên, không phải sự
+# thật. Lần 1 (15/09): "An article by theatre firm The Civilians argued…" thành "Các nhà nghiên cứu
+# cho thấy…"; "The Washington Post noted…" thành một khẳng định trần "Điểm lạ nhất là…".
+DONG_TU_NOI = r"(?:argued|argues|noted|notes|said|says|called|calls|claimed|claims|reported|wrote|compared|described|credited)"
+LOI_DA_MAC = (
+    "- Không bỏ chữ giới hạn. Lần trước viết \"video Skibidi Toilet đạt 65 tỷ lượt xem\" trong khi nguồn "
+    "nói \"các video LIÊN QUAN TỚI Skibidi Toilet\"; viết \"kênh xem nhiều nhất nước Mỹ\" trong khi nguồn "
+    "nói \"nhiều nhất TRONG THÁNG ĐÓ\".\n"
+    "- Nhận định của ai thì nêu tên người ấy. Lần trước viết \"các nhà nghiên cứu cho thấy\" trong khi "
+    "nguồn nói \"một bài viết của nhóm kịch The Civilians lập luận\".\n"
+    "- Nói rõ ai làm gì với cái gì. Lần trước viết \"Bay lại bác bỏ tin đồn\" mà không nói tin đồn nào.\n")
+
+
 def kiem_cau(cau: str, trich: str, chu_lon: str, nguon: str) -> list[str]:
-    """Lý do bác một câu; rỗng là đạt. HÀM THUẦN để cửa canh đưa câu xấu vào được."""
+    """Lý do bác một câu; rỗng là đạt. HÀM THUẦN để cửa canh đưa câu xấu vào được.
+
+    Ba luật cuối thêm 15/09 sau khi em đọc lại kịch bản lần 1: 12/12 câu qua cửa máy nhưng 4/12
+    SAI NGHĨA — và cả 4 đi qua đúng những lối dưới đây.
+    """
     from core.viet_truyen import chu_khong_phai_tieng_viet
     loi = []
     t = _chuan(trich).strip(" .\"'")
@@ -144,10 +161,26 @@ def kiem_cau(cau: str, trich: str, chu_lon: str, nguon: str) -> list[str]:
         loi.append(f"đoạn trích {len(t.split())} từ, cần ≥ 8")
     elif t not in _chuan(nguon):
         loi.append("đoạn trích KHÔNG có nguyên văn trong nguồn ghim")
-    duoc = _so(trich) | {str(THANG[w]) for w in re.findall(r"[a-z]+", trich.lower()) if w in THANG}
+    # Một câu thôi. Lần 1: câu 07 và 12 trích HAI câu rồi viết theo nửa này, bỏ vế giới hạn ở nửa kia.
+    if re.search(r"[.!?]\s+[A-Z]", t):
+        loi.append("đoạn trích dài hơn một câu")
+    # Tên tháng VIẾT HOA mới là tháng: lần thử luật 15/09 đọc "may have helped" thành tháng Năm.
+    thang_trich = {str(THANG[w.lower()]) for w in re.findall(r"\b[A-Z][a-z]+\b", trich) if w.lower() in THANG}
+    duoc = _so(trich) | thang_trich
     la = (_so(cau) | _so(chu_lon)) - duoc
     if la:
         loi.append(f"con số không có trong đoạn trích: {sorted(la)}")
+    # Mốc thời gian trong đoạn trích phải có trong câu: bỏ nó là bỏ vế giới hạn ("trong tháng đó").
+    nam = set(re.findall(r"\b(?:19|20)\d{2}\b", trich))
+    thieu_moc = (nam | thang_trich) - _so(cau)
+    if thieu_moc:
+        loi.append(f"câu bỏ mốc thời gian của đoạn trích: {sorted(thieu_moc)}")
+    # Lời nhận định phải mang tên người nhận định.
+    m = re.search(r"((?:[A-Z][\w!?.'-]*\s+){0,3}[A-Z][\w!?.'-]*)\s+" + DONG_TU_NOI + r"\b", t)
+    if m:
+        ten = [w for w in re.findall(r"[A-Z][\w'-]+", m.group(1)) if w not in ("The", "An", "A")]
+        if ten and not any(w.lower() in cau.lower() for w in ten):
+            loi.append(f"đoạn trích là nhận định của {m.group(1)!r} nhưng câu không nêu tên")
     mien = set(re.findall(r"[A-Za-z]+", trich)) | set(TEN_RIENG)
     chu_anh = chu_khong_phai_tieng_viet(cau + " " + chu_lon, mien=mien)
     if chu_anh:
@@ -185,11 +218,14 @@ def viet_kich_ban() -> dict:
             + (f"Câu ngay trước trong video: \"{cau_truoc}\" — câu của bạn phải nối tiếp tự nhiên, không lặp ý.\n"
                if cau_truoc else "Đây là câu mở đầu video.\n")
             + "CHỈ dùng thông tin có trong ĐOẠN NGUỒN tiếng Anh dưới đây. Không thêm con số hay chi tiết nào khác.\n"
-            "Tên riêng giữ nguyên. Không dùng từ tiếng Anh nào khác.\n\n"
+            "Tên riêng giữ nguyên. Không dùng từ tiếng Anh nào khác.\n"
+            "Nếu đoạn trích có mốc thời gian (năm, tháng) thì câu của bạn phải nói mốc ấy.\n"
+            "Nếu đoạn trích là nhận định của một người hay một tờ báo thì câu phải nêu tên người hay tờ báo ấy.\n"
+            f"LỖI ĐÃ MẮC, KHÔNG LẶP LẠI:\n{LOI_DA_MAC}\n"
             f"ĐOẠN NGUỒN:\n{doan[0]}\n\n"
             "Trả về JSON:\n"
             "- \"cau\": câu tiếng Việt;\n"
-            "- \"trich\": một đoạn CHÉP NGUYÊN VĂN từ ĐOẠN NGUỒN, 8–30 từ tiếng Anh, chứa đúng thông tin câu của bạn dùng;\n"
+            "- \"trich\": MỘT câu CHÉP NGUYÊN VĂN từ ĐOẠN NGUỒN (8–40 từ tiếng Anh), chứa đúng thông tin câu của bạn dùng;\n"
             "- \"chu_lon\": cụm tiếng Việt ngắn tối đa 5 từ để in to trên thẻ, ví dụ con số chính.")
         lan = []
         for k in range(SO_LAN_THU):
@@ -213,6 +249,94 @@ def viet_kich_ban() -> dict:
     return kq
 
 
+# ---- THẺ HÌNH + DỰNG -----------------------------------------------------------------------------
+PY_V2 = r"D:\AURA_OS_v2\venv\Scripts\python.exe"
+MAU = ("#f59e0b", "#a78bfa", "#38bdf8")  # đổi màu nhấn theo thẻ: đổi cảnh thấy được bằng mắt lẫn `scdet`
+THE_HTML = """<!doctype html><html><head><meta charset="utf-8"><style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{width:720px;height:1280px;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;color:#f8fafc;
+ background:radial-gradient(circle at 80% 18%,{mau}33 0,transparent 42%),linear-gradient(160deg,#0b1020 0%,#161c38 55%,#0a0e1a 100%)}}
+.tren{{position:absolute;top:64px;left:48px;right:48px;display:flex;justify-content:space-between;align-items:center}}
+.nhan-kenh{{font-size:20px;letter-spacing:3px;font-weight:700;color:{mau};border:1.5px solid {mau}88;padding:8px 16px;border-radius:999px}}
+.so{{font-size:22px;color:#94a3b8;font-weight:600}}
+/* Khối giữa xếp dọc, căn giữa trong y 150–860: phụ đề karaoke (can_chu.py: cỡ 54, lề dưới 120)
+   chiếm khoảng y 980–1160, nên từ 880 trở xuống để trống. */
+.giua{{position:absolute;top:150px;bottom:420px;left:48px;right:48px;display:flex;flex-direction:column;justify-content:center;gap:26px}}
+.y{{font-size:30px;font-weight:700;color:{mau};text-transform:uppercase;letter-spacing:2px}}
+.lon{{font-size:76px;line-height:1.08;font-weight:800}}
+.vach{{width:120px;height:6px;border-radius:3px;background:{mau}}}
+.trich{{font-size:23px;line-height:1.4;color:#cbd5e1;font-style:italic;
+ display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}}
+.trich b{{font-style:normal;color:#94a3b8;font-weight:600}}
+.nguon{{position:absolute;top:880px;left:48px;right:48px;font-size:18px;color:#64748b}}
+</style></head><body>
+<div class="tren"><div class="nhan-kenh">PHÂN TÍCH · SKIBIDI TOILET</div><div class="so">{i:02d}/{n:02d}</div></div>
+<div class="giua"><div class="y">{nhan}</div><div class="lon">{chu_lon}</div><div class="vach"></div>
+<div class="trich"><b>Wikipedia viết:</b> “{trich}”</div></div>
+<div class="nguon">Nguồn: Wikipedia tiếng Anh · bản sửa {ngay} · CC BY-SA 4.0</div>
+</body></html>"""
+
+
+def lam_the(kb: dict, thu_muc: Path) -> list[Path]:
+    thu_muc.mkdir(parents=True, exist_ok=True)
+    for cu in thu_muc.glob("*.*"):
+        cu.unlink()
+    ds = kb["y"]
+    for i, y in enumerate(ds, 1):
+        (thu_muc / f"{i:02d}.html").write_text(THE_HTML.format(
+            mau=MAU[(i - 1) % len(MAU)], i=i, n=len(ds), nhan=html.escape(y["nhan"]),
+            chu_lon=html.escape(y["chu_lon"]), trich=html.escape(_chuan(y["trich"])),
+            ngay=NGUON["en"]["ngay"]), encoding="utf-8")
+    r = subprocess.run([PY_V2, str(GOC / "tools" / "chup_the_html.py"), str(thu_muc)],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
+    anh = sorted(thu_muc.glob("*.png"))
+    if r.returncode != 0 or len(anh) != len(ds):
+        raise RuntimeError(f"chụp thẻ hỏng: {len(anh)}/{len(ds)} ảnh · {(r.stderr or '')[-300:]}")
+    return anh
+
+
+def dung() -> dict:
+    """Ghép video từ kịch bản ĐẠT. Dùng lại đúng các hàm của phòng Alpha — chỉ thẻ là mới."""
+    from core import phong_alpha as pa
+    kb = json.loads((THU_MUC / "kich_ban.json").read_text(encoding="utf-8"))
+    if kb["trang_thai"] != "DAT":
+        return {"trang_thai": "KHONG_CHAY", "vi_sao": "kịch bản chưa ĐẠT — không dựng từ câu chưa qua cửa"}
+    t0 = time.monotonic()
+    ra = THU_MUC / "video"
+    ra.mkdir(parents=True, exist_ok=True)
+    cau = [y["cau"] for y in kb["y"]]
+    cards = lam_the(kb, ra / "the")
+    t_the = round(time.monotonic() - t0, 1)
+    wav, moc, ly_do = pa.doc_giong_theo_doan(cau, ra)
+    if wav is None:
+        return {"trang_thai": "KHONG_CHAY_DUOC", "vi_sao": ly_do}
+    dai = pa._giay(wav)
+    srt = pa.lam_phu_de(cau, dai / len(cards), ra / "phu_de.srt", moc=moc)
+    kq_can = pa.can_tung_tu(wav, cau, moc, ra / "phu_de_tung_tu.ass")
+    ass = kq_can.get("ass")
+    nhac, _ = pa.lam_nhac_nen(dai, ra / "nhac_nen.wav")
+    mp4 = ra / "video.mp4"
+    ok, loi = pa.render(cards, wav, mp4, srt=srt, nhac=nhac, moc=moc, nung=ass)
+    if not ok:
+        return {"trang_thai": "KHONG_CHAY_DUOC", "vi_sao": loi}
+    kiem = pa.kiem_video(mp4)
+    kp = pa.kiem_phu_de(srt, len(cards), pa._giay(mp4))
+    kiem["so"].update(kp["so"])
+    kiem["vi_sao"] += kp["vi_sao"]
+    khoi = pa.khoi_phu_de(srt.read_text(encoding="utf-8"))
+    kiem["vi_sao"] += pa.kiem_lap_phu_de(khoi) + pa.kiem_phu_kin(" ".join(cau), khoi)
+    kiem["vi_sao"] += pa.kiem_quang_cam(pa._quang_cam_dai_nhat(wav))
+    # Đầu vào của lượt dựng, kể tên từng tệp: hàng "0 khung/âm/nhạc từ phim" đo bằng DANH SÁCH NÀY.
+    dau_vao = ([{"tep": str(c.relative_to(THU_MUC)), "tu": "thẻ HTML máy vẽ"} for c in cards]
+               + [{"tep": str(wav.relative_to(THU_MUC)), "tu": f"TTS OneCore {pa.GIONG}"}]
+               + ([{"tep": str(nhac.relative_to(THU_MUC)), "tu": "nhạc nền máy sinh"}] if nhac else []))
+    kq = {"trang_thai": "PASS" if not kiem["vi_sao"] else "FAIL", "mp4": str(mp4), "sha256": _sha(mp4),
+          "giay_video": round(pa._giay(mp4), 2), "giay_dung": round(time.monotonic() - t0, 1), "giay_the": t_the,
+          "can_chu": kq_can.get("trang_thai"), "kiem": kiem, "dau_vao": dau_vao}
+    (THU_MUC / "dung.json").write_text(json.dumps(kq, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+    return kq
+
+
 if __name__ == "__main__":
     if sys.stdout is not None:
         sys.stdout.reconfigure(encoding="utf-8")
@@ -222,5 +346,9 @@ if __name__ == "__main__":
     elif a[0] == "kich_ban":
         kq = viet_kich_ban()
         print(json.dumps({"trang_thai": kq["trang_thai"], "giay": kq["giay"]}, ensure_ascii=False))
+    elif a[0] == "dung":
+        kq = dung()
+        print(json.dumps({k: kq.get(k) for k in ("trang_thai", "giay_video", "giay_dung", "can_chu", "vi_sao")}
+                         | {"vi_sao": (kq.get("kiem") or {}).get("vi_sao", kq.get("vi_sao"))}, ensure_ascii=False))
     else:
         sys.exit(__doc__)

@@ -52,6 +52,57 @@ def test_chu_tieng_anh_la_bi_bac_ten_rieng_thi_mien():
     assert not any("Skibidi" in x or "Toilet" in x for x in loi)
 
 
+# ---- Ba luật thêm sau lần 1 (15/09): 12/12 câu qua cửa máy nhưng em đọc lại thì 4/12 sai nghĩa. ----
+# Các ca dưới là CÂU THẬT model viết ở lần 1, trích từ cùng bài Wikipedia bản 1374917295.
+NGUON_LAN_1 = NGUON + (
+    "According to Tubefilter rankings, by the end of April 2023, DaFuq!?Boom! entered the 50 most viewed "
+    "YouTube channels in the U.S., at 33rd place. By June, the channel had gained five billion views, making "
+    "it the most viewed YouTube channel in the U.S. that month.\n"
+    "An article by theatre firm The Civilians argued the series reflects Generation Alpha's fear of "
+    "surveillance and dehumanization.\n"
+    "Despite early reports saying that Bay was directing a Skibidi Toilet film, he denied them on 24 May 2025.\n"
+    "Since YouTube's recommendation algorithm tends to prefer frequent uploaders, the initial upload "
+    "schedule may have helped the show go viral.\n")
+
+
+def test_trich_hai_cau_bi_bac():
+    """Lần 1, câu 07: trích hai câu rồi viết "kênh xem nhiều nhất nước Mỹ", bỏ vế "trong tháng đó"."""
+    trich = ("According to Tubefilter rankings, by the end of April 2023, DaFuq!?Boom! entered the 50 most viewed "
+             "YouTube channels in the U.S., at 33rd place. By June, the channel had gained five billion views, "
+             "making it the most viewed YouTube channel in the U.S. that month.")
+    loi = ar.kiem_cau("Theo xếp hạng Tubefilter, kênh đã trở thành kênh YouTube được xem nhiều nhất tại Mỹ.",
+                      trich, "Kênh xem nhiều nhất Mỹ", NGUON_LAN_1)
+    assert any("hơn một câu" in x for x in loi)
+
+
+def test_bo_moc_thoi_gian_bi_bac():
+    """Lần 1, câu 12: "Bay lại bác bỏ tin đồn" — bỏ ngày, và bỏ luôn tin đồn nào."""
+    trich = "Despite early reports saying that Bay was directing a Skibidi Toilet film, he denied them on 24 May 2025."
+    loi = ar.kiem_cau("Dự án phim điện ảnh đã bắt đầu sản xuất nhưng đạo diễn Bay lại bác bỏ tin đồn.",
+                      trich, "Bay bác bỏ tin đồn", NGUON_LAN_1)
+    assert any("bỏ mốc thời gian" in x for x in loi)
+
+
+def test_nhan_dinh_phai_neu_ten():
+    """Lần 1, câu 10: "Các nhà nghiên cứu cho thấy…" — nguồn là một bài của nhóm kịch The Civilians."""
+    trich = ("An article by theatre firm The Civilians argued the series reflects Generation Alpha's fear of "
+             "surveillance and dehumanization.")
+    sai = ar.kiem_cau("Các nhà nghiên cứu cho thấy loạt phim phản ánh nỗi sợ bị giám sát của thế hệ Alpha.",
+                      trich, "Nỗi sợ bị giám sát", NGUON_LAN_1)
+    assert any("nhận định của" in x for x in sai)
+    dung = ar.kiem_cau("Một bài viết của nhóm kịch The Civilians lập luận rằng loạt phim phản ánh nỗi sợ bị giám sát.",
+                       trich, "Nỗi sợ bị giám sát", NGUON_LAN_1)
+    assert dung == []
+
+
+def test_may_viet_thuong_khong_phai_thang_nam():
+    """Bản đầu của luật mốc thời gian đọc "may have helped" thành tháng Năm và bác một câu đúng."""
+    trich = ("Since YouTube's recommendation algorithm tends to prefer frequent uploaders, the initial upload "
+             "schedule may have helped the show go viral.")
+    assert ar.kiem_cau("Vì thuật toán YouTube ưa người đăng thường xuyên nên lịch đăng dày lúc đầu có thể giúp "
+                       "loạt phim lan truyền.", trich, "Thuật toán YouTube", NGUON_LAN_1) == []
+
+
 def test_lam_sach_bo_chu_thich_va_giu_hop_thong_tin():
     h = ('<table class="infobox"><tr><th class="infobox-label">No. of episodes</th><td>81</td></tr></table>'
          '<p>The first episode was released on 7 February 2023, with an 11-second runtime.<sup class="reference">'

@@ -152,6 +152,32 @@ def test_bo_chu_rao_don_bi_bac():
     assert dung == []
 
 
+def test_bo_chu_gioi_han_bi_bac():
+    """Lần 1 và lần 4 cùng bỏ "that month"; lần 1 bỏ "associated with". Đúng hai câu thật ấy."""
+    trich07 = ("By June, the channel had gained five billion views, making it the most viewed YouTube channel "
+               "in the U.S. that month.")
+    sai07 = ar.kiem_cau("Theo xếp hạng Tubefilter, đến tháng 6 năm 2023 kênh DaFuq!?Boom! đã trở thành kênh YouTube "
+                        "được xem nhiều nhất ở Mỹ.", trich07, "Kênh được xem nhiều nhất", NGUON_LAN_1)
+    assert any("'that month'" in x for x in sai07)
+    trich01 = "By November 2023, YouTube videos associated with Skibidi Toilet had accumulated over 65 billion views."
+    sai01 = ar.kiem_cau("Video Skibidi Toilet đã đạt hơn 65 tỷ lượt xem trên YouTube vào tháng 11 năm 2023.",
+                        trich01, "65 tỷ lượt xem", NGUON)
+    assert any("'associated with'" in x for x in sai01)
+    dung01 = ar.kiem_cau("Tính tới tháng 11 năm 2023, các video liên quan đến Skibidi Toilet đã tích lũy hơn 65 tỷ "
+                         "lượt xem.", trich01, "65 tỷ lượt xem", NGUON)
+    assert dung01 == []
+
+
+def test_cau_nguon_chi_lay_cau_chua_tu_khoa_va_cau_ke():
+    """Lần 4 đưa cả đoạn: ý khán giả lạc sang câu Kim Kardashian cùng đoạn."""
+    doan = ("Skibidi Toilet's audience is predominantly Generation Alpha, those born since the early 2010s. "
+            "While the series does not appear on YouTube Kids, it is popular. The A. V. Club wrote about it. "
+            "Kim Kardashian's daughter gave her a necklace.")
+    ra = ar.cau_nguon(doan, "audience is predominantly Generation Alpha")
+    assert ra.startswith("Skibidi Toilet's audience") and "YouTube Kids" in ra and "Kardashian" not in ra
+    assert ar.cau_nguon(doan, "wrote about it") == "The A. V. Club wrote about it. Kim Kardashian's daughter gave her a necklace."
+
+
 def test_lam_sach_bo_chu_thich_va_giu_hop_thong_tin():
     h = ('<table class="infobox"><tr><th class="infobox-label">No. of episodes</th><td>81</td></tr></table>'
          '<p>The first episode was released on 7 February 2023, with an 11-second runtime.<sup class="reference">'

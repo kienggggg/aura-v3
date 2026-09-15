@@ -122,7 +122,6 @@ THANG = {m: i for i, m in enumerate(("january february march april may june july
 TEN_RIENG = ("Skibidi Toilet YouTube TikTok Twitter Gerasimov Alexey DaFuq Boom Blugray Invisible Narratives "
              "Timbaland Universal Music Group UMG Tubefilter Washington Post Civilians Wired Insider Michael Bay "
              "Adam Goodman Virlance Strider FScript Achi Garry Mod Alpha Gen Slender Man G-Toilet CCTV Kids").split()
-SO_LAN_THU = 3
 
 
 def _chuan(s: str) -> str:
@@ -149,6 +148,19 @@ LOI_DA_MAC = (
     "- Nhắc một tin đồn hay một lời phủ nhận thì nói rõ đó là tin gì.\n")
 RAO_DON_EN = r"\b(?:may|might|could|reportedly|allegedly|possibly|likely)\b"
 RAO_DON_VI = ("có thể", "có lẽ", "được cho là", "bị cho là", "cáo buộc", "dường như", "nhiều khả năng")
+# Chữ giới hạn phạm vi: có trong nguồn thì câu Việt phải mang chữ tương ứng. Lần 1 bỏ "associated with"
+# (65 tỷ là của CÁC VIDEO LIÊN QUAN, không riêng loạt phim); lần 1 và lần 4 cùng bỏ "that month" (kênh
+# xem nhiều nhất nước Mỹ TRONG THÁNG ẤY, không phải từ đó về sau).
+GIOI_HAN = (
+    (r"\bthat month\b", ("tháng đó", "tháng ấy", "trong tháng")),
+    (r"\bthat year\b", ("năm đó", "năm ấy", "trong năm")),
+    (r"\bassociated with\b", ("liên quan",)),
+    (r"\bat least\b", ("ít nhất", "tối thiểu")),
+    (r"\b(?:over|more than)\s+\d", ("hơn", "trên", "vượt")),  # "vượt 65 tỷ" đúng nghĩa — test cũ bắt được
+    (r"\b(?:about|around|approximately|roughly)\s+\d", ("khoảng", "chừng", "xấp xỉ", "gần")),
+    (r"\bnearly\s+\d", ("gần", "suýt")),
+    (r"\b(?:predominantly|mostly|mainly|largely)\b", ("chủ yếu", "phần lớn", "đa số")),
+)
 
 
 def _thang(s: str) -> set[str]:
@@ -200,6 +212,10 @@ def kiem_cau(cau: str, trich: str, chu_lon: str, nguon: str, cau_da_co: tuple = 
     # Chữ rào đón phải đi theo. Lần 3, ý 06: "may have helped" thành "giúp" — chắc chắn hoá lời nguồn.
     if re.search(RAO_DON_EN, t) and not any(r in cau.lower() for r in RAO_DON_VI):
         loi.append("đoạn trích có chữ rào đón (may/might/reportedly…) nhưng câu nói chắc chắn")
+    for mau, viet in GIOI_HAN:
+        m = re.search(mau, t, re.I)
+        if m and not any(v in cau.lower() for v in viet):
+            loi.append(f"đoạn trích có chữ giới hạn {m.group(0)!r} nhưng câu không có ({' / '.join(viet)})")
     # Lời nhận định phải mang tên người nhận định.
     m = re.search(r"((?:[A-Z][\w!?.'-]*\s+){0,3}[A-Z][\w!?.'-]*)\s+" + DONG_TU_NOI + r"\b", t)
     if m:
@@ -220,62 +236,107 @@ def kiem_cau(cau: str, trich: str, chu_lon: str, nguon: str, cau_da_co: tuple = 
     return loi
 
 
-def _goi_model(loi_nhac: str, seed: int) -> dict:
+def _goi_model(loi_nhac: str, seed: int, nhiet: float = 0.3) -> dict:
     import httpx
     from core.viet_truyen import HOST, MODEL
     r = httpx.post(f"{HOST}/api/generate", json={
         "model": MODEL, "prompt": loi_nhac, "stream": False, "think": False, "format": SCHEMA,
-        "options": {"temperature": 0.3, "seed": seed, "num_ctx": 4096}}, timeout=600)
+        "options": {"temperature": nhiet, "seed": seed, "num_ctx": 4096}}, timeout=600)
     r.raise_for_status()
     return json.loads(r.json()["response"])
 
 
+NHIET = (0.3, 0.6, 0.9)  # lượt thử lại phải KHÁC lượt trước: lần 4, ý 03 ra đúng một câu 9 từ ở cả 3 lượt
+
+
+def cau_nguon(doan: str, khoa: str) -> str:
+    """Câu nguồn chứa từ khoá, cộng MỘT câu kế tiếp. Lần 4 đưa cả đoạn: ý "khán giả" lạc sang chuyện
+    Kim Kardashian cùng đoạn và viết đảo chiều ai tặng ai. Tách câu cùng quy tắc với luật "một câu"."""
+    cac = re.split(r"(?<=[a-z0-9\"')\]][.!?])\s+(?=[A-Z])", doan)
+    for i, c in enumerate(cac):
+        if khoa.lower() in c.lower():
+            return " ".join(cac[i:i + 2])
+    return doan
+
+
+def _loi_nhac(y: str, nhan_truoc: str, nguon_y: str) -> str:
+    return (
+        "Bạn viết MỘT câu tiếng Việt, 14–24 từ, cho video phân tích về loạt phim hoạt hình Skibidi Toilet.\n"
+        f"Ý của câu này: {y}.\n"
+        # Chỉ báo CHỦ ĐỀ câu trước, không đưa nguyên văn: lần 2 đưa nguyên văn thì model chép lại nó.
+        + (f"Câu trước trong video nói về: {nhan_truoc.lower()}. Câu của bạn nói ý mới, không nhắc lại ý ấy.\n"
+           if nhan_truoc else "Đây là câu mở đầu video.\n")
+        + "CHỈ dùng thông tin có trong NGUỒN tiếng Anh dưới đây. Không thêm con số hay chi tiết nào khác.\n"
+        "Tên riêng giữ nguyên. Không dùng từ tiếng Anh nào khác.\n"
+        "Nếu đoạn trích có mốc thời gian (năm, tháng) thì câu của bạn phải nói mốc ấy.\n"
+        "Nếu đoạn trích là nhận định của ai thì câu phải nêu tên ấy, gọi đúng như nguồn gọi.\n"
+        f"LỖI ĐÃ MẮC, KHÔNG LẶP LẠI:\n{LOI_DA_MAC}\n"
+        f"NGUỒN:\n{nguon_y}\n\n"
+        "Trả về JSON:\n"
+        "- \"cau\": câu tiếng Việt;\n"
+        "- \"trich\": câu ĐẦU của NGUỒN, CHÉP NGUYÊN VĂN, hoặc một vế của nó dài 8–40 từ tiếng Anh;\n"
+        "- \"chu_lon\": cụm tiếng Việt ngắn tối đa 5 từ để in to trên thẻ, ví dụ con số chính.")
+
+
+def viet_mot_y(ma: str, nhan_truoc: str, da_co: list, nguon: str) -> dict:
+    y, khoa, nhan = next((y, k, n) for m, y, k, n in DAN_Y if m == ma)
+    doan = [d for d in nguon.splitlines() if khoa.lower() in d.lower()]
+    if not doan:
+        raise RuntimeError(f"ý {ma}: không thấy dòng nguồn chứa {khoa!r}")
+    nguon_y = cau_nguon(doan[0], khoa)
+    loi_nhac = _loi_nhac(y, nhan_truoc, nguon_y)
+    lan = []
+    for k, nhiet in enumerate(NHIET):
+        t1 = time.monotonic()
+        try:
+            d = _goi_model(loi_nhac, seed=15 + k, nhiet=nhiet)
+            loi = kiem_cau(d.get("cau", ""), d.get("trich", ""), d.get("chu_lon", ""), nguon, tuple(da_co))
+        except Exception as e:  # noqa: BLE001 — model trả rác cũng là một lượt hỏng, không phải sập
+            d, loi = {}, [f"{type(e).__name__}: {str(e)[:120]}"]
+        lan.append({**d, "loi": loi, "nhiet": nhiet, "giay": round(time.monotonic() - t1, 1)})
+        if not loi:
+            break
+    dat = not lan[-1]["loi"]
+    kq = {"ma": ma, "nhan": nhan, "dat": dat, "nguon_y": nguon_y, "lan": lan,
+          **({k: lan[-1][k] for k in ("cau", "trich", "chu_lon")} if dat else {})}
+    print(f"{ma:11} {'DAT' if dat else 'KHONG DAT'} sau {len(lan)} lan · {lan[-1].get('cau', '')[:90]}", flush=True)
+    return kq
+
+
 def viet_kich_ban() -> dict:
     nguon = (THU_MUC / "nguon_en.txt").read_text(encoding="utf-8")
-    dong = nguon.splitlines()
     t0 = time.monotonic()
     ra, nhan_truoc, da_co = [], "", []
-    for ma, y, khoa, nhan in DAN_Y:
-        doan = [d for d in dong if khoa.lower() in d.lower()]
-        if not doan:
-            raise RuntimeError(f"ý {ma}: không thấy dòng nguồn chứa {khoa!r}")
-        loi_nhac = (
-            "Bạn viết MỘT câu tiếng Việt, 14–24 từ, cho video phân tích về loạt phim hoạt hình Skibidi Toilet.\n"
-            f"Ý của câu này: {y}.\n"
-            # Chỉ báo CHỦ ĐỀ câu trước, không đưa nguyên văn: lần 2 đưa nguyên văn thì model chép lại nó.
-            + (f"Câu trước trong video nói về: {nhan_truoc.lower()}. Câu của bạn nói ý mới, không nhắc lại ý ấy.\n"
-               if nhan_truoc else "Đây là câu mở đầu video.\n")
-            + "CHỈ dùng thông tin có trong ĐOẠN NGUỒN tiếng Anh dưới đây. Không thêm con số hay chi tiết nào khác.\n"
-            "Tên riêng giữ nguyên. Không dùng từ tiếng Anh nào khác.\n"
-            "Nếu đoạn trích có mốc thời gian (năm, tháng) thì câu của bạn phải nói mốc ấy.\n"
-            "Nếu đoạn trích là nhận định của một người hay một tờ báo thì câu phải nêu tên người hay tờ báo ấy.\n"
-            f"LỖI ĐÃ MẮC, KHÔNG LẶP LẠI:\n{LOI_DA_MAC}\n"
-            f"ĐOẠN NGUỒN:\n{doan[0]}\n\n"
-            "Trả về JSON:\n"
-            "- \"cau\": câu tiếng Việt;\n"
-            "- \"trich\": MỘT câu CHÉP NGUYÊN VĂN từ ĐOẠN NGUỒN (8–40 từ tiếng Anh), chứa đúng thông tin câu của bạn dùng;\n"
-            "- \"chu_lon\": cụm tiếng Việt ngắn tối đa 5 từ để in to trên thẻ, ví dụ con số chính.")
-        lan = []
-        for k in range(SO_LAN_THU):
-            t1 = time.monotonic()
-            try:
-                d = _goi_model(loi_nhac, seed=15 + k)
-                loi = kiem_cau(d.get("cau", ""), d.get("trich", ""), d.get("chu_lon", ""), nguon, tuple(da_co))
-            except Exception as e:  # noqa: BLE001 — model trả rác cũng là một lượt hỏng, không phải sập
-                d, loi = {}, [f"{type(e).__name__}: {str(e)[:120]}"]
-            lan.append({**d, "loi": loi, "giay": round(time.monotonic() - t1, 1)})
-            if not loi:
-                break
-        dat = not lan[-1]["loi"]
-        ra.append({"ma": ma, "nhan": nhan, "dat": dat, "lan": lan, **({k: lan[-1][k] for k in ("cau", "trich", "chu_lon")} if dat else {})})
-        print(f"{ma:11} {'DAT' if dat else 'KHONG DAT'} sau {len(lan)} lan · {lan[-1].get('cau', '')[:90]}", flush=True)
-        if dat:
+    for ma, _y, _k, nhan in DAN_Y:
+        kq = viet_mot_y(ma, nhan_truoc, da_co, nguon)
+        ra.append(kq)
+        if kq["dat"]:
             nhan_truoc = nhan
-            da_co.append(lan[-1]["cau"])
+            da_co.append(kq["cau"])
     kq = {"trang_thai": "DAT" if all(x["dat"] for x in ra) else "KHONG_DAT", "y": ra,
           "giay": round(time.monotonic() - t0, 1)}
     (THU_MUC / "kich_ban.json").write_text(json.dumps(kq, ensure_ascii=False, indent=1), encoding="utf-8")
     return kq
+
+
+def viet_lai(ly_do: dict[str, str]) -> dict:
+    """Viết lại RIÊNG các ý người đọc bác (hoặc máy bác), giữ nguyên các ý đã đúng — như biên tập viên
+    trả lại từng câu. Lý do bác của người ghi vào `nguoi_bac` của ý ấy: số câu bị trả lại là một số đo."""
+    nguon = (THU_MUC / "nguon_en.txt").read_text(encoding="utf-8")
+    kb = json.loads((THU_MUC / "kich_ban.json").read_text(encoding="utf-8"))
+    t0 = time.monotonic()
+    for i, cu in enumerate(kb["y"]):
+        if cu["ma"] not in ly_do:
+            continue
+        khac = [x["cau"] for j, x in enumerate(kb["y"]) if j != i and x.get("dat") and x["ma"] not in ly_do]
+        nhan_truoc = next((x["nhan"] for x in reversed(kb["y"][:i]) if x.get("dat")), "")
+        moi = viet_mot_y(cu["ma"], nhan_truoc, khac, nguon)
+        moi["nguoi_bac"] = cu.get("nguoi_bac", []) + [{"cau": cu.get("cau"), "ly_do": ly_do[cu["ma"]]}]
+        kb["y"][i] = moi
+    kb["trang_thai"] = "DAT" if all(x["dat"] for x in kb["y"]) else "KHONG_DAT"
+    kb["giay_viet_lai"] = round(kb.get("giay_viet_lai", 0) + time.monotonic() - t0, 1)
+    (THU_MUC / "kich_ban.json").write_text(json.dumps(kb, ensure_ascii=False, indent=1), encoding="utf-8")
+    return kb
 
 
 # ---- THẺ HÌNH + DỰNG -----------------------------------------------------------------------------
@@ -386,6 +447,11 @@ if __name__ == "__main__":
     elif a[0] == "kich_ban":
         kq = viet_kich_ban()
         print(json.dumps({"trang_thai": kq["trang_thai"], "giay": kq["giay"]}, ensure_ascii=False))
+    elif a[0] == "viet_lai":
+        # python tools/alpha_review.py viet_lai xep_hang="bỏ 'trong tháng đó'" khan_gia="đảo chiều ai tặng ai"
+        ly_do = dict(x.split("=", 1) for x in a[1:])
+        kq = viet_lai(ly_do)
+        print(json.dumps({"trang_thai": kq["trang_thai"], "giay_viet_lai": kq.get("giay_viet_lai")}, ensure_ascii=False))
     elif a[0] == "dung":
         kq = dung()
         print(json.dumps({k: kq.get(k) for k in ("trang_thai", "giay_video", "giay_dung", "can_chu", "vi_sao")}

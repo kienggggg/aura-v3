@@ -50,6 +50,35 @@ Số thật lấy qua `gh api` lúc khoảng 15:00 ngày 15/09.
 - Chụp trang repo bằng Chromium sạch (không hồ sơ, không đăng nhập), khung 720×1280: 6,5–8,6 s mỗi
   trang. GitHub trả bố cục dọc, vừa khung 9:16.
 
+## 2b. 12 video Sếp lưu trong `D:\` (tải 15/09, 14:26–14:40)
+
+Chép lời ngay trên máy bằng faster-whisper `small`: 1.428 s âm thanh chép trong 15 phút, không
+gửi gì ra ngoài. Mỗi video em xem 8 khung hình rải đều.
+
+| kiểu | số video | ví dụ |
+|---|---|---|
+| soi một repo | 5 | VLX-Seek (`om-ai-lab`), Claude-Red, agent-device (callstack), bộ nhớ dùng chung cho tác tử |
+| bảng xếp hạng tuần | 1 | "10 repo tăng sao nhiều nhất tuần này": +4.417 → +8.086 sao, 23 thẻ |
+| so kè hai công cụ | 1 | Midjourney với Stable Diffusion |
+| giảng giải bài báo | 2 | tự cải thiện đệ quy (RSI); tác tử nghiên cứu của Meta |
+| hướng dẫn quy trình | 1 | 4 bước làm TVC bằng AI |
+| quảng cáo sản phẩm | 2 | ghi biên bản họp; văn phòng AI |
+
+**Khuôn kịch bản lặp lại ở nhiều video:**
+1. mở bằng *"Thời đại … kết thúc rồi anh em ạ"*;
+2. kể một cảnh hỏng quen thuộc;
+3. lật lại: *"nhưng nghĩ lại xem, lỗi không phải tại …"*;
+4. giới thiệu repo làm lời giải;
+5. đưa số (sao, tuổi repo);
+6. kêu gọi xem link.
+
+Khuôn này cho model một chỗ đứng cố định, gần với cách bộ nêu đề đang làm ở phòng viết.
+
+**Kiểu hợp với máy nhất là bảng xếp hạng.** Chỗ vướng, đo 15/09: GitHub không trả "số sao tăng
+trong tuần". Máy phải tự chụp số sao **mỗi ngày** cho một danh sách repo rồi lấy hiệu. Mỗi repo
+tốn 1 lượt gọi mỗi ngày, trong hạn mức 5.000 lượt/giờ. Chụp từ hôm nay thì 7 ngày nữa mới có
+bảng đầu tiên.
+
 ## 3. Từ khoá Sếp đưa
 
 "Đọc nguồn" nghĩa là em đọc README, trang chính thức hoặc số từ API ngày 15/09. **Không có mục nào
@@ -122,7 +151,8 @@ Kokoro-Vietnamese. Đo ba thứ:
 - lỗi đọc, đo bằng cách cho faster-whisper nghe lại;
 - Sếp nghe mù rồi xếp hạng.
 
-**Vòng 2:** thẻ động (Remotion), hàng chờ, đường đăng.
+**Vòng 2:** bảng xếp hạng tuần (cần sổ chụp số sao đủ 7 ngày), thẻ động (Remotion), hàng chờ,
+đường đăng.
 
 ## 6. CHƯA chặn được, và rủi ro
 
@@ -132,8 +162,6 @@ Kokoro-Vietnamese. Đo ba thứ:
   máy chỉ bắt được con số và chỗ tựa, không bắt được câu viết vụng.
 - **Giọng OneCore An nghe rõ là máy.** TTS tốt hơn phải tải và đo trước.
 - **0 video đã đăng**, nên chưa biết người xem có thích kiểu này không.
-- 12 video Sếp lưu trong `D:\` (tải 15/09) đang được chép lời tại máy. Em sẽ bổ sung những gì
-  thấy trong đó.
 
 ## 7. Việc cần Sếp
 
@@ -141,3 +169,5 @@ Kokoro-Vietnamese. Đo ba thứ:
 2. Chọn 5 repo cho vòng 0, hoặc để em lấy 5 trong 8 ảnh.
 3. Chọn kênh đăng: TikTok hay YouTube Shorts. Vòng 0 Sếp tự đăng.
 4. Duyệt tải giọng ở vòng 1. Em sẽ nêu tên, nguồn và cỡ trước.
+5. Có bật sổ chụp số sao hằng ngày ngay từ bây giờ không, để 7 ngày nữa có bảng xếp hạng đầu
+   tiên? Mỗi repo 1 lượt gọi API mỗi ngày, không tải gì.

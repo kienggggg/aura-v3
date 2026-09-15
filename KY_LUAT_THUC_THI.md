@@ -5248,3 +5248,38 @@ lên versionCode 3.
 **Giới hạn, nói trước:** bánh treo nên không đo được quãng đường, độ lệch hay tốc độ. Bộ nghe giọng
 là của Android, không phải của AURA.
 <!-- /CHOT:robot-nghiem-thu -->
+
+<!-- CHOT:alpha-review-vong-0 -->
+### Alpha review, vòng 0: video phân tích đầu tiên — Skibidi Toilet (Sếp chọn 15/09/2026); đăng ký TRƯỚC khi viết mã
+
+**Việc cần làm:** Sếp duyệt kế hoạch review ngày 15/09 (`docs/KE_HOACH_ALPHA_REVIEW_2026-09-15.md`)
+và chọn đề đầu tiên: *"review phân tích, có sẵn ngay 1 bộ đó là skibiditoilet"*. Trên máy không có
+tệp nào mang tên ấy (tìm khắp D, F và thư mục người dùng), nên đề là **loạt phim Skibidi Toilet**.
+
+**Nguồn ghim, không đổi giữa hai lần chạy:** Wikipedia tiếng Anh bản sửa `1374917295`
+(14/09/2026, 56.123 byte). Wikipedia tiếng Việt bản `74669391` (12/01/2026) chỉ dùng để tra từ ngữ,
+vì nó cũ hơn 8 tháng. Chữ Wikipedia theo giấy phép CC BY-SA 4.0, nên video ghi nguồn.
+
+**Không dùng gì của phim.** Chủ loạt phim đang chủ động đòi quyền: khiếu nại DMCA nhắm vào Garry's Mod
+(cuối 2023, giải quyết 07/2024); vụ kiện một công ty ở Dubai (01/2025); và bài hát trong phim là
+bản trộn KHÔNG có giấy phép. Nên video không có clip, không có ảnh nhân vật, không có nhạc của phim.
+Hình là thẻ chữ và số do máy vẽ.
+
+**Cách chống bịa:** mỗi câu kịch bản đi kèm một đoạn **trích nguyên văn** từ nguồn ghim, dài ít nhất
+8 từ. Máy tìm đoạn ấy trong nguồn, sau khi chuẩn hoá khoảng trắng. Một đoạn 8 từ trở lên thì không
+khớp nhầm vào giữa một từ khác, khác với loại dò chuỗi con đã ghi 8 lần trong `SO_BENH_AN.md`. Câu
+tiếng Việt có nói đúng như đoạn trích hay không thì em đọc lại, **không phải máy chấm**.
+
+| đơn | ngưỡng |
+|---|---|
+| câu kịch bản có đoạn trích nguyên văn từ 8 từ trở lên, máy tìm thấy trong nguồn ghim | 100% |
+| con số trên video có mặt trong nguồn ghim | 100% |
+| câu tiếng Việt nói đúng như đoạn trích, em đọc lại từng câu | 100% |
+| khung hình, âm thanh hay nhạc lấy từ phim | 0 |
+| dựng xong một video trên máy này | < 15 phút |
+| Sếp xem xong: muốn xem hết | có |
+
+**Giới hạn, nói trước:** giọng là OneCore An, giọng máy. Vòng 0 chưa đổi giọng vì phải tải về và
+đo trước. Số liệu lượt xem trên Wikipedia đóng băng theo ngày nguồn ghi (ví dụ *"tới tháng 11/2023"*),
+nên video đọc kèm mốc ấy, không nói như số hôm nay.
+<!-- /CHOT:alpha-review-vong-0 -->

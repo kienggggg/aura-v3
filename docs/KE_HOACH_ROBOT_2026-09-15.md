@@ -5,6 +5,13 @@
 trên xe thật với bản vá. Ngưỡng đăng ký trước khi đo ở `CHOT:robot-nghiem-thu` trong
 `KY_LUAT_THUC_THI.md`. Hướng B, C và câu hỏi ghép đôi BLE vẫn để ngỏ.
 
+**TẠM DỪNG 15/09, chiều**, theo lời Sếp: *"vẫn là để robot sau khi làm sau Alpha"*. Đã chuẩn bị xong:
+- firmware có số phiên bản đã dịch (v2 `9b844a4`), CHƯA nạp;
+- APK versionCode 3 đã dựng, CHƯA cài;
+- máy đo và máy chấm đã kiểm: 12 ca gieo lỗi, 0 ca mù.
+
+Chưa đo hàng nào của `CHOT:robot-nghiem-thu`.
+
 Rover nằm ở repo cũ `D:\AURA_OS_v2`, cùng ba đường ra lệnh:
 - firmware ESP32 trong `robot\`;
 - chat AURA v2, qua `v2: core/rover.py` và `bleak`;

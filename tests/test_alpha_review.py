@@ -217,12 +217,20 @@ def test_bo_ngoac_kep_van_la_nguyen_van_bo_chu_thi_khong():
     assert any("KHÔNG có nguyên văn" in x for x in ar.kiem_cau(cau, bo_chu, "24 tháng 7 năm 2024", nguon))
 
 
-def test_tran_giay_doc():
-    """Dựng lần đầu: 265 từ ra 79,1 s giọng, video 80,8 s. Trần đo bằng GIÂY ĐỌC, không bằng số từ."""
-    assert ar.qua_tran_giay(4.99) == []
-    assert ar.qua_tran_giay(5.0) == []
-    assert any("trần 5.0" in x for x in ar.qua_tran_giay(9.48))   # câu 12 lần dựng đầu
-    assert ar.qua_tran_giay(None) != []                           # không đo được thì không được coi là đạt
+# Giây đọc ĐO ĐƯỢC của 12 câu ở lần dựng đầu (15/09): 79,11 s giọng, video thật 80,76 s.
+GIAY_LAN_DAU = [7.08, 6.58, 7.02, 4.77, 6.49, 4.60, 8.36, 4.84, 6.58, 4.68, 8.62, 9.48]
+
+
+def test_du_bao_khop_lan_dung_that():
+    """Dự báo phải khớp video THẬT của lần dựng đầu (80,76 s) — không thì cửa tổng chỉ là đoán."""
+    assert abs(ar.du_bao_dai(GIAY_LAN_DAU) - 80.76) < 0.1
+
+
+def test_cua_tong_bac_12_cau_nhan_10_cau():
+    assert any("80.8" in x for x in ar.kiem_tong_giay(GIAY_LAN_DAU))
+    muoi = [g for g, ma in zip(GIAY_LAN_DAU, [y[0] for y in ar.DAN_Y]) if ma not in ar.BO_Y]
+    assert len(muoi) == 10 and ar.kiem_tong_giay(muoi) == []
+    assert ar.kiem_tong_giay(muoi[:-1] + [None]) != []    # không đo được thì không được coi là đạt
 
 
 def test_lam_sach_bo_chu_thich_va_giu_hop_thong_tin():

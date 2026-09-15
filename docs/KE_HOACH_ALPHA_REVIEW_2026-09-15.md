@@ -1,7 +1,15 @@
 # Kế hoạch — Alpha làm video review công nghệ (15/09/2026)
 
-<!-- KET_CUC:CHUA_DUYET · 15/09/2026 -->
-**Trạng thái: CHỜ SẾP DUYỆT.** Chưa viết mã, chưa tải gì.
+<!-- KET_CUC:DANG_LAM · 15/09/2026 -->
+**Trạng thái: ĐANG LÀM. Sếp duyệt ngày 15/09** (*"ok duyệt, bật sổ chụp sao đi"*).
+- **Sổ chụp sao đã bật.** Máy chạy tools/so_sao.py mỗi ngày lúc 09:00 bằng tác vụ Windows
+  "AURA so chup sao"; nếu lúc ấy máy tắt thì chạy khi máy bật lại. Lượt đầu 15/09 chụp 1.222 repo.
+  Bảng tuần đầu tiên có vào ngày 22/09. Giới hạn: mỗi truy vấn chỉ lấy 300 kết quả đầu, xếp theo
+  sao, trong khi truy vấn repo mới có 1.364 kết quả.
+- **Đề đầu tiên, Sếp chọn:** phân tích loạt phim **Skibidi Toilet**. Ngưỡng đăng ký ở
+  `CHOT:alpha-review-vong-0`. Không dùng clip, ảnh nhân vật hay nhạc của phim, vì chủ phim đang
+  chủ động đòi bản quyền.
+- 5 repo cho các video review sau: CHƯA chọn.
 
 Sếp giao ngày 15/09: robot để sau Alpha. Alpha thử hướng *reaction/review*, vì có lẽ đơn giản
 hơn tự tạo nội dung. `CLAUDE.md` §7 yêu cầu dựng hệ thống mới thì gửi kế hoạch trước. Chỗ nào

@@ -5345,3 +5345,74 @@ và chọn 10 ý (bỏ "xếp hạng" và "nhóm mới 2026"). Dự báo 63,47 s
 - Câu 05 ("là bên gửi khiếu nại") và câu 10 ("đang trong cuộc trò chuyện") đúng nghĩa nhưng vụng.
 - Một chữ lớn viết thường ở chữ đầu.
 <!-- /CHOT:alpha-review-vong-0 -->
+
+<!-- CHOT:alpha-giong-vong-1 -->
+### Alpha review, vòng 1: đổi giọng — 3 TTS tải về so với OneCore An (Sếp duyệt tải 15/09/2026); đăng ký TRƯỚC khi đo
+
+**Việc cần làm:** vòng 0 trượt ở hàng Sếp xem: *"giọng rề rà, chậm chạp, phát âm tiếng anh không
+chuẩn"*. Sếp duyệt tải cả ba ứng viên: *"ok tải cả 3"*.
+
+**Ứng viên, ghim bản.** Mỗi ứng viên nằm trong một venv riêng ở `F:\aura-giong`:
+- **ZeroTTS:** gói `zerotts` 0.1.5, trọng số HF `zeroweight-ai/ZeroTTS`, MIT.
+- **VieNeu-TTS v3 Turbo:** gói `vieneu` 3.6.5, trọng số HF `pnnbao-ump/VieNeu-TTS-v3-Turbo`,
+  Apache-2.0. Chạy đường ONNX trên CPU, không cài torch.
+- **Kokoro-Vietnamese:** trọng số HF `contextboxai/Kokoro-Vietnamese`, bản ONNX. Mã là 3 tệp của
+  `iamdinhthuan/Kokoro-Vietnamese`, ghim commit `a249afe5555a`. Gói gốc bắt cài torch chỉ để nạp bộ
+  giọng `.pt` nặng 0,5 MB. Em nạp tệp ấy bằng bộ nạp chỉ nhận lớp tensor; gặp lớp khác thì từ chối.
+- **Đối chứng: OneCore An,** giọng của vòng 0, chính giọng Sếp đã chê.
+
+Mỗi ứng viên đọc bằng **giọng mặc định của gói**; gói nào không có mặc định thì lấy giọng trong ví dụ
+README (ZeroTTS: `maichi`). Không chọn giọng bằng tai trước khi đo.
+
+**Cách đo:**
+- **Câu đo:** đúng 10 câu của video vòng 0, trong `data/alpha_review/skibidi_toilet/kich_ban.json`.
+- **Tốc độ:** mỗi ứng viên đọc một câu làm nóng (không tính), rồi đọc lần lượt 10 câu. Lấy tổng giây
+  máy chạy chia tổng giây âm thanh. Giây âm thanh tính **sau khi cắt lặng hai đầu** bằng `_cat_lang` của
+  `core/phong_alpha.py`, để giọng nào đệm lặng cũng không được lợi. Khi đo, Ollama và bộ test đều không
+  chạy. Giây nạp model ghi riêng, không đặt ngưỡng.
+- **Nhịp đọc:** số âm tiết chia giây âm thanh đã cắt lặng. Chỉ ghi lại để đặt cạnh chữ *"rề rà"* của
+  Sếp, không đặt ngưỡng.
+- **Lỗi chữ:** `tools/can_tung_tu_worker.py` nghe lại từng câu, với model `small`, tiếng Việt, nhiệt độ 0,
+  beam 5. Máy đếm tỉ lệ lỗi chữ bằng `tach_tu` và `_wer` của `core/can_chu.py`: tổng lỗi của 10 câu chia
+  tổng số chữ.
+- **Tên tiếng Anh:** tên được tính khi dãy chữ của tên đứng liền nhau trong bản nghe lại của chính câu
+  ấy. Máy so theo từng chữ, không dò chuỗi con. 13 lần xuất hiện:
+  - Skibidi Toilet ×2, Skibidi;
+  - Alexey Gerasimov, Gerasimov;
+  - Universal Music Group, YouTube, Alpha ×2;
+  - The Washington Post, The Civilians;
+  - Adam Goodman, Michael Bay.
+- **Nghe mù:**
+  - 3 câu đầu video, tức đoạn Sếp đã nghe trước khi dừng.
+  - 4 tệp dán nhãn A–D, cùng độ to (loudnorm −16 LUFS), cùng 48 kHz, cắt lặng hai đầu.
+  - Nhãn xáo bằng `secrets.SystemRandom`. Khoá lưu ngoài git, kèm một chuỗi ngẫu nhiên. SHA-256 của
+    khoá ghi vào đây TRƯỚC khi Sếp nghe, và chỉ mở khoá sau khi Sếp xếp hạng.
+- Ứng viên cài hỏng hoặc chạy hỏng thì ghi **KHÔNG ĐO ĐƯỢC**, không ghi "không đạt".
+
+| đơn | ngưỡng |
+|---|---|
+| giây máy tạo giọng chia giây âm thanh, 10 câu video, CPU máy này | ≤ 2,0 |
+| tỉ lệ lỗi chữ khi faster-whisper small nghe lại 10 câu | ≤ OneCore An + 5 điểm % |
+| tên tiếng Anh faster-whisper nghe ra đúng chính tả | ≥ 10/13 |
+| ca đối chứng OneCore An, hàng tên tiếng Anh | < 10/13 |
+| Sếp nghe mù 3 câu đầu, 4 giọng A–D xáo thứ tự | xếp đủ 4 hạng |
+| Sếp xem lại video Skibidi đọc bằng giọng xếp đầu: muốn xem hết | có |
+
+**Vì sao là những ngưỡng ấy:**
+- **Tốc độ ≤ 2,0:** trần dựng là 15 phút một video. 60 s giọng × 2 = 2 phút, nên vẫn còn chỗ.
+- **Lỗi chữ so với OneCore An, không so số tuyệt đối:** faster-whisper `small` tự sai khi nghe tiếng Việt
+  và khi viết con số. Cái sai ấy đè lên cả bốn giọng như nhau.
+- **Tên tiếng Anh:** đây là thước thay cho lời chê *"phát âm tiếng anh không chuẩn"*. OneCore An là giọng
+  bị chê, nên nó phải trượt hàng này. Nếu nó qua, thước mù, và hàng tên tiếng Anh thành
+  **KHÔNG ĐO ĐƯỢC** cho mọi ứng viên.
+
+**Giới hạn, nói trước:**
+- Tai máy không phải tai người. Máy nghe ra đúng chính tả là dấu hiệu phát âm đúng, không phải bằng chứng.
+  Riêng câu "rề rà" thì chỉ Sếp nghe mới chấm được, nên hai hàng cuối là của Sếp.
+- Mỗi ứng viên chỉ đo một giọng. Giọng khác của cùng model có thể hay hơn hoặc dở hơn. Giọng mặc định
+  lại khác nhau cả giới lẫn vùng miền, nên Sếp có thể chấm cả hai thứ ấy chứ không chỉ chấm chất lượng.
+- **Venv riêng không phải hộp cát:** mã vẫn chạy với quyền của Sếp.
+  - Em đã đọc mã Python của `zerotts`, của `vieneu` (đường CPU), của `vig2p`, và 3 tệp Kokoro.
+  - `vieneu` còn có lệnh `serve`, mở máy chủ và đường hầm ra Internet. Em không gọi lệnh ấy.
+  - `sea-g2p` là mã máy biên dịch sẵn, 27 MB. **CHƯA kiểm được:** em không đọc được nó.
+<!-- /CHOT:alpha-giong-vong-1 -->

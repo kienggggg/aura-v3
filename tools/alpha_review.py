@@ -141,10 +141,14 @@ def _so(s: str) -> set[str]:
 DONG_TU_NOI = r"(?:argued|argues|noted|notes|said|says|called|calls|claimed|claims|reported|wrote|compared|described|credited)"
 # Viết XUÔI, không chép câu sai (luật của SO_LOI_PHONG_AURA.md: bản đồ từng bị chép nguyên chữ vào
 # 2/15 truyện). Bản đầu 15/09 trích nguyên 3 câu sai của lần 1 vào đây — dừng lượt ấy giữa chừng.
+# Lần 3: ví dụ "tờ … nhận xét" ở đây làm model gọi NHÓM KỊCH The Civilians là "tờ" — chữ trong lời
+# nhắc lại bị chép. Bỏ ví dụ, chỉ nói luật.
 LOI_DA_MAC = (
-    "- Giữ nguyên chữ giới hạn của nguồn: \"liên quan tới\", \"hơn\", \"khoảng\", \"tính tới\", \"trong tháng đó\".\n"
-    "- Nhận định thì nói rõ của ai: \"tờ … nhận xét\", \"bài viết của … lập luận\".\n"
+    "- Giữ nguyên chữ giới hạn và chữ rào đón của nguồn (liên quan tới, hơn, khoảng, tính tới, trong tháng đó, có thể).\n"
+    "- Nhận định thì nói rõ ai nhận định, và gọi họ đúng như đoạn nguồn gọi.\n"
     "- Nhắc một tin đồn hay một lời phủ nhận thì nói rõ đó là tin gì.\n")
+RAO_DON_EN = r"\b(?:may|might|could|reportedly|allegedly|possibly|likely)\b"
+RAO_DON_VI = ("có thể", "có lẽ", "được cho là", "bị cho là", "cáo buộc", "dường như", "nhiều khả năng")
 
 
 def _thang(s: str) -> set[str]:
@@ -167,7 +171,8 @@ def kiem_cau(cau: str, trich: str, chu_lon: str, nguon: str, cau_da_co: tuple = 
     elif t not in nguon_c:
         loi.append("đoạn trích KHÔNG có nguyên văn trong nguồn ghim")
     # Một câu thôi. Lần 1: câu 07 và 12 trích HAI câu rồi viết theo nửa này, bỏ vế giới hạn ở nửa kia.
-    if re.search(r"[.!?]\s+[A-Z]", t):
+    # Chấm sau chữ thường/số/ngoặc mới là hết câu: lần 3 đọc "A. V. Club" thành ba câu.
+    if re.search(r"[a-z0-9\"')\]][.!?]\s+[A-Z]", t):
         loi.append("đoạn trích dài hơn một câu")
     thang_trich = _thang(trich)
     # Con số được phép lấy trong CÙNG ĐOẠN NGUỒN chứa đoạn trích, không chỉ trong câu trích. Lần 2, ý 07:
@@ -186,10 +191,15 @@ def kiem_cau(cau: str, trich: str, chu_lon: str, nguon: str, cau_da_co: tuple = 
             loi.append("câu lặp từ 6 từ liền trở lên của một câu đã có")
             break
     # Mốc thời gian trong đoạn trích phải có trong câu: bỏ nó là bỏ vế giới hạn ("trong tháng đó").
-    nam = set(re.findall(r"\b(?:19|20)\d{2}\b", trich))
-    thieu_moc = (nam | thang_trich) - _so(cau)
+    # Phần trong NGOẶC là chi tiết phụ: lần 3 bắt câu phải nói năm sinh "(born 1997 or 1998)".
+    ngoai_ngoac = re.sub(r"\([^)]*\)", " ", trich)
+    nam = set(re.findall(r"\b(?:19|20)\d{2}\b", ngoai_ngoac))
+    thieu_moc = (nam | _thang(ngoai_ngoac)) - _so(cau)
     if thieu_moc:
         loi.append(f"câu bỏ mốc thời gian của đoạn trích: {sorted(thieu_moc)}")
+    # Chữ rào đón phải đi theo. Lần 3, ý 06: "may have helped" thành "giúp" — chắc chắn hoá lời nguồn.
+    if re.search(RAO_DON_EN, t) and not any(r in cau.lower() for r in RAO_DON_VI):
+        loi.append("đoạn trích có chữ rào đón (may/might/reportedly…) nhưng câu nói chắc chắn")
     # Lời nhận định phải mang tên người nhận định.
     m = re.search(r"((?:[A-Z][\w!?.'-]*\s+){0,3}[A-Z][\w!?.'-]*)\s+" + DONG_TU_NOI + r"\b", t)
     if m:
@@ -200,9 +210,11 @@ def kiem_cau(cau: str, trich: str, chu_lon: str, nguon: str, cau_da_co: tuple = 
     chu_anh = chu_khong_phai_tieng_viet(cau + " " + chu_lon, mien=mien)
     if chu_anh:
         loi.append(f"chữ không phải tiếng Việt: {' '.join(sorted(set(chu_anh)))[:60]}")
+    # Trần 34 từ (bản đầu 30): lần 3, ý 02 cần liệt kê "camera, loa, tivi" và ra 31 từ ở cả 3 lượt.
+    # Karaoke tự chia dòng; độ dài tổng do cửa 55–65 s của `kiem_video` canh, không phải trần này.
     n = len(cau.split())
-    if not 10 <= n <= 30:
-        loi.append(f"câu {n} từ, cần 10–30")
+    if not 10 <= n <= 34:
+        loi.append(f"câu {n} từ, cần 10–34")
     if len(chu_lon.split()) > 6:
         loi.append(f"chữ lớn {len(chu_lon.split())} từ, cần ≤ 6")
     return loi

@@ -122,6 +122,36 @@ def test_so_trong_cung_doan_nguon_duoc_phep():
                        "trong tháng đó.", trich, "Nhiều nhất tháng 6", NGUON_LAN_1) == []
 
 
+def test_chu_viet_tat_khong_phai_het_cau():
+    """Lần 3, ý 12: "A. V. Club" bị đọc thành ba câu và câu đúng bị bác cả 3 lượt."""
+    nguon = NGUON + "The A. V. Club said that adapting Internet culture into traditional formats would be difficult.\n"
+    trich = "The A. V. Club said that adapting Internet culture into traditional formats would be difficult."
+    loi = ar.kiem_cau("Trang A. V. Club nhận xét rằng chuyển văn hoá mạng sang định dạng truyền thống sẽ rất khó.",
+                      trich, "Chuyển thể khó", nguon)
+    assert not any("hơn một câu" in x for x in loi), loi
+
+
+def test_nam_trong_ngoac_khong_bat_buoc():
+    """Lần 3, ý 03: "(born 1997 or 1998)" là chi tiết phụ — không bắt câu phải nói năm sinh."""
+    nguon = NGUON + ("Skibidi Toilet is produced by Alexey Gerasimov (Russian: name, born 1997 or 1998), also known "
+                     "by his alias Blugray.\n")
+    trich = "Skibidi Toilet is produced by Alexey Gerasimov (Russian: name, born 1997 or 1998), also known by his alias Blugray."
+    assert ar.kiem_cau("Loạt phim Skibidi Toilet do Alexey Gerasimov, còn có biệt danh Blugray, sản xuất.",
+                       trich, "Alexey Gerasimov", nguon) == []
+
+
+def test_bo_chu_rao_don_bi_bac():
+    """Lần 3, ý 06: "may have helped" thành "giúp" — nói chắc điều nguồn chỉ nói là có thể."""
+    trich = ("Since YouTube's recommendation algorithm tends to prefer frequent uploaders, the initial upload "
+             "schedule may have helped the show go viral.")
+    sai = ar.kiem_cau("Nhịp đăng dày lúc đầu giúp phim lan nhanh vì thuật toán YouTube thích người đăng tải thường xuyên.",
+                      trich, "Thuật toán YouTube", NGUON_LAN_1)
+    assert any("rào đón" in x for x in sai)
+    dung = ar.kiem_cau("Nhịp đăng dày lúc đầu có thể đã giúp phim lan nhanh vì thuật toán YouTube thích người đăng "
+                       "thường xuyên.", trich, "Thuật toán YouTube", NGUON_LAN_1)
+    assert dung == []
+
+
 def test_lam_sach_bo_chu_thich_va_giu_hop_thong_tin():
     h = ('<table class="infobox"><tr><th class="infobox-label">No. of episodes</th><td>81</td></tr></table>'
          '<p>The first episode was released on 7 February 2023, with an 11-second runtime.<sup class="reference">'

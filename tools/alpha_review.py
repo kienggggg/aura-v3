@@ -139,37 +139,52 @@ def _so(s: str) -> set[str]:
 # thật. Lần 1 (15/09): "An article by theatre firm The Civilians argued…" thành "Các nhà nghiên cứu
 # cho thấy…"; "The Washington Post noted…" thành một khẳng định trần "Điểm lạ nhất là…".
 DONG_TU_NOI = r"(?:argued|argues|noted|notes|said|says|called|calls|claimed|claims|reported|wrote|compared|described|credited)"
+# Viết XUÔI, không chép câu sai (luật của SO_LOI_PHONG_AURA.md: bản đồ từng bị chép nguyên chữ vào
+# 2/15 truyện). Bản đầu 15/09 trích nguyên 3 câu sai của lần 1 vào đây — dừng lượt ấy giữa chừng.
 LOI_DA_MAC = (
-    "- Không bỏ chữ giới hạn. Lần trước viết \"video Skibidi Toilet đạt 65 tỷ lượt xem\" trong khi nguồn "
-    "nói \"các video LIÊN QUAN TỚI Skibidi Toilet\"; viết \"kênh xem nhiều nhất nước Mỹ\" trong khi nguồn "
-    "nói \"nhiều nhất TRONG THÁNG ĐÓ\".\n"
-    "- Nhận định của ai thì nêu tên người ấy. Lần trước viết \"các nhà nghiên cứu cho thấy\" trong khi "
-    "nguồn nói \"một bài viết của nhóm kịch The Civilians lập luận\".\n"
-    "- Nói rõ ai làm gì với cái gì. Lần trước viết \"Bay lại bác bỏ tin đồn\" mà không nói tin đồn nào.\n")
+    "- Giữ nguyên chữ giới hạn của nguồn: \"liên quan tới\", \"hơn\", \"khoảng\", \"tính tới\", \"trong tháng đó\".\n"
+    "- Nhận định thì nói rõ của ai: \"tờ … nhận xét\", \"bài viết của … lập luận\".\n"
+    "- Nhắc một tin đồn hay một lời phủ nhận thì nói rõ đó là tin gì.\n")
 
 
-def kiem_cau(cau: str, trich: str, chu_lon: str, nguon: str) -> list[str]:
+def _thang(s: str) -> set[str]:
+    # Tên tháng VIẾT HOA mới là tháng: lần thử luật 15/09 đọc "may have helped" thành tháng Năm.
+    return {str(THANG[w.lower()]) for w in re.findall(r"\b[A-Z][a-z]+\b", s or "") if w.lower() in THANG}
+
+
+def kiem_cau(cau: str, trich: str, chu_lon: str, nguon: str, cau_da_co: tuple = ()) -> list[str]:
     """Lý do bác một câu; rỗng là đạt. HÀM THUẦN để cửa canh đưa câu xấu vào được.
 
-    Ba luật cuối thêm 15/09 sau khi em đọc lại kịch bản lần 1: 12/12 câu qua cửa máy nhưng 4/12
-    SAI NGHĨA — và cả 4 đi qua đúng những lối dưới đây.
+    Các luật sau luật "có nguyên văn" thêm 15/09 từ lỗi THẬT: lần 1 có 12/12 câu qua cửa máy nhưng em
+    đọc lại thì 4/12 sai nghĩa; lần 2 model chép nguyên câu liền trước cho hai ý khác.
     """
     from core.viet_truyen import chu_khong_phai_tieng_viet
     loi = []
     t = _chuan(trich).strip(" .\"'")
+    nguon_c = _chuan(nguon)
     if len(t.split()) < 8:
         loi.append(f"đoạn trích {len(t.split())} từ, cần ≥ 8")
-    elif t not in _chuan(nguon):
+    elif t not in nguon_c:
         loi.append("đoạn trích KHÔNG có nguyên văn trong nguồn ghim")
     # Một câu thôi. Lần 1: câu 07 và 12 trích HAI câu rồi viết theo nửa này, bỏ vế giới hạn ở nửa kia.
     if re.search(r"[.!?]\s+[A-Z]", t):
         loi.append("đoạn trích dài hơn một câu")
-    # Tên tháng VIẾT HOA mới là tháng: lần thử luật 15/09 đọc "may have helped" thành tháng Năm.
-    thang_trich = {str(THANG[w.lower()]) for w in re.findall(r"\b[A-Z][a-z]+\b", trich) if w.lower() in THANG}
-    duoc = _so(trich) | thang_trich
+    thang_trich = _thang(trich)
+    # Con số được phép lấy trong CÙNG ĐOẠN NGUỒN chứa đoạn trích, không chỉ trong câu trích. Lần 2, ý 07:
+    # câu trích "By June, … that month." không mang năm — năm nằm ở câu liền trước của cùng đoạn.
+    doan_chua = next((d for d in nguon_c.splitlines() if t and t in d), "")
+    duoc = _so(trich) | thang_trich | _so(doan_chua) | _thang(doan_chua)
     la = (_so(cau) | _so(chu_lon)) - duoc
     if la:
-        loi.append(f"con số không có trong đoạn trích: {sorted(la)}")
+        loi.append(f"con số không có trong đoạn nguồn chứa đoạn trích: {sorted(la)}")
+    # Không chép câu đã có. Lần 2: ý 10 và 11 lặp NGUYÊN VĂN câu của ý 09, vì lời nhắc đưa câu trước
+    # vào "để nối cho mượt" — model 4B chép thứ nằm trong lời nhắc (cùng họ với bản đồ chép 2/15).
+    tu = re.findall(r"\w+", cau.lower())
+    for truoc in cau_da_co:
+        tt = re.findall(r"\w+", truoc.lower())
+        if {tuple(tu[i:i + 6]) for i in range(len(tu) - 5)} & {tuple(tt[i:i + 6]) for i in range(len(tt) - 5)}:
+            loi.append("câu lặp từ 6 từ liền trở lên của một câu đã có")
+            break
     # Mốc thời gian trong đoạn trích phải có trong câu: bỏ nó là bỏ vế giới hạn ("trong tháng đó").
     nam = set(re.findall(r"\b(?:19|20)\d{2}\b", trich))
     thieu_moc = (nam | thang_trich) - _so(cau)
@@ -207,7 +222,7 @@ def viet_kich_ban() -> dict:
     nguon = (THU_MUC / "nguon_en.txt").read_text(encoding="utf-8")
     dong = nguon.splitlines()
     t0 = time.monotonic()
-    ra, cau_truoc = [], ""
+    ra, nhan_truoc, da_co = [], "", []
     for ma, y, khoa, nhan in DAN_Y:
         doan = [d for d in dong if khoa.lower() in d.lower()]
         if not doan:
@@ -215,8 +230,9 @@ def viet_kich_ban() -> dict:
         loi_nhac = (
             "Bạn viết MỘT câu tiếng Việt, 14–24 từ, cho video phân tích về loạt phim hoạt hình Skibidi Toilet.\n"
             f"Ý của câu này: {y}.\n"
-            + (f"Câu ngay trước trong video: \"{cau_truoc}\" — câu của bạn phải nối tiếp tự nhiên, không lặp ý.\n"
-               if cau_truoc else "Đây là câu mở đầu video.\n")
+            # Chỉ báo CHỦ ĐỀ câu trước, không đưa nguyên văn: lần 2 đưa nguyên văn thì model chép lại nó.
+            + (f"Câu trước trong video nói về: {nhan_truoc.lower()}. Câu của bạn nói ý mới, không nhắc lại ý ấy.\n"
+               if nhan_truoc else "Đây là câu mở đầu video.\n")
             + "CHỈ dùng thông tin có trong ĐOẠN NGUỒN tiếng Anh dưới đây. Không thêm con số hay chi tiết nào khác.\n"
             "Tên riêng giữ nguyên. Không dùng từ tiếng Anh nào khác.\n"
             "Nếu đoạn trích có mốc thời gian (năm, tháng) thì câu của bạn phải nói mốc ấy.\n"
@@ -232,7 +248,7 @@ def viet_kich_ban() -> dict:
             t1 = time.monotonic()
             try:
                 d = _goi_model(loi_nhac, seed=15 + k)
-                loi = kiem_cau(d.get("cau", ""), d.get("trich", ""), d.get("chu_lon", ""), nguon)
+                loi = kiem_cau(d.get("cau", ""), d.get("trich", ""), d.get("chu_lon", ""), nguon, tuple(da_co))
             except Exception as e:  # noqa: BLE001 — model trả rác cũng là một lượt hỏng, không phải sập
                 d, loi = {}, [f"{type(e).__name__}: {str(e)[:120]}"]
             lan.append({**d, "loi": loi, "giay": round(time.monotonic() - t1, 1)})
@@ -242,7 +258,8 @@ def viet_kich_ban() -> dict:
         ra.append({"ma": ma, "nhan": nhan, "dat": dat, "lan": lan, **({k: lan[-1][k] for k in ("cau", "trich", "chu_lon")} if dat else {})})
         print(f"{ma:11} {'DAT' if dat else 'KHONG DAT'} sau {len(lan)} lan · {lan[-1].get('cau', '')[:90]}", flush=True)
         if dat:
-            cau_truoc = lan[-1]["cau"]
+            nhan_truoc = nhan
+            da_co.append(lan[-1]["cau"])
     kq = {"trang_thai": "DAT" if all(x["dat"] for x in ra) else "KHONG_DAT", "y": ra,
           "giay": round(time.monotonic() - t0, 1)}
     (THU_MUC / "kich_ban.json").write_text(json.dumps(kq, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -326,6 +343,17 @@ def dung() -> dict:
     khoi = pa.khoi_phu_de(srt.read_text(encoding="utf-8"))
     kiem["vi_sao"] += pa.kiem_lap_phu_de(khoi) + pa.kiem_phu_kin(" ".join(cau), khoi)
     kiem["vi_sao"] += pa.kiem_quang_cam(pa._quang_cam_dai_nhat(wav))
+    # Hai cửa còn lại của `_dung_video`: chữ đã nung vào hình chưa, và độ ồn giọng/nhạc.
+    chua_nung = mp4.with_name("video_chua_nung.mp4")
+    if chua_nung.is_file():
+        cd = pa.chenh_dai_phu_de(chua_nung, mp4)
+        kiem["so"].update(cd)
+        kiem["vi_sao"] += pa.kiem_nung(cd)
+    else:
+        kiem["vi_sao"].append("không có bản chưa nung để đối chiếu")
+    lg, ln, lv = pa._lufs(wav), (pa._lufs(nhac) if nhac else None), pa._lufs(mp4)
+    kiem["so"].update({"lufs_giong": lg, "lufs_nhac": ln, "lufs_video": lv})
+    kiem["vi_sao"] += pa.kiem_am_thanh(lg, ln, lv)
     # Đầu vào của lượt dựng, kể tên từng tệp: hàng "0 khung/âm/nhạc từ phim" đo bằng DANH SÁCH NÀY.
     dau_vao = ([{"tep": str(c.relative_to(THU_MUC)), "tu": "thẻ HTML máy vẽ"} for c in cards]
                + [{"tep": str(wav.relative_to(THU_MUC)), "tu": f"TTS OneCore {pa.GIONG}"}]

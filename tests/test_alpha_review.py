@@ -35,7 +35,7 @@ def test_trich_ngan_bi_bac():
 
 def test_con_so_khong_co_trong_trich_bi_bac():
     loi = ar.kiem_cau(CAU_DAU + " Nó có 90 tỷ lượt xem.", TRICH_DAU, "11 giây", NGUON)
-    assert any("con số không có trong đoạn trích" in x and "90" in x for x in loi)
+    assert any("con số không có" in x and "90" in x for x in loi)
 
 
 def test_thang_chu_anh_doi_ra_so():
@@ -101,6 +101,25 @@ def test_may_viet_thuong_khong_phai_thang_nam():
              "schedule may have helped the show go viral.")
     assert ar.kiem_cau("Vì thuật toán YouTube ưa người đăng thường xuyên nên lịch đăng dày lúc đầu có thể giúp "
                        "loạt phim lan truyền.", trich, "Thuật toán YouTube", NGUON_LAN_1) == []
+
+
+def test_chep_cau_da_co_bi_bac():
+    """Lần 2: ý 10 và 11 lặp NGUYÊN VĂN câu của ý 09 — lời nhắc đưa câu trước vào, model chép lại."""
+    cau09 = ("Tờ Washington Post nhận xét sự độc đáo khi loạt phim kể trọn vẹn một câu chuyện chỉ bằng các "
+             "đoạn video ngắn.")
+    trich = ("An article by theatre firm The Civilians argued the series reflects Generation Alpha's fear of "
+             "surveillance and dehumanization.")
+    loi = ar.kiem_cau(cau09, trich, "Nỗi sợ bị giám sát", NGUON_LAN_1, cau_da_co=(cau09,))
+    assert any("lặp từ 6 từ liền" in x for x in loi)
+
+
+def test_so_trong_cung_doan_nguon_duoc_phep():
+    """Lần 2, ý 07: câu trích "By June, … that month." không mang năm; năm 2023 nằm ở câu liền trước của
+    CÙNG đoạn — câu Việt nói "tháng 6 năm 2023" là đúng, không phải bịa."""
+    trich = ("By June, the channel had gained five billion views, making it the most viewed YouTube channel "
+             "in the U.S. that month.")
+    assert ar.kiem_cau("Theo Tubefilter, trong tháng 6 năm 2023 kênh là kênh YouTube được xem nhiều nhất tại Mỹ "
+                       "trong tháng đó.", trich, "Nhiều nhất tháng 6", NGUON_LAN_1) == []
 
 
 def test_lam_sach_bo_chu_thich_va_giu_hop_thong_tin():

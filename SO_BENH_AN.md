@@ -66,6 +66,20 @@ riêng chữ "phiên": vá một ca thì họ lỗi vẫn còn nguyên. Sau khi 
 `x in y` để quyết định một chuyện, hãy hỏi: `x` có thể nằm lọt giữa một từ khác
 không?
 
+**Tái phát 15/09/2026, ở chỗ duy nhất trong kho làm được một vật THẬT chuyển động.** Rover
+ở repo cũ nhận lệnh từ ba đường, và cả ba cùng dò chuỗi con. Đo bằng hàm đọc lệnh, không nối
+BLE:
+- chat v2: 7/12 câu có chữ "xe/robot" đọc sai, cả 7 thành TIẾN. "robot hết điện chưa" → tiến,
+  vì "đi" nằm trong "điện".
+- nút dừng `chay_xe.py dung`: → tiến 3 giây.
+- app Vivo (bỏ dấu rồi dò): 8/18 câu sai, cả 8 làm xe chuyển động. "tiếng" chứa "tien",
+  "phải" (cần phải) thành rẽ phải, và "aura tự chạy lại bài test đi" bật tự tuần tra.
+
+`test_rover.py` xanh 29/29 suốt từ 08/08, vì mọi câu *"không được cướp"* trong đó đều thiếu
+chữ "xe/robot": bộ lọc vòng ngoài chặn hết, nên chưa ca nào chạm tới chỗ dò. Sửa: đọc theo từ
+có dấu, mơ hồ thì đứng yên. Đo lại app bằng chính hàm Java, trích từ tệp rồi dịch bằng javac,
+vì chép sang Python thì chỉ là đo một bản sao.
+
 ### Phép đo không chạy phải NÓI LÀ KHÔNG CHẠY
 
 In "CHỐNG ĐƯỢC 0/4" trong khi cả 4 đòn đều gãy ở chữ ký hàm — "0/4" đọc y hệt

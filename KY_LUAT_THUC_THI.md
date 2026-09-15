@@ -5282,4 +5282,62 @@ tiếng Việt có nói đúng như đoạn trích hay không thì em đọc l�
 **Giới hạn, nói trước:** giọng là OneCore An, giọng máy. Vòng 0 chưa đổi giọng vì phải tải về và
 đo trước. Số liệu lượt xem trên Wikipedia đóng băng theo ngày nguồn ghi (ví dụ *"tới tháng 11/2023"*),
 nên video đọc kèm mốc ấy, không nói như số hôm nay.
+**KẾT QUẢ 15/09/2026:**
+- 5/6 hàng ĐẠT; hàng Sếp xem còn CHỜ SẾP.
+- Video `data/alpha_review/skibidi_toilet/video/video.mp4`: 63,48 s, 10 thẻ, SHA-256 bắt đầu bằng
+  `ca816110`, qua mọi cửa của `kiem_video`.
+
+```
+câu có đoạn trích ≥ 8 từ, máy tìm thấy trong nguồn ghim   10/10    ĐẠT
+con số trên video có trong nguồn ghim                    10/10    ĐẠT (câu và chữ lớn, máy dò)
+câu tiếng Việt nói đúng như đoạn trích, em đọc lại        10/10    ĐẠT — sau 5 lượt viết và các đợt viết lại
+khung hình, âm thanh hay nhạc lấy từ phim                 0        ĐẠT — đầu vào: 10 thẻ máy vẽ, giọng OneCore, nhạc máy sinh
+dựng xong một video                                       74,9 s   ĐẠT (phần dựng; viết kịch bản tính riêng, xem dưới)
+Sếp xem xong: muốn xem hết                                CHỜ SẾP
+```
+
+**Kịch bản không đạt ngay, và cái giá tính bằng lượt:**
+
+```
+lượt  máy qua  em đọc đúng  lỗi chính
+1     12/12    8/12         bỏ "liên quan tới", bỏ "trong tháng đó", nhóm kịch thành "các nhà nghiên cứu", nhầm ngày công bố
+2     8/12     —            chép nguyên câu liền trước cho hai ý khác
+3     9/12     7/9          mất chữ rào đón "có thể"; gọi nhóm kịch là "tờ"
+4     10/12    8/10         lại bỏ "trong tháng đó"; đảo chiều ai tặng ai
+5     10/12    8/10         sai chủ thể khiếu nại; nhầm ngày công bố với ngày thảo luận
+```
+
+Sau lượt 5 em viết lại riêng từng ý hỏng. Riêng ý kết mất thêm 3 lượt, mỗi lượt lộ một lỗi mới: chép
+chữ in hoa trong câu dặn, chép động từ "Kể rằng" của câu dặn, và bỏ ngoặc kép khi trích. Tổng thời
+gian model viết kịch bản khoảng 90 phút trên CPU. Mỗi lỗi thành một cửa máy, kèm test dựng từ đúng câu
+sai thật, và gieo lỗi đỏ ở mọi phép:
+- đoạn trích một câu;
+- mốc thời gian (bỏ qua phần trong ngoặc);
+- nêu tên người nhận định;
+- giữ chữ rào đón và chữ giới hạn;
+- không lặp câu đã có;
+- không chữ in hoa cả chữ;
+- không lời dặn lọt vào lời kể;
+- ngoặc kép không tính là chữ.
+
+**Dựng lần 1 trượt độ dài:** 12 câu ra video 80,8 s. Em đã ước "59–61 s" từ số từ mà không đo, và
+ước sai. Đo từng câu thì OneCore đọc 2,4–4,8 từ/s, vì tên tiếng Anh và con số đọc chậm gấp đôi.
+
+Thử đặt trần 5 s cho MỖI câu thì 6/8 câu viết lại trượt: câu có ngày đã tốn 7,7–8,2 s, trong khi
+luật mốc thời gian lại bắt câu phải có ngày. Nên em đổi sang cửa TỔNG, dự báo độ dài từ giây đo được,
+và chọn 10 ý (bỏ "xếp hạng" và "nhóm mới 2026"). Dự báo 63,47 s; video thật 63,48 s.
+
+**Hai lỗi của phòng Alpha lộ ra khi em nhìn khung hình, không cửa máy nào bắt:**
+- **Thẻ đổi sớm hơn lời**, cộng dồn từng khoảng lặng; đã sửa trong `render`, xem commit `b2a73c1`.
+  - Video review lệch tới −1,33 s. Video truyện lệch tới −10,5 s: thẻ cuối đứng 14,2 s.
+  - Sau khi sửa, mọi lần cắt đo được đều lệch ≤ 0,043 s, tức trong một khung hình.
+- **Phụ đề lui về `.srt` phóng lên ~89 px và đè chữ trên thẻ review.** Video review dùng phụ đề tĩnh
+  46 px ở dải đáy; video truyện giữ kiểu cũ.
+
+**Giới hạn:**
+- Giọng là OneCore An, nghe rõ là máy.
+- Karaoke từng từ không đạt, vì tên riêng tiếng Anh; video dùng phụ đề theo câu.
+- Hai ý bị bỏ để vừa 65 s.
+- Câu 05 ("là bên gửi khiếu nại") và câu 10 ("đang trong cuộc trò chuyện") đúng nghĩa nhưng vụng.
+- Một chữ lớn viết thường ở chữ đầu.
 <!-- /CHOT:alpha-review-vong-0 -->

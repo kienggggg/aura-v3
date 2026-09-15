@@ -10,6 +10,11 @@
   `CHOT:alpha-review-vong-0`. Không dùng clip, ảnh nhân vật hay nhạc của phim, vì chủ phim đang
   chủ động đòi bản quyền.
 - 5 repo cho các video review sau: CHƯA chọn.
+- **Video đầu tiên đã dựng ngày 15/09**, 63,48 s. 5/6 hàng của `CHOT:alpha-review-vong-0` ĐẠT; hàng
+  "Sếp muốn xem hết" CHỜ SẾP.
+  - Kịch bản mất 5 lượt viết và các đợt viết lại. Mỗi lỗi em đọc ra đều thành một cửa máy.
+  - Dựng lần đầu dài 80,8 s, trượt khung; dựng lại với 10 ý thì vừa.
+  - Lộ và sửa một lỗi của phòng Alpha: thẻ đổi sớm hơn lời, tới 10,5 s trong video truyện.
 
 Sếp giao ngày 15/09: robot để sau Alpha. Alpha thử hướng *reaction/review*, vì có lẽ đơn giản
 hơn tự tạo nội dung. `CLAUDE.md` §7 yêu cầu dựng hệ thống mới thì gửi kế hoạch trước. Chỗ nào

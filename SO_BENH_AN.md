@@ -1098,6 +1098,25 @@ thích giải thích vì sao không nung**, đúng chỗ nó nên ở. Sửa xon
 một trường `duongSrt` vào `Props`: **vẫn xanh**, vì tên trường không có dấu
 chấm. Phải hỏi *kiểu này khai những trường nào* rồi so danh sách, mới đỏ.
 
+**Tái phát 15/09/2026, và lần này cặp ấy lệch lại mà không ai biết suốt 9 ngày.** Dựng video review
+đầu tiên của Alpha, em nhìn 8 khung hình thì thấy thẻ đã sang ý sau trong khi phụ đề còn đọc ý trước.
+Đo bằng `scdet` thì thẻ đổi SỚM hơn chữ, lệch tăng dần 0,15 · 0,30 · 0,43 … 1,33 s, mỗi câu thêm đúng
+một khe im lặng.
+
+Nguyên nhân: phụ đề tính theo mốc có khe (`cong += d + khe`), còn thẻ tính theo phần có tiếng (`kt - bd`).
+Vẫn một cặp, lại vá lệch một vế.
+
+Đo trên video truyện dựng mới bằng mã hiện hành thì thẻ cuối đứng **14,2 s** trên 60 s, và hình chạy
+trước lời tới **10,5 s**.
+
+Con số "1,72 s → 0,036 s" ở trên là một phép đo TAY, không có cửa canh nào giữ lại, và `kiem_video`
+không đo độ khớp thẻ–lời. Nên nó đứng yên trên giấy trong khi mã đi tiếp: đúng bài *"nhãn đã đo không
+mang ngày"*.
+
+Đã sửa: thẻ đứng từ lúc câu của nó bắt đầu tới lúc câu sau bắt đầu, và hàm ấy có cửa canh
+(`tests/test_the_doi_cung_loi.py`). Sau khi sửa, mọi lần cắt đo được lệch ≤ 0,043 s trên cả video
+review lẫn video truyện.
+
 ### Một độ lệch HẰNG SỐ không phải nhiễu — nó là một cái tên chưa đọc ra
 
 Chấm hai bộ dựng, cùng đầu vào, khác đúng một biến: ai vẽ khung hình. Bản
